@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-20
 **Branch**: `develop`
-**Phase**: Phase 0 DONE — Master plan finalized, starting Phase 1
+**Phase**: Phase 0 IN PROGRESS — Master plan updated with 7-ECU hybrid architecture
 
 ---
 
@@ -12,42 +12,58 @@
 
 **Portfolio project** demonstrating ISO 26262 ASIL D automotive functional safety engineering with cloud IoT and edge ML.
 
-**Product**: Zonal Vehicle Platform — 4-ECU zonal architecture connected via CAN bus, with Raspberry Pi edge gateway, cloud telemetry (AWS), and ML-based anomaly detection. Demonstrates drive-by-wire with full safety lifecycle.
+**Product**: Zonal Vehicle Platform — 7-ECU zonal architecture (4 physical + 3 simulated) connected via CAN bus, with Raspberry Pi edge gateway, cloud telemetry (AWS), and ML-based anomaly detection. Demonstrates drive-by-wire with full safety lifecycle.
 
-### Architecture: Zonal (Modern E/E)
+### Architecture: Zonal (Modern E/E) — 7 ECUs
 
-| Zonal ECU | Absorbs Functions | Hardware | ASIL |
-|-----------|-------------------|----------|------|
-| Central Vehicle Computer (CVC) | VCU | STM32G474RE Nucleo | D (SW) |
-| Front Zone Controller (FZC) | BCU + SCU + ADAS | STM32G474RE Nucleo | D (SW) |
-| Rear Zone Controller (RZC) | PCU + BMS | STM32G474RE Nucleo | D (SW) |
-| Safety Controller (SC) | Safety MCU | TI TMS570LC43x LaunchPad | D (HW lockstep) |
+#### 4 Physical ECUs (real hardware, real sensors/actuators)
 
-**Additional**: Raspberry Pi 4 (edge gateway, cloud, ML) + CANable 2.0 (USB-CAN)
+| Zonal ECU | Role | Hardware | ASIL |
+|-----------|------|----------|------|
+| Central Vehicle Computer (CVC) | Vehicle brain, pedal input, state machine | STM32G474RE Nucleo | D (SW) |
+| Front Zone Controller (FZC) | Steering, braking, lidar, ADAS | STM32G474RE Nucleo | D (SW) |
+| Rear Zone Controller (RZC) | Motor, current, temp, battery | STM32G474RE Nucleo | D (SW) |
+| Safety Controller (SC) | Independent safety monitor | TI TMS570LC43x LaunchPad | D (HW lockstep) |
+
+#### 3 Simulated ECUs (Docker + SocketCAN, same C codebase)
+
+| ECU | Role | Runtime | ASIL |
+|-----|------|---------|------|
+| Body Control Module (BCM) | Lights, indicators, door locks | Docker container | QM |
+| Instrument Cluster Unit (ICU) | Dashboard gauges, warnings, DTCs | Docker container | QM |
+| Telematics Control Unit (TCU) | UDS diagnostics, OBD-II, DTC storage | Docker container | QM |
+
+**Additional**: Raspberry Pi 4 (edge gateway, cloud, ML) + 2× CANable 2.0 (Pi + PC CAN bridge)
 
 **Diverse redundancy**: STM32 (ST) for zone ECUs, TMS570 (TI) for Safety Controller.
 
-### 12 Demo Fault Scenarios
-1. Normal driving
-2. Pedal sensor disagreement → limp mode
-3. Pedal sensor failure → motor stops
-4. Object detected (lidar) → emergency brake
-5. Motor overcurrent → motor stops
-6. Motor overtemp → derating then stop
-7. Steering sensor fault → return to center
+### 15 Demo Scenarios (12 Safety + 3 Simulated ECU)
+1. Normal driving → ICU shows speed, BCM lights on
+2. Pedal sensor disagreement → limp mode, ICU warning
+3. Pedal sensor failure → motor stops, ICU fault
+4. Object detected (lidar) → emergency brake, BCM hazards
+5. Motor overcurrent → motor stops, DTC stored in TCU
+6. Motor overtemp → derating then stop, ICU temp warning
+7. Steering sensor fault → return to center, ICU warning
 8. CAN bus loss → Safety Controller kills system
 9. ECU hang → Safety Controller kills system
-10. E-stop → broadcast stop
+10. E-stop → broadcast stop, BCM hazards
 11. ML anomaly alert → cloud dashboard alarm
 12. CVC vs Safety disagree → Safety wins
+13. UDS diagnostic session → TCU responds to requests
+14. DTC read/clear cycle → TCU manages fault codes
+15. Night driving mode → BCM auto headlights
 
 ### Key Design Decisions
-- **Zonal over domain**: Modern E/E architecture, fewer ECUs, more resume impact
+- **7-ECU hybrid**: 4 physical + 3 simulated (Docker), mirrors real Tier 1 vECU development
+- **Zonal over domain**: Modern E/E architecture, fewer physical ECUs, more resume impact
 - **3× STM32 + 1× TMS570**: One toolchain for most firmware, real ASIL D MCU for safety
 - **TMS570 for Safety Controller**: Simple firmware (~400 LOC), lockstep cores, TUV-certified
+- **Simulated ECUs in C**: Same codebase structure, POSIX SocketCAN abstraction layer
+- **UDS/OBD-II in TCU**: Massive resume keyword, every OEM cares about diagnostics
 - **Cloud + ML**: AWS IoT Core + Grafana + scikit-learn (motor health, CAN anomaly detection)
 - **CAN 2.0B only**: TMS570 DCAN doesn't support FD. STM32 FDCAN runs in classic mode. All compatible.
-- **~$942 hardware budget** (within $2K target)
+- **~$977 hardware budget** (within $2K target)
 
 ---
 
@@ -58,15 +74,20 @@ taktflow-embedded/
 ├── .claude/
 │   ├── settings.json, hooks/, rules/ (28 files), skills/ (3)
 ├── firmware/
-│   ├── cvc/src/, cvc/include/, cvc/test/    — Central Vehicle Computer (STM32)
-│   ├── fzc/src/, fzc/include/, fzc/test/    — Front Zone Controller (STM32)
-│   ├── rzc/src/, rzc/include/, rzc/test/    — Rear Zone Controller (STM32)
-│   ├── sc/src/, sc/include/, sc/test/       — Safety Controller (TMS570)
-│   └── shared/                               — Shared CAN protocol, E2E library
+│   ├── cvc/src/, cvc/include/, cvc/test/    — Central Vehicle Computer (STM32, physical)
+│   ├── fzc/src/, fzc/include/, fzc/test/    — Front Zone Controller (STM32, physical)
+│   ├── rzc/src/, rzc/include/, rzc/test/    — Rear Zone Controller (STM32, physical)
+│   ├── sc/src/, sc/include/, sc/test/       — Safety Controller (TMS570, physical)
+│   ├── bcm/src/, bcm/include/, bcm/test/   — Body Control Module (simulated)
+│   ├── icu/src/, icu/include/, icu/test/   — Instrument Cluster Unit (simulated)
+│   ├── tcu/src/, tcu/include/, tcu/test/   — Telematics Control Unit (simulated)
+│   └── shared/                               — Shared CAN protocol, E2E, SocketCAN abstraction
+├── docker/                                   — Dockerfile, docker-compose for simulated ECUs
 ├── gateway/                                  — Raspberry Pi edge gateway (Python)
 ├── hardware/                                 — Pin mappings, BOM, schematics
+├── scripts/                                  — Build scripts, vECU startup scripts
 ├── docs/
-│   ├── plans/master-plan.md                  — UPDATED with zonal architecture
+│   ├── plans/master-plan.md                  — 7-ECU hybrid architecture, 14 phases (0-13)
 │   ├── safety/                               — EMPTY, awaiting Phase 1
 │   ├── aspice/                               — EMPTY, awaiting Phase 3
 │   └── reference/                            — process-playbook.md, lessons-learned.md
@@ -88,6 +109,7 @@ All integration points researched and confirmed feasible:
 - CANable 2.0 + Pi: candleLight firmware, gs_usb driver, python-can proven
 - Edge ML: scikit-learn inference sub-millisecond on Pi 4
 - AWS IoT Core: MQTT over TLS, batch to 1msg/5sec for free tier
+- SocketCAN + Docker: proven on Linux, WSL2 with USB passthrough on Windows
 
 ---
 
@@ -104,5 +126,8 @@ All integration points researched and confirmed feasible:
 - Update PROJECT_STATE.md before context compression
 - Building as portfolio for automotive FSE job
 - Zonal architecture, not domain-based
+- 7 ECUs: 4 physical + 3 simulated (Docker)
 - Focus on finishability — 3× STM32 + 1× TMS570 + Pi
 - ~$2K hardware budget
+- Refine every document 3 times (see memory/refinement-process.md)
+- Search web freely without asking

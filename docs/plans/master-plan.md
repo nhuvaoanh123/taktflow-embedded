@@ -3,16 +3,18 @@
 **Status**: IN PROGRESS
 **Created**: 2026-02-20
 **Updated**: 2026-02-20
-**Target**: 14 working days
+**Target**: 15.5 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
 
 ## Architecture Overview
 
-### Zonal Controller Architecture (Modern E/E)
+### Zonal Controller Architecture (Modern E/E) — 7 ECUs (4 Physical + 3 Simulated)
 
 Unlike traditional domain-based architectures (one ECU per function), this project uses a **zonal architecture** — the modern approach adopted by Tesla, VW, BMW. ECUs are organized by physical vehicle zone with a central computer on top.
+
+The architecture uses **7 ECU nodes**: 4 run on real hardware with real sensors and actuators, and 3 run as software-simulated ECUs (Docker containers or native processes using virtual CAN). This mirrors real automotive development where virtual ECUs (vECUs) are used alongside physical prototypes — a standard practice at Tier 1 suppliers using tools like Vector CANoe and dSPACE VEOS.
 
 ```
                                  ┌──────────────────────┐
@@ -29,7 +31,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 │              CANable 2.0 (USB-CAN)        │
 └───────────────────┬───────────────────────┘
                     │
-════════════════════╪═══════════════ CAN Bus (500 kbps) ════
+════════════════════╪═══════════════ CAN Bus (500 kbps) ════════════
     │               │              │              │
 ┌───┴───────┐ ┌─────┴─────┐ ┌─────┴─────┐ ┌─────┴──────┐
 │  CENTRAL  │ │FRONT ZONE │ │ REAR ZONE │ │  SAFETY    │
@@ -49,43 +51,111 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 │           │ │• Buzzer   │ │  voltage  │ │  cores     │
 └───────────┘ └───────────┘ └───────────┘ └────────────┘
   PHYSICAL      PHYSICAL      PHYSICAL      PHYSICAL
+                    │
+                    │ CAN bridge (CANable 2.0 USB-CAN on PC)
+                    │
+        ┌───────────┼────────────────────────┐
+        │           │                        │
+  ┌─────┴─────┐ ┌───┴───────┐ ┌─────────────┴─┐
+  │   BODY    │ │INSTRUMENT │ │  TELEMATICS    │
+  │  CONTROL  │ │  CLUSTER  │ │   CONTROL     │
+  │  MODULE   │ │   UNIT    │ │    UNIT       │
+  │  (BCM)    │ │  (ICU)    │ │   (TCU)       │
+  │           │ │           │ │               │
+  │• Lights   │ │• Gauges   │ │• UDS diag     │
+  │• Indicators│ │• Warnings │ │• DTC storage  │
+  │• Door lock│ │• DTC view │ │• OBD-II PIDs  │
+  │• Hazards  │ │• Dash UI  │ │• Fault logging│
+  └───────────┘ └───────────┘ └───────────────┘
+   SIMULATED     SIMULATED      SIMULATED
+   (Docker)      (Docker)       (Docker)
 ```
 
-### Zonal Mapping (7 Functions → 4 Physical ECUs)
+### ECU Summary Table
 
-| Zonal ECU | Absorbs | Hardware | ASIL |
-|-----------|---------|----------|------|
-| Central Vehicle Computer (CVC) | VCU | STM32G474RE Nucleo | D (SW measures) |
-| Front Zone Controller (FZC) | BCU + SCU + ADAS | STM32G474RE Nucleo | D (SW measures) |
-| Rear Zone Controller (RZC) | PCU + BMS | STM32G474RE Nucleo | D (SW measures) |
-| Safety Controller (SC) | Safety MCU | TI TMS570LC43x LaunchPad | D (HW lockstep) |
+| ECU | Role | Type | Hardware / Runtime | ASIL |
+|-----|------|------|--------------------|------|
+| Central Vehicle Computer (CVC) | Vehicle brain, pedal input, state machine | **Physical** | STM32G474RE Nucleo | D (SW) |
+| Front Zone Controller (FZC) | Steering, braking, lidar, ADAS | **Physical** | STM32G474RE Nucleo | D (SW) |
+| Rear Zone Controller (RZC) | Motor, current, temp, battery | **Physical** | STM32G474RE Nucleo | D (SW) |
+| Safety Controller (SC) | Independent safety monitor | **Physical** | TI TMS570LC43x LaunchPad | D (HW lockstep) |
+| Body Control Module (BCM) | Lights, indicators, door locks | **Simulated** | Docker + vcan / CAN bridge | QM |
+| Instrument Cluster Unit (ICU) | Dashboard gauges, warnings, DTCs | **Simulated** | Docker + vcan / CAN bridge | QM |
+| Telematics Control Unit (TCU) | UDS diagnostics, OBD-II, DTC storage | **Simulated** | Docker + vcan / CAN bridge | QM |
 
 **Diverse redundancy**: CVC/FZC/RZC use STM32 (ST). Safety Controller uses TMS570 (TI). Different vendor, different architecture = real ISO 26262 diverse redundancy.
+
+### Simulated ECU Details
+
+All 3 simulated ECUs are written in **C** (same codebase structure as physical ECUs) compiled for Linux with a POSIX SocketCAN abstraction layer. They run as Docker containers on the development PC, connected to the real CAN bus via a second CANable 2.0 adapter, or to a virtual CAN bus (vcan0) for pure-software testing.
+
+**BCM — Body Control Module (QM)**
+- Receives: vehicle state from CVC, speed from RZC, brake status from FZC
+- Sends: light status (0x400), indicator state (0x401), door lock status (0x402)
+- Logic: auto headlights at speed > 0, hazard lights on emergency brake, turn signals from steering angle
+- Adds: realistic comfort-domain CAN traffic, multi-domain network demonstration
+
+**ICU — Instrument Cluster Unit (QM)**
+- Receives: ALL CAN messages (listen-only consumer)
+- Sends: DTC acknowledgments (0x7FF)
+- Output: Terminal UI (ncurses) or web dashboard showing speedometer, tachometer, temp gauge, warning lights
+- Adds: visual demo output, proves CAN message decoding across full network
+
+**TCU — Telematics Control Unit (QM)**
+- Receives: diagnostic requests (UDS 0x7DF/0x7E0-0x7E6), all DTC broadcasts
+- Sends: UDS responses (0x7E8-0x7EE), DTC storage confirmations
+- Logic: UDS service handler (0x10 DiagSession, 0x22 ReadDataByID, 0x14 ClearDTCs, 0x19 ReadDTCs)
+- Adds: UDS/OBD-II diagnostics stack — massive resume keyword, every OEM cares about this
+
+### CAN Bus Topology
+
+```
+Development Modes:
+
+MODE 1: Full Hardware + Simulated (Demo Mode)
+  Real CAN Bus ─── CVC ─── FZC ─── RZC ─── SC ─── CANable(Pi) ─── CANable(PC)
+                                                                         │
+                                                           Docker: BCM, ICU, TCU
+
+MODE 2: Pure Software (CI/CD Mode)
+  vcan0 ─── vCVC ─── vFZC ─── vRZC ─── vSC ─── BCM ─── ICU ─── TCU ─── Gateway
+  (All 7 ECUs + gateway as processes, no hardware needed)
+
+MODE 3: Partial Hardware (Development Mode)
+  Real CAN Bus ─── [1-4 physical ECUs] ─── CANable(PC)
+                                              │
+                              Docker: remaining ECUs simulated
+```
 
 ### Additional Systems
 
 | System | Hardware | Purpose |
 |--------|----------|---------|
 | Edge Gateway | Raspberry Pi 4 (2GB) | Cloud telemetry, ML inference, fault injection GUI |
-| CAN Analyzer | CANable 2.0 (USB-CAN) | Bus monitoring, SocketCAN interface for Pi |
+| CAN Analyzer (Pi) | CANable 2.0 (USB-CAN) | Bus monitoring, SocketCAN interface for Pi |
+| CAN Bridge (PC) | CANable 2.0 (USB-CAN) | Bridge real CAN bus to Docker simulated ECUs |
 | Cloud | AWS IoT Core + Grafana | Real-time dashboard, data lake, alerts |
+| vECU Runtime | Docker + SocketCAN | Run simulated ECUs with same C source code |
 
-### 12 Demo Fault Scenarios
+### 15 Demo Scenarios (12 Safety + 3 Simulated ECU)
 
-| # | Scenario | Trigger | Observable Result |
-|---|----------|---------|-------------------|
-| 1 | Normal driving | Pedal input | Motor spins proportionally |
-| 2 | Pedal sensor disagreement | Dual sensor mismatch | Limp mode (motor slows) |
-| 3 | Pedal sensor failure | Sensor disconnected | Motor stops |
-| 4 | Object detected | Lidar < threshold | Brake engages, motor stops |
-| 5 | Motor overcurrent | Current sensor trip | Motor stops (RZC cuts PWM) |
-| 6 | Motor overtemp | Temp sensor trip | Motor derates then stops |
-| 7 | Steering fault | Angle sensor lost | Servo returns to center |
-| 8 | CAN bus loss | Bus disconnected | Safety Controller kills system |
-| 9 | ECU hang | Missing heartbeat | Safety Controller kills system |
-| 10 | E-stop pressed | Button pressed | Broadcast stop, everything stops |
-| 11 | ML anomaly alert | Abnormal current pattern | Cloud dashboard alarm fires |
-| 12 | CVC vs Safety disagree | Injected conflict | Safety Controller wins (kill relay) |
+| # | Scenario | Trigger | Observable Result | ECUs Involved |
+|---|----------|---------|-------------------|---------------|
+| 1 | Normal driving | Pedal input | Motor spins, ICU shows speed, BCM lights on | CVC, RZC, ICU, BCM |
+| 2 | Pedal sensor disagreement | Dual sensor mismatch | Limp mode, ICU warning light | CVC, RZC, ICU |
+| 3 | Pedal sensor failure | Sensor disconnected | Motor stops, ICU fault display | CVC, RZC, ICU |
+| 4 | Object detected | Lidar < threshold | Brake engages, BCM hazard lights | FZC, CVC, RZC, BCM |
+| 5 | Motor overcurrent | Current sensor trip | Motor stops, DTC stored in TCU | RZC, CVC, TCU |
+| 6 | Motor overtemp | Temp sensor trip | Motor derates then stops, ICU temp warning | RZC, CVC, ICU |
+| 7 | Steering fault | Angle sensor lost | Servo returns to center, ICU steering warning | FZC, CVC, ICU |
+| 8 | CAN bus loss | Bus disconnected | Safety Controller kills system | SC, all |
+| 9 | ECU hang | Missing heartbeat | Safety Controller kills system | SC, all |
+| 10 | E-stop pressed | Button pressed | Broadcast stop, everything stops, BCM hazards | CVC, all, BCM |
+| 11 | ML anomaly alert | Abnormal current pattern | Cloud dashboard alarm fires | Pi, AWS |
+| 12 | CVC vs Safety disagree | Injected conflict | Safety Controller wins (kill relay) | CVC, SC |
+| 13 | UDS diagnostic session | TCU receives 0x10 request | TCU responds, reads live data via 0x22 | TCU, all |
+| 14 | DTC read/clear cycle | TCU 0x19/0x14 service | TCU lists stored faults, clears on command | TCU |
+| 15 | Night driving mode | Speed > 0 in BCM | BCM auto-enables headlights, ICU shows icon | BCM, ICU, RZC |
 
 ---
 
@@ -101,6 +171,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 | 4 | Adafruit CAN Pal (TJA1051T/3 transceiver) | 4 | $4 | $16 |
 | 5 | SN65HVD230 breakout (for TMS570) | 1 | $5 | $5 |
 | 6 | CANable 2.0 (USB-CAN, for Pi) | 1 | $35 | $35 |
+| 6b | CANable 2.0 (USB-CAN, for PC — CAN bridge to simulated ECUs) | 1 | $35 | $35 |
 | 7 | 22 AWG twisted pair wire (25 ft) | 1 | $10 | $10 |
 | 8 | 120 ohm resistors (bus termination) | 2 | $0.10 | $1 |
 | | **Sensors** | | | |
@@ -135,10 +206,10 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 | 32 | Heat shrink + cable labels | 1 | $10 | $10 |
 | | **Test Equipment (optional)** | | | |
 | 33 | Rigol DS1054Z oscilloscope | 1 | $400 | $400 |
-| | | | **Total** | **~$942** |
-| | | | **Without scope** | **~$542** |
+| | | | **Total** | **~$977** |
+| | | | **Without scope** | **~$577** |
 
-**Budget**: $2,000 — leaves ~$1,058 for shipping, spares, and upgrades (e.g., RPLidar A1 at $100 for 360-degree scanning).
+**Budget**: $2,000 — leaves ~$1,023 for shipping, spares, and upgrades (e.g., RPLidar A1 at $100 for 360-degree scanning).
 
 ---
 
@@ -156,7 +227,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 
 | Phase | Name | Days | Status |
 |-------|------|------|--------|
-| 0 | Project Setup & Architecture Docs | 1 | DONE |
+| 0 | Project Setup & Architecture Docs | 1 | IN PROGRESS |
 | 1 | Safety Concept (HARA, Safety Goals, FSC) | 1 | PENDING |
 | 2 | Safety Analysis (FMEA, DFA, Hardware Metrics) | 1 | PENDING |
 | 3 | Requirements & System Architecture | 1 | PENDING |
@@ -165,14 +236,15 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 | 6 | Firmware: Front Zone Controller | 1.5 | PENDING |
 | 7 | Firmware: Rear Zone Controller | 1 | PENDING |
 | 8 | Firmware: Safety Controller (TMS570) | 1 | PENDING |
-| 9 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
-| 10 | Unit Tests + Coverage | 1 | PENDING |
-| 11 | Hardware Assembly + Integration | 1 | PENDING |
-| 12 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
+| 9 | Simulated ECUs: BCM, ICU, TCU (Docker) | 1.5 | PENDING |
+| 10 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
+| 11 | Unit Tests + Coverage | 1 | PENDING |
+| 12 | Hardware Assembly + Integration | 1 | PENDING |
+| 13 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
 
 ---
 
-## Phase 0: Project Setup & Architecture Docs ✅
+## Phase 0: Project Setup & Architecture Docs (IN PROGRESS)
 
 - [x] Repository scaffold
 - [x] .claude/rules/ — 28 rule files (embedded + ISO 26262)
@@ -295,12 +367,20 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
   - [ ] RZC → CVC: motor status, current, temp, battery voltage (20 ms cycle)
   - [ ] ALL → SC: heartbeat (alive counter, 50 ms cycle)
   - [ ] FZC → CVC/RZC: emergency brake request (event-driven)
+  - [ ] BCM → ALL: light status, indicator state, door lock status (100 ms cycle)
+  - [ ] ICU → CVC: DTC acknowledgment (event-driven)
+  - [ ] TCU ↔ ALL: UDS request/response (0x7DF/0x7E0-0x7E6 → 0x7E8-0x7EE, on-demand)
 - [ ] E2E protection design (CRC-8, alive counter, data ID per safety message)
 - [ ] Hardware-Software Interface per ECU
   - [ ] CVC: pin mapping (SPI1, I2C1, FDCAN1, GPIO)
   - [ ] FZC: pin mapping (TIM2, USART1, SPI2, FDCAN1, GPIO)
   - [ ] RZC: pin mapping (TIM3, TIM4, ADC1, FDCAN1, GPIO)
   - [ ] SC: pin mapping (DCAN1, GIO, RTI)
+- [ ] Simulated ECU CAN interface specification
+  - [ ] POSIX SocketCAN abstraction layer (replaces STM32 HAL CAN driver)
+  - [ ] Docker networking: host network mode for CAN socket access
+  - [ ] CAN bridge configuration: CANable on PC ↔ real CAN bus
+  - [ ] vcan0 setup for pure-software CI/CD mode
 - [ ] Bill of Materials (final, with supplier links)
 
 ### Files
@@ -308,11 +388,13 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 - `docs/safety/hsi-specification.md`
 - `hardware/pin-mapping.md`
 - `hardware/bom.md`
+- `docs/aspice/vecu-specification.md`
 
 ### DONE Criteria
 - [ ] Every CAN message defined with ID, signals, timing, E2E protection
-- [ ] HSI complete for all 4 ECUs
+- [ ] HSI complete for all 4 physical ECUs
 - [ ] Pin assignments verified against Nucleo/LaunchPad schematics
+- [ ] Simulated ECU CAN interface specified
 
 ---
 
@@ -441,16 +523,85 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 
 ---
 
-## Phase 9: Edge Gateway — Raspberry Pi + Cloud + ML
+## Phase 9: Simulated ECUs — BCM, ICU, TCU (Docker + SocketCAN)
 
-### 9a: CAN Interface + Data Logging
+### 9a: vECU Runtime Infrastructure
+- [ ] SocketCAN abstraction layer (`firmware/shared/hal_can_posix.c`)
+  - [ ] Same `can_tx()` / `can_rx()` API as STM32 HAL CAN driver
+  - [ ] Linux SocketCAN backend (socket, bind, read, write)
+  - [ ] Compile-time switch: `#ifdef PLATFORM_POSIX` vs `#ifdef PLATFORM_STM32`
+- [ ] Dockerfile for vECU base image (Ubuntu, build-essential, can-utils, SocketCAN headers)
+- [ ] `docker-compose.yml` for all 3 simulated ECUs + vcan setup
+- [ ] Startup script: create vcan0, bring up, launch containers
+- [ ] CAN bridge mode: `candump can0 | canplayer vcan0` for real↔virtual bridging
+- [ ] Makefile target: `make vecu` to build all 3 simulated ECUs for Linux
+
+### 9b: Body Control Module (BCM)
+- [ ] `firmware/bcm/src/bcm_main.c` — 100 ms main loop
+- [ ] `firmware/bcm/src/lights.c` — auto headlight logic (speed > 0 → lights on)
+- [ ] `firmware/bcm/src/indicators.c` — turn signals from steering angle, hazard on emergency
+- [ ] `firmware/bcm/src/door_lock.c` — lock state management, auto-lock at speed
+- [ ] `firmware/bcm/src/can_manager.c` — subscribe to vehicle state, publish light/indicator/lock status
+- [ ] CAN messages: 0x400 (light status), 0x401 (indicator state), 0x402 (door lock status)
+
+### 9c: Instrument Cluster Unit (ICU)
+- [ ] `firmware/icu/src/icu_main.c` — 50 ms main loop
+- [ ] `firmware/icu/src/dashboard.c` — ncurses terminal UI
+  - [ ] Speedometer (from RZC encoder data)
+  - [ ] Motor temperature gauge
+  - [ ] Battery voltage display
+  - [ ] Warning lights: overheat, overcurrent, steering fault, CAN fault, e-stop
+  - [ ] Active fault list (DTCs received from TCU/ECUs)
+- [ ] `firmware/icu/src/can_decoder.c` — decode ALL CAN message IDs, update display model
+- [ ] `firmware/icu/src/dtc_display.c` — display active/stored DTCs from TCU
+
+### 9d: Telematics Control Unit (TCU)
+- [ ] `firmware/tcu/src/tcu_main.c` — event-driven (UDS request → response)
+- [ ] `firmware/tcu/src/uds_server.c` — UDS (ISO 14229) service handler
+  - [ ] 0x10 DiagnosticSessionControl (default, extended, programming)
+  - [ ] 0x22 ReadDataByIdentifier (live sensor data, SW version, HW version)
+  - [ ] 0x14 ClearDiagnosticInformation (clear stored DTCs)
+  - [ ] 0x19 ReadDTCInformation (list stored DTCs by status mask)
+  - [ ] 0x3E TesterPresent (keep session alive)
+  - [ ] 0x7F NegativeResponse (serviceNotSupported, conditionsNotCorrect)
+- [ ] `firmware/tcu/src/dtc_store.c` — DTC storage (in-memory, max 64 DTCs)
+  - [ ] DTC format: 3-byte DTC number + status byte (ISO 14229 status bits)
+  - [ ] Auto-capture DTCs from fault CAN messages (overcurrent, overtemp, sensor fail)
+- [ ] `firmware/tcu/src/obd2_pids.c` — OBD-II PID handler (mode 01)
+  - [ ] PID 0x0C: engine RPM (from motor encoder)
+  - [ ] PID 0x0D: vehicle speed
+  - [ ] PID 0x05: coolant temp (from motor temp)
+  - [ ] PID 0x04: calculated load (from torque request / max torque)
+
+### Files
+- `firmware/bcm/src/`, `firmware/bcm/include/`
+- `firmware/icu/src/`, `firmware/icu/include/`
+- `firmware/tcu/src/`, `firmware/tcu/include/`
+- `firmware/shared/hal_can_posix.c`, `firmware/shared/hal_can_posix.h`
+- `docker/Dockerfile.vecu`
+- `docker/docker-compose.yml`
+- `scripts/vecu-start.sh`
+
+### DONE Criteria
+- [ ] All 3 simulated ECUs build and run on Linux
+- [ ] BCM sends light/indicator/lock messages on vcan0
+- [ ] ICU displays live dashboard from all CAN traffic
+- [ ] TCU responds to UDS requests (0x10, 0x22, 0x19, 0x14)
+- [ ] Docker-compose brings up all 3 with single command
+- [ ] CAN bridge mode connects simulated ECUs to real CAN bus
+
+---
+
+## Phase 10: Edge Gateway — Raspberry Pi + Cloud + ML
+
+### 10a: CAN Interface + Data Logging
 - [ ] CANable 2.0 setup (flash candleLight firmware, gs_usb driver)
 - [ ] SocketCAN configuration (`ip link set can0 up type can bitrate 500000`)
 - [ ] python-can listener (Notifier + Listener pattern)
 - [ ] CAN data logger (CSV/Parquet format for ML training)
 - [ ] CAN message decoder (parse all message IDs per CAN matrix)
 
-### 9b: Cloud Telemetry
+### 10b: Cloud Telemetry
 - [ ] AWS IoT Core setup (thing, certificate, policy)
 - [ ] MQTT publisher (paho-mqtt or AWS IoT SDK, TLS on port 8883)
 - [ ] Telemetry schema (JSON: ECU status, sensor values, fault flags)
@@ -464,7 +615,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
   - [ ] Anomaly score display
   - [ ] Fault event log
 
-### 9c: Edge ML Models
+### 10c: Edge ML Models
 - [ ] Data collection: run normal + fault scenarios, log CAN data
 - [ ] Model 1: Motor Health Score (Random Forest)
   - [ ] Features: current mean/variance, temp trend, current-to-torque ratio
@@ -476,7 +627,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
   - [ ] Deploy on Pi, inference at 1 Hz
 - [ ] Alert pipeline: anomaly score > threshold → MQTT alert → Grafana alarm
 
-### 9d: Fault Injection GUI
+### 10d: Fault Injection GUI
 - [ ] Python GUI (tkinter or web-based Flask)
   - [ ] Buttons per demo scenario (1-12)
   - [ ] Live CAN bus status display
@@ -502,7 +653,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 
 ---
 
-## Phase 10: Unit Tests + Coverage
+## Phase 11: Unit Tests + Coverage
 
 - [ ] Test framework setup (Unity for STM32, CCS test for TMS570, pytest for Pi)
 - [ ] Unit tests for every safety-critical module:
@@ -515,6 +666,12 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
   - [ ] `temp_monitor.c` — derating curve, shutdown threshold
   - [ ] `heartbeat.c` — timeout detection, alive counter validation
   - [ ] `e2e.c` — CRC calculation, alive counter wrap
+- [ ] Simulated ECU tests:
+  - [ ] `uds_server.c` — all UDS services, negative responses, session management
+  - [ ] `dtc_store.c` — store, read, clear, overflow handling
+  - [ ] `obd2_pids.c` — PID response values, unsupported PID handling
+  - [ ] `lights.c` — auto headlight logic, hazard trigger conditions
+  - [ ] `can_decoder.c` — decode all message IDs, handle unknown IDs
 - [ ] Fault injection tests per module
 - [ ] Static analysis (cppcheck + MISRA subset)
 - [ ] Coverage report (statement, branch, MC/DC for safety-critical)
@@ -524,6 +681,9 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 - `firmware/fzc/test/`
 - `firmware/rzc/test/`
 - `firmware/sc/test/`
+- `firmware/bcm/test/`
+- `firmware/icu/test/`
+- `firmware/tcu/test/`
 - `gateway/tests/`
 - `docs/aspice/unit-test-report.md`
 - `docs/aspice/coverage-report.md`
@@ -537,7 +697,7 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 
 ---
 
-## Phase 11: Hardware Assembly + Integration
+## Phase 12: Hardware Assembly + Integration
 
 - [ ] Mount 4 ECU boards on platform
 - [ ] CAN bus wiring (daisy chain: CVC → FZC → RZC → SC, 120Ω terminators at CVC and SC)
@@ -556,42 +716,46 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
   - [ ] Fault LEDs → SC GPIO
   - [ ] External watchdogs → each ECU GPIO
 - [ ] Pi + CANable connected to CAN bus
-- [ ] Flash all firmware
-- [ ] Integration test: CAN messages flowing between all ECUs
-- [ ] End-to-end test: pedal → CVC → RZC → motor spins
-- [ ] Safety chain test: fault → SC detects → kill relay opens → motor stops
-- [ ] Cloud test: Pi → AWS → Grafana shows live data
+- [ ] PC + CANable connected to CAN bus (CAN bridge for simulated ECUs)
+- [ ] Flash all physical firmware
+- [ ] Launch simulated ECUs via docker-compose
+- [ ] Integration test: CAN messages flowing between all 7 ECUs (4 physical + 3 simulated)
+- [ ] End-to-end test: pedal → CVC → RZC → motor spins → ICU shows speed
+- [ ] Safety chain test: fault → SC detects → kill relay opens → motor stops → BCM hazards
+- [ ] Diagnostics test: UDS request from PC → TCU responds with DTCs
+- [ ] Cloud test: Pi → AWS → Grafana shows live data from all 7 ECUs
 
 ### Files
 - `docs/aspice/integration-test-report.md`
 - Photos of assembled platform
 
 ### DONE Criteria
-- [ ] All 4 ECUs + Pi communicating on CAN bus
+- [ ] All 7 ECUs (4 physical + 3 simulated) + Pi communicating on CAN bus
 - [ ] End-to-end pedal-to-motor working
 - [ ] Safety chain (heartbeat → timeout → kill) working
+- [ ] Simulated ECUs responding to CAN traffic (BCM lights, ICU dashboard, TCU UDS)
 - [ ] Cloud dashboard receiving live data
 - [ ] No communication errors in 10-minute run
 
 ---
 
-## Phase 12: Demo Scenarios + Video + Portfolio Polish
+## Phase 13: Demo Scenarios + Video + Portfolio Polish
 
-### 12a: Demo Scenarios
-- [ ] Execute and record all 12 fault scenarios
+### 13a: Demo Scenarios
+- [ ] Execute and record all 15 demo scenarios
 - [ ] Each scenario: setup → trigger → observable result → CAN trace
 - [ ] Document results in system test report
 
-### 12b: Video
+### 13b: Video
 - [ ] Record each scenario on video (10-15 sec each)
 - [ ] Create demo reel (3-5 min combined)
 - [ ] Include: platform overview, normal operation, fault scenarios, cloud dashboard, ML alerts
 
-### 12c: Safety Case
+### 13c: Safety Case
 - [ ] Safety case document (claims, arguments, evidence)
 - [ ] Final traceability verification (no gaps in matrix)
 
-### 12d: Portfolio Polish
+### 13d: Portfolio Polish
 - [ ] README.md — portfolio landing page
   - [ ] Project overview + zonal architecture diagram
   - [ ] Photo of assembled platform
@@ -623,19 +787,22 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 
 | Skill Area | Where Demonstrated | Resume Keywords |
 |------------|-------------------|-----------------|
-| Embedded C (MISRA) | Firmware: CVC, FZC, RZC, SC | MISRA C, state machines, defensive programming |
+| Embedded C (MISRA) | Firmware: CVC, FZC, RZC, SC, BCM, ICU, TCU | MISRA C, state machines, defensive programming |
 | Automotive Safety MCU | Safety Controller (TMS570) | TMS570, lockstep, HALCoGen, Cortex-R5 |
 | Automotive Safety Process | All safety docs | ISO 26262, ASIL D, HARA, FMEA, DFA, safety case |
-| Zonal Architecture | System design | E/E architecture, zonal controllers |
+| Zonal Architecture | System design (7 ECUs, 4 physical + 3 simulated) | E/E architecture, zonal controllers |
 | CAN Bus Protocol | CAN matrix, E2E, all firmware | CAN 2.0B, E2E protection, CRC, alive counter |
 | Sensor Integration | AS5048A, TFMini-S, ACS723, NTC | SPI, UART, ADC, lidar, hall-effect, ToF |
 | Motor Control | RZC firmware | PWM, H-bridge, current monitoring, encoder |
 | ASPICE Process | All documentation | ASPICE 4.0, V-model, traceability |
-| HIL Testing | Fault injection GUI | HIL, fault injection, python-can, SocketCAN |
+| Virtual ECU / SIL | BCM, ICU, TCU (Docker + SocketCAN) | vECU, SIL testing, Docker, SocketCAN, CI/CD |
+| UDS Diagnostics | TCU firmware | UDS (ISO 14229), OBD-II, DTC management, ReadDataByID |
+| HIL Testing | Fault injection GUI + CAN bridge | HIL, fault injection, python-can, SocketCAN |
 | Edge Computing | Raspberry Pi gateway | Edge ML, gateway, python-can |
 | Machine Learning | Motor health, anomaly detection | scikit-learn, Isolation Forest, Random Forest, predictive maintenance |
 | Cloud IoT | AWS pipeline | AWS IoT Core, MQTT, Timestream, Grafana |
 | Automotive Cybersecurity | CAN anomaly detection | ISO/SAE 21434, intrusion detection |
+| Containerization | Simulated ECU runtime | Docker, docker-compose, Linux containers |
 
 ---
 
@@ -649,3 +816,6 @@ Unlike traditional domain-based architectures (one ECU per function), this proje
 | AWS free tier exceeded | Unexpected cost | Batch messages to 1/5sec. Budget $3/month worst case. |
 | Sensor wiring errors | Debug time | Follow HSI spec exactly. Test each sensor standalone before integration. |
 | ML model insufficient training data | Weak demo | Generate synthetic data from fault injection. 30 min of CAN logging = thousands of samples. |
+| CAN bridge timing jitter | Simulated ECUs have delayed responses vs physical | Acceptable for QM-rated simulated ECUs. Document latency in test report. |
+| SocketCAN not available on Windows | Dev PC is Windows | Use WSL2 with USB passthrough for CANable, or develop on Raspberry Pi directly. Docker Desktop supports WSL2 backend. |
+| UDS implementation scope creep | TCU takes too long | Limit to 5 core services (0x10, 0x22, 0x14, 0x19, 0x3E). No security access (0x27) for portfolio scope. |
