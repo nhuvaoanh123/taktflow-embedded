@@ -4,44 +4,50 @@
 
 **Last updated**: 2026-02-20
 **Branch**: `develop`
-**Phase**: Pre-planning — product defined, starting Day 1
+**Phase**: Phase 0 DONE — Master plan finalized, starting Phase 1
 
 ---
 
 ## What This Project Is
 
-**Portfolio project** demonstrating ISO 26262 ASIL D automotive functional safety engineering.
+**Portfolio project** demonstrating ISO 26262 ASIL D automotive functional safety engineering with cloud IoT and edge ML.
 
-**Product**: Mini Vehicle Platform — 7-ECU system-of-systems connected via CAN bus, demonstrating drive-by-wire with full safety architecture.
+**Product**: Zonal Vehicle Platform — 4-ECU zonal architecture connected via CAN bus, with Raspberry Pi edge gateway, cloud telemetry (AWS), and ML-based anomaly detection. Demonstrates drive-by-wire with full safety lifecycle.
 
-### The 7 ECUs
+### Architecture: Zonal (Modern E/E)
 
-| ECU | Full Name | Role | ASIL | Hardware |
-|-----|-----------|------|------|----------|
-| VCU | Vehicle Control Unit | Master arbitrator, pedal input, E-stop | D | ESP32 |
-| PCU | Powertrain Control Unit | Motor control, current/temp monitoring | D | STM32 |
-| BCU | Brake Control Unit | Brake servo, parking brake, hill hold | D | STM32 |
-| SCU | Steering Control Unit | Steering servo, angle feedback | D | Arduino Nano |
-| ADAS | Advanced Driver Assist | Distance sensing, emergency brake request | B/D | Arduino Nano |
-| BMS | Battery Management System | Voltage, current, temp, kill relay | C | Arduino Nano |
-| Safety MCU | Independent Monitor | Alive monitoring, CAN watchdog, system kill | D | STM32 |
+| Zonal ECU | Absorbs Functions | Hardware | ASIL |
+|-----------|-------------------|----------|------|
+| Central Vehicle Computer (CVC) | VCU | STM32G474RE Nucleo | D (SW) |
+| Front Zone Controller (FZC) | BCU + SCU + ADAS | STM32G474RE Nucleo | D (SW) |
+| Rear Zone Controller (RZC) | PCU + BMS | STM32G474RE Nucleo | D (SW) |
+| Safety Controller (SC) | Safety MCU | TI TMS570LC43x LaunchPad | D (HW lockstep) |
 
-### 15 Demo Fault Scenarios
+**Additional**: Raspberry Pi 4 (edge gateway, cloud, ML) + CANable 2.0 (USB-CAN)
+
+**Diverse redundancy**: STM32 (ST) for zone ECUs, TMS570 (TI) for Safety Controller.
+
+### 12 Demo Fault Scenarios
 1. Normal driving
 2. Pedal sensor disagreement → limp mode
 3. Pedal sensor failure → motor stops
-4. Object detected → emergency brake (cross-ECU)
-5. Motor overcurrent → PCU cuts power
-6. Battery overtemp → system derates
-7. Battery critical → kill relay
-8. Steering sensor fault → return to center
-9. CAN bus failure → safety MCU kills
-10. PCU hangs → safety MCU kills motor
-11. Hill hold → auto brake
-12. E-stop → broadcast stop
-13. ADAS sensor blocked → disable auto-brake
-14. VCU vs Safety MCU disagree → safety wins
-15. Multiple faults → cascading degradation
+4. Object detected (lidar) → emergency brake
+5. Motor overcurrent → motor stops
+6. Motor overtemp → derating then stop
+7. Steering sensor fault → return to center
+8. CAN bus loss → Safety Controller kills system
+9. ECU hang → Safety Controller kills system
+10. E-stop → broadcast stop
+11. ML anomaly alert → cloud dashboard alarm
+12. CVC vs Safety disagree → Safety wins
+
+### Key Design Decisions
+- **Zonal over domain**: Modern E/E architecture, fewer ECUs, more resume impact
+- **3× STM32 + 1× TMS570**: One toolchain for most firmware, real ASIL D MCU for safety
+- **TMS570 for Safety Controller**: Simple firmware (~400 LOC), lockstep cores, TUV-certified
+- **Cloud + ML**: AWS IoT Core + Grafana + scikit-learn (motor health, CAN anomaly detection)
+- **CAN 2.0B only**: TMS570 DCAN doesn't support FD. STM32 FDCAN runs in classic mode. All compatible.
+- **~$942 hardware budget** (within $2K target)
 
 ---
 
@@ -51,18 +57,37 @@
 taktflow-embedded/
 ├── .claude/
 │   ├── settings.json, hooks/, rules/ (28 files), skills/ (3)
-├── firmware/src/          — EMPTY, awaiting Day 4+
-├── firmware/test/         — EMPTY, awaiting Day 9
-├── hardware/              — EMPTY, awaiting Day 4
+├── firmware/
+│   ├── cvc/src/, cvc/include/, cvc/test/    — Central Vehicle Computer (STM32)
+│   ├── fzc/src/, fzc/include/, fzc/test/    — Front Zone Controller (STM32)
+│   ├── rzc/src/, rzc/include/, rzc/test/    — Rear Zone Controller (STM32)
+│   ├── sc/src/, sc/include/, sc/test/       — Safety Controller (TMS570)
+│   └── shared/                               — Shared CAN protocol, E2E library
+├── gateway/                                  — Raspberry Pi edge gateway (Python)
+├── hardware/                                 — Pin mappings, BOM, schematics
 ├── docs/
-│   ├── plans/             — EMPTY, awaiting Day 1 plan
-│   ├── safety/            — EMPTY, awaiting Day 1
-│   ├── aspice/            — EMPTY, awaiting Day 3
-│   ├── reference/         — process-playbook.md, lessons-learned.md
-│   └── PROJECT_STATE.md   — THIS FILE
+│   ├── plans/master-plan.md                  — UPDATED with zonal architecture
+│   ├── safety/                               — EMPTY, awaiting Phase 1
+│   ├── aspice/                               — EMPTY, awaiting Phase 3
+│   └── reference/                            — process-playbook.md, lessons-learned.md
 ├── CLAUDE.md
 └── .gitignore
 ```
+
+---
+
+## Hardware Feasibility (Verified)
+
+All integration points researched and confirmed feasible:
+- STM32G474RE: enough pins for all 3 zone roles, <1% CPU load at 170MHz
+- TMS570LC43x: CAN silent mode works, ~400 lines firmware, DCAN1 via edge connector
+- CAN bus: FDCAN (classic mode) + DCAN coexist at 500kbps, proven configuration
+- TFMini-S lidar: UART 3.3V logic, 5V power, official STM32 example exists
+- AS5048A: SPI dual sensors on same bus with separate CS, 14-bit resolution
+- BTS7960: 3.3V logic compatible, built-in current sense + external ACS723
+- CANable 2.0 + Pi: candleLight firmware, gs_usb driver, python-can proven
+- Edge ML: scikit-learn inference sub-millisecond on Pi 4
+- AWS IoT Core: MQTT over TLS, batch to 1msg/5sec for free tier
 
 ---
 
@@ -70,7 +95,7 @@ taktflow-embedded/
 
 - **Branching**: Git Flow (main → develop → feature/)
 - **Remote**: github.com/nhuvaoanh123/taktflow-embedded
-- develop is 3 commits ahead of main
+- **Current branch**: develop
 
 ## User Preferences
 
@@ -78,4 +103,6 @@ taktflow-embedded/
 - Plan before implementing
 - Update PROJECT_STATE.md before context compression
 - Building as portfolio for automotive FSE job
-- Full 7-ECU scope, no cutting corners
+- Zonal architecture, not domain-based
+- Focus on finishability — 3× STM32 + 1× TMS570 + Pi
+- ~$2K hardware budget
