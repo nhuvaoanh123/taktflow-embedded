@@ -137,7 +137,7 @@ MODE 3: Partial Hardware (Development Mode)
 | Cloud | AWS IoT Core + Grafana | Real-time dashboard, data lake, alerts |
 | vECU Runtime | Docker + SocketCAN | Run simulated ECUs with same C source code |
 
-### 15 Demo Scenarios (12 Safety + 3 Simulated ECU)
+### 16 Demo Scenarios (12 Safety + 3 Simulated ECU + 1 SAP QM)
 
 | # | Scenario | Trigger | Observable Result | ECUs Involved |
 |---|----------|---------|-------------------|---------------|
@@ -156,6 +156,7 @@ MODE 3: Partial Hardware (Development Mode)
 | 13 | UDS diagnostic session | TCU receives 0x10 request | TCU responds, reads live data via 0x22 | TCU, all |
 | 14 | DTC read/clear cycle | TCU 0x19/0x14 service | TCU lists stored faults, clears on command | TCU |
 | 15 | Night driving mode | Speed > 0 in BCM | BCM auto-enables headlights, ICU shows icon | BCM, ICU, RZC |
+| 16 | DTC → SAP QM workflow | Motor overcurrent DTC | Q-Meldung created, 8D report auto-generated | RZC, TCU, Pi, SAP QM |
 
 ---
 
@@ -795,11 +796,56 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
   - [ ] Deploy on Pi, inference at 1 Hz
 - [ ] Alert pipeline: anomaly score > threshold → MQTT alert → Grafana alarm
 
-### 11d: Fault Injection GUI
+### 11d: SAP QM Integration (Simulated)
+
+Demonstrates the full chain: **sensor fault → DTC (Dem) → CAN → cloud → SAP Quality Notification**.
+
+This bridges embedded engineering with enterprise business processes — showing understanding of how vehicle field failures flow into the OEM's quality management system.
+
+- [ ] SAP QM mock API (`gateway/sap_qm_mock/`)
+  - [ ] Flask REST API simulating SAP QM BAPI endpoints
+  - [ ] `POST /api/qm/notification` — create quality notification (Q-Meldung)
+  - [ ] `GET /api/qm/notifications` — list all notifications
+  - [ ] `PATCH /api/qm/notification/{id}` — update status (open → in process → completed)
+  - [ ] In-memory storage (SQLite for persistence across restarts)
+- [ ] DTC → Quality Notification mapping
+  - [ ] DTC triggers notification automatically when cloud receives fault MQTT message
+  - [ ] Notification types:
+    - [ ] Q1 (Customer complaint): overcurrent, overtemp → field return
+    - [ ] Q2 (Internal): sensor plausibility failure → production quality
+    - [ ] Q3 (Supplier complaint): CAN transceiver fault → supplier issue
+  - [ ] Notification content maps DTC data to SAP fields:
+
+    | DTC Field | SAP QM Field | Example |
+    |-----------|-------------|---------|
+    | DTC number (3 bytes) | Defect code (QMNUM) | P0480 (Motor overcurrent) |
+    | ECU ID | Equipment number (EQUNR) | RZC-001 |
+    | Timestamp | Notification date (QMDAT) | 2026-02-21 |
+    | Fault status | Priority (PRIOK) | 1 (safety-critical) |
+    | Sensor values at fault | Long text (QMTXT) | "Current: 15.2A, Threshold: 10A" |
+    | Safety goal reference | Catalog code (FECOD) | SG-003 (unintended acceleration) |
+
+- [ ] SAP QM Dashboard (web UI)
+  - [ ] Quality notification list (table: ID, type, DTC, ECU, status, date)
+  - [ ] Notification detail view (full DTC context, sensor values, safety goal)
+  - [ ] 8D report template auto-generated from DTC data
+    - [ ] D1: Team (auto: "Zonal Platform Safety Team")
+    - [ ] D2: Problem description (from DTC + sensor context)
+    - [ ] D3: Containment (from safe state in safety concept)
+    - [ ] D4: Root cause (placeholder — user fills in)
+    - [ ] D5-D8: Corrective action workflow
+  - [ ] Statistics: notifications per ECU, per DTC type, trend over time
+- [ ] Integration pipeline:
+  - [ ] MQTT topic `vehicle/dtc/new` → Lambda/rule → SAP QM mock API
+  - [ ] Grafana panel linking to SAP QM dashboard for cross-reference
+  - [ ] Traceability: DTC → quality notification → 8D report → corrective action
+
+### 11e: Fault Injection GUI
 - [ ] Python GUI (tkinter or web-based Flask)
-  - [ ] Buttons per demo scenario (1-12)
+  - [ ] Buttons per demo scenario (1-15)
   - [ ] Live CAN bus status display
   - [ ] Scenario result logging
+  - [ ] SAP QM notification feed (shows new Q-Meldung when DTC fires)
 - [ ] CAN message injection (simulate faults from Pi)
 
 ### Files
@@ -807,8 +853,13 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 - `gateway/cloud_publisher.py`
 - `gateway/ml_inference.py`
 - `gateway/fault_injector.py`
-- `gateway/models/` — trained model files
-- `gateway/config.py` — CAN IDs, MQTT topics, thresholds
+- `gateway/sap_qm_mock/app.py` — Flask API simulating SAP QM
+- `gateway/sap_qm_mock/models.py` — notification data model
+- `gateway/sap_qm_mock/dtc_mapping.py` — DTC → Q-notification mapping rules
+- `gateway/sap_qm_mock/templates/` — dashboard HTML templates
+- `gateway/sap_qm_mock/eight_d.py` — 8D report generator
+- `gateway/models/` — trained ML model files
+- `gateway/config.py` — CAN IDs, MQTT topics, thresholds, SAP QM config
 - `gateway/requirements.txt`
 - `docs/aspice/cloud-architecture.md`
 
@@ -817,7 +868,10 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 - [ ] Grafana dashboard shows live telemetry
 - [ ] Motor health model produces scores
 - [ ] Anomaly detector flags injected faults
-- [ ] Fault injection GUI triggers demo scenarios
+- [ ] DTC automatically creates SAP QM notification via mock API
+- [ ] SAP QM dashboard shows notification list with DTC context
+- [ ] 8D report template auto-generated from DTC data
+- [ ] Fault injection GUI triggers demo scenarios and shows Q-Meldung feed
 
 ---
 
@@ -918,7 +972,7 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 ## Phase 14: Demo Scenarios + Video + Portfolio Polish
 
 ### 14a: Demo Scenarios
-- [ ] Execute and record all 15 demo scenarios
+- [ ] Execute and record all 16 demo scenarios
 - [ ] Each scenario: setup → trigger → observable result → CAN trace
 - [ ] Document results in system test report
 
@@ -980,6 +1034,8 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 | Machine Learning | Motor health, anomaly detection | scikit-learn, Isolation Forest, Random Forest, predictive maintenance |
 | Cloud IoT | AWS pipeline | AWS IoT Core, MQTT, Timestream, Grafana |
 | Automotive Cybersecurity | CAN anomaly detection | ISO/SAE 21434, intrusion detection |
+| **SAP QM / Quality Management** | DTC → Q-Meldung pipeline, 8D report generation | SAP QM, quality notification, 8D process, BAPI |
+| **End-to-End Traceability** | Sensor fault → DTC → cloud → SAP QM → 8D → corrective action | Field quality, warranty analysis, closed-loop quality |
 | Containerization | Simulated ECU runtime | Docker, docker-compose, Linux containers |
 
 ---
