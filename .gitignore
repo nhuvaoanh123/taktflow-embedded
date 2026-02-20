@@ -24,5 +24,9 @@ secrets/
 .DS_Store
 Thumbs.db
 
+# Claude Code local (personal, not shared)
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
 # Dependencies
 node_modules/
