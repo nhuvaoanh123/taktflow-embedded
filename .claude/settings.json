@@ -39,6 +39,17 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Update the project state file at docs/PROJECT_STATE.md. Read the current file, then update it with: current date, current branch, last commit hash and message (run git log --oneline -1), any new files or changes since last update, current task status, and what was being worked on. Keep the same format. Then commit and push with message 'Update project state before context compression'.",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }
