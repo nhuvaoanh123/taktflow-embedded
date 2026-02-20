@@ -3,7 +3,7 @@
 **Status**: IN PROGRESS
 **Created**: 2026-02-20
 **Updated**: 2026-02-20
-**Target**: 15.5 working days
+**Target**: 17 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
@@ -219,7 +219,85 @@ MODE 3: Partial Hardware (Development Mode)
 |-----|-----|---------------|-------|
 | STM32G474 | STM32CubeIDE | STM32 HAL + CubeMX | Onboard ST-LINK/V3 |
 | TMS570LC43x | Code Composer Studio | HALCoGen (TUV-certified process) | Onboard XDS110 |
+| Simulated ECUs | VS Code + GCC | POSIX SocketCAN, vsomeip | Docker, GDB |
 | Raspberry Pi | VS Code + Python | python-can, paho-mqtt, scikit-learn | SSH |
+
+## Software Architecture — AUTOSAR-like Layered BSW
+
+All physical ECUs (CVC, FZC, RZC) follow an AUTOSAR Classic-inspired layered architecture. This is not a certified AUTOSAR stack — it's an architectural pattern that demonstrates understanding of the BSW structure.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  APPLICATION LAYER (SWCs — Software Components)         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
+│  │Swc_Pedal │ │Swc_Steer │ │Swc_Motor │ │Swc_Safety│  │
+│  │          │ │          │ │          │ │          │  │
+│  │Rte_Read()│ │Rte_Read()│ │Rte_Read()│ │Rte_Read()│  │
+│  │Rte_Write│ │Rte_Write│ │Rte_Write│ │Rte_Write│  │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘  │
+├───────┼────────────┼────────────┼────────────┼─────────┤
+│  RTE (Runtime Environment)                              │
+│  Signal routing: SWC ports ←→ BSW services              │
+│  Implemented as: function pointer table + signal buffer │
+├─────────────────────────────────────────────────────────┤
+│  BSW SERVICES LAYER                                     │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │ Com │ │ Dcm │ │ Dem │ │ WdgM │ │ BswM │ │ NvM  │  │
+│  │     │ │     │ │     │ │      │ │      │ │(stub)│  │
+│  └──┬──┘ └──┬──┘ └──┬──┘ └──┬───┘ └──┬───┘ └──┬───┘  │
+├─────┼───────┼───────┼───────┼────────┼────────┼───────┤
+│  ECU ABSTRACTION LAYER                                  │
+│  ┌──────┐ ┌──────┐ ┌──────┐                            │
+│  │CanIf │ │ PduR │ │IoHwAb│                            │
+│  └──┬───┘ └──┬───┘ └──┬───┘                            │
+├─────┼────────┼────────┼────────────────────────────────┤
+│  MCAL (Microcontroller Abstraction Layer)               │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐    │
+│  │ Can │ │ Spi │ │ Adc │ │ Pwm │ │ Gpt │ │ Dio │    │
+│  └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘    │
+├─────┼───────┼───────┼───────┼───────┼───────┼────────┤
+│  HARDWARE (STM32G474RE / TMS570LC43x)                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+### BSW Module Summary
+
+| Module | AUTOSAR Name | What It Does | Complexity |
+|--------|-------------|-------------|------------|
+| `Can` | CAN Driver (MCAL) | Raw FDCAN peripheral access | Wraps STM32 HAL |
+| `Spi` | SPI Driver (MCAL) | Raw SPI peripheral access | Wraps STM32 HAL |
+| `Adc` | ADC Driver (MCAL) | Raw ADC DMA scan | Wraps STM32 HAL |
+| `Pwm` | PWM Driver (MCAL) | Timer-based PWM output | Wraps STM32 HAL |
+| `Gpt` | GPT Driver (MCAL) | System tick, timing | Wraps STM32 HAL |
+| `Dio` | DIO Driver (MCAL) | Digital I/O (GPIO) | Wraps STM32 HAL |
+| `CanIf` | CAN Interface | HW-independent CAN API, PDU routing up | ~200 LOC |
+| `PduR` | PDU Router | Routes PDUs between Com, Dcm, CanIf | ~150 LOC |
+| `IoHwAb` | I/O HW Abstraction | Sensor/actuator access for SWCs | ~100 LOC |
+| `Com` | Communication | Signal packing/unpacking, I-PDU groups, deadlines | ~400 LOC |
+| `Dcm` | Diagnostic Comm Mgr | UDS service dispatch, session management | ~500 LOC |
+| `Dem` | Diagnostic Event Mgr | DTC storage, status bits, fault debouncing | ~300 LOC |
+| `WdgM` | Watchdog Manager | Supervised entities, alive/deadline monitoring | ~200 LOC |
+| `BswM` | BSW Mode Manager | ECU state/mode management, rule-based actions | ~150 LOC |
+| `NvM` | NV Memory Manager | Stub — DTC persistence placeholder | ~50 LOC (stub) |
+| `Rte` | Runtime Environment | Signal buffer, port connections, runnable scheduling | ~300 LOC |
+
+**Total shared BSW: ~2,500 LOC** — reused across all 3 STM32 ECUs.
+
+### AUTOSAR Adaptive (Simulated ECUs)
+
+The 3 simulated ECUs (BCM, ICU, TCU) use AUTOSAR Adaptive concepts:
+- **SOME/IP** via BMW's open-source **vsomeip** library for service-oriented communication
+- **ara::com-like** service interfaces between simulated ECUs
+- **CAN ↔ SOME/IP gateway** on Raspberry Pi bridges the two worlds
+
+```
+Physical ECUs (AUTOSAR Classic)          Simulated ECUs (AUTOSAR Adaptive)
+CVC ──┐                                 BCM ──┐
+FZC ──┤── CAN 2.0B (500 kbps) ──→ Pi ──┤── SOME/IP (vsomeip)
+RZC ──┤                          (bridge)    │
+SC  ──┘                                 ICU ──┤
+                                        TCU ──┘
+```
 
 ---
 
@@ -232,15 +310,16 @@ MODE 3: Partial Hardware (Development Mode)
 | 2 | Safety Analysis (FMEA, DFA, Hardware Metrics) | 1 | PENDING |
 | 3 | Requirements & System Architecture | 1 | PENDING |
 | 4 | CAN Protocol & HSI Design | 1 | PENDING |
-| 5 | Firmware: Central Vehicle Computer | 1.5 | PENDING |
-| 6 | Firmware: Front Zone Controller | 1.5 | PENDING |
-| 7 | Firmware: Rear Zone Controller | 1 | PENDING |
-| 8 | Firmware: Safety Controller (TMS570) | 1 | PENDING |
-| 9 | Simulated ECUs: BCM, ICU, TCU (Docker) | 1.5 | PENDING |
-| 10 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
-| 11 | Unit Tests + Coverage | 1 | PENDING |
-| 12 | Hardware Assembly + Integration | 1 | PENDING |
-| 13 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
+| 5 | Shared BSW Layer (AUTOSAR-like) | 2 | PENDING |
+| 6 | Firmware: Central Vehicle Computer (SWCs) | 1 | PENDING |
+| 7 | Firmware: Front Zone Controller (SWCs) | 1 | PENDING |
+| 8 | Firmware: Rear Zone Controller (SWCs) | 1 | PENDING |
+| 9 | Firmware: Safety Controller (TMS570) | 1 | PENDING |
+| 10 | Simulated ECUs: BCM, ICU, TCU (Docker + SOME/IP) | 1.5 | PENDING |
+| 11 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
+| 12 | Unit Tests + Coverage | 1 | PENDING |
+| 13 | Hardware Assembly + Integration | 1 | PENDING |
+| 14 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
 
 ---
 
@@ -398,99 +477,182 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 5: Firmware — Central Vehicle Computer (STM32G474)
+## Phase 5: Shared BSW Layer (AUTOSAR-like)
 
-- [ ] Project setup (STM32CubeIDE, CubeMX pin config, build system)
-- [ ] HAL modules
-  - [ ] `hal_can.c` — FDCAN1 init, TX, RX, E2E pack/unpack
-  - [ ] `hal_spi.c` — SPI1 for dual AS5048A pedal sensors
-  - [ ] `hal_i2c.c` — I2C1 for SSD1306 OLED
-  - [ ] `hal_gpio.c` — E-stop input (EXTI), status LEDs
-- [ ] Application modules
-  - [ ] `pedal.c` — dual sensor read, filtering, plausibility check (|S1-S2| < threshold)
-  - [ ] `state_machine.c` — INIT → NORMAL → DEGRADED → LIMP → SAFE_STOP
-  - [ ] `dashboard.c` — OLED display (vehicle state, speed, fault indicator)
-  - [ ] `can_manager.c` — message dispatch, heartbeat TX, status aggregation
-  - [ ] `estop.c` — E-stop detection, broadcast CAN stop message
-- [ ] `main.c` — 10 ms main loop, watchdog feed, module tick calls
+Build the reusable BSW modules first — these are shared across all 3 STM32 ECUs.
+
+### 5a: MCAL Drivers (wrapping STM32 HAL)
+- [ ] `bsw/mcal/Can.c` — FDCAN1 init, TX, RX (wraps HAL_FDCAN)
+- [ ] `bsw/mcal/Spi.c` — SPI init, transfer (wraps HAL_SPI)
+- [ ] `bsw/mcal/Adc.c` — ADC DMA scan (wraps HAL_ADC)
+- [ ] `bsw/mcal/Pwm.c` — Timer PWM output (wraps HAL_TIM)
+- [ ] `bsw/mcal/Dio.c` — Digital I/O (wraps HAL_GPIO)
+- [ ] `bsw/mcal/Gpt.c` — System tick, timing (wraps SysTick)
+- [ ] Platform abstraction header: `Platform_Types.h` (uint8, uint16, Std_ReturnType)
+
+### 5b: ECU Abstraction Layer
+- [ ] `bsw/ecual/CanIf.c` — hardware-independent CAN interface
+  - [ ] `CanIf_Transmit(PduId, PduInfo)` — routes PDU down to Can driver
+  - [ ] `CanIf_RxIndication()` — callback from Can, routes up to PduR
+- [ ] `bsw/ecual/PduR.c` — PDU Router
+  - [ ] Routes TX: Com/Dcm → CanIf
+  - [ ] Routes RX: CanIf → Com/Dcm (based on PDU ID lookup table)
+- [ ] `bsw/ecual/IoHwAb.c` — I/O Hardware Abstraction
+  - [ ] `IoHwAb_ReadAnalog(channel)` — wraps ADC read
+  - [ ] `IoHwAb_ReadEncoder(channel)` — wraps timer encoder
+  - [ ] `IoHwAb_SetPwm(channel, duty)` — wraps PWM set
+
+### 5c: BSW Services
+- [ ] `bsw/services/Com.c` — Communication module
+  - [ ] Signal-to-PDU packing (little-endian, configurable layout)
+  - [ ] PDU-to-signal unpacking
+  - [ ] I-PDU transmission deadline monitoring
+  - [ ] Rx timeout detection (for safety-critical signals)
+  - [ ] E2E integration point (CRC + alive counter wrapping)
+- [ ] `bsw/services/Dcm.c` — Diagnostic Communication Manager
+  - [ ] UDS service dispatch table
+  - [ ] Session management (default, extended, programming)
+  - [ ] Response pending (0x78) for long operations
+  - [ ] Negative response codes
+- [ ] `bsw/services/Dem.c` — Diagnostic Event Manager
+  - [ ] DTC storage (in-memory array, configurable size)
+  - [ ] DTC status byte management (ISO 14229 status bits)
+  - [ ] Fault debouncing (counter-based)
+  - [ ] `Dem_ReportErrorStatus()` — called by SWCs to report faults
+  - [ ] `Dem_GetDTCStatusAvailabilityMask()`
+- [ ] `bsw/services/WdgM.c` — Watchdog Manager
+  - [ ] Supervised entity registration
+  - [ ] Alive counter monitoring per entity
+  - [ ] Deadline monitoring (max execution time)
+  - [ ] Only feeds external watchdog (TPS3823) if ALL entities healthy
+- [ ] `bsw/services/BswM.c` — BSW Mode Manager
+  - [ ] ECU mode: STARTUP → RUN → DEGRADED → SAFE_STOP → SHUTDOWN
+  - [ ] Mode-dependent rule actions (e.g., SAFE_STOP → disable Com TX)
+- [ ] `bsw/services/E2E.c` — E2E Protection (not standard AUTOSAR module name but fits here)
+  - [ ] CRC-8 calculation
+  - [ ] Alive counter management
+  - [ ] Data ID per message
+
+### 5d: RTE (Runtime Environment)
+- [ ] `bsw/rte/Rte.c` — Runtime Environment
+  - [ ] Signal buffer (shared memory between SWCs and BSW)
+  - [ ] `Rte_Read_<Port>_<Signal>()` — SWC reads a signal
+  - [ ] `Rte_Write_<Port>_<Signal>()` — SWC writes a signal
+  - [ ] Runnable scheduling table (which SWC runs at which tick rate)
+  - [ ] Port connection configuration (compile-time, per ECU)
+- [ ] RTE configuration per ECU (CVC, FZC, RZC) — different port mappings
+
+### Files
+- `firmware/shared/bsw/mcal/` — Can.c, Spi.c, Adc.c, Pwm.c, Dio.c, Gpt.c
+- `firmware/shared/bsw/ecual/` — CanIf.c, PduR.c, IoHwAb.c
+- `firmware/shared/bsw/services/` — Com.c, Dcm.c, Dem.c, WdgM.c, BswM.c, E2E.c
+- `firmware/shared/bsw/rte/` — Rte.c, Rte_Cfg_Cvc.c, Rte_Cfg_Fzc.c, Rte_Cfg_Rzc.c
+- `firmware/shared/bsw/include/` — all headers, Platform_Types.h, Std_Types.h, ComStack_Types.h
+
+### DONE Criteria
+- [ ] BSW compiles for STM32 target
+- [ ] Can → CanIf → PduR → Com chain sends/receives a CAN message
+- [ ] Dcm responds to a basic UDS request (0x10)
+- [ ] Dem stores and retrieves a DTC
+- [ ] WdgM feeds watchdog only when supervised entities are healthy
+- [ ] Rte_Read / Rte_Write pass signals between SWC and Com
+- [ ] Same BSW links into CVC, FZC, RZC projects without modification
+
+---
+
+## Phase 6: Firmware — Central Vehicle Computer (STM32G474)
+
+- [ ] Project setup (STM32CubeIDE, CubeMX pin config, link shared BSW)
+- [ ] CubeMX: configure FDCAN1, SPI1, I2C1, GPIO (E-stop EXTI, LEDs)
+- [ ] Application SWCs (Software Components)
+  - [ ] `Swc_Pedal.c` — dual sensor read via Rte_Read(IoHwAb), plausibility check (|S1-S2| < threshold)
+  - [ ] `Swc_VehicleState.c` — state machine INIT → RUN → DEGRADED → LIMP → SAFE_STOP
+  - [ ] `Swc_Dashboard.c` — OLED display via IoHwAb (vehicle state, speed, fault indicator)
+  - [ ] `Swc_EStop.c` — E-stop detection via Rte_Read(Dio), triggers Rte_Write(broadcast stop)
+  - [ ] `Swc_Heartbeat.c` — alive counter TX via Com, heartbeat aggregation
+- [ ] RTE configuration: `Rte_Cfg_Cvc.c`
+  - [ ] Port mapping: pedal SPI → Swc_Pedal, OLED I2C → Swc_Dashboard
+  - [ ] Runnable schedule: Swc_Pedal @ 10ms, Swc_VehicleState @ 10ms, Swc_Dashboard @ 100ms
+- [ ] `main.c` — BSW init, RTE init, 10ms tick loop, BswM mode management
 - [ ] MISRA compliance pass
 
 ### Files
-- `firmware/cvc/src/` — hal_can.c, hal_spi.c, hal_i2c.c, hal_gpio.c, pedal.c, state_machine.c, dashboard.c, can_manager.c, estop.c, main.c
+- `firmware/cvc/src/` — Swc_Pedal.c, Swc_VehicleState.c, Swc_Dashboard.c, Swc_EStop.c, Swc_Heartbeat.c, main.c
 - `firmware/cvc/include/` — corresponding headers
-- `firmware/shared/` — can_protocol.h, e2e.h, e2e.c (shared across all STM32 ECUs)
+- `firmware/cvc/cfg/` — Rte_Cfg_Cvc.c, Com_Cfg_Cvc.c (signal/PDU mappings for CVC)
 
 ### DONE Criteria
-- [ ] Dual pedal reading with plausibility check working
+- [ ] Dual pedal reading with plausibility check via Rte_Read
 - [ ] State machine transitions verified
-- [ ] CAN messages transmitting and receiving correctly
+- [ ] CAN messages TX/RX through full BSW stack (Swc → Rte → Com → PduR → CanIf → Can)
 - [ ] OLED displays vehicle state
 - [ ] E-stop triggers broadcast stop
+- [ ] Dem stores DTC on pedal plausibility failure
 
 ---
 
-## Phase 6: Firmware — Front Zone Controller (STM32G474)
+## Phase 7: Firmware — Front Zone Controller (STM32G474)
 
-- [ ] Project setup (STM32CubeIDE, CubeMX, link shared/ code)
-- [ ] HAL modules
-  - [ ] `hal_can.c` — FDCAN1 (shared code from CVC, same driver)
-  - [ ] `hal_pwm.c` — TIM2 CH1 (steering servo), TIM2 CH2 (brake servo)
-  - [ ] `hal_uart.c` — USART1 for TFMini-S lidar (DMA RX)
-  - [ ] `hal_spi.c` — SPI2 for AS5048A steering angle sensor
-  - [ ] `hal_gpio.c` — buzzer output
-- [ ] Application modules
-  - [ ] `steering.c` — servo control, angle feedback, rate limiting, angle limits, return-to-center on fault
-  - [ ] `brake.c` — servo control, brake force mapping, auto-brake on CAN timeout
-  - [ ] `lidar.c` — TFMini-S frame parser, distance filtering, threshold check (warning/brake/emergency)
-  - [ ] `fzc_safety.c` — local plausibility checks, sensor timeout detection, safe state logic
-  - [ ] `can_manager.c` — heartbeat TX, command RX, status TX, emergency brake TX
-- [ ] `main.c` — 10 ms main loop
+- [ ] Project setup (STM32CubeIDE, CubeMX, link shared BSW)
+- [ ] CubeMX: configure FDCAN1, TIM2 (PWM), USART1 (DMA), SPI2, GPIO (buzzer)
+- [ ] MCAL extensions (FZC-specific)
+  - [ ] `Uart.c` — USART1 DMA RX for TFMini-S lidar (not in shared MCAL — only FZC needs UART)
+- [ ] Application SWCs
+  - [ ] `Swc_Steering.c` — servo control via Rte_Write(Pwm), angle feedback via Rte_Read(Spi), rate limiting, angle limits, return-to-center on fault
+  - [ ] `Swc_Brake.c` — servo control via Rte_Write(Pwm), brake force mapping, auto-brake on Com Rx timeout
+  - [ ] `Swc_Lidar.c` — TFMini-S frame parser via Rte_Read(Uart), distance filtering, threshold check (warning/brake/emergency)
+  - [ ] `Swc_FzcSafety.c` — local plausibility checks, sensor timeout detection, Dem_ReportErrorStatus on failures
+  - [ ] `Swc_Heartbeat.c` — alive counter TX via Com
+- [ ] RTE configuration: `Rte_Cfg_Fzc.c`
+  - [ ] Port mapping: steering SPI → Swc_Steering, lidar UART → Swc_Lidar, servos PWM → Swc_Steering/Brake
+  - [ ] Runnable schedule: Swc_Steering @ 10ms, Swc_Brake @ 10ms, Swc_Lidar @ 10ms, Swc_FzcSafety @ 20ms
+- [ ] `main.c` — BSW init, RTE init, 10ms tick loop
 
 ### Files
-- `firmware/fzc/src/`
-- `firmware/fzc/include/`
+- `firmware/fzc/src/` — Swc_Steering.c, Swc_Brake.c, Swc_Lidar.c, Swc_FzcSafety.c, Swc_Heartbeat.c, Uart.c, main.c
+- `firmware/fzc/cfg/` — Rte_Cfg_Fzc.c, Com_Cfg_Fzc.c
 
 ### DONE Criteria
-- [ ] Steering servo tracks angle command with feedback
-- [ ] Brake servo responds to brake request
+- [ ] Steering servo tracks angle command through Rte → Pwm
+- [ ] Brake servo responds to brake request via Com Rx
 - [ ] Lidar reads distance, triggers emergency brake at threshold
-- [ ] Return-to-center on steering sensor fault
-- [ ] Auto-brake on CAN timeout
+- [ ] Return-to-center on steering sensor fault, DTC stored via Dem
+- [ ] Auto-brake on Com Rx timeout detection
 
 ---
 
-## Phase 7: Firmware — Rear Zone Controller (STM32G474)
+## Phase 8: Firmware — Rear Zone Controller (STM32G474)
 
-- [ ] Project setup (STM32CubeIDE, CubeMX, link shared/ code)
-- [ ] HAL modules
-  - [ ] `hal_can.c` — FDCAN1 (shared driver)
-  - [ ] `hal_pwm.c` — TIM3 CH1/CH2 for BTS7960 H-bridge (RPWM/LPWM)
-  - [ ] `hal_adc.c` — ADC1 DMA scan: current sensor, thermistors, battery voltage
-  - [ ] `hal_encoder.c` — TIM4 encoder mode (hardware quadrature decode)
-  - [ ] `hal_gpio.c` — motor enable, status LED
-- [ ] Application modules
-  - [ ] `motor.c` — torque request → PWM, ramp limiting, direction control
-  - [ ] `current_monitor.c` — overcurrent detection, cutoff threshold, filtering
-  - [ ] `temp_monitor.c` — derating curve, over-temp shutdown
-  - [ ] `battery.c` — voltage monitoring via divider, SOC estimate (simple voltage table)
-  - [ ] `rzc_safety.c` — motor safety checks, emergency brake response, safe state
-  - [ ] `can_manager.c` — heartbeat TX, torque RX, status TX
-- [ ] `main.c` — 10 ms main loop
+- [ ] Project setup (STM32CubeIDE, CubeMX, link shared BSW)
+- [ ] CubeMX: configure FDCAN1, TIM3 (PWM H-bridge), TIM4 (encoder), ADC1 (DMA), GPIO
+- [ ] Application SWCs
+  - [ ] `Swc_Motor.c` — torque request via Rte_Read(Com) → PWM via Rte_Write(Pwm), ramp limiting, direction control
+  - [ ] `Swc_CurrentMonitor.c` — overcurrent detection via Rte_Read(Adc), cutoff threshold, filtering, Dem_ReportErrorStatus on trip
+  - [ ] `Swc_TempMonitor.c` — derating curve via Rte_Read(Adc), over-temp shutdown, Dem_ReportErrorStatus
+  - [ ] `Swc_Battery.c` — voltage monitoring via Rte_Read(Adc), SOC estimate (simple voltage table)
+  - [ ] `Swc_RzcSafety.c` — motor safety checks, emergency brake response via Com Rx, safe state transition via BswM
+  - [ ] `Swc_Heartbeat.c` — alive counter TX via Com
+- [ ] RTE configuration: `Rte_Cfg_Rzc.c`
+  - [ ] Port mapping: current ADC → Swc_CurrentMonitor, temp ADC → Swc_TempMonitor, encoder → Swc_Motor
+  - [ ] Runnable schedule: Swc_Motor @ 10ms, Swc_CurrentMonitor @ 10ms, Swc_TempMonitor @ 100ms, Swc_Battery @ 1000ms
+- [ ] `main.c` — BSW init, RTE init, 10ms tick loop
 
 ### Files
-- `firmware/rzc/src/`
-- `firmware/rzc/include/`
+- `firmware/rzc/src/` — Swc_Motor.c, Swc_CurrentMonitor.c, Swc_TempMonitor.c, Swc_Battery.c, Swc_RzcSafety.c, Swc_Heartbeat.c, main.c
+- `firmware/rzc/cfg/` — Rte_Cfg_Rzc.c, Com_Cfg_Rzc.c
 
 ### DONE Criteria
-- [ ] Motor responds to torque request proportionally
-- [ ] Overcurrent protection cuts motor within 10 ms
-- [ ] Over-temp derating and shutdown working
-- [ ] Emergency brake command stops motor
-- [ ] Battery voltage reported over CAN
+- [ ] Motor responds to torque request via full BSW stack (Com → Rte → Swc_Motor → Rte → Pwm)
+- [ ] Overcurrent protection cuts motor within 10 ms, DTC stored via Dem
+- [ ] Over-temp derating and shutdown working, DTC stored via Dem
+- [ ] Emergency brake command stops motor via Com Rx
+- [ ] Battery voltage reported over CAN via Com TX
 
 ---
 
-## Phase 8: Firmware — Safety Controller (TMS570LC43x)
+## Phase 9: Firmware — Safety Controller (TMS570LC43x)
+
+**Note**: The Safety Controller does NOT use the AUTOSAR-like BSW stack. It runs a minimal, independent firmware (~400 LOC) generated by HALCoGen. This is intentional — the Safety Controller must be simple, auditable, and architecturally independent from the zone controllers it monitors. Diverse software architecture = real ISO 26262 principle.
 
 - [ ] Project setup (HALCoGen config + CCS project)
   - [ ] HALCoGen: enable DCAN1, GIO, RTI timer, pinmux
@@ -523,20 +685,26 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 9: Simulated ECUs — BCM, ICU, TCU (Docker + SocketCAN)
+## Phase 10: Simulated ECUs — BCM, ICU, TCU (Docker + SOME/IP)
 
-### 9a: vECU Runtime Infrastructure
-- [ ] SocketCAN abstraction layer (`firmware/shared/hal_can_posix.c`)
-  - [ ] Same `can_tx()` / `can_rx()` API as STM32 HAL CAN driver
+### 10a: vECU Runtime Infrastructure
+- [ ] POSIX MCAL abstraction (`firmware/shared/bsw/mcal/Can_Posix.c`)
+  - [ ] Same `Can_Write()` / `Can_MainFunction_Read()` API as STM32 MCAL
   - [ ] Linux SocketCAN backend (socket, bind, read, write)
   - [ ] Compile-time switch: `#ifdef PLATFORM_POSIX` vs `#ifdef PLATFORM_STM32`
-- [ ] Dockerfile for vECU base image (Ubuntu, build-essential, can-utils, SocketCAN headers)
+  - [ ] Entire BSW stack (CanIf, PduR, Com, Dcm, Dem) reused unchanged on Linux
+- [ ] **vsomeip integration** (BMW open-source SOME/IP)
+  - [ ] Install vsomeip library in Docker image
+  - [ ] Service interface definitions (BCM offers LightService, ICU offers DisplayService)
+  - [ ] SOME/IP-SD (Service Discovery) configuration
+  - [ ] CAN ↔ SOME/IP bridge service on Raspberry Pi
+- [ ] Dockerfile for vECU base image (Ubuntu, build-essential, can-utils, vsomeip, SocketCAN headers)
 - [ ] `docker-compose.yml` for all 3 simulated ECUs + vcan setup
 - [ ] Startup script: create vcan0, bring up, launch containers
-- [ ] CAN bridge mode: `candump can0 | canplayer vcan0` for real↔virtual bridging
+- [ ] CAN bridge mode: `cangw` or custom bridge for real↔virtual CAN
 - [ ] Makefile target: `make vecu` to build all 3 simulated ECUs for Linux
 
-### 9b: Body Control Module (BCM)
+### 10b: Body Control Module (BCM)
 - [ ] `firmware/bcm/src/bcm_main.c` — 100 ms main loop
 - [ ] `firmware/bcm/src/lights.c` — auto headlight logic (speed > 0 → lights on)
 - [ ] `firmware/bcm/src/indicators.c` — turn signals from steering angle, hazard on emergency
@@ -544,7 +712,7 @@ MODE 3: Partial Hardware (Development Mode)
 - [ ] `firmware/bcm/src/can_manager.c` — subscribe to vehicle state, publish light/indicator/lock status
 - [ ] CAN messages: 0x400 (light status), 0x401 (indicator state), 0x402 (door lock status)
 
-### 9c: Instrument Cluster Unit (ICU)
+### 10c: Instrument Cluster Unit (ICU)
 - [ ] `firmware/icu/src/icu_main.c` — 50 ms main loop
 - [ ] `firmware/icu/src/dashboard.c` — ncurses terminal UI
   - [ ] Speedometer (from RZC encoder data)
@@ -555,7 +723,7 @@ MODE 3: Partial Hardware (Development Mode)
 - [ ] `firmware/icu/src/can_decoder.c` — decode ALL CAN message IDs, update display model
 - [ ] `firmware/icu/src/dtc_display.c` — display active/stored DTCs from TCU
 
-### 9d: Telematics Control Unit (TCU)
+### 10d: Telematics Control Unit (TCU)
 - [ ] `firmware/tcu/src/tcu_main.c` — event-driven (UDS request → response)
 - [ ] `firmware/tcu/src/uds_server.c` — UDS (ISO 14229) service handler
   - [ ] 0x10 DiagnosticSessionControl (default, extended, programming)
@@ -592,16 +760,16 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 10: Edge Gateway — Raspberry Pi + Cloud + ML
+## Phase 11: Edge Gateway — Raspberry Pi + Cloud + ML
 
-### 10a: CAN Interface + Data Logging
+### 11a: CAN Interface + Data Logging
 - [ ] CANable 2.0 setup (flash candleLight firmware, gs_usb driver)
 - [ ] SocketCAN configuration (`ip link set can0 up type can bitrate 500000`)
 - [ ] python-can listener (Notifier + Listener pattern)
 - [ ] CAN data logger (CSV/Parquet format for ML training)
 - [ ] CAN message decoder (parse all message IDs per CAN matrix)
 
-### 10b: Cloud Telemetry
+### 11b: Cloud Telemetry
 - [ ] AWS IoT Core setup (thing, certificate, policy)
 - [ ] MQTT publisher (paho-mqtt or AWS IoT SDK, TLS on port 8883)
 - [ ] Telemetry schema (JSON: ECU status, sensor values, fault flags)
@@ -615,7 +783,7 @@ MODE 3: Partial Hardware (Development Mode)
   - [ ] Anomaly score display
   - [ ] Fault event log
 
-### 10c: Edge ML Models
+### 11c: Edge ML Models
 - [ ] Data collection: run normal + fault scenarios, log CAN data
 - [ ] Model 1: Motor Health Score (Random Forest)
   - [ ] Features: current mean/variance, temp trend, current-to-torque ratio
@@ -627,7 +795,7 @@ MODE 3: Partial Hardware (Development Mode)
   - [ ] Deploy on Pi, inference at 1 Hz
 - [ ] Alert pipeline: anomaly score > threshold → MQTT alert → Grafana alarm
 
-### 10d: Fault Injection GUI
+### 11d: Fault Injection GUI
 - [ ] Python GUI (tkinter or web-based Flask)
   - [ ] Buttons per demo scenario (1-12)
   - [ ] Live CAN bus status display
@@ -653,19 +821,27 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 11: Unit Tests + Coverage
+## Phase 12: Unit Tests + Coverage
 
 - [ ] Test framework setup (Unity for STM32, CCS test for TMS570, pytest for Pi)
-- [ ] Unit tests for every safety-critical module:
-  - [ ] `pedal.c` — plausibility check (agree, disagree, one failed, both failed)
-  - [ ] `steering.c` — angle limits, rate limiting, return-to-center
-  - [ ] `brake.c` — auto-brake on timeout, brake force mapping
-  - [ ] `lidar.c` — distance thresholds, sensor timeout, stuck value
-  - [ ] `motor.c` — ramp limiting, direction, torque mapping
-  - [ ] `current_monitor.c` — overcurrent detection, threshold, filtering
-  - [ ] `temp_monitor.c` — derating curve, shutdown threshold
-  - [ ] `heartbeat.c` — timeout detection, alive counter validation
-  - [ ] `e2e.c` — CRC calculation, alive counter wrap
+- [ ] BSW module unit tests:
+  - [ ] `Com.c` — signal packing/unpacking, Rx timeout, deadline monitoring
+  - [ ] `CanIf.c` — PDU routing, Tx confirmation, Rx indication
+  - [ ] `PduR.c` — routing table lookup, Com vs Dcm dispatch
+  - [ ] `Dcm.c` — UDS session management, service dispatch, negative responses
+  - [ ] `Dem.c` — DTC storage, status bits, debouncing, overflow
+  - [ ] `WdgM.c` — supervised entity alive check, watchdog feed/block
+  - [ ] `E2E.c` — CRC calculation, alive counter wrap, data ID
+  - [ ] `Rte.c` — signal buffer read/write, port connections
+- [ ] Application SWC unit tests:
+  - [ ] `Swc_Pedal.c` — plausibility check (agree, disagree, one failed, both failed)
+  - [ ] `Swc_Steering.c` — angle limits, rate limiting, return-to-center
+  - [ ] `Swc_Brake.c` — auto-brake on timeout, brake force mapping
+  - [ ] `Swc_Lidar.c` — distance thresholds, sensor timeout, stuck value
+  - [ ] `Swc_Motor.c` — ramp limiting, direction, torque mapping
+  - [ ] `Swc_CurrentMonitor.c` — overcurrent detection, threshold, filtering
+  - [ ] `Swc_TempMonitor.c` — derating curve, shutdown threshold
+  - [ ] `heartbeat.c` (SC) — timeout detection, alive counter validation
 - [ ] Simulated ECU tests:
   - [ ] `uds_server.c` — all UDS services, negative responses, session management
   - [ ] `dtc_store.c` — store, read, clear, overflow handling
@@ -697,7 +873,7 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 12: Hardware Assembly + Integration
+## Phase 13: Hardware Assembly + Integration
 
 - [ ] Mount 4 ECU boards on platform
 - [ ] CAN bus wiring (daisy chain: CVC → FZC → RZC → SC, 120Ω terminators at CVC and SC)
@@ -739,23 +915,23 @@ MODE 3: Partial Hardware (Development Mode)
 
 ---
 
-## Phase 13: Demo Scenarios + Video + Portfolio Polish
+## Phase 14: Demo Scenarios + Video + Portfolio Polish
 
-### 13a: Demo Scenarios
+### 14a: Demo Scenarios
 - [ ] Execute and record all 15 demo scenarios
 - [ ] Each scenario: setup → trigger → observable result → CAN trace
 - [ ] Document results in system test report
 
-### 13b: Video
+### 14b: Video
 - [ ] Record each scenario on video (10-15 sec each)
 - [ ] Create demo reel (3-5 min combined)
 - [ ] Include: platform overview, normal operation, fault scenarios, cloud dashboard, ML alerts
 
-### 13c: Safety Case
+### 14c: Safety Case
 - [ ] Safety case document (claims, arguments, evidence)
 - [ ] Final traceability verification (no gaps in matrix)
 
-### 13d: Portfolio Polish
+### 14d: Portfolio Polish
 - [ ] README.md — portfolio landing page
   - [ ] Project overview + zonal architecture diagram
   - [ ] Photo of assembled platform
@@ -787,16 +963,18 @@ MODE 3: Partial Hardware (Development Mode)
 
 | Skill Area | Where Demonstrated | Resume Keywords |
 |------------|-------------------|-----------------|
-| Embedded C (MISRA) | Firmware: CVC, FZC, RZC, SC, BCM, ICU, TCU | MISRA C, state machines, defensive programming |
+| **AUTOSAR Classic** | Shared BSW layer (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE) | AUTOSAR, BSW, MCAL, RTE, SWC, Com, Dcm, Dem |
+| **AUTOSAR Adaptive** | Simulated ECUs with vsomeip SOME/IP | SOME/IP, vsomeip, service-oriented, ara::com |
+| Embedded C (MISRA) | All firmware: CVC, FZC, RZC, SC, BCM, ICU, TCU | MISRA C, state machines, defensive programming |
 | Automotive Safety MCU | Safety Controller (TMS570) | TMS570, lockstep, HALCoGen, Cortex-R5 |
 | Automotive Safety Process | All safety docs | ISO 26262, ASIL D, HARA, FMEA, DFA, safety case |
-| Zonal Architecture | System design (7 ECUs, 4 physical + 3 simulated) | E/E architecture, zonal controllers |
+| Zonal Architecture | System design (7 ECUs, 4 physical + 3 simulated) | E/E architecture, zonal controllers, SDV |
 | CAN Bus Protocol | CAN matrix, E2E, all firmware | CAN 2.0B, E2E protection, CRC, alive counter |
 | Sensor Integration | AS5048A, TFMini-S, ACS723, NTC | SPI, UART, ADC, lidar, hall-effect, ToF |
 | Motor Control | RZC firmware | PWM, H-bridge, current monitoring, encoder |
 | ASPICE Process | All documentation | ASPICE 4.0, V-model, traceability |
 | Virtual ECU / SIL | BCM, ICU, TCU (Docker + SocketCAN) | vECU, SIL testing, Docker, SocketCAN, CI/CD |
-| UDS Diagnostics | TCU firmware | UDS (ISO 14229), OBD-II, DTC management, ReadDataByID |
+| UDS Diagnostics | Dcm + Dem in BSW, TCU | UDS (ISO 14229), OBD-II, DTC management, ReadDataByID |
 | HIL Testing | Fault injection GUI + CAN bridge | HIL, fault injection, python-can, SocketCAN |
 | Edge Computing | Raspberry Pi gateway | Edge ML, gateway, python-can |
 | Machine Learning | Motor health, anomaly detection | scikit-learn, Isolation Forest, Random Forest, predictive maintenance |
@@ -819,3 +997,5 @@ MODE 3: Partial Hardware (Development Mode)
 | CAN bridge timing jitter | Simulated ECUs have delayed responses vs physical | Acceptable for QM-rated simulated ECUs. Document latency in test report. |
 | SocketCAN not available on Windows | Dev PC is Windows | Use WSL2 with USB passthrough for CANable, or develop on Raspberry Pi directly. Docker Desktop supports WSL2 backend. |
 | UDS implementation scope creep | TCU takes too long | Limit to 5 core services (0x10, 0x22, 0x14, 0x19, 0x3E). No security access (0x27) for portfolio scope. |
+| AUTOSAR BSW over-engineering | Spend too long on BSW perfection | Keep modules simplified (~2,500 LOC total). Not a certified stack — demonstrate architecture understanding, not production completeness. |
+| vsomeip build complexity | Docker image build issues | Pin vsomeip version, pre-build in base image, fallback to raw SOME/IP over UDP if vsomeip too heavy. |

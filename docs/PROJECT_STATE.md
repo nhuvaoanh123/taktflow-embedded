@@ -56,11 +56,13 @@
 
 ### Key Design Decisions
 - **7-ECU hybrid**: 4 physical + 3 simulated (Docker), mirrors real Tier 1 vECU development
+- **AUTOSAR Classic BSW**: Layered architecture (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE) on physical ECUs
+- **AUTOSAR Adaptive / SOME/IP**: vsomeip on simulated ECUs, CAN↔SOME/IP bridge on Pi
 - **Zonal over domain**: Modern E/E architecture, fewer physical ECUs, more resume impact
 - **3× STM32 + 1× TMS570**: One toolchain for most firmware, real ASIL D MCU for safety
-- **TMS570 for Safety Controller**: Simple firmware (~400 LOC), lockstep cores, TUV-certified
-- **Simulated ECUs in C**: Same codebase structure, POSIX SocketCAN abstraction layer
-- **UDS/OBD-II in TCU**: Massive resume keyword, every OEM cares about diagnostics
+- **TMS570 for Safety Controller**: Simple firmware (~400 LOC), lockstep cores, TUV-certified, NO AUTOSAR (intentional — diverse architecture)
+- **Simulated ECUs in C**: Same BSW stack compiled for Linux with POSIX SocketCAN MCAL
+- **UDS/OBD-II in Dcm/Dem**: Diagnostic stack per AUTOSAR module structure
 - **Cloud + ML**: AWS IoT Core + Grafana + scikit-learn (motor health, CAN anomaly detection)
 - **CAN 2.0B only**: TMS570 DCAN doesn't support FD. STM32 FDCAN runs in classic mode. All compatible.
 - **~$977 hardware budget** (within $2K target)
@@ -81,13 +83,13 @@ taktflow-embedded/
 │   ├── bcm/src/, bcm/include/, bcm/test/   — Body Control Module (simulated)
 │   ├── icu/src/, icu/include/, icu/test/   — Instrument Cluster Unit (simulated)
 │   ├── tcu/src/, tcu/include/, tcu/test/   — Telematics Control Unit (simulated)
-│   └── shared/                               — Shared CAN protocol, E2E, SocketCAN abstraction
+│   └── shared/bsw/                           — AUTOSAR-like BSW (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, RTE)
 ├── docker/                                   — Dockerfile, docker-compose for simulated ECUs
 ├── gateway/                                  — Raspberry Pi edge gateway (Python)
 ├── hardware/                                 — Pin mappings, BOM, schematics
 ├── scripts/                                  — Build scripts, vECU startup scripts
 ├── docs/
-│   ├── plans/master-plan.md                  — 7-ECU hybrid architecture, 14 phases (0-13)
+│   ├── plans/master-plan.md                  — 7-ECU hybrid architecture, 15 phases (0-14), AUTOSAR BSW
 │   ├── safety/                               — EMPTY, awaiting Phase 1
 │   ├── aspice/                               — EMPTY, awaiting Phase 3
 │   └── reference/                            — process-playbook.md, lessons-learned.md
