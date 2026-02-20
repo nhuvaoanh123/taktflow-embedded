@@ -3,7 +3,7 @@
 **Status**: IN PROGRESS
 **Created**: 2026-02-20
 **Updated**: 2026-02-20
-**Target**: 17 working days
+**Target**: 18.5 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
@@ -318,8 +318,8 @@ SC  ──┘                                 ICU ──┤
 | 9 | Firmware: Safety Controller (TMS570) | 1 | PENDING |
 | 10 | Simulated ECUs: BCM, ICU, TCU (Docker + SOME/IP) | 1.5 | PENDING |
 | 11 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
-| 12 | Unit Tests + Coverage | 1 | PENDING |
-| 13 | Hardware Assembly + Integration | 1 | PENDING |
+| 12 | Verification: MIL + Unit Tests + SIL + PIL | 2 | PENDING |
+| 13 | HIL: Hardware Assembly + Integration Testing | 1.5 | PENDING |
 | 14 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
 
 ---
@@ -875,9 +875,69 @@ This bridges embedded engineering with enterprise business processes — showing
 
 ---
 
-## Phase 12: Unit Tests + Coverage
+## Phase 12: Verification — xIL Testing + Unit Tests + Coverage
 
-- [ ] Test framework setup (Unity for STM32, CCS test for TMS570, pytest for Pi)
+This phase implements the full **xIL (x-in-the-Loop) testing strategy** used in automotive systems engineering. Each level adds hardware fidelity, progressively validating from pure software to full system.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  xIL Testing Pyramid                                           │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  HIL — Hardware-in-the-Loop                              │   │
+│  │  All 4 physical ECUs + simulated plant + fault injection │   │
+│  │  Validates: full system safety, real CAN timing          │   │
+│  ├─────────────────────────────────────────────────────────┤   │
+│  │  PIL — Processor-in-the-Loop                             │   │
+│  │  1-4 physical ECUs + rest simulated on PC                │   │
+│  │  Validates: real-time behavior on target CPU             │   │
+│  ├─────────────────────────────────────────────────────────┤   │
+│  │  SIL — Software-in-the-Loop                              │   │
+│  │  All 7 ECUs as Docker containers + vcan0                 │   │
+│  │  Validates: control logic, CAN protocol, state machines  │   │
+│  ├─────────────────────────────────────────────────────────┤   │
+│  │  MIL — Model-in-the-Loop                                 │   │
+│  │  Python plant model + control algorithm (no firmware)    │   │
+│  │  Validates: algorithm design, system dynamics            │   │
+│  ├─────────────────────────────────────────────────────────┤   │
+│  │  Unit Tests                                               │   │
+│  │  Individual functions, isolated, mocked dependencies     │   │
+│  │  Validates: correctness of each function                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12a: MIL — Model-in-the-Loop (Python)
+
+Plant models simulating physical dynamics. No firmware, no CAN — pure algorithm validation.
+
+- [ ] `test/mil/plant_motor.py` — DC motor model
+  - [ ] Electrical: V = IR + L(dI/dt) + Ke*ω (back-EMF)
+  - [ ] Mechanical: J(dω/dt) = Kt*I - B*ω - T_load (inertia, friction, load)
+  - [ ] Thermal: dT/dt = (I²R - h*A*(T-T_amb)) / (m*Cp) (heat generation vs dissipation)
+  - [ ] Inputs: PWM duty → voltage, load torque
+  - [ ] Outputs: current, speed (RPM), temperature
+- [ ] `test/mil/plant_steering.py` — steering servo model
+  - [ ] Angle response: first-order with rate limit and saturation
+  - [ ] Return-to-center spring force
+  - [ ] Inputs: PWM command
+  - [ ] Outputs: actual angle (degrees)
+- [ ] `test/mil/plant_vehicle.py` — simplified vehicle dynamics
+  - [ ] Speed from motor torque: F = T/r, a = F/m, v += a*dt
+  - [ ] Braking deceleration model
+  - [ ] Lidar: object at configurable distance, closing rate
+- [ ] `test/mil/controller_pedal.py` — pedal plausibility algorithm (pure Python)
+- [ ] `test/mil/controller_motor.py` — motor control algorithm (ramp, derating)
+- [ ] MIL test scenarios:
+  - [ ] Normal operation: pedal → torque → motor model → speed
+  - [ ] Overcurrent: load increase → current rises → cutoff triggers
+  - [ ] Thermal runaway: sustained high load → temp rises → derating → shutdown
+  - [ ] Emergency brake: lidar object → brake model → deceleration
+- [ ] MIL test report with plots (matplotlib): current vs time, temp vs time, speed vs torque
+
+### 12b: Unit Tests (per module)
+
+- [ ] Test framework setup (Unity for STM32/BSW, CCS test for TMS570, pytest for Python)
 - [ ] BSW module unit tests:
   - [ ] `Com.c` — signal packing/unpacking, Rx timeout, deadline monitoring
   - [ ] `CanIf.c` — PDU routing, Tx confirmation, Rx indication
@@ -902,32 +962,65 @@ This bridges embedded engineering with enterprise business processes — showing
   - [ ] `obd2_pids.c` — PID response values, unsupported PID handling
   - [ ] `lights.c` — auto headlight logic, hazard trigger conditions
   - [ ] `can_decoder.c` — decode all message IDs, handle unknown IDs
-- [ ] Fault injection tests per module
 - [ ] Static analysis (cppcheck + MISRA subset)
 - [ ] Coverage report (statement, branch, MC/DC for safety-critical)
 
+### 12c: SIL — Software-in-the-Loop (Docker + vcan)
+
+All 7 ECUs compiled for Linux, running on PC with virtual CAN. No hardware needed.
+
+- [ ] `test/sil/run_sil.sh` — brings up vcan0, launches all 7 ECU containers + plant simulator
+- [ ] Plant simulator process (`test/sil/plant_sim.py`)
+  - [ ] Reads motor commands from vcan0 (torque request PDU)
+  - [ ] Runs motor/vehicle plant model from MIL
+  - [ ] Writes simulated sensor values back to vcan0 (current, temp, speed, lidar distance)
+  - [ ] Closed-loop: firmware controls plant, plant feeds back to firmware
+- [ ] SIL test scenarios (automated, pytest):
+  - [ ] All 16 demo scenarios run in SIL mode
+  - [ ] Verify: correct state transitions, DTC storage, CAN message timing
+  - [ ] Verify: safety mechanisms trigger at correct thresholds
+  - [ ] Regression: run full suite in CI (GitHub Actions) — no hardware needed
+- [ ] SIL timing analysis: measure loop execution time, CAN latency on vcan
+
+### 12d: PIL — Processor-in-the-Loop (partial hardware)
+
+Real MCU executing firmware, but with simulated sensors/actuators from PC.
+
+- [ ] PIL configuration: 1 STM32 (e.g., CVC) on real CAN bus ↔ PC running plant sim + remaining ECUs
+- [ ] CAN bridge: CANable on PC bridges real CAN ↔ plant simulator
+- [ ] PIL test scenarios:
+  - [ ] Pedal → CVC (real MCU) → torque request on CAN → plant sim responds with motor feedback
+  - [ ] Verify: real-time 10ms loop timing met on STM32
+  - [ ] Verify: CAN message timing matches spec (jitter < 1ms)
+  - [ ] Verify: WdgM feeds watchdog correctly under real CPU load
+- [ ] PIL report: compare SIL results vs PIL results (any timing differences?)
+
 ### Files
-- `firmware/cvc/test/`
-- `firmware/fzc/test/`
-- `firmware/rzc/test/`
-- `firmware/sc/test/`
-- `firmware/bcm/test/`
-- `firmware/icu/test/`
-- `firmware/tcu/test/`
-- `gateway/tests/`
+- `test/mil/` — Python plant models, MIL test scripts, plots
+- `test/sil/` — SIL runner, plant simulator, docker-compose-sil.yml
+- `test/pil/` — PIL configuration, CAN bridge scripts
+- `firmware/*/test/` — Unity unit tests per ECU
+- `gateway/tests/` — pytest for Python modules
+- `docs/aspice/mil-test-report.md`
 - `docs/aspice/unit-test-report.md`
+- `docs/aspice/sil-test-report.md`
+- `docs/aspice/pil-test-report.md`
 - `docs/aspice/coverage-report.md`
 - `docs/aspice/static-analysis-report.md`
 
 ### DONE Criteria
-- [ ] Every safety module has tests
-- [ ] MC/DC coverage documented for critical modules
+- [ ] MIL: plant models produce physically plausible outputs, control algorithms validated
+- [ ] Unit tests: every safety module has tests, MC/DC coverage documented
+- [ ] SIL: all 16 scenarios pass in pure-software mode, CI-ready
+- [ ] PIL: at least 1 ECU validated on real MCU with plant simulation
 - [ ] Zero MISRA mandatory violations
-- [ ] All tests pass
+- [ ] All tests pass across all xIL levels
 
 ---
 
-## Phase 13: Hardware Assembly + Integration
+## Phase 13: HIL — Hardware Assembly + Integration Testing
+
+Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/actuators, plus fault injection from PC/Pi simulating environmental conditions.
 
 - [ ] Mount 4 ECU boards on platform
 - [ ] CAN bus wiring (daisy chain: CVC → FZC → RZC → SC, 120Ω terminators at CVC and SC)
@@ -949,14 +1042,21 @@ This bridges embedded engineering with enterprise business processes — showing
 - [ ] PC + CANable connected to CAN bus (CAN bridge for simulated ECUs)
 - [ ] Flash all physical firmware
 - [ ] Launch simulated ECUs via docker-compose
-- [ ] Integration test: CAN messages flowing between all 7 ECUs (4 physical + 3 simulated)
-- [ ] End-to-end test: pedal → CVC → RZC → motor spins → ICU shows speed
-- [ ] Safety chain test: fault → SC detects → kill relay opens → motor stops → BCM hazards
-- [ ] Diagnostics test: UDS request from PC → TCU responds with DTCs
-- [ ] Cloud test: Pi → AWS → Grafana shows live data from all 7 ECUs
+- [ ] **HIL test execution:**
+  - [ ] Integration test: CAN messages flowing between all 7 ECUs (4 physical + 3 simulated)
+  - [ ] End-to-end test: pedal → CVC → RZC → motor spins → ICU shows speed
+  - [ ] Safety chain test: fault → SC detects → kill relay opens → motor stops → BCM hazards
+  - [ ] Diagnostics test: UDS request from PC → TCU responds with DTCs
+  - [ ] Cloud test: Pi → AWS → Grafana shows live data from all 7 ECUs
+  - [ ] **Fault injection via CAN**: inject corrupted messages, missing heartbeats, wrong alive counters
+  - [ ] **Timing validation**: compare HIL CAN timing vs SIL vs PIL — document differences
+  - [ ] **Endurance test**: 30-minute continuous run, monitor for drift, memory leaks, watchdog resets
+- [ ] **HIL vs SIL comparison report**: document which failures are only caught at HIL level (e.g., EMC, timing jitter, ADC noise)
 
 ### Files
+- `docs/aspice/hil-test-report.md`
 - `docs/aspice/integration-test-report.md`
+- `docs/aspice/xil-comparison-report.md` — MIL vs SIL vs PIL vs HIL comparison
 - Photos of assembled platform
 
 ### DONE Criteria
@@ -965,7 +1065,8 @@ This bridges embedded engineering with enterprise business processes — showing
 - [ ] Safety chain (heartbeat → timeout → kill) working
 - [ ] Simulated ECUs responding to CAN traffic (BCM lights, ICU dashboard, TCU UDS)
 - [ ] Cloud dashboard receiving live data
-- [ ] No communication errors in 10-minute run
+- [ ] No communication errors in 30-minute endurance run
+- [ ] xIL comparison report documents test coverage per level
 
 ---
 
@@ -1029,7 +1130,11 @@ This bridges embedded engineering with enterprise business processes — showing
 | ASPICE Process | All documentation | ASPICE 4.0, V-model, traceability |
 | Virtual ECU / SIL | BCM, ICU, TCU (Docker + SocketCAN) | vECU, SIL testing, Docker, SocketCAN, CI/CD |
 | UDS Diagnostics | Dcm + Dem in BSW, TCU | UDS (ISO 14229), OBD-II, DTC management, ReadDataByID |
-| HIL Testing | Fault injection GUI + CAN bridge | HIL, fault injection, python-can, SocketCAN |
+| **MIL Testing** | Python plant models (motor, steering, vehicle dynamics) | MIL, plant model, control algorithm validation |
+| **SIL Testing** | All 7 ECUs in Docker + vcan, automated test suite | SIL, virtual ECU, CI/CD, regression testing |
+| **PIL Testing** | Real MCU + simulated plant via CAN bridge | PIL, processor-in-the-loop, real-time validation |
+| **HIL Testing** | Full hardware + fault injection via CAN | HIL, fault injection, python-can, SocketCAN, endurance testing |
+| **xIL Comparison** | MIL vs SIL vs PIL vs HIL coverage analysis | systems engineering, V-model verification, test strategy |
 | Edge Computing | Raspberry Pi gateway | Edge ML, gateway, python-can |
 | Machine Learning | Motor health, anomaly detection | scikit-learn, Isolation Forest, Random Forest, predictive maintenance |
 | Cloud IoT | AWS pipeline | AWS IoT Core, MQTT, Timestream, Grafana |
