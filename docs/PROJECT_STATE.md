@@ -4,15 +4,44 @@
 
 **Last updated**: 2026-02-20
 **Branch**: `develop`
-**Last commit**: `da66c4e` — Remove settings.local.json from tracking
+**Phase**: Pre-planning — product defined, starting Day 1
 
 ---
 
 ## What This Project Is
 
-IoT / microcontroller embedded system, part of the Taktflow ecosystem. Targeting **ISO 26262 ASIL D** automotive functional safety compliance with **ASPICE 4.0** process maturity.
+**Portfolio project** demonstrating ISO 26262 ASIL D automotive functional safety engineering.
 
-**Current product concept**: Automated musical instrument — 32 glockenspiel bars + solenoid strikers, ESP32-S3 controller, BLE MIDI, phone app. (Conceptual stage, no plan written yet.)
+**Product**: Mini Vehicle Platform — 7-ECU system-of-systems connected via CAN bus, demonstrating drive-by-wire with full safety architecture.
+
+### The 7 ECUs
+
+| ECU | Full Name | Role | ASIL | Hardware |
+|-----|-----------|------|------|----------|
+| VCU | Vehicle Control Unit | Master arbitrator, pedal input, E-stop | D | ESP32 |
+| PCU | Powertrain Control Unit | Motor control, current/temp monitoring | D | STM32 |
+| BCU | Brake Control Unit | Brake servo, parking brake, hill hold | D | STM32 |
+| SCU | Steering Control Unit | Steering servo, angle feedback | D | Arduino Nano |
+| ADAS | Advanced Driver Assist | Distance sensing, emergency brake request | B/D | Arduino Nano |
+| BMS | Battery Management System | Voltage, current, temp, kill relay | C | Arduino Nano |
+| Safety MCU | Independent Monitor | Alive monitoring, CAN watchdog, system kill | D | STM32 |
+
+### 15 Demo Fault Scenarios
+1. Normal driving
+2. Pedal sensor disagreement → limp mode
+3. Pedal sensor failure → motor stops
+4. Object detected → emergency brake (cross-ECU)
+5. Motor overcurrent → PCU cuts power
+6. Battery overtemp → system derates
+7. Battery critical → kill relay
+8. Steering sensor fault → return to center
+9. CAN bus failure → safety MCU kills
+10. PCU hangs → safety MCU kills motor
+11. Hill hold → auto brake
+12. E-stop → broadcast stop
+13. ADAS sensor blocked → disable auto-brake
+14. VCU vs Safety MCU disagree → safety wins
+15. Multiple faults → cascading degradation
 
 ---
 
@@ -21,31 +50,17 @@ IoT / microcontroller embedded system, part of the Taktflow ecosystem. Targeting
 ```
 taktflow-embedded/
 ├── .claude/
-│   ├── settings.json          # Team-shared permissions + hooks
-│   ├── hooks/
-│   │   ├── protect-files.sh   # Blocks edits to .env, .pem, .key, secrets/
-│   │   └── lint-firmware.sh   # Blocks banned C functions (gets, strcpy, sprintf, etc.)
-│   ├── rules/                 # 28 rule files (see CLAUDE.md for full index)
-│   │   ├── [15 embedded best practice rules]
-│   │   └── [11 ISO 26262 / ASIL D / ASPICE rules]
-│   └── skills/
-│       ├── security-review/   # /security-review — audit code for vulnerabilities
-│       ├── plan-feature/      # /plan-feature — structured implementation plan
-│       └── firmware-build/    # /firmware-build — build + test + validate
-├── firmware/
-│   ├── src/                   # EMPTY — no code yet
-│   ├── include/               # EMPTY
-│   ├── lib/                   # EMPTY
-│   └── test/                  # EMPTY
-├── hardware/                  # EMPTY
-├── scripts/                   # EMPTY
+│   ├── settings.json, hooks/, rules/ (28 files), skills/ (3)
+├── firmware/src/          — EMPTY, awaiting Day 4+
+├── firmware/test/         — EMPTY, awaiting Day 9
+├── hardware/              — EMPTY, awaiting Day 4
 ├── docs/
-│   ├── plans/                 # EMPTY — awaiting first plan
-│   ├── reference/
-│   │   ├── process-playbook.md
-│   │   └── lessons-learned-security-hardening.md
-│   └── PROJECT_STATE.md       # THIS FILE
-├── CLAUDE.md                  # Tier 1 project instructions (brief)
+│   ├── plans/             — EMPTY, awaiting Day 1 plan
+│   ├── safety/            — EMPTY, awaiting Day 1
+│   ├── aspice/            — EMPTY, awaiting Day 3
+│   ├── reference/         — process-playbook.md, lessons-learned.md
+│   └── PROJECT_STATE.md   — THIS FILE
+├── CLAUDE.md
 └── .gitignore
 ```
 
@@ -53,46 +68,14 @@ taktflow-embedded/
 
 ## Git State
 
-- **Branching**: Git Flow — main (protected) → develop → feature/ / release/ / hotfix/
-- **Remote**: https://github.com/nhuvaoanh123/taktflow-embedded.git
-- **GitHub CLI**: Installed, authenticated as nhuvaoanh123
-- **Default branch**: main
-
-### Commit History
-```
-da66c4e (develop) Remove settings.local.json from tracking
-e96fafd (develop) Add Git Flow branching strategy and update rules
-41dfb28 (main)    Boundaries Docus — all 28 rules, skills, hooks, settings
-f29d3df (main)    Initial project scaffold with reference docs
-```
-
-develop is 2 commits ahead of main.
-
----
-
-## Rules System (28 files in .claude/rules/)
-
-### Embedded Best Practices (15)
-workflow, firmware-safety, security, input-validation, networking, ota-updates, hardware, testing, error-handling, code-style, power-management, state-machines, logging-diagnostics, device-provisioning, vendor-independence, build-and-ci, documentation
-
-### ISO 26262 / ASIL D / Automotive (11)
-iso-compliance, asil-d-software, asil-d-hardware, asil-d-architecture, asil-d-verification, misra-c, aspice, safety-lifecycle, tool-qualification, traceability, asil-decomposition
-
----
+- **Branching**: Git Flow (main → develop → feature/)
+- **Remote**: github.com/nhuvaoanh123/taktflow-embedded
+- develop is 3 commits ahead of main
 
 ## User Preferences
 
-- **Auto commit and push** — commit and push after completing work, no asking
-- **Plan before implementing** — write to docs/plans/, get approval first
-- **Comprehensive rules upfront** — update later with more restrictions
-- **Security-first, fail-closed** throughout
-- **Git Flow** branching strategy
-
----
-
-## What's Next (not started)
-
-- No firmware code written yet
-- No implementation plans created yet
-- Product concept (musical instrument) is in discussion stage
-- First plan should go to `docs/plans/`
+- Auto commit and push after work
+- Plan before implementing
+- Update PROJECT_STATE.md before context compression
+- Building as portfolio for automotive FSE job
+- Full 7-ECU scope, no cutting corners
