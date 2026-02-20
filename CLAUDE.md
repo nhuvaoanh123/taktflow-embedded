@@ -1,6 +1,6 @@
 # Taktflow Embedded
 
-IoT / microcontroller embedded system. Part of the Taktflow ecosystem.
+Automotive functional safety portfolio project — ISO 26262 ASIL D zonal vehicle platform with 7 ECUs (4 physical STM32/TMS570 + 3 simulated Docker), AUTOSAR-like BSW, CAN bus, cloud IoT, edge ML, UDS diagnostics, and SAP QM integration.
 
 ## Workflow
 
@@ -19,14 +19,24 @@ IoT / microcontroller embedded system. Part of the Taktflow ecosystem.
 ## Project Layout
 
 ```
-firmware/src/       — Application code
-firmware/include/   — Headers
-firmware/lib/       — Third-party libraries
-firmware/test/      — Unit tests (test_<module>.c)
-hardware/           — Schematics, PCB, pin mappings
-scripts/            — Build/flash/utility scripts
-docs/plans/         — Implementation plans
-docs/reference/     — Process playbook, lessons learned
+firmware/
+  cvc/src/, include/, cfg/, test/     — Central Vehicle Computer (STM32, physical)
+  fzc/src/, include/, cfg/, test/     — Front Zone Controller (STM32, physical)
+  rzc/src/, include/, cfg/, test/     — Rear Zone Controller (STM32, physical)
+  sc/src/, include/, test/            — Safety Controller (TMS570, physical, NO AUTOSAR)
+  bcm/src/, include/, cfg/, test/     — Body Control Module (Docker, simulated)
+  icu/src/, include/, cfg/, test/     — Instrument Cluster Unit (Docker, simulated)
+  tcu/src/, include/, cfg/, test/     — Telematics Control Unit (Docker, simulated)
+  shared/bsw/                         — AUTOSAR-like BSW (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE)
+docker/                               — Dockerfile, docker-compose for simulated ECUs
+gateway/                              — Raspberry Pi edge gateway (Python), SAP QM mock
+hardware/                             — Pin mappings, BOM, schematics
+scripts/                              — Build scripts, vECU startup scripts
+test/mil/, test/sil/, test/pil/       — xIL testing (MIL, SIL, PIL)
+docs/plans/                           — Master plan (source of truth)
+docs/safety/                          — HARA, safety goals, FMEA, safety case
+docs/aspice/                          — Architecture, test reports, traceability
+docs/reference/                       — Process playbook, lessons learned
 ```
 
 ## Standards

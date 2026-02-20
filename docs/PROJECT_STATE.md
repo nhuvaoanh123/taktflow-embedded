@@ -2,7 +2,7 @@
 
 > Auto-updated before context compression. Read this to restore full context.
 
-**Last updated**: 2026-02-20
+**Last updated**: 2026-02-21
 **Branch**: `develop`
 **Phase**: Phase 0 IN PROGRESS — Master plan updated with 7-ECU hybrid architecture
 
@@ -37,7 +37,7 @@
 
 **Diverse redundancy**: STM32 (ST) for zone ECUs, TMS570 (TI) for Safety Controller.
 
-### 15 Demo Scenarios (12 Safety + 3 Simulated ECU)
+### 16 Demo Scenarios (12 Safety + 3 Simulated ECU + 1 SAP QM)
 1. Normal driving → ICU shows speed, BCM lights on
 2. Pedal sensor disagreement → limp mode, ICU warning
 3. Pedal sensor failure → motor stops, ICU fault
@@ -53,6 +53,7 @@
 13. UDS diagnostic session → TCU responds to requests
 14. DTC read/clear cycle → TCU manages fault codes
 15. Night driving mode → BCM auto headlights
+16. DTC → SAP QM workflow → Q-Meldung created, 8D report auto-generated
 
 ### Key Design Decisions
 - **7-ECU hybrid**: 4 physical + 3 simulated (Docker), mirrors real Tier 1 vECU development
@@ -65,6 +66,8 @@
 - **UDS/OBD-II in Dcm/Dem**: Diagnostic stack per AUTOSAR module structure
 - **Cloud + ML**: AWS IoT Core + Grafana + scikit-learn (motor health, CAN anomaly detection)
 - **CAN 2.0B only**: TMS570 DCAN doesn't support FD. STM32 FDCAN runs in classic mode. All compatible.
+- **SAP QM mock integration**: DTC → Q-Meldung pipeline, 8D report auto-generation
+- **xIL testing strategy**: MIL (Python plant models), SIL (Docker + vcan), PIL (real MCU + sim plant), HIL (full hardware)
 - **~$977 hardware budget** (within $2K target)
 
 ---

@@ -2,8 +2,8 @@
 
 **Status**: IN PROGRESS
 **Created**: 2026-02-20
-**Updated**: 2026-02-20
-**Target**: 18.5 working days
+**Updated**: 2026-02-21
+**Target**: 19.5 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
@@ -317,7 +317,7 @@ SC  ──┘                                 ICU ──┤
 | 8 | Firmware: Rear Zone Controller (SWCs) | 1 | PENDING |
 | 9 | Firmware: Safety Controller (TMS570) | 1 | PENDING |
 | 10 | Simulated ECUs: BCM, ICU, TCU (Docker + SOME/IP) | 1.5 | PENDING |
-| 11 | Edge Gateway: Pi + CAN + Cloud + ML | 1.5 | PENDING |
+| 11 | Edge Gateway: Pi + CAN + Cloud + ML + SAP QM | 2.5 | PENDING |
 | 12 | Verification: MIL + Unit Tests + SIL + PIL | 2 | PENDING |
 | 13 | HIL: Hardware Assembly + Integration Testing | 1.5 | PENDING |
 | 14 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
@@ -345,7 +345,7 @@ SC  ──┘                                 ICU ──┤
 ## Phase 1: Safety Concept
 
 - [ ] Item definition (system boundary, functions, interfaces, environment)
-  - [ ] System: Zonal vehicle platform (4 ECUs + edge gateway)
+  - [ ] System: Zonal vehicle platform (7 ECUs: 4 physical + 3 simulated + edge gateway)
   - [ ] Functions: drive-by-wire (pedal → motor), steering, braking, distance sensing
   - [ ] Interfaces: CAN bus (500 kbps), lidar (UART), sensors (SPI/ADC), actuators (PWM/GPIO)
   - [ ] Environment: indoor demo platform, 12V power, controlled conditions
@@ -419,7 +419,7 @@ SC  ──┘                                 ICU ──┤
   - [ ] RZC: SSR-RZC-001..N
   - [ ] SC: SSR-SC-001..N
 - [ ] Hardware Safety Requirements (HSR) per ECU
-- [ ] System architecture document (4 ECUs + Pi + CAN bus + cloud)
+- [ ] System architecture document (7 ECUs + Pi + CAN bus + cloud)
 - [ ] Software architecture per ECU (modules, interfaces, state machines)
 - [ ] Traceability matrix (SG → FSR → TSR → SSR → module)
 
@@ -705,28 +705,31 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 - [ ] CAN bridge mode: `cangw` or custom bridge for real↔virtual CAN
 - [ ] Makefile target: `make vecu` to build all 3 simulated ECUs for Linux
 
+**DOUBT: Communication approach needs a firm decision before implementation.**
+The plan claims three overlapping approaches: (1) BSW reuse via Can_Posix + CanIf + PduR + Com, (2) SOME/IP via vsomeip, and (3) direct `can_manager.c` in application code. Recommendation: use BSW stack for CAN (same code as physical ECUs, which is the whole point of vECU), add vsomeip as an optional parallel service interface, and remove direct `can_manager.c`. This means BCM/ICU/TCU use Rte_Read/Rte_Write just like physical ECUs, with Can_Posix as the MCAL backend. The vsomeip SOME/IP layer sits alongside as a demonstration of AUTOSAR Adaptive concepts, not as a replacement for CAN.
+
 ### 10b: Body Control Module (BCM)
-- [ ] `firmware/bcm/src/bcm_main.c` — 100 ms main loop
-- [ ] `firmware/bcm/src/lights.c` — auto headlight logic (speed > 0 → lights on)
-- [ ] `firmware/bcm/src/indicators.c` — turn signals from steering angle, hazard on emergency
-- [ ] `firmware/bcm/src/door_lock.c` — lock state management, auto-lock at speed
-- [ ] `firmware/bcm/src/can_manager.c` — subscribe to vehicle state, publish light/indicator/lock status
+- [ ] `firmware/bcm/src/Swc_Lights.c` — auto headlight logic (speed > 0 → lights on) via Rte_Read(vehicle_speed)
+- [ ] `firmware/bcm/src/Swc_Indicators.c` — turn signals from steering angle, hazard on emergency via Rte_Read(steering_angle, emergency_brake)
+- [ ] `firmware/bcm/src/Swc_DoorLock.c` — lock state management, auto-lock at speed via Rte_Read(vehicle_speed)
+- [ ] `firmware/bcm/src/bcm_main.c` — BSW init (Can_Posix), RTE init, 100 ms main loop
+- [ ] `firmware/bcm/cfg/Rte_Cfg_Bcm.c` — port mappings, runnable schedule
 - [ ] CAN messages: 0x400 (light status), 0x401 (indicator state), 0x402 (door lock status)
 
 ### 10c: Instrument Cluster Unit (ICU)
-- [ ] `firmware/icu/src/icu_main.c` — 50 ms main loop
-- [ ] `firmware/icu/src/dashboard.c` — ncurses terminal UI
+- [ ] `firmware/icu/src/Swc_Dashboard.c` — ncurses terminal UI via Rte_Read(all signals)
   - [ ] Speedometer (from RZC encoder data)
   - [ ] Motor temperature gauge
   - [ ] Battery voltage display
   - [ ] Warning lights: overheat, overcurrent, steering fault, CAN fault, e-stop
   - [ ] Active fault list (DTCs received from TCU/ECUs)
-- [ ] `firmware/icu/src/can_decoder.c` — decode ALL CAN message IDs, update display model
-- [ ] `firmware/icu/src/dtc_display.c` — display active/stored DTCs from TCU
+- [ ] `firmware/icu/src/Swc_DtcDisplay.c` — display active/stored DTCs from TCU via Rte_Read
+- [ ] `firmware/icu/src/icu_main.c` — BSW init (Can_Posix), RTE init, 50 ms main loop
+- [ ] `firmware/icu/cfg/Rte_Cfg_Icu.c` — port mappings (subscribe to ALL signal groups)
 
 ### 10d: Telematics Control Unit (TCU)
-- [ ] `firmware/tcu/src/tcu_main.c` — event-driven (UDS request → response)
-- [ ] `firmware/tcu/src/uds_server.c` — UDS (ISO 14229) service handler
+- [ ] `firmware/tcu/src/tcu_main.c` — BSW init (Can_Posix), event-driven (UDS request → Dcm → response)
+- [ ] `firmware/tcu/src/uds_server.c` — UDS (ISO 14229) service handler (uses Dcm module from shared BSW)
   - [ ] 0x10 DiagnosticSessionControl (default, extended, programming)
   - [ ] 0x22 ReadDataByIdentifier (live sensor data, SW version, HW version)
   - [ ] 0x14 ClearDiagnosticInformation (clear stored DTCs)
@@ -746,7 +749,7 @@ Build the reusable BSW modules first — these are shared across all 3 STM32 ECU
 - `firmware/bcm/src/`, `firmware/bcm/include/`
 - `firmware/icu/src/`, `firmware/icu/include/`
 - `firmware/tcu/src/`, `firmware/tcu/include/`
-- `firmware/shared/hal_can_posix.c`, `firmware/shared/hal_can_posix.h`
+- `firmware/shared/bsw/mcal/Can_Posix.c`, `firmware/shared/bsw/mcal/Can_Posix.h`
 - `docker/Dockerfile.vecu`
 - `docker/docker-compose.yml`
 - `scripts/vecu-start.sh`
@@ -842,7 +845,7 @@ This bridges embedded engineering with enterprise business processes — showing
 
 ### 11e: Fault Injection GUI
 - [ ] Python GUI (tkinter or web-based Flask)
-  - [ ] Buttons per demo scenario (1-15)
+  - [ ] Buttons per demo scenario (1-16)
   - [ ] Live CAN bus status display
   - [ ] Scenario result logging
   - [ ] SAP QM notification feed (shows new Q-Meldung when DTC fires)
@@ -1105,7 +1108,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 - `media/` — demo video or YouTube link
 
 ### DONE Criteria
-- [ ] All 12 scenarios demonstrated and recorded
+- [ ] All 16 scenarios demonstrated and recorded
 - [ ] Every fault results in correct safe state
 - [ ] Safety case references all evidence
 - [ ] Traceability matrix 100% complete
@@ -1142,6 +1145,25 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 | **SAP QM / Quality Management** | DTC → Q-Meldung pipeline, 8D report generation | SAP QM, quality notification, 8D process, BAPI |
 | **End-to-End Traceability** | Sensor fault → DTC → cloud → SAP QM → 8D → corrective action | Field quality, warranty analysis, closed-loop quality |
 | Containerization | Simulated ECU runtime | Docker, docker-compose, Linux containers |
+
+---
+
+## Doubts & Open Questions
+
+These are honest uncertainties that need to be resolved during implementation. Flagging them now prevents surprises later.
+
+| # | Doubt | Phase | Impact | Resolution Needed |
+|---|-------|-------|--------|-------------------|
+| D1 | **19.5 days is optimistic**. TMS570 toolchain (HALCoGen + CCS), vsomeip Docker build, AWS IoT setup, and ML model training each have learning curves. Realistic estimate with learning: 25-30 working days. | All | Schedule | Accept that timeline is aspirational. Track actual velocity after Phase 5. |
+| D2 | **BSW ~2,500 LOC may underestimate**. Com with signal packing + timeouts + E2E integration alone could be 500+ LOC. Real total might be 3,500-4,000 LOC. | 5 | Schedule | Start with minimal Com (pack/unpack only), add E2E and timeouts incrementally. |
+| D3 | **Simulated ECU communication approach** (see Phase 10 DOUBT note). Plan claimed BSW reuse + SOME/IP + direct CAN manager simultaneously. Now resolved: BSW reuse is primary, vsomeip is supplementary demo. | 10 | Architecture | Resolved in this review — simulated ECUs use BSW stack with Can_Posix MCAL. |
+| D4 | **MIL plant model parameters**. Motor model equations are correct, but parameter values (J, B, Ke, Kt, R, L) require the actual motor datasheet. A $25 hobby motor may not have a detailed datasheet — may need to measure parameters experimentally. | 12 | Accuracy | Buy motor early (Phase 0/1), measure parameters if datasheet is incomplete. |
+| D5 | **Docker + SocketCAN on Windows**. WSL2 USB passthrough for CANable is finicky (requires usbipd-win). May need to develop simulated ECUs directly on Raspberry Pi or a Linux machine. | 10 | Dev environment | Test WSL2 + usbipd-win early. Fallback: develop on Pi. |
+| D6 | **vsomeip build complexity in Docker**. vsomeip has Boost dependencies and a non-trivial CMake build. Docker image may take significant effort to get right. | 10 | Schedule | Pin vsomeip version in Dockerfile. If >1 day stuck, fall back to raw UDP SOME/IP (simpler, still demonstrates the concept). |
+| D7 | **HARA for a demo platform**. Real HARA requires operational situations analysis, but this is an indoor bench demo. Some Severity/Exposure ratings will feel forced. | 1 | Credibility | Be transparent: document that S/E/C ratings assume the platform controls a real vehicle. This is standard practice in academic/portfolio HARA. |
+| D8 | **FMEDA failure rates**. TI publishes TMS570 safety manual with failure rates. ST publishes STM32 safety manuals for some variants — G474 may not have one (it's not an ASIL-certified MCU). | 2 | Completeness | Use generic Cortex-M4 failure rates from literature. Flag the assumption. |
+| D9 | **AWS free tier sustainability**. Even at 1 msg/5sec, Timestream charges per write. May exceed free tier after ~2 weeks of continuous testing. | 11 | Cost | Budget $3-5/month for AWS. Use local InfluxDB as fallback. |
+| D10 | **SAP QM mock vs real SAP**. The mock API demonstrates the pipeline but won't impress someone who actually works with SAP QM daily. It's a Flask REST API, not RFC/BAPI. | 11 | Credibility | Frame it as "integration architecture demonstration" not "SAP integration". Show the data mapping and 8D workflow, not the API itself. |
 
 ---
 
