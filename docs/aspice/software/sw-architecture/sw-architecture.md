@@ -204,7 +204,7 @@ AS5048A_2 --[SPI1]--> IoHwAb --> Rte --> Swc_Pedal --+
                                                       |
                                               (PedalFault) --> Dem --> DTC storage
 
-E-stop btn --[GPIO/EXTI]--> Swc_EStop --> Rte --> Com --> CAN broadcast (0x080)
+E-stop btn --[GPIO/EXTI]--> Swc_EStop --> Rte --> Com --> CAN broadcast (0x001)
 
 CAN RX <-- Can <-- CanIf <-- PduR <-- Com --> Rte --> Swc_StateMachine
 (FZC/RZC heartbeats, feedback)
@@ -395,7 +395,7 @@ TIM4 (encoder) --> IoHwAb --> Rte --> Swc_Encoder --> Rte --> Com --> CAN TX (Mo
 
 | Module | Responsibility | ASIL | Execution |
 |--------|---------------|------|-----------|
-| can_monitor.c | Poll DCAN1 mailboxes (3 mailboxes: CVC 0x300, FZC 0x310, RZC 0x320), decode heartbeat and status messages, extract alive counters and torque/current values | D | Every main loop iteration |
+| can_monitor.c | Poll DCAN1 mailboxes (3 mailboxes: CVC 0x010, FZC 0x011, RZC 0x012), decode heartbeat and status messages, extract alive counters and torque/current values | D | Every main loop iteration |
 | heartbeat.c | Track per-ECU alive counter (expected increment each 50 ms), detect timeout (no valid heartbeat within 100 ms), set per-ECU fault flag | D | Every main loop iteration |
 | plausibility.c | Cross-check torque request (from CVC CAN) vs actual motor current (from RZC CAN): if |expected - actual| > threshold for > 50 ms, flag plausibility fault; verify E-stop CAN message matches expected pattern | D | Every main loop iteration |
 | relay.c | Control kill relay via GIO pin (drives IRLZ44N MOSFET gate): energize-to-run pattern (relay ON = system active, relay OFF = safe state). De-energize on any: heartbeat timeout, plausibility fault, E-stop received, SC internal fault | D | Every main loop iteration |
@@ -499,7 +499,7 @@ State transition table:
 
 **Runnable: Swc_EStop_ISR** — Trigger: GPIO EXTI falling edge (event-driven)
 
-On E-stop activation, this runnable immediately sets EStopActive = TRUE and triggers an immediate Com transmission of the E-stop broadcast message (0x080). The ISR latency from GPIO edge to CAN TX must be < 1 ms.
+On E-stop activation, this runnable immediately sets EStopActive = TRUE and triggers an immediate Com transmission of the E-stop broadcast message (0x001). The ISR latency from GPIO edge to CAN TX must be < 1 ms.
 
 ---
 
@@ -699,21 +699,21 @@ button         |                |            |           |          |          |
   |            | Rte_Write      |            |           |          |          |
   |            | EStop=TRUE     |            |           |          |          |
   |            +--------------->| immediate  |           |          |          |
-  |            |                | TX 0x080   |           |          |          |
+  |            |                | TX 0x001   |           |          |          |
   |            |                | EStop bcast|           |          |          |
   |            |                +----------->|           |          |          |
   |            |                |            |           |          |          |
-  |            |                |            | RX 0x080  |          |          |
+  |            |                |            | RX 0x001  |          |          |
   |            |                |            +---------->| brake    |          |
   |            |                |            |           | 100%     |          |
   |            |                |            |           | servo    |          |
   |            |                |            |           |          |          |
-  |            |                |            | RX 0x080  |          |          |
+  |            |                |            | RX 0x001  |          |          |
   |            |                |            +---------->+--------->| PWM=0    |
   |            |                |            |           |          | motor    |
   |            |                |            |           |          | off      |
   |            |                |            |           |          |          |
-  |            |                |            | RX 0x080  |          |          |
+  |            |                |            | RX 0x001  |          |          |
   |            |                |            +---------->+--------->+--------->|
   |            |                |            |           |          |          | verify
   |            |                |            |           |          |          | E-stop
@@ -763,7 +763,7 @@ CVC            CAN Bus        FZC:Com           FZC:Swc_Brake     Brake Servo
 ```
 CVC        FZC        RZC        CAN Bus       SC:heartbeat    SC:relay    Kill Relay
  |          |          |            |              |               |           |
- | HB 0x300 |          |            |              |               |           |
+ | HB 0x010 |          |            |              |               |           |
  +--------->+--------->+----------->| RX all 3 HBs |               |           |
  |          |          |            +------------->| alive counters |           |
  |          |          |            |              | valid, reset   |           |
@@ -1124,7 +1124,7 @@ Dem: DTC stored in RAM array, status byte updated
 | SSR-CVC-009 | Steering command forwarding to FZC | Swc_StateMachine, Com | D |
 | SSR-CVC-010 | Brake command forwarding to FZC | Swc_StateMachine, Com | D |
 | SSR-CVC-011 | E-stop GPIO detection (EXTI, < 1 ms latency) | Swc_EStop, Dio | D |
-| SSR-CVC-012 | E-stop CAN broadcast (0x080) | Swc_EStop, Com | D |
+| SSR-CVC-012 | E-stop CAN broadcast (0x001) | Swc_EStop, Com | D |
 | SSR-CVC-013 | CVC heartbeat transmission (50 ms, alive counter) | Swc_CanMaster, Com, E2E | D |
 | SSR-CVC-014 | FZC heartbeat monitoring and timeout detection | Swc_CanMaster, Com | D |
 | SSR-CVC-015 | RZC heartbeat monitoring and timeout detection | Swc_CanMaster, Com | D |

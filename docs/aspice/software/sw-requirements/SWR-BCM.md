@@ -189,17 +189,15 @@ The alive counter shall increment by 1 per transmission. The CRC-8 shall use pol
 - **Verified by**: TC-BCM-019, TC-BCM-020
 - **Status**: draft
 
-The BCM software shall receive body control commands on CAN ID 0x350 from the CVC. The command message format shall be:
+The BCM software shall receive body control commands on CAN ID 0x350 from the CVC. This is a QM (non-safety) message and does not use E2E protection. The command message format shall be:
 
 | Byte | Field | Description |
 |------|-------|-------------|
-| 0 | Alive counter + Data ID | E2E header |
-| 1 | CRC-8 | E2E CRC |
-| 2 | Headlight control | Bit 0: manual override (0=auto, 1=force on) |
-| 3 | Indicator control | 0x00=off, 0x01=left, 0x02=right, 0x03=hazard |
-| 4 | Door lock control | 0x00=unlock, 0x01=lock |
+| 0 | Headlight control | Bit 0: manual override (0=auto, 1=force on) |
+| 1 | Indicator control | 0x00=off, 0x01=left, 0x02=right, 0x03=hazard |
+| 2 | Door lock control | 0x00=unlock, 0x01=lock |
 
-The BCM shall validate the E2E header (CRC-8 and alive counter). Invalid commands shall be discarded. If no valid command is received for 2 seconds, the BCM shall revert all outputs to their automatic/default states.
+If no valid command is received for 2 seconds, the BCM shall revert all outputs to their automatic/default states.
 
 ---
 

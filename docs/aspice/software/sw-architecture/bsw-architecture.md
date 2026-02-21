@@ -591,23 +591,23 @@ RX: CAN bus --> Can_MainFunction_Read --> CanIf_RxIndication
 #define COM_TX_PDU_TORQUE_REQ       0u    /* CAN 0x120, 10ms cycle */
 #define COM_TX_PDU_STEERING_CMD     1u    /* CAN 0x110, 10ms cycle */
 #define COM_TX_PDU_BRAKE_CMD        2u    /* CAN 0x130, 10ms cycle */
-#define COM_TX_PDU_CVC_HEARTBEAT    3u    /* CAN 0x300, 50ms cycle */
+#define COM_TX_PDU_CVC_HEARTBEAT    3u    /* CAN 0x010, 50ms cycle */
 #define COM_TX_PDU_VEHICLE_STATE    4u    /* CAN 0x140, 100ms cycle */
-#define COM_TX_PDU_ESTOP            5u    /* CAN 0x080, event-driven */
+#define COM_TX_PDU_ESTOP            5u    /* CAN 0x001, event-driven */
 
 /* RX PDUs */
 #define COM_RX_PDU_MOTOR_STATUS     0u    /* CAN 0x200, from RZC */
 #define COM_RX_PDU_STEERING_FB      1u    /* CAN 0x210, from FZC */
 #define COM_RX_PDU_LIDAR_DIST       2u    /* CAN 0x220, from FZC */
-#define COM_RX_PDU_FZC_HEARTBEAT    3u    /* CAN 0x310, from FZC */
-#define COM_RX_PDU_RZC_HEARTBEAT    4u    /* CAN 0x320, from RZC */
+#define COM_RX_PDU_FZC_HEARTBEAT    3u    /* CAN 0x011, from FZC */
+#define COM_RX_PDU_RZC_HEARTBEAT    4u    /* CAN 0x012, from RZC */
 
 /* TX Signals */
 #define COM_SIGNAL_TORQUE_REQUEST   0u    /* uint8, bit 0-7 in PDU 0x120 */
 #define COM_SIGNAL_STEERING_CMD     1u    /* int16, bit 0-15 in PDU 0x110 */
 #define COM_SIGNAL_BRAKE_CMD        2u    /* uint8, bit 0-7 in PDU 0x130 */
 #define COM_SIGNAL_VEHICLE_STATE    3u    /* uint8, bit 0-7 in PDU 0x140 */
-#define COM_SIGNAL_ESTOP_ACTIVE     4u    /* boolean, bit 0 in PDU 0x080 */
+#define COM_SIGNAL_ESTOP_ACTIVE     4u    /* boolean, bit 0 in PDU 0x001 */
 
 /* RX Timeouts */
 #define COM_RX_TIMEOUT_HEARTBEAT_MS     100u
@@ -1238,9 +1238,9 @@ void Can_Init(const Can_ConfigType* ConfigPtr) {
     /* Set TEST.Silent bit for listen-only mode */
     canREG1->TEST |= (1u << 3u);  /* Silent mode (no TX) */
     /* Configure 3 RX message objects for CVC/FZC/RZC heartbeats */
-    canUpdateID(canREG1, canMESSAGE_BOX1, 0x300u);  /* CVC heartbeat */
-    canUpdateID(canREG1, canMESSAGE_BOX2, 0x310u);  /* FZC heartbeat */
-    canUpdateID(canREG1, canMESSAGE_BOX3, 0x320u);  /* RZC heartbeat */
+    canUpdateID(canREG1, canMESSAGE_BOX1, 0x010u);  /* CVC heartbeat */
+    canUpdateID(canREG1, canMESSAGE_BOX2, 0x011u);  /* FZC heartbeat */
+    canUpdateID(canREG1, canMESSAGE_BOX3, 0x012u);  /* RZC heartbeat */
 }
 ```
 
@@ -1343,7 +1343,7 @@ CAN Bus                              Upper Layer
 RX:
   CAN ID 0x120 (TorqueReq)    --> CanIf --> PduR --> Com (signal unpack)
   CAN ID 0x7DF (UDS func req) --> CanIf --> PduR --> Dcm (UDS processing)
-  CAN ID 0x310 (FZC heartbeat)--> CanIf --> PduR --> Com (signal unpack)
+  CAN ID 0x011 (FZC heartbeat)--> CanIf --> PduR --> Com (signal unpack)
 
 TX:
   Com_SendSignal(TorqueReq)   --> PduR --> CanIf --> CAN ID 0x120
@@ -1363,8 +1363,8 @@ static const PduR_RoutingTableType PduR_RoutingTable[] = {
     { CANIF_RX_PDU_0x200,  PDUR_DEST_COM,  COM_RX_PDU_MOTOR_STATUS   },
     { CANIF_RX_PDU_0x210,  PDUR_DEST_COM,  COM_RX_PDU_STEERING_FB    },
     { CANIF_RX_PDU_0x220,  PDUR_DEST_COM,  COM_RX_PDU_LIDAR_DIST     },
-    { CANIF_RX_PDU_0x310,  PDUR_DEST_COM,  COM_RX_PDU_FZC_HEARTBEAT  },
-    { CANIF_RX_PDU_0x320,  PDUR_DEST_COM,  COM_RX_PDU_RZC_HEARTBEAT  },
+    { CANIF_RX_PDU_0x011,  PDUR_DEST_COM,  COM_RX_PDU_FZC_HEARTBEAT  },
+    { CANIF_RX_PDU_0x012,  PDUR_DEST_COM,  COM_RX_PDU_RZC_HEARTBEAT  },
     { CANIF_RX_PDU_0x7DF,  PDUR_DEST_DCM,  DCM_RX_PDU_FUNCTIONAL     },
     { CANIF_RX_PDU_0x7E0,  PDUR_DEST_DCM,  DCM_RX_PDU_PHYSICAL       },
 
@@ -1372,9 +1372,9 @@ static const PduR_RoutingTableType PduR_RoutingTable[] = {
     { COM_TX_PDU_TORQUE_REQ,     PDUR_DEST_CANIF, CANIF_TX_PDU_0x120  },
     { COM_TX_PDU_STEERING_CMD,   PDUR_DEST_CANIF, CANIF_TX_PDU_0x110  },
     { COM_TX_PDU_BRAKE_CMD,      PDUR_DEST_CANIF, CANIF_TX_PDU_0x130  },
-    { COM_TX_PDU_CVC_HEARTBEAT,  PDUR_DEST_CANIF, CANIF_TX_PDU_0x300  },
+    { COM_TX_PDU_CVC_HEARTBEAT,  PDUR_DEST_CANIF, CANIF_TX_PDU_0x010  },
     { COM_TX_PDU_VEHICLE_STATE,  PDUR_DEST_CANIF, CANIF_TX_PDU_0x140  },
-    { COM_TX_PDU_ESTOP,          PDUR_DEST_CANIF, CANIF_TX_PDU_0x080  },
+    { COM_TX_PDU_ESTOP,          PDUR_DEST_CANIF, CANIF_TX_PDU_0x001  },
     { DCM_TX_PDU_RESPONSE,       PDUR_DEST_CANIF, CANIF_TX_PDU_0x7E8  },
 };
 ```
@@ -1713,7 +1713,7 @@ firmware/
 #define CAN_NODE_ID             0x01u  /* CVC=0x01, FZC=0x02, RZC=0x03 */
 
 /* Heartbeat message ID */
-#define HEARTBEAT_CAN_ID        0x300u /* CVC=0x300, FZC=0x310, RZC=0x320 */
+#define HEARTBEAT_CAN_ID        0x010u /* CVC=0x010, FZC=0x011, RZC=0x012 */
 
 /* UDS physical addressing */
 #define DCM_PHYSICAL_CAN_ID     0x7E0u /* CVC=0x7E0, FZC=0x7E1, RZC=0x7E2 */
