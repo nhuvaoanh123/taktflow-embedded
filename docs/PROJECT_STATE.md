@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-21
 **Branch**: `develop`
-**Phase**: Phase 0 IN PROGRESS — ASPICE-aligned ALM structure complete, master plan paths updated
+**Phase**: Phases 0-4 DONE — V-model left side (specification) complete, ready for Phase 5 (firmware)
 
 ---
 
@@ -37,38 +37,80 @@
 
 **Diverse redundancy**: STM32 (ST) for zone ECUs, TMS570 (TI) for Safety Controller.
 
-### 16 Demo Scenarios (12 Safety + 3 Simulated ECU + 1 SAP QM)
-1. Normal driving → ICU shows speed, BCM lights on
-2. Pedal sensor disagreement → limp mode, ICU warning
-3. Pedal sensor failure → motor stops, ICU fault
-4. Object detected (lidar) → emergency brake, BCM hazards
-5. Motor overcurrent → motor stops, DTC stored in TCU
-6. Motor overtemp → derating then stop, ICU temp warning
-7. Steering sensor fault → return to center, ICU warning
-8. CAN bus loss → Safety Controller kills system
-9. ECU hang → Safety Controller kills system
-10. E-stop → broadcast stop, BCM hazards
-11. ML anomaly alert → cloud dashboard alarm
-12. CVC vs Safety disagree → Safety wins
-13. UDS diagnostic session → TCU responds to requests
-14. DTC read/clear cycle → TCU manages fault codes
-15. Night driving mode → BCM auto headlights
-16. DTC → SAP QM workflow → Q-Meldung created, 8D report auto-generated
+---
 
-### Key Design Decisions
-- **7-ECU hybrid**: 4 physical + 3 simulated (Docker), mirrors real Tier 1 vECU development
-- **AUTOSAR Classic BSW**: Layered architecture (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE) on physical ECUs
-- **AUTOSAR Adaptive / SOME/IP**: vsomeip on simulated ECUs, CAN↔SOME/IP bridge on Pi
-- **Zonal over domain**: Modern E/E architecture, fewer physical ECUs, more resume impact
-- **3× STM32 + 1× TMS570**: One toolchain for most firmware, real ASIL D MCU for safety
-- **TMS570 for Safety Controller**: Simple firmware (~400 LOC), lockstep cores, TUV-certified, NO AUTOSAR (intentional — diverse architecture)
-- **Simulated ECUs in C**: Same BSW stack compiled for Linux with POSIX SocketCAN MCAL
-- **UDS/OBD-II in Dcm/Dem**: Diagnostic stack per AUTOSAR module structure
-- **Cloud + ML**: AWS IoT Core + Grafana + scikit-learn (motor health, CAN anomaly detection)
-- **CAN 2.0B only**: TMS570 DCAN doesn't support FD. STM32 FDCAN runs in classic mode. All compatible.
-- **SAP QM mock integration**: DTC → Q-Meldung pipeline, 8D report auto-generation
-- **xIL testing strategy**: MIL (Python plant models), SIL (Docker + vcan), PIL (real MCU + sim plant), HIL (full hardware)
-- **~$977 hardware budget** (within $2K target)
+## Completed Work (Phases 0-4)
+
+### Phase 0: Project Setup & Architecture Docs (DONE)
+- Repository scaffold, 28 rule files, hooks, skills, Git Flow
+- Hardware feasibility verified for all integration points
+
+### Phase 1: Safety Concept (DONE)
+- **Item Definition**: 7 functions, complete interface list, system boundary
+- **HARA**: 6 operational situations, 16 hazardous events, ASIL determination
+- **Safety Goals**: 8 SGs (SG-001 to SG-008) — 3 ASIL D, 2 ASIL C, 1 ASIL B, 2 ASIL A
+- **4 Safe States**: SS-MOTOR-OFF, SS-STEER-CENTER, SS-CONTROLLED-STOP, SS-SYSTEM-SHUTDOWN
+- **Functional Safety Concept**: 23 safety mechanisms (SM-001 to SM-023)
+- **Functional Safety Requirements**: 25 FSRs (FSR-001 to FSR-025)
+- **Safety Plan**: Lifecycle phases, roles, activities, tool qualification
+
+### Phase 2: Safety Analysis (DONE)
+- **FMEA**: 50 failure modes across all components (CVC, FZC, RZC, SC, CAN, power)
+- **DFA**: 6 common cause failures, 5 cascading failures, beta-factor analysis
+- **Hardware Metrics**: SPFM >= 99%, LFM >= 90%, PMHF = 5.2 FIT (all exceed targets)
+- **ASIL Decomposition**: 2 decompositions documented with independence arguments
+
+### Phase 3: Requirements & System Architecture (DONE)
+- **Stakeholder Requirements**: 32 (STK-001 to STK-032)
+- **System Requirements**: 56 (SYS-001 to SYS-056) — 18 ASIL D, 12 C, 1 B, 3 A, 22 QM
+- **Technical Safety Requirements**: 51 (TSR-001 to TSR-051) — 26 D, 17 C, 4 B, 4 A
+- **SW Safety Requirements**: 81 SSRs across 4 physical ECUs (CVC:23, FZC:24, RZC:17, SC:17)
+- **HW Safety Requirements**: 25 HSRs across 4 ECUs (CVC:5, FZC:7, RZC:7, SC:6)
+- **System Architecture**: 10 element categories, 24 CAN messages, system state machine, FFI
+- **SW Architecture**: Per-ECU decomposition, MPU config, task scheduling, 81 SSR-to-module allocation
+- **BSW Architecture**: 16 modules with full C API signatures, 3 platform targets
+- **Per-ECU SWRs**: 187 total across 8 documents
+  - SWR-CVC: 35 | SWR-FZC: 32 | SWR-RZC: 30 | SWR-SC: 26
+  - SWR-BCM: 12 | SWR-ICU: 10 | SWR-TCU: 15 | SWR-BSW: 27
+- **Traceability Matrix**: 440 total traced (SG → FSR → TSR → SSR → SWR → module → test)
+
+### Phase 4: CAN Protocol & HSI Design (DONE)
+- **CAN Message Matrix**: 31 message types, 16 E2E-protected, 24% worst-case bus load
+- **Interface Control Document**: 22 interfaces (CAN, SPI, UART, ADC, PWM, GPIO, I2C, MQTT, SOME/IP, USB-CAN, encoder)
+- **HSI Specification**: All 4 physical ECUs with peripheral configs, memory maps, MPU, startup
+- **HW Requirements**: 33 (HWR-001 to HWR-033) in 7 categories
+- **HW Design**: Per-ECU circuit designs with ASCII schematics, power distribution
+- **vECU Architecture**: POSIX MCAL abstraction, Docker containers, CI/CD
+- **Pin Mapping**: 53 pins across 4 ECUs with conflict checks and solder bridge mods
+- **BOM**: 74 line items, $537/$937 total, 3-phase procurement plan
+
+### Total Requirements Written
+| Type | Count |
+|------|-------|
+| Safety Goals (SG) | 8 |
+| Functional Safety Reqs (FSR) | 25 |
+| Technical Safety Reqs (TSR) | 51 |
+| SW Safety Reqs (SSR) | 81 |
+| HW Safety Reqs (HSR) | 25 |
+| Stakeholder Reqs (STK) | 32 |
+| System Reqs (SYS) | 56 |
+| SW Requirements (SWR) | 187 |
+| HW Requirements (HWR) | 33 |
+| FMEA Failure Modes | 50 |
+| **Total** | **~548** |
+
+---
+
+## Next Phase: Phase 5 — Shared BSW Layer (AUTOSAR-like)
+
+The next phase implements the shared BSW layer that all ECUs depend on:
+- MCAL: Can, Spi, Adc, Pwm, Dio, Gpt drivers
+- ECUAL: CanIf, PduR, IoHwAb
+- Services: Com, Dcm, Dem, WdgM, BswM, E2E
+- RTE: Runtime Environment
+- Platform types and standard types headers
+
+All specifications are now complete to guide implementation.
 
 ---
 
@@ -117,18 +159,17 @@ taktflow-embedded/
 └── .gitignore
 ```
 
-### Document Counts
+### Document Status
 
 | Area | Files | Status |
 |------|-------|--------|
-| Safety (ISO 26262) | 17 | Planned stubs |
-| ASPICE deliverables | 32 | Planned stubs |
+| Safety (ISO 26262) | 15 | Draft (filled) |
+| ASPICE deliverables | 25 | Draft (filled) |
 | ASPICE execution plans | 8 | Active |
-| Firmware READMEs | 32 | Active |
-| Infrastructure stubs | 9 | Active |
-| Scripts | 2 | Stubs |
-| Hardware docs | 2 | Draft |
-| **Total new files** | **~100** | |
+| Hardware docs | 3 | Draft (filled) |
+| Verification docs | 14 | Planned stubs |
+| Reference/templates | 4 | Active |
+| **Total documentation files** | **~70** | |
 
 ---
 
