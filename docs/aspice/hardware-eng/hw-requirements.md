@@ -313,8 +313,8 @@ The CAN physical layer shall comply with ISO 11898-2 (high-speed CAN):
 
 1. **Differential voltage**: CAN_H dominant = 3.5V (nominal), CAN_L dominant = 1.5V (nominal), differential = 2.0V. Recessive: both lines at 2.5V.
 2. **Bit rate**: 500 kbps +/-0.1% (crystal/PLL accuracy on STM32 and TMS570).
-3. **Sample point**: 87.5% of bit time (recommended by CiA 601-2).
-4. **Bit timing**: Prescaler, time segment 1, and time segment 2 configured for 500 kbps with 87.5% sample point on both FDCAN (STM32) and DCAN (TMS570).
+3. **Sample point**: 80% of bit time (10 Tq: 1 sync + 7 NTSEG1 + 2 NTSEG2).
+4. **Bit timing**: STM32 FDCAN prescaler=34 (170 MHz/34=5 MHz), TMS570 DCAN BRP=15 (75 MHz/15=5 MHz), both at 10 Tq per bit for 500 kbps with 80% sample point.
 5. **Bus impedance**: 60 ohm (two 120 ohm terminators in parallel at each end).
 6. **Maximum propagation delay**: Within CAN 2.0B specification for 500 kbps at 2 m bus length (well within limits).
 
