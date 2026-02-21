@@ -44,7 +44,14 @@ Every document must be registered here. If it is not in this index, it does not 
 | Master Plan | [plans/master-plan.md](plans/master-plan.md) | draft |
 | Execution Roadmap | [aspice/plans/MAN.3-project-management/execution-roadmap.md](aspice/plans/MAN.3-project-management/execution-roadmap.md) | active |
 | Weekly Status Template | [aspice/plans/MAN.3-project-management/weekly-status-template.md](aspice/plans/MAN.3-project-management/weekly-status-template.md) | active |
+| Weekly Status (Current) | [aspice/plans/MAN.3-project-management/weekly-status-2026-W08.md](aspice/plans/MAN.3-project-management/weekly-status-2026-W08.md) | active |
+| Daily Progress Template | [aspice/plans/MAN.3-project-management/daily-progress-template.md](aspice/plans/MAN.3-project-management/daily-progress-template.md) | active |
+| Daily Log (Latest) | [aspice/plans/MAN.3-project-management/daily-log/2026-02-21.md](aspice/plans/MAN.3-project-management/daily-log/2026-02-21.md) | active |
+| Progress Dashboard | [aspice/plans/MAN.3-project-management/progress-dashboard.md](aspice/plans/MAN.3-project-management/progress-dashboard.md) | active |
 | Risk Register | [aspice/plans/MAN.3-project-management/risk-register.md](aspice/plans/MAN.3-project-management/risk-register.md) | draft |
+| Issue Log | [aspice/plans/MAN.3-project-management/issue-log.md](aspice/plans/MAN.3-project-management/issue-log.md) | active |
+| Decision Log | [aspice/plans/MAN.3-project-management/decision-log.md](aspice/plans/MAN.3-project-management/decision-log.md) | active |
+| Gate Readiness Checklist | [aspice/plans/MAN.3-project-management/gate-readiness-checklist.md](aspice/plans/MAN.3-project-management/gate-readiness-checklist.md) | active |
 
 ### ISO 26262 — Safety (Parts 2-9)
 

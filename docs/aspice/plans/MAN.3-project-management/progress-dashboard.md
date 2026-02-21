@@ -40,6 +40,11 @@ updated: "2026-02-21"
 |------|-----------|-----------|------------|
 | 2026-W08 | 3 | 0 | 3 |
 
+## Daily Tracking
+
+- Template: `docs/aspice/plans/MAN.3-project-management/daily-progress-template.md`
+- Latest log: `docs/aspice/plans/MAN.3-project-management/daily-log/2026-02-21.md`
+
 ## Quality and Delivery KPIs
 
 | KPI | Target | Current | Trend |

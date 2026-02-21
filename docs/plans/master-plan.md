@@ -11,52 +11,40 @@
 ## Full Setup (Before Walkthrough)
 
 ```text
-                              +----------------------+
-                              |      AWS Cloud       |
-                              | IoT Core, Timestream |
-                              | Grafana, Rules/Lambda|
-                              +----------+-----------+
-                                         | MQTT TLS
+      DRIVER INPUT
+           |
+           v
+   ______________________
+  /|                    |\        +-----------------------------+
+ /_|  SMART VEHICLE      | \      | Edge Gateway (Raspberry Pi)|
+|   | (7 ECU Platform)   |  |---->| CAN ingest + ML inference  |
+| O | CVC/FZC/RZC/SC     | O|     | DTC + Soft DTC generation  |
+|___| BCM/ICU/TCU        |__|     +---------------+-------------+
+                                         | MQTT/TLS
                                          v
- +---------------------------------------------------------------+
- | Raspberry Pi Gateway                                          |
- | - CAN listener/decoder                                        |
- | - ML inference (health + anomaly)                             |
- | - Fault injector                                               |
- | - DTC + Soft DTC publisher                                    |
- +------------------------------+--------------------------------+
-                                | CAN (500 kbps) via CANable
-                                v
-   +-----------+   +-----------+   +-----------+   +-----------+
-   | CVC       |---| FZC       |---| RZC       |---| SC        |
-   | STM32     |   | STM32     |   | STM32     |   | TMS570    |
-   | pedal/eStop|  | steer/brk |   | motor     |   | safety    |
-   +-----+-----+   +-----+-----+   +-----+-----+   +-----+-----+
-         |               |               |               |
-         +---------------+---------------+---------------+
-                         Real CAN bus backbone
-                                |
-                                | CAN bridge (PC CANable)
-                                v
-      +------------------+  +------------------+  +------------------+
-      | BCM (Docker)     |  | ICU (Docker)     |  | TCU (Docker)     |
-      | lights/locks     |  | dashboard/DTC UI |  | UDS + DTC store  |
-      +------------------+  +------------------+  +------------------+
-                                |
-                                v
-                      +----------------------+
-                      | SAP QM Mock + 8D     |
-                      | Q-notification flow  |
-                      +----------------------+
+                               +-----------------------------+
+                               | Cloud Platform              |
+                               | IoT Core + Rules + Storage |
+                               | Grafana + Alerting          |
+                               +------+----------------------+
+                                      |
+                     +----------------+------------------+
+                     |                                   |
+                     v                                   v
+     +-----------------------------+       +-----------------------------+
+     | Quality System (SAP QM)     |       | Business/Finance Layer      |
+     | Q-Meldung, 8D, CAPA         |       | Cost of quality, warranty,  |
+     | corrective action workflow  |       | service KPIs, management BI |
+     +-----------------------------+       +-----------------------------+
 ```
 
 ### Itemized Setup
 
-1. Physical ECUs on CAN: `CVC`, `FZC`, `RZC`, `SC`
-2. Simulated ECUs on Docker: `BCM`, `ICU`, `TCU`
-3. Edge and cloud path: Pi gateway -> MQTT -> AWS/Grafana
-4. Quality path: DTC/Soft DTC -> cloud rule -> SAP QM mock -> 8D template
-5. Safety authority: `SC` can force safe state independent of other ECUs
+1. Vehicle layer: zonal car platform running safety + control + diagnostics.
+2. Edge layer: local gateway does protocol handling and ML inference.
+3. Cloud layer: telemetry, rules, and real-time observability.
+4. Quality layer: SAP QM notifications and 8D corrective-action lifecycle.
+5. Business layer: quality cost, warranty/service metrics, and leadership reporting.
 
 ## Quick Walkthrough (How This Works)
 

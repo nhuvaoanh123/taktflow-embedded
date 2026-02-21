@@ -18,6 +18,8 @@ This folder contains execution-ready plans organized by Automotive SPICE process
 - `docs/aspice/plans/MAN.3-project-management/progress-dashboard.md`
 - `docs/aspice/plans/MAN.3-project-management/weekly-status-template.md`
 - `docs/aspice/plans/MAN.3-project-management/weekly-status-2026-W08.md`
+- `docs/aspice/plans/MAN.3-project-management/daily-progress-template.md`
+- `docs/aspice/plans/MAN.3-project-management/daily-log/`
 - `docs/aspice/plans/MAN.3-project-management/risk-register.md`
 - `docs/aspice/plans/MAN.3-project-management/issue-log.md`
 - `docs/aspice/plans/MAN.3-project-management/decision-log.md`
