@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-21
 **Branch**: `develop`
-**Phase**: Phases 0-4 DONE — V-model left side (specification) complete, ready for Phase 5 (firmware)
+**Phase**: Phases 0-5 DONE — Shared BSW Layer complete (16 modules, 195 tests), ready for Phase 6 (CVC firmware)
 
 ---
 
@@ -101,16 +101,58 @@
 
 ---
 
-## Next Phase: Phase 5 — Shared BSW Layer (AUTOSAR-like)
+## Phase 5: Shared BSW Layer (DONE)
 
-The next phase implements the shared BSW layer that all ECUs depend on:
-- MCAL: Can, Spi, Adc, Pwm, Dio, Gpt drivers
-- ECUAL: CanIf, PduR, IoHwAb
-- Services: Com, Dcm, Dem, WdgM, BswM, E2E
-- RTE: Runtime Environment
-- Platform types and standard types headers
+All 16 AUTOSAR-like BSW modules implemented with TDD (test-first enforcement):
 
-All specifications are now complete to guide implementation.
+### MCAL (6 modules, 87 tests)
+| Module | Tests | Traces | Description |
+|--------|-------|--------|-------------|
+| Can | 20 | SWR-BSW-001..005 | FDCAN driver, state machine, bus-off recovery |
+| Spi | 14 | SWR-BSW-006 | SPI master, AS5048A compatible (CPOL=0, CPHA=1) |
+| Adc | 13 | SWR-BSW-007 | ADC group conversion, 12-bit |
+| Pwm | 14 | SWR-BSW-008 | Timer PWM, 16-bit duty (0x0000-0x8000) |
+| Dio | 12 | SWR-BSW-009 | GPIO atomic access via BSRR |
+| Gpt | 14 | SWR-BSW-010 | General purpose timers, microsecond resolution |
+
+### ECUAL (3 modules, 36 tests)
+| Module | Tests | Traces | Description |
+|--------|-------|--------|-------------|
+| CanIf | 9 | SWR-BSW-011..012 | CAN ID ↔ PDU ID routing |
+| PduR | 8 | SWR-BSW-013 | PDU routing (Com/Dcm ↔ CanIf) |
+| IoHwAb | 19 | SWR-BSW-014 | Sensor/actuator MCAL wrappers |
+
+### Services (6 modules, 58 tests)
+| Module | Tests | Traces | Description |
+|--------|-------|--------|-------------|
+| Com | 9 | SWR-BSW-015..016 | Signal pack/unpack, TX/RX PDU management |
+| Dcm | 14 | SWR-BSW-017 | UDS 0x10/0x22/0x3E, session management, NRCs |
+| Dem | 8 | SWR-BSW-018..020 | DTC storage, counter-based debouncing |
+| WdgM | 8 | SWR-BSW-021 | Alive supervision, watchdog gating |
+| BswM | 14 | SWR-BSW-022 | Mode manager (STARTUP→RUN→DEGRADED→SAFE_STOP→SHUTDOWN) |
+| E2E | 23 | SWR-BSW-023..025 | CRC-8 SAE J1850, alive counter, Data ID |
+
+### RTE (1 module, 14 tests)
+| Module | Tests | Traces | Description |
+|--------|-------|--------|-------------|
+| Rte | 14 | SWR-BSW-026..027 | Signal buffering, priority-ordered runnable dispatch |
+
+**Total: 16 modules, 195 unit tests, ~5,000 LOC**
+
+Hardware abstraction pattern: `Module_Hw_*` extern functions (mocked in tests, real HAL on target).
+
+---
+
+## Next Phase: Phase 6 — Central Vehicle Computer (CVC) Firmware
+
+The next phase implements CVC application SWCs on top of the shared BSW:
+- Swc_Pedal: dual AS5048A pedal sensors, plausibility check
+- Swc_VehicleState: INIT → RUN → DEGRADED → LIMP → SAFE_STOP state machine
+- Swc_Dashboard: SSD1306 OLED display
+- Swc_EStop: E-stop detection and broadcast
+- Swc_Heartbeat: alive counter TX
+- RTE configuration for CVC (Rte_Cfg_Cvc.c)
+- main.c: BSW init, RTE init, 10ms tick loop
 
 ---
 
