@@ -36,14 +36,14 @@ This is the authoritative reference for hardware/software interface integration.
 | IF-001 | CAN Bus | Communication | CAN 2.0B, 500 kbps | CVC, FZC, RZC, SC, BCM, ICU, TCU, Pi | 500 kbps | D | Bidirectional (SC listen-only) |
 | IF-002 | CVC SPI1 | Sensor | SPI Mode 1, 1 MHz | CVC <-> AS5048A x2 | 1 MHz | D | Bidirectional |
 | IF-003 | FZC SPI2 | Sensor | SPI Mode 1, 1 MHz | FZC <-> AS5048A | 1 MHz | D | Bidirectional |
-| IF-004 | FZC USART1 | Sensor | UART 115200 8N1 | FZC <-> TFMini-S | 115.2 kbps | C | RX only (MCU receives) |
+| IF-004 | FZC USART2 | Sensor | UART 115200 8N1 | FZC <-> TFMini-S | 115.2 kbps | C | RX only (MCU receives) |
 | IF-005 | RZC ADC1 CH1 | Sensor | Analog 0-3.3V | RZC <-> ACS723 | 1 kHz sample | A | Unidirectional (sensor to MCU) |
 | IF-006 | RZC ADC1 CH2 | Sensor | Analog 0-3.3V | RZC <-> NTC winding 1 | 10 Hz sample | A | Unidirectional |
 | IF-007 | RZC ADC1 CH3 | Sensor | Analog 0-3.3V | RZC <-> NTC winding 2 | 10 Hz sample | A | Unidirectional |
 | IF-008 | RZC ADC1 CH4 | Sensor | Analog 0-3.3V | RZC <-> Battery divider | 10 Hz sample | QM | Unidirectional |
 | IF-009 | FZC TIM2 CH1 | Actuator | PWM 50 Hz | FZC -> Steering servo | 50 Hz | D | Unidirectional (MCU to servo) |
 | IF-010 | FZC TIM2 CH2 | Actuator | PWM 50 Hz | FZC -> Brake servo | 50 Hz | D | Unidirectional |
-| IF-011 | RZC TIM3 CH1/CH2 | Actuator | PWM 20 kHz | RZC -> BTS7960 RPWM/LPWM | 20 kHz | D | Unidirectional |
+| IF-011 | RZC TIM1 CH1/CH2 | Actuator | PWM 20 kHz | RZC -> BTS7960 RPWM/LPWM | 20 kHz | D | Unidirectional |
 | IF-012 | CVC GPIO PC13 | Sensor | Digital EXTI | CVC <-> E-stop button | Event | B | Input to MCU |
 | IF-013 | SC GIO_A[0] | Actuator | Digital GPIO | SC -> Kill relay | On-demand | D | Output from MCU |
 | IF-014 | SC GIO_A[1-3] | Indicator | Digital GPIO | SC -> Fault LEDs | On-demand | C | Output from MCU |
@@ -52,7 +52,7 @@ This is the authoritative reference for hardware/software interface integration.
 | IF-017 | MQTT/TLS | Communication | MQTT v3.1.1/TLS 1.2 | Pi <-> AWS IoT Core | 1 msg/5s | QM | Bidirectional |
 | IF-018 | SOME/IP Bridge | Communication | SOME/IP/UDP | Docker ECUs <-> host CAN | Variable | QM | Bidirectional |
 | IF-019 | RZC TIM4 CH1/CH2 | Sensor | Quadrature encoder | RZC <-> Motor encoder | Variable | C | Input to MCU |
-| IF-020 | RZC GPIO PB5 | Actuator | Digital GPIO | RZC -> BTS7960 R_EN/L_EN | On-demand | D | Output from MCU |
+| IF-020 | RZC GPIO PB0/PB1 | Actuator | Digital GPIO | RZC -> BTS7960 R_EN/L_EN | On-demand | D | Output from MCU |
 | IF-021 | All ECUs WDT | Safety | Digital GPIO toggle | ECU <-> TPS3823 | 0.5-1 Hz | D | Output from MCU |
 | IF-022 | Pi USB-CAN | Communication | gs_usb / SocketCAN | Pi <-> CANable 2.0 | 500 kbps | QM | Bidirectional |
 
@@ -96,12 +96,12 @@ This is the authoritative reference for hardware/software interface integration.
 |-----------|-------|
 | Mode | Classic CAN (not CAN FD) |
 | Nominal bit rate | 500 kbps |
-| Prescaler | Depends on APB clock; target 16 Tq per bit |
+| Prescaler | 34 (170 MHz / 34 = 5 MHz bit rate clock) |
 | Sync segment | 1 Tq |
-| Time segment 1 (TSEG1) | 13 Tq (prop + phase1) |
+| Time segment 1 (TSEG1) | 7 Tq (prop + phase1) |
 | Time segment 2 (TSEG2) | 2 Tq |
-| SJW | 1 Tq |
-| Sample point | 87.5% |
+| SJW | 2 Tq |
+| Sample point | 80% (8/10 Tq) |
 | TX FIFO depth | 3 messages |
 | RX FIFO 0 | 3 messages (safety messages) |
 | RX FIFO 1 | 3 messages (QM messages) |
@@ -115,12 +115,12 @@ This is the authoritative reference for hardware/software interface integration.
 | Module | DCAN1 (NOT DCAN4 -- HALCoGen mailbox bug) |
 | Mode | Silent (listen-only) via TEST register bit 3 |
 | Bit rate | 500 kbps |
-| Prescaler | 10 (from 20 MHz module clock) |
-| TSEG1 | 2 |
-| TSEG2 | 1 |
+| Prescaler | 15 (from 75 MHz VCLK1) |
+| TSEG1 | 7 |
+| TSEG2 | 2 |
 | SJW | 1 |
-| Mailboxes | 6 configured (exact-match acceptance masks) |
-| Interrupt | New message on mailbox 1-6 |
+| Mailboxes | 7 configured (exact-match acceptance masks) |
+| Interrupt | New message on mailbox 1-7 |
 
 ### 4.6 Bus Protection
 
@@ -169,8 +169,8 @@ This is the authoritative reference for hardware/software interface integration.
 | SPI1_SCK | PA5 | AF5 | Output | -- | Clock to both sensors |
 | SPI1_MISO | PA6 | AF5 | Input | Pull-up | Data from sensor |
 | SPI1_MOSI | PA7 | AF5 | Output | -- | Command to sensor |
-| CS1 (Pedal 1) | PB6 | GPIO | Output | 10k ext. pull-up to 3.3V | Active LOW |
-| CS2 (Pedal 2) | PC7 | GPIO | Output | 10k ext. pull-up to 3.3V | Active LOW |
+| CS1 (Pedal 1) | PA4 | GPIO | Output | 10k ext. pull-up to 3.3V | Active LOW |
+| CS2 (Pedal 2) | PA15 | GPIO | Output | 10k ext. pull-up to 3.3V | Active LOW |
 
 **AS5048A SPI Protocol**:
 
@@ -258,11 +258,11 @@ Protocol, transaction sequence, and timing are identical to CVC SPI1 (Section 5.
 
 ## 6. UART Interface (IF-004)
 
-### 6.1 FZC USART1 -- TFMini-S Lidar
+### 6.1 FZC USART2 -- TFMini-S Lidar
 
 | Parameter | Value |
 |-----------|-------|
-| Peripheral | USART1 |
+| Peripheral | USART2 |
 | Baud rate | 115200 bps |
 | Data bits | 8 |
 | Parity | None |
@@ -274,8 +274,8 @@ Protocol, transaction sequence, and timing are identical to CVC SPI1 (Section 5.
 
 | Signal | Pin | AF | Direction | Pull | Notes |
 |--------|-----|-----|-----------|------|-------|
-| USART1_TX | PA9 | AF7 | Output | -- | MCU to lidar (config commands) |
-| USART1_RX | PA10 | AF7 | Input | Pull-up | Lidar to MCU (data frames) |
+| USART2_TX | PA2 | AF7 | Output | -- | MCU to lidar (config commands) |
+| USART2_RX | PA3 | AF7 | Input | Pull-up | Lidar to MCU (data frames) |
 
 **TFMini-S Frame Format (9 bytes)**:
 
@@ -454,9 +454,9 @@ Conversion and fault detection are identical to IF-006. This sensor provides a s
 |-----------|-------|
 | ADC channel | ADC1_IN4 |
 | Pin | PA3 |
-| Divider ratio | R_high = 10 kohm, R_low = 3.3 kohm |
-| Input range | 0-16 V (battery) |
-| ADC range | 0-3.968 V (clamped to 3.3V by Zener) |
+| Divider ratio | R_high = 47 kohm, R_low = 10 kohm |
+| Input range | 0-18.8 V (battery) |
+| ADC range | 0-3.3 V (clamped to 3.3V by Zener) |
 | Zener protection | 3.3V Zener diode across ADC input |
 | Filter | 100 nF capacitor on ADC input |
 | Sample rate | 10 Hz |
@@ -465,22 +465,22 @@ Conversion and fault detection are identical to IF-006. This sensor provides a s
 
 ```
 V_battery_mV = adc_value * Vref_mV / 4096 * (R_high + R_low) / R_low
-V_battery_mV = adc_value * 3300 / 4096 * (10000 + 3300) / 3300
-V_battery_mV = adc_value * 3300 / 4096 * 4.0303
-V_battery_mV = adc_value * 3.246
+V_battery_mV = adc_value * 3300 / 4096 * (47000 + 10000) / 10000
+V_battery_mV = adc_value * 3300 / 4096 * 5.7
+V_battery_mV = adc_value * 4.592
 ```
 
 **Voltage Thresholds**:
 
 | Condition | Battery V | ADC Value | Action |
 |-----------|-----------|-----------|--------|
-| Critical undervoltage | < 8.0 V | < 2464 | Motor disable, DTC |
-| Undervoltage warning | < 10.5 V | < 3234 | DTC, heartbeat warning |
-| Normal | 10.5-15.0 V | 3234-4095 | Normal operation |
-| Overvoltage warning | > 15.0 V | > 4095 (clipped) | DTC, heartbeat warning |
-| Critical overvoltage | > 17.0 V | > 4095 (clipped) | Motor disable, DTC |
+| Critical undervoltage | < 8.0 V | < 1741 | Motor disable, DTC |
+| Undervoltage warning | < 10.5 V | < 2286 | DTC, heartbeat warning |
+| Normal | 10.5-15.0 V | 2286-3267 | Normal operation |
+| Overvoltage warning | > 15.0 V | > 3267 | DTC, heartbeat warning |
+| Critical overvoltage | > 17.0 V | > 3702 | Motor disable, DTC |
 
-Note: Overvoltage detection above 13 V relies on the voltage divider ratio staying within the ADC range. The Zener diode provides hardware protection for the MCU.
+Note: With the 47k/10k divider, the full ADC range (0-4095) corresponds to 0-18.8V. Overvoltage up to 18.8V is detectable before the Zener clamp activates. The Zener diode provides hardware protection for the MCU above 18.8V.
 
 ## 8. PWM Interfaces (IF-009, IF-010, IF-011)
 
@@ -552,8 +552,8 @@ TIM2_CCR2 = pulse_us
 
 | Parameter | Value |
 |-----------|-------|
-| Timer | TIM3 |
-| Channels | CH1 (PA6, RPWM forward) and CH2 (PA7, LPWM reverse) |
+| Timer | TIM1 |
+| Channels | CH1 (PA8, RPWM forward) and CH2 (PA9, LPWM reverse) |
 | Frequency | 20 kHz (50 us period) |
 | Prescaler | 0 (no prescaler; full timer clock) |
 | ARR | (SystemCoreClock / 20000) - 1 = 8499 (at 170 MHz) |
@@ -564,9 +564,9 @@ TIM2_CCR2 = pulse_us
 **Direction Control**:
 
 ```
-Forward:  TIM3_CCR1 = duty (RPWM active), TIM3_CCR2 = 0 (LPWM off)
-Reverse:  TIM3_CCR1 = 0 (RPWM off), TIM3_CCR2 = duty (LPWM active)
-Stop:     TIM3_CCR1 = 0, TIM3_CCR2 = 0
+Forward:  TIM1_CCR1 = duty (RPWM active), TIM1_CCR2 = 0 (LPWM off)
+Reverse:  TIM1_CCR1 = 0 (RPWM off), TIM1_CCR2 = duty (LPWM active)
+Stop:     TIM1_CCR1 = 0, TIM1_CCR2 = 0
 
 Direction change sequence:
   1. Set both CCR1 and CCR2 to 0
@@ -578,17 +578,20 @@ Direction change sequence:
 
 | Signal | Pin | State | Meaning |
 |--------|-----|-------|---------|
-| R_EN + L_EN | PB5 (combined) | LOW | Motor driver disabled (safe state) |
-| R_EN + L_EN | PB5 (combined) | HIGH | Motor driver enabled |
+| R_EN | PB0 | LOW | Right half-bridge disabled (safe state) |
+| R_EN | PB0 | HIGH | Right half-bridge enabled |
+| L_EN | PB1 | LOW | Left half-bridge disabled (safe state) |
+| L_EN | PB1 | HIGH | Left half-bridge enabled |
 
-Note: Both enable lines are tied together on PB5 per the pin mapping. A 10k pull-down resistor on PB5 ensures the motor driver defaults to disabled on MCU reset.
+Note: R_EN and L_EN are driven by separate GPIO pins (PB0, PB1) per the pin mapping. 10k pull-down resistors on both PB0 and PB1 ensure the motor driver defaults to disabled on MCU reset.
 
 **Motor Disable Sequence**:
 
 ```
-1. TIM3_CCR1 = 0  (RPWM off)
-2. TIM3_CCR2 = 0  (LPWM off)
-3. PB5 = LOW      (R_EN + L_EN disabled)
+1. TIM1_CCR1 = 0  (RPWM off)
+2. TIM1_CCR2 = 0  (LPWM off)
+3. PB0 = LOW      (R_EN disabled)
+4. PB1 = LOW      (L_EN disabled)
 ```
 
 ## 9. GPIO Interfaces
@@ -599,7 +602,7 @@ Note: Both enable lines are tied together on PB5 per the pin mapping. A 10k pull
 |-----------|-------|
 | Pin | PC13 |
 | Mode | Input, EXTI (external interrupt) |
-| Trigger | Falling edge (button press = LOW on NC button logic) |
+| Trigger | Rising edge (NC button opens = pull-up drives HIGH) |
 | Pull | Internal pull-up enabled |
 | Debounce | Hardware: 10k series R + 100 nF to GND (RC = 1 ms) |
 | | Software: 1 ms timer re-read confirmation |
@@ -693,7 +696,7 @@ Each physical ECU has an identical TPS3823 external watchdog connection:
 |-----|---------|-----------------|---------|
 | CVC | PB0 | STM32 NRST via 100 nF RC | 1.6 s (+/- 20%) |
 | FZC | PB0 | STM32 NRST via 100 nF RC | 1.6 s (+/- 20%) |
-| RZC | PB0 | STM32 NRST via 100 nF RC | 1.6 s (+/- 20%) |
+| RZC | PB4 | STM32 NRST via 100 nF RC | 1.6 s (+/- 20%) |
 | SC | GIO_A[4] | TMS570 nRST via 100 nF RC | 1.6 s (+/- 20%) |
 
 **Feed Protocol**: Software toggles WDI pin (alternating HIGH/LOW) once per main loop iteration. If the main loop hangs and no toggle occurs within 1.6 seconds, the TPS3823 asserts RESET (active low, open-drain) and resets the MCU.
@@ -702,11 +705,12 @@ Each physical ECU has an identical TPS3823 external watchdog connection:
 
 | Parameter | Value |
 |-----------|-------|
-| Pin | PB5 (drives both R_EN and L_EN via common trace) |
+| R_EN Pin | PB0 (drives BTS7960 R_EN) |
+| L_EN Pin | PB1 (drives BTS7960 L_EN) |
 | Mode | Output, push-pull |
-| External pull-down | 10k ohm to GND (ensures disabled on MCU reset) |
-| HIGH | Motor driver enabled |
-| LOW | Motor driver disabled (safe state) |
+| External pull-down | 10k ohm to GND on each pin (ensures disabled on MCU reset) |
+| HIGH | Half-bridge enabled |
+| LOW | Half-bridge disabled (safe state) |
 
 ## 10. I2C Interface (IF-016)
 

@@ -29,7 +29,7 @@ This document describes the hardware design for the Taktflow Zonal Vehicle Platf
 | ECU | MCU | Key Peripherals | CAN Transceiver |
 |-----|-----|-----------------|-----------------|
 | CVC | STM32G474RE Nucleo-64 | FDCAN1, SPI1, I2C1, EXTI (PC13) | TJA1051T/3 |
-| FZC | STM32G474RE Nucleo-64 | FDCAN1, SPI1, USART2, TIM2 | TJA1051T/3 |
+| FZC | STM32G474RE Nucleo-64 | FDCAN1, SPI2, USART2, TIM2 | TJA1051T/3 |
 | RZC | STM32G474RE Nucleo-64 | FDCAN1, TIM1, TIM4, ADC1 (4ch) | TJA1051T/3 |
 | SC | TMS570LC43x LaunchPad | DCAN1, GIO (6 pins), RTI | SN65HVD230 |
 
@@ -247,17 +247,17 @@ Same schematic as CVC (Section 5.1.1) using FDCAN1 on PA12 (TX) and PA11 (RX) wi
   STM32G474RE                  AS5048A (Steering)
   +-----------+                +----------+
   |           |                |          |
-  | SPI1_SCK  +--- PA5 ------>| CLK      |
+  | SPI2_SCK  +--- PB13 ----->| CLK      |
   | (AF5)     |                |          |
-  | SPI1_MISO +--- PA6 ---<---| DO   VDD |--[100nF]-- 3.3V
+  | SPI2_MISO +--- PB14 --<---| DO   VDD |--[100nF]-- 3.3V
   | (AF5)     |                |      |   |
-  | SPI1_MOSI +--- PA7 ------>| DI   GND |-- GND
+  | SPI2_MOSI +--- PB15 ----->| DI   GND |-- GND
   | (AF5)     |                |          |
-  |   GPIO    +--- PA4 ------>| CSn      |
+  |   GPIO    +--- PB12 ----->| CSn      |
   |           |     |          +----------+
   +-----------+ [10k to 3.3V]
 
-  Single sensor on SPI1 bus.
+  Single sensor on SPI2 bus (SPI2 avoids SB21 solder bridge conflict on Nucleo-64).
   Sensor mounted on steering servo output shaft.
   SPI cable routed with 10mm separation from servo power lines.
 ```
@@ -342,6 +342,8 @@ Same as CVC (Section 5.1.5) using PB0 as WDI GPIO.
 ---
 
 ### 5.3 RZC -- Rear Zone Controller
+
+> **Note**: On the RZC, the watchdog WDI pin is PB4 (not PB0). PB0 is used for BTS7960 R_EN on this ECU. See Section 5.3.7.
 
 #### 5.3.1 CAN Transceiver Circuit
 
@@ -469,7 +471,7 @@ Same schematic as CVC (Section 5.1.1) using FDCAN1 on PA12 (TX) and PA11 (RX) wi
 
 #### 5.3.7 RZC Watchdog Circuit
 
-Same as CVC (Section 5.1.5) using PB0 as WDI GPIO.
+Same as CVC (Section 5.1.5) but using **PB4** as WDI GPIO (PB0 is used for BTS7960 R_EN on RZC).
 
 ---
 

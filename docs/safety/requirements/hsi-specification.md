@@ -171,8 +171,8 @@ Region 6 provides stack overflow detection. Any access to this 256-byte guard zo
 | PA5 | SPI1_SCK | SPI1 | AF5 | Output | CVC_SPI_CLK | AS5048A x2 | 1 MHz clock |
 | PA6 | SPI1_MISO | SPI1 | AF5 | Input | CVC_SPI_MISO | AS5048A x2 | Data from sensors |
 | PA7 | SPI1_MOSI | SPI1 | AF5 | Output | CVC_SPI_MOSI | AS5048A x2 | Commands to sensors |
-| PB6 | PEDAL_CS1 | GPIO | -- | Output | CVC_CS1_N | AS5048A #1 | Active LOW, 10k pull-up |
-| PC7 | PEDAL_CS2 | GPIO | -- | Output | CVC_CS2_N | AS5048A #2 | Active LOW, 10k pull-up |
+| PA4 | PEDAL_CS1 | GPIO | -- | Output | CVC_CS1_N | AS5048A #1 | Active LOW, 10k pull-up |
+| PA15 | PEDAL_CS2 | GPIO | -- | Output | CVC_CS2_N | AS5048A #2 | Active LOW, 10k pull-up |
 | PA11 | FDCAN1_RX | FDCAN1 | AF9 | Input | CAN_RX | TJA1051T/3 RXD | CAN receive |
 | PA12 | FDCAN1_TX | FDCAN1 | AF9 | Output | CAN_TX | TJA1051T/3 TXD | CAN transmit |
 | PB8 | I2C1_SCL | I2C1 | AF4 | Bidir | CVC_SCL | SSD1306 OLED | 4.7k pull-up, 400 kHz |
@@ -206,10 +206,10 @@ Note: On the Nucleo-64 board, PA5 serves double duty as the onboard LED and SPI1
 
 | Register / Parameter | Value | Notes |
 |---------------------|-------|-------|
-| NBTP.NBRP | Prescaler for 500 kbps | Computed from APB1 clock |
-| NBTP.NTSEG1 | 13 | 14 Tq (sync + TSEG1) |
+| NBTP.NBRP | 34 (170 MHz / 34 = 5 MHz) | Prescaler for 500 kbps |
+| NBTP.NTSEG1 | 7 | 8 Tq (sync + TSEG1) |
 | NBTP.NTSEG2 | 2 | 2 Tq |
-| NBTP.NSJW | 1 | 1 Tq |
+| NBTP.NSJW | 2 | 2 Tq |
 | CCCR.FDOE | 0 | Classic CAN mode (not FD) |
 | CCCR.BRSE | 0 | No bit rate switching |
 | GFC | Reject non-matching | Only accept filtered IDs |
@@ -235,7 +235,7 @@ Note: On the Nucleo-64 board, PA5 serves double duty as the onboard LED and SPI1
 | Interface | Voltage | Current (max) | Notes |
 |-----------|---------|---------------|-------|
 | SPI1 (PA5-PA7) | 3.3V LVCMOS | 8 mA per pin | GPIO output drive |
-| CS1, CS2 (PB6, PC7) | 3.3V | 8 mA | 10k external pull-up to 3.3V |
+| CS1, CS2 (PA4, PA15) | 3.3V | 8 mA | 10k external pull-up to 3.3V |
 | FDCAN1 (PA11/PA12) | 3.3V | Via TJA1051T/3 | Transceiver handles bus levels |
 | I2C1 (PB8/PB9) | 3.3V open-drain | 4.7k pull-up to 3.3V | 3 mA max sink per pin |
 | E-stop (PC13) | 3.3V input | < 1 mA (pull-up current) | 10k internal pull-up |
@@ -322,8 +322,8 @@ Total self-test time: < 120 ms.
 |---------|------------|-----------|-----|-----------|----------|-------------------|-------|
 | PA0 | STEER_PWM | TIM2_CH1 | AF1 | Output | FZC_STEER | Steering servo signal | 50 Hz, 1-2 ms pulse |
 | PA1 | BRAKE_PWM | TIM2_CH2 | AF1 | Output | FZC_BRAKE | Brake servo signal | 50 Hz, 1-2 ms pulse |
-| PA9 | LIDAR_TX | USART1_TX | AF7 | Output | FZC_LIDAR_TX | TFMini-S RX | Config commands |
-| PA10 | LIDAR_RX | USART1_RX | AF7 | Input | FZC_LIDAR_RX | TFMini-S TX | Data frames via DMA |
+| PA2 | LIDAR_TX | USART2_TX | AF7 | Output | FZC_LIDAR_TX | TFMini-S RX | Config commands |
+| PA3 | LIDAR_RX | USART2_RX | AF7 | Input | FZC_LIDAR_RX | TFMini-S TX | Data frames via DMA |
 | PB13 | SPI2_SCK | SPI2 | AF5 | Output | FZC_SPI_CLK | AS5048A (steer) | 1 MHz clock |
 | PB14 | SPI2_MISO | SPI2 | AF5 | Input | FZC_SPI_MISO | AS5048A (steer) | Angle data |
 | PB15 | SPI2_MOSI | SPI2 | AF5 | Output | FZC_SPI_MOSI | AS5048A (steer) | Commands |
@@ -348,7 +348,7 @@ Total self-test time: < 120 ms.
 | CCER.CC2E | 1 (brake output enable) | |
 | CR1.CEN | 1 (counter enable) | Start after init |
 
-#### 5.2.2 USART1 -- TFMini-S Lidar
+#### 5.2.2 USART2 -- TFMini-S Lidar
 
 | Register / Parameter | Value | Notes |
 |---------------------|-------|-------|
@@ -431,7 +431,7 @@ Total self-test time: < 560 ms.
 | TIM2 PWM output control | 3-level disable (CCR, CCER, GPIO) | 80% (defense-in-depth) |
 | TPS3823 external watchdog | Independent 1.6 s timeout | 85% |
 | MPU | Stack guard, peripheral isolation | Spatial FFI |
-| USART1 + DMA | Autonomous lidar reception | 80% (checksum + timeout) |
+| USART2 + DMA | Autonomous lidar reception | 80% (checksum + timeout) |
 | Brown-out detection | Reset at VDD < 2.7 V | Prevents low-voltage operation |
 
 ## 6. RZC -- Rear Zone Controller
@@ -440,22 +440,23 @@ Total self-test time: < 560 ms.
 
 | MCU Pin | Signal Name | Peripheral | AF | Direction | Net Name | External Component | Notes |
 |---------|------------|-----------|-----|-----------|----------|-------------------|-------|
-| PA6 | MOTOR_RPWM | TIM3_CH1 | AF2 | Output | RZC_RPWM | BTS7960 RPWM | 20 kHz, forward |
-| PA7 | MOTOR_LPWM | TIM3_CH2 | AF2 | Output | RZC_LPWM | BTS7960 LPWM | 20 kHz, reverse |
-| PB5 | MOTOR_EN | GPIO | -- | Output | RZC_M_EN | BTS7960 R_EN + L_EN | 10k pull-down, active HIGH |
+| PA8 | MOTOR_RPWM | TIM1_CH1 | AF6 | Output | RZC_RPWM | BTS7960 RPWM | 20 kHz, forward |
+| PA9 | MOTOR_LPWM | TIM1_CH2 | AF6 | Output | RZC_LPWM | BTS7960 LPWM | 20 kHz, reverse |
+| PB0 | MOTOR_R_EN | GPIO | -- | Output | RZC_MOT_REN | BTS7960 R_EN | 10k pull-down, active HIGH |
+| PB1 | MOTOR_L_EN | GPIO | -- | Output | RZC_MOT_LEN | BTS7960 L_EN | 10k pull-down, active HIGH |
 | PB6 | ENCODER_A | TIM4_CH1 | AF2 | Input | RZC_ENC_A | Motor encoder A | 10k pull-up |
 | PB7 | ENCODER_B | TIM4_CH2 | AF2 | Input | RZC_ENC_B | Motor encoder B | 10k pull-up |
 | PA0 | CURRENT_SENSE | ADC1_IN1 | Analog | Input | RZC_ISENSE | ACS723 output | 400 mV/A, mid-rail zero |
 | PA1 | TEMP_NTC1 | ADC1_IN2 | Analog | Input | RZC_NTC1 | NTC #1 (motor winding) | 10k pullup divider |
 | PA2 | TEMP_NTC2 | ADC1_IN3 | Analog | Input | RZC_NTC2 | NTC #2 (board) | 10k pullup divider |
-| PA3 | BATT_VOLTAGE | ADC1_IN4 | Analog | Input | RZC_VBAT | Voltage divider | 10k/3.3k, Zener clamp |
+| PA3 | BATT_VOLTAGE | ADC1_IN4 | Analog | Input | RZC_VBAT | Voltage divider | 47k/10k, Zener clamp |
 | PA11 | FDCAN1_RX | FDCAN1 | AF9 | Input | CAN_RX | TJA1051T/3 RXD | CAN receive |
 | PA12 | FDCAN1_TX | FDCAN1 | AF9 | Output | CAN_TX | TJA1051T/3 TXD | CAN transmit |
-| PB0 | WDT_FEED | GPIO | -- | Output | RZC_WDI | TPS3823 WDI | Toggle to feed watchdog |
+| PB4 | WDT_FEED | GPIO | -- | Output | RZC_WDT_WDI | TPS3823 WDI | Toggle to feed watchdog |
 
 ### 6.2 Peripheral Configuration
 
-#### 6.2.1 TIM3 -- Motor PWM
+#### 6.2.1 TIM1 -- Motor PWM
 
 | Register / Parameter | Value | Notes |
 |---------------------|-------|-------|
@@ -464,7 +465,7 @@ Total self-test time: < 560 ms.
 | CH1 CCR (RPWM) | 0-8074 (0-95% of ARR) | Forward direction duty |
 | CH2 CCR (LPWM) | 0-8074 (0-95% of ARR) | Reverse direction duty |
 | OCM | PWM Mode 1 | Output HIGH when CNT < CCR |
-| BDTR.DTG | Dead-time not used on TIM3 | Software-enforced 10 us dead-time |
+| BDTR.DTG | Dead-time available on TIM1 (advanced timer) | Software-enforced 10 us dead-time |
 | CCER.CC1E, CC2E | 1, 1 | Both channels enabled |
 
 #### 6.2.2 TIM4 -- Quadrature Encoder
@@ -618,9 +619,9 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 |-------------|-----------|---------|
 | External oscillator | 16 MHz | PLL input |
 | PLL output (GCLK) | 300 MHz | CPU clock |
-| VCLK | 150 MHz (GCLK / 2) | Peripheral clock |
-| VCLK2 | 150 MHz | DCAN clock |
-| RTI clock | 150 MHz / prescaler | Real-time interrupt (10 ms tick) |
+| VCLK1 | 75 MHz (GCLK / 4) | Peripheral clock, DCAN clock |
+| VCLK2 | 75 MHz | Secondary peripheral clock |
+| RTI clock | 75 MHz / prescaler | Real-time interrupt (10 ms tick) |
 
 ### 7.4 Peripheral Configuration
 
@@ -630,15 +631,17 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 |----------|-------|-------|
 | DCAN_CTL.Init | 1 (during config) | Enter initialization mode |
 | DCAN_CTL.CCE | 1 (during config) | Configuration change enable |
-| DCAN_BTR | 500 kbps baud rate | BRP + TSEG1 + TSEG2 from 150 MHz VCLK2 |
+| DCAN_BTR | 500 kbps baud rate | BRP=15, TSEG1=7, TSEG2=2 from 75 MHz VCLK1 |
 | DCAN_TEST.Silent | 1 | **Listen-only mode** (bit 3) |
 | DCAN_CTL.Init | 0 (after config) | Exit initialization, enter normal mode |
 | Mailbox 1 | ID = 0x001, mask = 0x7FF | E-stop (exact match) |
 | Mailbox 2 | ID = 0x010, mask = 0x7FF | CVC heartbeat |
 | Mailbox 3 | ID = 0x011, mask = 0x7FF | FZC heartbeat |
 | Mailbox 4 | ID = 0x012, mask = 0x7FF | RZC heartbeat |
-| Mailbox 5 | ID = 0x100, mask = 0x7FF | Vehicle state / torque request |
-| Mailbox 6 | ID = 0x301, mask = 0x7FF | Motor current |
+| Mailbox 5 | ID = 0x100, mask = 0x7FF | Vehicle state |
+| Mailbox 6 | ID = 0x101, mask = 0x7FF | Torque request (for current-vs-torque plausibility) |
+| Mailbox 7 | ID = 0x301, mask = 0x7FF | Motor current |
+| Mailboxes | 7 configured (exact-match acceptance masks) |
 | Interrupt | DCAN1 Level 0 | New message notification |
 
 #### 7.4.2 RTI -- 10 ms Tick Timer
@@ -646,7 +649,7 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 | Register | Value | Notes |
 |----------|-------|-------|
 | RTIGCTRL.CNT0EN | 1 | Enable counter 0 |
-| RTIUC0 | (150 MHz / 10000) - 1 = 14999 | Up counter prescaler (10 kHz tick) |
+| RTIUC0 | (75 MHz / 10000) - 1 = 7499 | Up counter prescaler (10 kHz tick) |
 | RTIFRC0 | Free-running counter | Not used directly |
 | RTICOMP0 | 100 | Compare register (100 * 0.1 ms = 10 ms) |
 | RTIINTFLAG | Compare 0 interrupt | Sets tick flag for main loop |
@@ -821,9 +824,9 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 | 4.2.2 CVC FDCAN1 | SYS-031 | HSR-CVC-004 | SWR-CVC-014 to SWR-CVC-017 |
 | 4.2.3 CVC I2C1 | SYS-044 | HSR-CVC-005 | SWR-CVC-026 to SWR-CVC-028 |
 | 5.1 FZC TIM2 | SYS-010, SYS-014, SYS-050 | HSR-FZC-002, HSR-FZC-006 | SWR-FZC-008, SWR-FZC-009 |
-| 5.2.2 FZC USART1 | SYS-018, SYS-048 | HSR-FZC-003 | SWR-FZC-013 |
+| 5.2.2 FZC USART2 | SYS-018, SYS-048 | HSR-FZC-003 | SWR-FZC-013 |
 | 5.1 FZC SPI2 | SYS-011, SYS-047 | HSR-FZC-001 | SWR-FZC-001 |
-| 6.1 RZC TIM3 | SYS-004, SYS-050 | HSR-RZC-004 | SWR-RZC-003, SWR-RZC-004 |
+| 6.1 RZC TIM1 | SYS-004, SYS-050 | HSR-RZC-004 | SWR-RZC-003, SWR-RZC-004 |
 | 6.2.3 RZC ADC1 | SYS-005, SYS-006, SYS-008, SYS-049 | HSR-RZC-001, HSR-RZC-002 | SWR-RZC-005, SWR-RZC-009, SWR-RZC-017 |
 | 6.1 RZC TIM4 | SYS-009 | HSR-RZC-006 | SWR-RZC-012 |
 | 7.4.1 SC DCAN1 | SYS-025 | HSR-SC-004 | SWR-SC-001, SWR-SC-002 |

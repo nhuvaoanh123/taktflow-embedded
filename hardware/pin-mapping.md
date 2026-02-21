@@ -82,10 +82,10 @@ All unused GPIO pins on the CVC shall be configured as GPIO output LOW at initia
 | 4 | Brake servo PWM | TIM2_CH2 | PA1 | AF1 | A1 | CN7-30 | OUT | 3.3V | MG996R signal (orange wire) | FZC_BRAKE_PWM | D |
 | 5 | Lidar UART TX | USART2 | PA2 | AF7 | A7 | CN10-35 | OUT | 3.3V | TFMini-S RX (green wire) | FZC_LIDAR_TX | C |
 | 6 | Lidar UART RX | USART2 | PA3 | AF7 | A2 | CN10-37 | IN | 3.3V | TFMini-S TX (white wire) + TVS | FZC_LIDAR_RX | C |
-| 7 | Steering angle SPI SCK | SPI1 | PA5 | AF5 | D13 | CN10-11 | OUT | 3.3V | AS5048A CLK | FZC_SPI1_SCK | D |
-| 8 | Steering angle SPI MISO | SPI1 | PA6 | AF5 | D12 | CN10-13 | IN | 3.3V | AS5048A DO | FZC_SPI1_MISO | D |
-| 9 | Steering angle SPI MOSI | SPI1 | PA7 | AF5 | D11 | CN10-15 | OUT | 3.3V | AS5048A DI | FZC_SPI1_MOSI | D |
-| 10 | Steering angle CS | GPIO | PA4 | -- | A2 | CN7-32 | OUT | 3.3V | AS5048A CSn (10k PU) | FZC_STEER_CS | D |
+| 7 | Steering angle SPI SCK | SPI2 | PB13 | AF5 | -- | CN10-30 | OUT | 3.3V | AS5048A CLK | FZC_SPI2_SCK | D |
+| 8 | Steering angle SPI MISO | SPI2 | PB14 | AF5 | -- | CN10-28 | IN | 3.3V | AS5048A DO | FZC_SPI2_MISO | D |
+| 9 | Steering angle SPI MOSI | SPI2 | PB15 | AF5 | -- | CN10-26 | OUT | 3.3V | AS5048A DI | FZC_SPI2_MOSI | D |
+| 10 | Steering angle CS | GPIO | PB12 | -- | -- | CN10-16 | OUT | 3.3V | AS5048A CSn (10k PU) | FZC_STEER_CS | D |
 | 11 | Buzzer drive | GPIO | PB4 | -- | D5 | CN10-27 | OUT | 3.3V | 2N7002 gate + 10k PD | FZC_BUZZER | B |
 | 12 | WDT Feed | GPIO | PB0 | -- | D3 | CN10-31 | OUT | 3.3V | TPS3823 WDI | FZC_WDT_WDI | D |
 | 13 | Status LED Green | GPIO | PB5 | -- | D4 | CN10-29 | OUT | 3.3V | Green LED + 330R | FZC_LED_GRN | QM |
@@ -97,7 +97,7 @@ All unused GPIO pins on the CVC shall be configured as GPIO output LOW at initia
 
 | Check | Result |
 |-------|--------|
-| PA5 conflict with onboard LED LD2? | Same as CVC -- SPI1_SCK takes priority. |
+| FZC SPI2 on PB13-PB15 conflict? | No conflict -- SPI2 pins (PB13-PB15) have no onboard peripheral. SPI2 avoids SB21 solder bridge conflict (PA5/LD2) on Nucleo-64. |
 | PA2/PA3 used for both USART2 and Nucleo ST-LINK VCP? | CONFLICT -- PA2/PA3 are the Nucleo ST-LINK virtual COM port USART2. Resolved: disconnect SB63/SB65 solder bridges on Nucleo to free PA2/PA3 for lidar UART. Debug printf can use LPUART1 or SWO instead. |
 | TIM2_CH1 (PA0) and TIM2_CH2 (PA1) on same timer? | By design -- both servo PWMs on TIM2 for synchronized 50 Hz update. |
 
@@ -203,7 +203,8 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 | AF1 | TIM2 | PA0 (CH1), PA1 (CH2) -- FZC servos |
 | AF2 | TIM4 | PB6 (CH1), PB7 (CH2) -- RZC encoder |
 | AF4 | I2C1 | PB8 (SCL), PB9 (SDA) -- CVC OLED |
-| AF5 | SPI1 | PA5 (SCK), PA6 (MISO), PA7 (MOSI) -- CVC/FZC angle sensors |
+| AF5 | SPI1 | PA5 (SCK), PA6 (MISO), PA7 (MOSI) -- CVC pedal sensors |
+| AF5 | SPI2 | PB13 (SCK), PB14 (MISO), PB15 (MOSI) -- FZC steering angle sensor |
 | AF6 | TIM1 | PA8 (CH1), PA9 (CH2) -- RZC motor PWM |
 | AF7 | USART2 | PA2 (TX), PA3 (RX) -- FZC lidar UART |
 | AF9 | FDCAN1 | PA11 (RX), PA12 (TX) -- all STM32 ECUs |
@@ -215,10 +216,14 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 |-----|-------------|-------------|-------------|
 | PA11 | FDCAN1_RX | FDCAN1_RX | FDCAN1_RX |
 | PA12 | FDCAN1_TX | FDCAN1_TX | FDCAN1_TX |
-| PA5 | SPI1_SCK | SPI1_SCK | (unused) |
-| PA6 | SPI1_MISO | SPI1_MISO | (unused) |
-| PA7 | SPI1_MOSI | SPI1_MOSI | (unused) |
-| PA4 | SPI1_CS (pedal 1) | SPI1_CS (steering) | ADC1_IN5 (BTS7960 IS_L) |
+| PA5 | SPI1_SCK | (unused) | (unused) |
+| PA6 | SPI1_MISO | (unused) | (unused) |
+| PA7 | SPI1_MOSI | (unused) | (unused) |
+| PA4 | SPI1_CS (pedal 1) | (unused) | ADC1_IN5 (BTS7960 IS_L) |
+| PB13 | (unused) | SPI2_SCK (steering) | (unused) |
+| PB14 | (unused) | SPI2_MISO (steering) | (unused) |
+| PB15 | (unused) | SPI2_MOSI (steering) | ADC1_IN15 (BTS7960 IS_R) |
+| PB12 | (unused) | SPI2_CS (steering) | (unused) |
 | PA0 | (unused) | TIM2_CH1 (steer servo) | ADC1_IN1 (current) |
 | PA1 | (unused) | TIM2_CH2 (brake servo) | ADC1_IN2 (motor temp) |
 | PA2 | (unused) | USART2_TX (lidar) | ADC1_IN3 (board temp) |
