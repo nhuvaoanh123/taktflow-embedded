@@ -106,14 +106,14 @@ Every document must be registered here. If it is not in this index, it does not 
 | **SW Architecture (SWE.2)** | | | |
 | SW Architecture | [aspice/software/sw-architecture/sw-architecture.md](aspice/software/sw-architecture/sw-architecture.md) | SWE.2 | draft |
 | BSW Architecture | [aspice/software/sw-architecture/bsw-architecture.md](aspice/software/sw-architecture/bsw-architecture.md) | SWE.2 | draft |
-| vECU Architecture | [aspice/software/sw-architecture/vecu-architecture.md](aspice/software/sw-architecture/vecu-architecture.md) | SWE.2 | planned |
+| vECU Architecture | [aspice/software/sw-architecture/vecu-architecture.md](aspice/software/sw-architecture/vecu-architecture.md) | SWE.2 | draft |
 
 ### HWE.1-3 — Hardware Engineering
 
 | Document | Path | Process | Status |
 |----------|------|---------|--------|
-| HW Requirements | [aspice/hardware-eng/hw-requirements.md](aspice/hardware-eng/hw-requirements.md) | HWE.1 | planned |
-| HW Design | [aspice/hardware-eng/hw-design.md](aspice/hardware-eng/hw-design.md) | HWE.2 | planned |
+| HW Requirements | [aspice/hardware-eng/hw-requirements.md](aspice/hardware-eng/hw-requirements.md) | HWE.1 | draft |
+| HW Design | [aspice/hardware-eng/hw-design.md](aspice/hardware-eng/hw-design.md) | HWE.2 | draft |
 
 ### SWE.4-6, SYS.4-5 — Verification
 
@@ -192,8 +192,8 @@ Every document must be registered here. If it is not in this index, it does not 
 | Project Management | MAN.3 | aspice/plans/MAN.3-project-management/, plans/master-plan.md | active |
 | Quality Assurance | SUP.1 | aspice/quality/qa-plan.md | planned |
 | Config Management | SUP.8 | aspice/cm/cm-strategy.md | draft |
-| HW Requirements | HWE.1 | aspice/hardware-eng/hw-requirements.md | planned |
-| HW Design | HWE.2 | aspice/hardware-eng/hw-design.md | planned |
+| HW Requirements | HWE.1 | aspice/hardware-eng/hw-requirements.md | draft |
+| HW Design | HWE.2 | aspice/hardware-eng/hw-design.md | draft |
 
 ---
 
@@ -202,8 +202,8 @@ Every document must be registered here. If it is not in this index, it does not 
 | Status | Count | Description |
 |--------|-------|-------------|
 | active | 8 | Reference docs and execution plans |
-| draft | 5 | Content exists, under development |
-| planned | 42 | Registered, not yet authored |
+| draft | 8 | Content exists, under development |
+| planned | 39 | Registered, not yet authored |
 | template | 2 | Reusable templates |
 | baselined | 0 | Approved, under change control |
 | **Total** | **57** | |
