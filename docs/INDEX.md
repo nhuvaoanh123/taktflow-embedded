@@ -104,8 +104,8 @@ Every document must be registered here. If it is not in this index, it does not 
 | SWR — TCU | [aspice/software/sw-requirements/SWR-TCU.md](aspice/software/sw-requirements/SWR-TCU.md) | SWE.1 | planned |
 | SWR — BSW | [aspice/software/sw-requirements/SWR-BSW.md](aspice/software/sw-requirements/SWR-BSW.md) | SWE.1 | planned |
 | **SW Architecture (SWE.2)** | | | |
-| SW Architecture | [aspice/software/sw-architecture/sw-architecture.md](aspice/software/sw-architecture/sw-architecture.md) | SWE.2 | planned |
-| BSW Architecture | [aspice/software/sw-architecture/bsw-architecture.md](aspice/software/sw-architecture/bsw-architecture.md) | SWE.2 | planned |
+| SW Architecture | [aspice/software/sw-architecture/sw-architecture.md](aspice/software/sw-architecture/sw-architecture.md) | SWE.2 | draft |
+| BSW Architecture | [aspice/software/sw-architecture/bsw-architecture.md](aspice/software/sw-architecture/bsw-architecture.md) | SWE.2 | draft |
 | vECU Architecture | [aspice/software/sw-architecture/vecu-architecture.md](aspice/software/sw-architecture/vecu-architecture.md) | SWE.2 | planned |
 
 ### HWE.1-3 — Hardware Engineering
