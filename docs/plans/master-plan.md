@@ -8,6 +8,90 @@
 
 ---
 
+## Full Setup (Before Walkthrough)
+
+```text
+                              +----------------------+
+                              |      AWS Cloud       |
+                              | IoT Core, Timestream |
+                              | Grafana, Rules/Lambda|
+                              +----------+-----------+
+                                         | MQTT TLS
+                                         v
+ +---------------------------------------------------------------+
+ | Raspberry Pi Gateway                                          |
+ | - CAN listener/decoder                                        |
+ | - ML inference (health + anomaly)                             |
+ | - Fault injector                                               |
+ | - DTC + Soft DTC publisher                                    |
+ +------------------------------+--------------------------------+
+                                | CAN (500 kbps) via CANable
+                                v
+   +-----------+   +-----------+   +-----------+   +-----------+
+   | CVC       |---| FZC       |---| RZC       |---| SC        |
+   | STM32     |   | STM32     |   | STM32     |   | TMS570    |
+   | pedal/eStop|  | steer/brk |   | motor     |   | safety    |
+   +-----+-----+   +-----+-----+   +-----+-----+   +-----+-----+
+         |               |               |               |
+         +---------------+---------------+---------------+
+                         Real CAN bus backbone
+                                |
+                                | CAN bridge (PC CANable)
+                                v
+      +------------------+  +------------------+  +------------------+
+      | BCM (Docker)     |  | ICU (Docker)     |  | TCU (Docker)     |
+      | lights/locks     |  | dashboard/DTC UI |  | UDS + DTC store  |
+      +------------------+  +------------------+  +------------------+
+                                |
+                                v
+                      +----------------------+
+                      | SAP QM Mock + 8D     |
+                      | Q-notification flow  |
+                      +----------------------+
+```
+
+### Itemized Setup
+
+1. Physical ECUs on CAN: `CVC`, `FZC`, `RZC`, `SC`
+2. Simulated ECUs on Docker: `BCM`, `ICU`, `TCU`
+3. Edge and cloud path: Pi gateway -> MQTT -> AWS/Grafana
+4. Quality path: DTC/Soft DTC -> cloud rule -> SAP QM mock -> 8D template
+5. Safety authority: `SC` can force safe state independent of other ECUs
+
+## Quick Walkthrough (How This Works)
+
+This platform is a 7-ECU zonal system on CAN:
+
+1. Driver input enters through **CVC** (dual pedal sensors + vehicle state logic).
+2. CVC sends motion commands over CAN to **FZC** (steering/brake) and **RZC** (motor).
+3. FZC and RZC execute control and send feedback (angle, current, temp, speed, status).
+4. **SC (TMS570 Safety Controller)** independently monitors heartbeats and plausibility; if unsafe, it opens kill relay and forces safe state.
+5. Simulated ECUs (**BCM, ICU, TCU**) run in Docker and consume/produce CAN traffic for body functions, dashboard, and diagnostics.
+6. Raspberry Pi gateway logs CAN, runs ML inference, and publishes telemetry/alerts to cloud dashboards.
+7. Faults become DTCs, then can flow into quality workflow (SAP QM mock + 8D report path).
+
+Development and validation run in three modes:
+
+- Full mixed mode: 4 physical ECUs + 3 simulated ECUs
+- Pure software mode: all virtual ECUs on `vcan0`
+- Partial hardware mode: any subset physical, rest simulated
+
+## Example Full Workflow (One Fault Scenario)
+
+Scenario: motor overcurrent during driving.
+
+1. CVC sends torque request to RZC.
+2. RZC drives motor and reads current sensor.
+3. Current exceeds threshold for debounce window.
+4. RZC triggers protection: derate or cut motor output, reports fault to Dem/DTC path.
+5. ICU shows warning; TCU stores/serves DTC via UDS (`0x19`, `0x14` etc.).
+6. SC still supervises global safety; if heartbeat/plausibility fails, SC opens kill relay.
+7. Gateway detects anomaly pattern, publishes cloud alert.
+8. Cloud pipeline creates quality notification (SAP QM mock), links to 8D workflow.
+9. Test evidence is captured across xIL levels (SIL/PIL/HIL) and added to safety/verification reports.
+
+---
+
 ## Architecture Overview
 
 ### Zonal Controller Architecture (Modern E/E) — 7 ECUs (4 Physical + 3 Simulated)
@@ -797,11 +881,16 @@ The plan claims three overlapping approaches: (1) BSW reuse via Can_Posix + CanI
   - [ ] Features: message frequency per ID, payload byte distributions, timing jitter
   - [ ] Train on normal baseline, detect injected anomalies
   - [ ] Deploy on Pi, inference at 1 Hz
-- [ ] Alert pipeline: anomaly score > threshold → MQTT alert → Grafana alarm
+- [ ] Alert pipeline: anomaly score > threshold -> MQTT alert -> Grafana alarm
+- [ ] Predictive quality trigger:
+  - [ ] If Motor Health Score < 40%, generate **Soft DTC** `P1A40` (`Predictive Component Degradation`)
+  - [ ] Publish Soft DTC event to MQTT topic `vehicle/dtc/soft`
+  - [ ] Mark event severity as early-warning (non-hard-fault) with confidence score and feature snapshot
 
 ### 11d: SAP QM Integration (Simulated)
 
-Demonstrates the full chain: **sensor fault → DTC (Dem) → CAN → cloud → SAP Quality Notification**.
+Demonstrates the full chain: **sensor fault -> DTC (Dem) -> CAN -> cloud -> SAP Quality Notification**.
+Also demonstrates predictive chain: **ML health degradation -> Soft DTC -> cloud -> SAP QM early notification -> 8D initiation before hardware failure**.
 
 This bridges embedded engineering with enterprise business processes — showing understanding of how vehicle field failures flow into the OEM's quality management system.
 
@@ -813,9 +902,11 @@ This bridges embedded engineering with enterprise business processes — showing
   - [ ] In-memory storage (SQLite for persistence across restarts)
 - [ ] DTC → Quality Notification mapping
   - [ ] DTC triggers notification automatically when cloud receives fault MQTT message
+  - [ ] Soft DTC triggers notification automatically when cloud receives predictive MQTT message (`vehicle/dtc/soft`)
   - [ ] Notification types:
     - [ ] Q1 (Customer complaint): overcurrent, overtemp → field return
     - [ ] Q2 (Internal): sensor plausibility failure → production quality
+    - [ ] Q2 (Internal): **predictive component degradation** from ML Soft DTC (`P1A40`)
     - [ ] Q3 (Supplier complaint): CAN transceiver fault → supplier issue
   - [ ] Notification content maps DTC data to SAP fields:
 
@@ -840,9 +931,9 @@ This bridges embedded engineering with enterprise business processes — showing
   - [ ] Statistics: notifications per ECU, per DTC type, trend over time
 - [ ] Integration pipeline:
   - [ ] MQTT topic `vehicle/dtc/new` → Lambda/rule → SAP QM mock API
+  - [ ] MQTT topic `vehicle/dtc/soft` → Lambda/rule → SAP QM mock API (auto-create Q2 early warning)
   - [ ] Grafana panel linking to SAP QM dashboard for cross-reference
-  - [ ] Traceability: DTC → quality notification → 8D report → corrective action
-
+  - [ ] Traceability: DTC/Soft DTC → quality notification → 8D report → corrective action
 ### 11e: Fault Injection GUI
 - [ ] Python GUI (tkinter or web-based Flask)
   - [ ] Buttons per demo scenario (1-16)
@@ -872,6 +963,7 @@ This bridges embedded engineering with enterprise business processes — showing
 - [ ] Motor health model produces scores
 - [ ] Anomaly detector flags injected faults
 - [ ] DTC automatically creates SAP QM notification via mock API
+- [ ] **Soft DTC from ML score < 40% automatically creates Q2 SAP QM notification**
 - [ ] SAP QM dashboard shows notification list with DTC context
 - [ ] 8D report template auto-generated from DTC data
 - [ ] Fault injection GUI triggers demo scenarios and shows Q-Meldung feed
@@ -1182,3 +1274,5 @@ These are honest uncertainties that need to be resolved during implementation. F
 | UDS implementation scope creep | TCU takes too long | Limit to 5 core services (0x10, 0x22, 0x14, 0x19, 0x3E). No security access (0x27) for portfolio scope. |
 | AUTOSAR BSW over-engineering | Spend too long on BSW perfection | Keep modules simplified (~2,500 LOC total). Not a certified stack — demonstrate architecture understanding, not production completeness. |
 | vsomeip build complexity | Docker image build issues | Pin vsomeip version, pre-build in base image, fallback to raw SOME/IP over UDP if vsomeip too heavy. |
+
+
