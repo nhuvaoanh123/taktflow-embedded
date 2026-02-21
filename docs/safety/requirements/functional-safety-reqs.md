@@ -35,7 +35,7 @@ Each requirement follows the format:
 - **Title**: Descriptive name
 - **ASIL**: Inherited from the traced safety goal (or decomposed per ISO 26262-9)
 - **Traces up**: Safety goal(s) this requirement derives from
-- **Traces down**: Technical safety requirement(s) that refine this FSR (placeholder until TSC phase)
+- **Traces down**: Technical safety requirement(s) that refine this FSR (see TSR document)
 - **Safety mechanism**: Reference to the mechanism in the FSC that implements this requirement
 - **Status**: draft | reviewed | approved | implemented | verified
 
@@ -59,8 +59,7 @@ Unless ASIL decomposition is applied (per ISO 26262-9 Clause 5, documented in AS
 
 - **ASIL**: D
 - **Traces up**: SG-001
-- **Traces down**: TSR-001, TSR-002 (placeholder)
-- **Safety mechanism**: SM-001
+- **Traces down**: TSR-001, TSR-002- **Safety mechanism**: SM-001
 - **Allocation**: CVC
 - **Status**: draft
 
@@ -74,8 +73,7 @@ The system shall continuously compare the readings from both pedal position sens
 
 - **ASIL**: D
 - **Traces up**: SG-001
-- **Traces down**: TSR-003 (placeholder)
-- **Safety mechanism**: SM-001
+- **Traces down**: TSR-003- **Safety mechanism**: SM-001
 - **Allocation**: CVC
 - **Status**: draft
 
@@ -89,8 +87,7 @@ The system shall detect a pedal sensor plausibility fault within 20 ms of the fa
 
 - **ASIL**: D
 - **Traces up**: SG-001
-- **Traces down**: TSR-004, TSR-005 (placeholder)
-- **Safety mechanism**: SM-001, SM-002
+- **Traces down**: TSR-004, TSR-005- **Safety mechanism**: SM-001, SM-002
 - **Allocation**: CVC (command), RZC (execution)
 - **Status**: draft
 
@@ -104,8 +101,7 @@ The system shall reduce the motor torque request to zero within 10 ms of detecti
 
 - **ASIL**: A
 - **Traces up**: SG-006
-- **Traces down**: TSR-006, TSR-007 (placeholder)
-- **Safety mechanism**: SM-002, SM-016
+- **Traces down**: TSR-006, TSR-007- **Safety mechanism**: SM-002, SM-016
 - **Allocation**: RZC
 - **Status**: draft
 
@@ -119,8 +115,7 @@ The system shall continuously monitor motor current via the ACS723 current senso
 
 - **ASIL**: A
 - **Traces up**: SG-006
-- **Traces down**: TSR-008, TSR-009 (placeholder)
-- **Safety mechanism**: SM-015
+- **Traces down**: TSR-008, TSR-009- **Safety mechanism**: SM-015
 - **Allocation**: RZC
 - **Status**: draft
 
@@ -146,8 +141,7 @@ The derating shall include a 10 degree C hysteresis on recovery (motor re-enable
 
 - **ASIL**: D
 - **Traces up**: SG-003
-- **Traces down**: TSR-010, TSR-011 (placeholder)
-- **Safety mechanism**: SM-008
+- **Traces down**: TSR-010, TSR-011- **Safety mechanism**: SM-008
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -166,8 +160,7 @@ The system shall continuously monitor the steering angle feedback sensor (AS5048
 
 - **ASIL**: D
 - **Traces up**: SG-003
-- **Traces down**: TSR-012, TSR-013 (placeholder)
-- **Safety mechanism**: SM-008
+- **Traces down**: TSR-012, TSR-013- **Safety mechanism**: SM-008
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -181,8 +174,7 @@ The system shall command the steering servo to the center position (0 degrees) a
 
 - **ASIL**: C
 - **Traces up**: SG-003
-- **Traces down**: TSR-014 (placeholder)
-- **Safety mechanism**: SM-009, SM-010
+- **Traces down**: TSR-014- **Safety mechanism**: SM-009, SM-010
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -200,8 +192,7 @@ The system shall limit the rate of change of the steering angle command to a max
 
 - **ASIL**: D
 - **Traces up**: SG-004, SG-005
-- **Traces down**: TSR-015, TSR-016 (placeholder)
-- **Safety mechanism**: SM-011, SM-014
+- **Traces down**: TSR-015, TSR-016- **Safety mechanism**: SM-011, SM-014
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -222,8 +213,7 @@ On detection of a brake fault (conditions 1 or 2), the system shall immediately 
 
 - **ASIL**: D
 - **Traces up**: SG-004
-- **Traces down**: TSR-017 (placeholder)
-- **Safety mechanism**: SM-012
+- **Traces down**: TSR-017- **Safety mechanism**: SM-012
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -241,8 +231,7 @@ The system shall autonomously apply maximum braking force if no valid brake comm
 
 - **ASIL**: C
 - **Traces up**: SG-007
-- **Traces down**: TSR-018, TSR-019 (placeholder)
-- **Safety mechanism**: SM-017
+- **Traces down**: TSR-018, TSR-019- **Safety mechanism**: SM-017
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -262,8 +251,7 @@ The distance thresholds shall be adjustable at compile time and shall maintain t
 
 - **ASIL**: C
 - **Traces up**: SG-007
-- **Traces down**: TSR-020, TSR-021 (placeholder)
-- **Safety mechanism**: SM-018
+- **Traces down**: TSR-020, TSR-021- **Safety mechanism**: SM-018
 - **Allocation**: FZC
 - **Status**: draft
 
@@ -288,8 +276,7 @@ On any plausibility failure, the system shall substitute a safe default distance
 
 - **ASIL**: D
 - **Traces up**: SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008
-- **Traces down**: TSR-022, TSR-023, TSR-024 (placeholder)
-- **Safety mechanism**: SM-004
+- **Traces down**: TSR-022, TSR-023, TSR-024- **Safety mechanism**: SM-004
 - **Allocation**: CVC, FZC, RZC, SC
 - **Status**: draft
 
@@ -315,8 +302,7 @@ Safety-critical CAN messages include: pedal position, torque request, torque sta
 
 - **ASIL**: C
 - **Traces up**: SG-008
-- **Traces down**: TSR-025, TSR-026 (placeholder)
-- **Safety mechanism**: SM-019
+- **Traces down**: TSR-025, TSR-026- **Safety mechanism**: SM-019
 - **Allocation**: CVC, FZC, RZC
 - **Status**: draft
 
@@ -330,8 +316,7 @@ Each zone ECU (CVC, FZC, RZC) shall transmit a heartbeat CAN message at a fixed 
 
 - **ASIL**: C
 - **Traces up**: SG-008
-- **Traces down**: TSR-027, TSR-028 (placeholder)
-- **Safety mechanism**: SM-019
+- **Traces down**: TSR-027, TSR-028- **Safety mechanism**: SM-019
 - **Allocation**: SC
 - **Status**: draft
 
@@ -349,8 +334,7 @@ The Safety Controller shall independently monitor the heartbeat CAN messages fro
 
 - **ASIL**: D
 - **Traces up**: SG-001, SG-003, SG-004, SG-008
-- **Traces down**: TSR-029, TSR-030 (placeholder)
-- **Safety mechanism**: SM-005
+- **Traces down**: TSR-029, TSR-030- **Safety mechanism**: SM-005
 - **Allocation**: SC
 - **Status**: draft
 
@@ -372,8 +356,7 @@ The kill relay shall use an energize-to-run configuration: the relay coil must b
 
 - **ASIL**: D
 - **Traces up**: SG-008
-- **Traces down**: TSR-031, TSR-032 (placeholder)
-- **Safety mechanism**: SM-020, SM-021
+- **Traces down**: TSR-031, TSR-032- **Safety mechanism**: SM-020, SM-021
 - **Allocation**: CVC, FZC, RZC, SC
 - **Status**: draft
 
@@ -398,8 +381,7 @@ Additionally, the Safety Controller (TMS570LC43x) shall rely on its hardware loc
 
 - **ASIL**: B
 - **Traces up**: SG-001, SG-008
-- **Traces down**: TSR-033, TSR-034 (placeholder)
-- **Safety mechanism**: SM-023
+- **Traces down**: TSR-033, TSR-034- **Safety mechanism**: SM-023
 - **Allocation**: CVC (detection), FZC and RZC (reaction)
 - **Status**: draft
 
@@ -427,8 +409,7 @@ The system shall remain in SAFE_STOP until the E-stop button is released AND a m
 
 - **ASIL**: D
 - **Traces up**: SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008
-- **Traces down**: TSR-035, TSR-036, TSR-037 (placeholder)
-- **Safety mechanism**: SM-022
+- **Traces down**: TSR-035, TSR-036, TSR-037- **Safety mechanism**: SM-022
 - **Allocation**: CVC (primary), all ECUs (secondary via BswM)
 - **Status**: draft
 
@@ -450,8 +431,7 @@ Each state shall define the maximum permitted operational limits (torque, speed,
 
 - **ASIL**: C
 - **Traces up**: SG-008
-- **Traces down**: TSR-038, TSR-039 (placeholder)
-- **Safety mechanism**: SM-004, SM-007
+- **Traces down**: TSR-038, TSR-039- **Safety mechanism**: SM-004, SM-007
 - **Allocation**: CVC, FZC, RZC, SC
 - **Status**: draft
 
@@ -476,8 +456,7 @@ Each ECU shall independently handle CAN loss without relying on commands from ot
 
 - **ASIL**: C
 - **Traces up**: SG-001
-- **Traces down**: TSR-040 (placeholder)
-- **Safety mechanism**: SM-002
+- **Traces down**: TSR-040- **Safety mechanism**: SM-002
 - **Allocation**: RZC
 - **Status**: draft
 
@@ -493,8 +472,7 @@ Additionally, the system shall prevent simultaneous activation of both RPWM and 
 
 - **ASIL**: C
 - **Traces up**: SG-001
-- **Traces down**: TSR-041, TSR-042 (placeholder)
-- **Safety mechanism**: SM-003
+- **Traces down**: TSR-041, TSR-042- **Safety mechanism**: SM-003
 - **Allocation**: SC
 - **Status**: draft
 
@@ -514,8 +492,7 @@ On cross-plausibility fault detection, the SC shall de-energize the kill relay (
 
 - **ASIL**: B
 - **Traces up**: SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008
-- **Traces down**: TSR-043, TSR-044, TSR-045 (placeholder)
-- **Safety mechanism**: SM-022
+- **Traces down**: TSR-043, TSR-044, TSR-045- **Safety mechanism**: SM-022
 - **Allocation**: CVC (OLED), FZC (buzzer), SC (fault LEDs)
 - **Status**: draft
 
@@ -539,8 +516,7 @@ At least one warning channel (SC fault LEDs) shall be independent of the CAN bus
 
 - **ASIL**: D
 - **Traces up**: SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008
-- **Traces down**: TSR-046, TSR-047 (placeholder)
-- **Safety mechanism**: SM-001 through SM-023 (all)
+- **Traces down**: TSR-046, TSR-047- **Safety mechanism**: SM-001 through SM-023 (all)
 - **Allocation**: All ECUs
 - **Status**: draft
 
@@ -571,8 +547,7 @@ For each safety goal, the total time from fault occurrence to safe state achieve
 
 - **ASIL**: D
 - **Traces up**: SG-004
-- **Traces down**: TSR-048, TSR-049 (placeholder)
-- **Safety mechanism**: SM-011, SM-013
+- **Traces down**: TSR-048, TSR-049- **Safety mechanism**: SM-011, SM-013
 - **Allocation**: FZC (detection), CVC (command), RZC (execution), SC (backup)
 - **Status**: draft
 
