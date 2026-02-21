@@ -14,12 +14,13 @@ All project decisions must be recorded here with the mandatory fields below.
 
 Every decision MUST include:
 
-1. **Decision**: what was chosen
-2. **Rationale**: WHY it was chosen
-3. **Effort**: cost ($) and time (hours/days) for the chosen option
-4. **Alternative A**: description, effort ($ + time), pros, cons
-5. **Alternative B**: description, effort ($ + time), pros, cons
-6. **Why chosen wins**: explicit comparison against alternatives
+1. **Tier**: T1-T4 classification (see [decision-records rule](../../../../.claude/rules/decision-records.md))
+2. **Scores**: Cost, Time, Safety, Resume (1-3 each, total /12)
+3. **Rationale**: WHY it was chosen
+4. **Effort**: cost ($) and time (hours/days) for the chosen option
+5. **Alternative A**: description, effort ($ + time), pros, cons
+6. **Alternative B**: description, effort ($ + time), pros, cons
+7. **Why chosen wins**: explicit comparison against alternatives
 
 ## Compliance Markers
 
@@ -36,26 +37,28 @@ The daily scan script (`scripts/decision-audit.sh`) searches for:
 
 ## Quick Reference
 
-| ADR | Decision | Date | Status |
-|-----|----------|------|--------|
-| ADR-001 | Structure docs under ASPICE process areas | 2026-02-21 | Approved |
-| ADR-002 | Keep master-plan.md as source baseline | 2026-02-21 | Approved |
-| ADR-003 | Create central docs/research/ repository | 2026-02-21 | Approved |
-| ADR-004 | Add MAN.3 live tracking set | 2026-02-21 | Approved |
-| ADR-005 | STM32G474RE Nucleo for 3 zone ECUs | 2026-02-21 | Approved |
-| ADR-006 | AUTOSAR Classic layered BSW | 2026-02-21 | Approved |
-| ADR-007 | POSIX SocketCAN for simulated ECU MCAL | 2026-02-21 | Approved |
-| ADR-008 | BMW vsomeip for SOME/IP demo | 2026-02-21 | Approved |
-| ADR-009 | Docker containers for simulated ECU runtime | 2026-02-21 | Approved |
-| ADR-010 | Unity + CCS Test + pytest for testing | 2026-02-21 | Approved |
-| ADR-011 | CAN 2.0B at 500 kbps (no CAN FD) | 2026-02-21 | Approved |
-| ADR-012 | AWS IoT Core + Timestream + Grafana | 2026-02-21 | Approved |
+| ADR | Decision | Tier | Score | Date | Status |
+|-----|----------|------|-------|------|--------|
+| ADR-001 | Structure docs under ASPICE process areas | T4 | 5/12 | 2026-02-21 | Approved |
+| ADR-002 | Keep master-plan.md as source baseline | T4 | 4/12 | 2026-02-21 | Approved |
+| ADR-003 | Create central docs/research/ repository | T4 | 4/12 | 2026-02-21 | Approved |
+| ADR-004 | Add MAN.3 live tracking set | T4 | 5/12 | 2026-02-21 | Approved |
+| ADR-005 | STM32G474RE Nucleo for 3 zone ECUs | T1 | 10/12 | 2026-02-21 | Approved |
+| ADR-006 | AUTOSAR Classic layered BSW | T1 | 9/12 | 2026-02-21 | Approved |
+| ADR-007 | POSIX SocketCAN for simulated ECU MCAL | T2 | 7/12 | 2026-02-21 | Approved |
+| ADR-008 | BMW vsomeip for SOME/IP demo | T2 | 6/12 | 2026-02-21 | Approved |
+| ADR-009 | Docker containers for simulated ECU runtime | T2 | 5/12 | 2026-02-21 | Approved |
+| ADR-010 | Unity + CCS Test + pytest for testing | T2 | 7/12 | 2026-02-21 | Approved |
+| ADR-011 | CAN 2.0B at 500 kbps (no CAN FD) | T1 | 7/12 | 2026-02-21 | Approved |
+| ADR-012 | AWS IoT Core + Timestream + Grafana | T2 | 6/12 | 2026-02-21 | Approved |
 
 ---
 
 ## ADR-001: Structure docs under ASPICE process areas
 
 - **Date**: 2026-02-21
+- **Tier**: T4 — Process
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 2 = **5/12**
 - **Decision**: Organize documentation under `docs/aspice/` by process area (SYS, SWE, SUP, MAN, HWE)
 - **Rationale**: Assessors navigate by process area. Flat folder requires mental mapping.
 - **Effort**: 2 hours to restructure, $0
@@ -78,6 +81,8 @@ File-based ALM in Git gives assessor-friendly structure at zero cost with full v
 ## ADR-002: Keep master-plan.md as source baseline
 
 - **Date**: 2026-02-21
+- **Tier**: T4 — Process
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 1 = **4/12**
 - **Decision**: Keep `docs/plans/master-plan.md` as the single strategic plan, with ASPICE execution plans as operational breakdowns
 - **Rationale**: One source of truth for scope, phases, and architecture. ASPICE plans reference it.
 - **Effort**: 0 hours (exists), $0
@@ -100,6 +105,8 @@ Master plan provides strategic context (architecture, BOM, demos) that execution
 ## ADR-003: Create central docs/research/ repository
 
 - **Date**: 2026-02-21
+- **Tier**: T4 — Process
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 1 = **4/12**
 - **Decision**: Centralize all external references and research notes in `docs/research/`
 - **Rationale**: Scattered references across plans and notes lose provenance. Central log enables traceability.
 - **Effort**: 1 hour setup, $0
@@ -122,6 +129,8 @@ Git-versioned research log keeps provenance with the codebase. Link-log.md is gr
 ## ADR-004: Add MAN.3 live tracking set (dashboard/logs/gates)
 
 - **Date**: 2026-02-21
+- **Tier**: T4 — Process
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 2 = **5/12**
 - **Decision**: Add progress dashboard, issue log, decision log, and gate readiness checklist to MAN.3
 - **Rationale**: ASPICE MAN.3 requires progress monitoring, issue tracking, and gate management.
 - **Effort**: 3 hours to create templates, $0
@@ -144,6 +153,8 @@ Markdown tracking files in-repo satisfy ASPICE evidence requirements, are self-c
 ## ADR-005: STM32G474RE Nucleo-64 for 3 zone ECUs
 
 - **Date**: 2026-02-21
+- **Tier**: T1 — Architecture
+- **Scores**: Cost 2 | Time 2 | Safety 3 | Resume 3 = **10/12**
 - **Decision**: Use 3x STM32G474RE Nucleo-64 boards for CVC, FZC, and RZC zone controllers
 - **Rationale**: The G474RE offers 3x FDCAN (CAN-FD capable, backward-compatible with CAN 2.0B), 5x 12-bit ADCs (42 channels for dual-sensor plausibility), CORDIC + FMAC math accelerators (motor control), 170 MHz Cortex-M4F, and 128 KB RAM — all critical for ASIL D automotive BSW. STM32 is the dominant MCU family in automotive Tier 1 development, maximizing resume impact. Free toolchain (STM32CubeIDE + CubeMX) with onboard ST-LINK/V3 debugger.
 - **Effort**: ~$60 for 3 boards ($20 each), 10-14 days BSW development, $0 toolchain
@@ -166,6 +177,8 @@ The STM32G474RE costs $15-25 more total than the F446RE but gains CAN-FD (the cu
 ## ADR-006: AUTOSAR Classic layered BSW architecture
 
 - **Date**: 2026-02-21
+- **Tier**: T1 — Architecture
+- **Scores**: Cost 1 | Time 2 | Safety 3 | Resume 3 = **9/12**
 - **Decision**: Implement a custom AUTOSAR Classic-inspired layered BSW with MCAL, EAL (CanIf, PduR, IoHwAb), Services (Com, Dcm, Dem, WdgM, BswM, E2E), and RTE — approximately 3,000 LOC shared across 3 STM32 ECUs
 - **Rationale**: AUTOSAR BSW module names (CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE) are the most searched keywords in automotive embedded job postings. The layered architecture directly satisfies ASPICE SWE.2 (software architecture) and SWE.3 (detailed design). The MCAL abstraction enables SIL testing by swapping STM32 MCAL for POSIX SocketCAN MCAL — same BSW code on hardware and in Docker. No licensing cost ($0) versus commercial AUTOSAR stacks ($10K-$100K+).
 - **Effort**: 10-14 days for single developer (~3,000 LOC across 16 modules), $0
@@ -188,6 +201,8 @@ The AUTOSAR-like BSW costs 2-6 extra days over alternatives but delivers 16+ aut
 ## ADR-007: POSIX SocketCAN for simulated ECU MCAL
 
 - **Date**: 2026-02-21
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 2 | Safety 1 | Resume 3 = **7/12**
 - **Decision**: Use POSIX SocketCAN API as the MCAL layer for 3 simulated ECUs (BCM, ICU, TCU) running in Docker containers, enabling the same C firmware codebase to compile for both STM32 (hardware MCAL) and Linux (SocketCAN MCAL)
 - **Rationale**: 100% code reuse between physical and simulated ECUs. The same BSW stack runs on target hardware and in Docker, swapping only the MCAL layer. This demonstrates the AUTOSAR portability principle and enables CI/CD testing without hardware. Virtual CAN interfaces (vcan/vxcan) provide zero-cost inter-container CAN communication.
 - **Effort**: 5-8 days for MCAL abstraction + SocketCAN implementation, $0
@@ -210,6 +225,8 @@ The SocketCAN MCAL approach is the only option that achieves 100% code reuse bet
 ## ADR-008: BMW vsomeip for SOME/IP demo
 
 - **Date**: 2026-02-21
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 3 = **6/12**
 - **Decision**: Use vsomeip (COVESA/BMW open-source SOME/IP implementation) for service-oriented communication between simulated ECUs and Pi gateway
 - **Rationale**: vsomeip is the industry-standard open-source SOME/IP stack, deployed in millions of BMW production vehicles. 1,400 GitHub stars, 55+ contributors, actively maintained with monthly public meetings. A working hello-world client-server pair takes ~300-400 lines. Direct API usage exposes SOME/IP protocol concepts (service discovery, request/response, publish/subscribe) — exactly what interviewers want to see.
 - **Effort**: 4-7 days for 2-3 service interfaces + Docker integration, $0 (MPL-2.0 license)
@@ -232,6 +249,8 @@ vsomeip direct API gives the best ROI: 4-7 days produces a working SOME/IP demo 
 ## ADR-009: Docker containers for simulated ECU runtime
 
 - **Date**: 2026-02-21
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 2 = **5/12**
 - **Decision**: Run 3 simulated ECUs (BCM, ICU, TCU) in Docker containers with virtual CAN (vcan/vxcan) interfaces on Linux
 - **Rationale**: Docker provides strong isolation (namespaces, cgroups), reproducible environments (Dockerfile), and excellent CI/CD integration. The same C firmware source compiles for x86 host with SocketCAN MCAL. Docker-based vECU is an emerging industry pattern (SYS TEC, Collabora, dSPACE all document this approach). Containers can be started/stopped/reset with docker-compose.
 - **Effort**: 1-2 days for Dockerfile + docker-compose + vcan setup, $0
@@ -254,6 +273,8 @@ Docker costs the same 1-2 days as native processes but adds isolation, reproduci
 ## ADR-010: Unity + CCS Test + pytest for testing
 
 - **Date**: 2026-02-21
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 1 | Safety 3 | Resume 2 = **7/12**
 - **Decision**: Use Unity (ThrowTheSwitch) for C unit testing on STM32 firmware, CCS (Code Composer Studio) built-in testing for TMS570 Safety Controller, and pytest for Python gateway/cloud testing
 - **Rationale**: Unity is pure ANSI C (runs on 8-bit MCUs to 64-bit hosts), MIT-licensed, 5,040 GitHub stars, actively maintained (336/365 days active). CMock auto-generates C mocks from headers. The entire framework is 1 C file + 2 headers (~1,500 lines) — trivial to include in any build system. CCS Test is the only practical option for TMS570 on-target testing. pytest is the Python standard.
 - **Effort**: 2-4 hours Unity setup + 1-2 days CCS test harness + 1-2 hours pytest setup, $0
@@ -276,6 +297,8 @@ Unity takes 2-4 hours to set up (include unity.c in your build) vs 2-4 days for 
 ## ADR-011: CAN 2.0B at 500 kbps (no CAN FD)
 
 - **Date**: 2026-02-21
+- **Tier**: T1 — Architecture
+- **Scores**: Cost 1 | Time 1 | Safety 3 | Resume 2 = **7/12**
 - **Decision**: Use CAN 2.0B at 500 kbps for all inter-ECU communication. STM32G474RE FDCAN runs in classic mode; TMS570LC43x DCAN operates natively at 500 kbps. All nodes are bus-compatible.
 - **Rationale**: The TMS570LC43x Safety Controller only has DCAN (classic CAN). CAN-FD frames cause error frames on classic CAN controllers — they cannot coexist on the same bus segment. Since the Safety Controller must monitor all traffic in silent mode, the entire bus must use classic CAN. The project's 16 CAN messages at 10-50 Hz with 8-byte payloads = ~12.8 kB/s, well under CAN 2.0B's ~36 kB/s capacity (~35% utilization). No bandwidth pressure exists.
 - **Effort**: $0 (no additional hardware), 0 additional days (native mode for both MCUs)
@@ -298,6 +321,8 @@ CAN 2.0B at 500 kbps is the zero-cost, zero-risk baseline that satisfies all pro
 ## ADR-012: AWS IoT Core + Timestream + Grafana for cloud telemetry
 
 - **Date**: 2026-02-21
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 1 | Safety 1 | Resume 3 = **6/12**
 - **Decision**: Use AWS IoT Core (MQTT broker) + Amazon Timestream (time-series DB) + Grafana (self-hosted dashboards) for cloud telemetry from the Pi edge gateway, batching to 1 msg/5sec for free tier compliance
 - **Rationale**: AWS dominates automotive IoT — Mercedes-Benz, VW, Toyota, Stellantis, Continental all run on AWS. AWS IoT Core free tier covers 500K messages/month for 12 months. AWS IoT FleetWise is a purpose-built automotive feature (vehicle signal catalog, data campaigns). Grafana is fully free and open-source with unlimited sharing. The combination puts "AWS IoT Core" on the resume, which is the most recognized cloud IoT platform in automotive hiring.
 - **Effort**: 3-5 days for setup + integration, ~$4-6/month (Timestream minimum during year 1), ~$5-7/month after free tier

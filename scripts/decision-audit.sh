@@ -54,18 +54,23 @@ for ADR in $ADR_IDS; do
     if grep -q "^## $ADR:" "$DECISION_LOG"; then
         # Check required fields
         SECTION=$(sed -n "/^## $ADR:/,/^## ADR-/p" "$DECISION_LOG" | head -60)
+        HAS_TIER=$(echo "$SECTION" | grep -c "Tier" || true)
+        HAS_SCORES=$(echo "$SECTION" | grep -c "Scores" || true)
         HAS_RATIONALE=$(echo "$SECTION" | grep -c "Rationale" || true)
         HAS_EFFORT=$(echo "$SECTION" | grep -c "Effort" || true)
         HAS_ALT_A=$(echo "$SECTION" | grep -c "Alternative A" || true)
         HAS_ALT_B=$(echo "$SECTION" | grep -c "Alternative B" || true)
         HAS_WHY=$(echo "$SECTION" | grep -c "Why chosen wins" || true)
 
-        if [ "$HAS_RATIONALE" -ge 1 ] && [ "$HAS_EFFORT" -ge 2 ] && \
+        if [ "$HAS_TIER" -ge 1 ] && [ "$HAS_SCORES" -ge 1 ] && \
+           [ "$HAS_RATIONALE" -ge 1 ] && [ "$HAS_EFFORT" -ge 2 ] && \
            [ "$HAS_ALT_A" -ge 1 ] && [ "$HAS_ALT_B" -ge 1 ] && [ "$HAS_WHY" -ge 1 ]; then
             echo "  PASS: $ADR"
             PASS_COUNT=$((PASS_COUNT + 1))
         else
             echo "  FAIL: $ADR — missing:"
+            [ "$HAS_TIER" -lt 1 ] && echo "    - Tier (T1-T4)"
+            [ "$HAS_SCORES" -lt 1 ] && echo "    - Scores (Cost/Time/Safety/Resume)"
             [ "$HAS_RATIONALE" -lt 1 ] && echo "    - Rationale"
             [ "$HAS_EFFORT" -lt 2 ] && echo "    - Effort (need chosen + alternatives)"
             [ "$HAS_ALT_A" -lt 1 ] && echo "    - Alternative A"

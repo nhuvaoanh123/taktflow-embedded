@@ -1,81 +1,93 @@
 ---
 document_id: MAN3-DECISION-SUMMARY
 title: "Decision Summary — Quick Reference"
-version: "1.0"
+version: "2.0"
 status: active
 updated: "2026-02-22"
 ---
 
 # Decision Summary
 
-Quick reference for all approved decisions. For full rationale, alternatives, and effort analysis, see [decision-log.md](decision-log.md).
+Quick reference for all approved decisions with tier ranking and impact scores. For full rationale, alternatives, and effort analysis, see [decision-log.md](decision-log.md).
+
+## Ranking System
+
+**Tiers** (by reversibility and impact):
+
+| Tier | Name | Reversibility | Meaning |
+|------|------|---------------|---------|
+| **T1** | Architecture | Locked (months+) | Defines system shape — MCU, bus, safety architecture |
+| **T2** | Design | Hard (weeks) | Affects multiple components — BSW, test stack, cloud |
+| **T3** | Implementation | Moderate (days) | Affects one component — library, driver, API |
+| **T4** | Process | Easy (hours) | Affects workflow only — folders, naming, docs |
+
+**Scores** (1-3 per dimension, total /12):
+
+| Dimension | 1 (Low) | 2 (Medium) | 3 (High) |
+|-----------|---------|------------|----------|
+| Cost ($) | < $50 | $50-$500 | > $500 |
+| Time | < 1 week | 1-4 weeks | > 4 weeks |
+| Safety | QM | ASIL A-C | ASIL D |
+| Resume | Generic | Industry-relevant | Top automotive keyword |
 
 ---
 
-## Hardware
+## All Decisions Ranked by Tier
 
-| ADR | Decision | Cost | Time | Key Reason |
-|-----|----------|------|------|------------|
-| ADR-005 | **STM32G474RE Nucleo-64** for 3 zone ECUs (CVC, FZC, RZC) | $60 (3x $20) | 10-14 days BSW | 3x FDCAN, 5x ADC, CORDIC/FMAC, dominant automotive MCU family |
-| ADR-011 | **CAN 2.0B at 500 kbps** (no CAN FD) | $0 | 0 days | TMS570 DCAN only supports classic CAN; 35% bus utilization — no bandwidth pressure |
+### T1 — Architecture (system-defining, locked)
 
-## Software Architecture
+| ADR | Decision | Cost | Time | Scores (C/T/S/R) | Total | Key Reason |
+|-----|----------|------|------|-------------------|-------|------------|
+| ADR-005 | **STM32G474RE Nucleo-64** ×3 | $60 | 10-14d | 2/2/3/3 | **10** | 3x FDCAN, 5x ADC, CORDIC/FMAC, dominant automotive MCU |
+| ADR-011 | **CAN 2.0B at 500 kbps** | $0 | 0d | 1/1/3/2 | **7** | TMS570 DCAN = classic only; 35% utilization, no pressure |
+| ADR-006 | **AUTOSAR Classic layered BSW** | $0 | 10-14d | 1/2/3/3 | **9** | 16+ resume keywords, ASPICE SWE.2/SWE.3, 10/10 impact |
 
-| ADR | Decision | Cost | Time | Key Reason |
-|-----|----------|------|------|------------|
-| ADR-006 | **AUTOSAR Classic layered BSW** (MCAL, EAL, Services, RTE) | $0 | 10-14 days | 16+ automotive resume keywords, ASPICE SWE.2/SWE.3 compliant, 10/10 resume impact |
-| ADR-007 | **POSIX SocketCAN** for simulated ECU MCAL | $0 | 5-8 days | 100% code reuse between physical and simulated ECUs |
-| ADR-008 | **BMW vsomeip** for SOME/IP demo | $0 | 4-7 days | Industry-standard (1,400 stars), deployed in millions of BMW vehicles, direct API shows protocol knowledge |
-| ADR-009 | **Docker containers** for simulated ECU runtime | $0 | 1-2 days | Isolation + reproducibility + CI/CD at same cost as native processes |
+### T2 — Design (multi-component, hard to reverse)
 
-## Testing
+| ADR | Decision | Cost | Time | Scores (C/T/S/R) | Total | Key Reason |
+|-----|----------|------|------|-------------------|-------|------------|
+| ADR-007 | **POSIX SocketCAN** simulated MCAL | $0 | 5-8d | 1/2/1/3 | **7** | 100% code reuse physical ↔ simulated ECUs |
+| ADR-008 | **BMW vsomeip** for SOME/IP | $0 | 4-7d | 1/1/1/3 | **6** | Industry-standard, millions deployed, protocol visible |
+| ADR-009 | **Docker containers** for vECUs | $0 | 1-2d | 1/1/1/2 | **5** | Isolation + reproducibility + CI/CD |
+| ADR-010 | **Unity + CCS Test + pytest** | $0 | 2-4h+1-2d | 1/1/3/2 | **7** | Pure C, MIT, embedded-designed, actively maintained |
+| ADR-012 | **AWS IoT Core + Timestream + Grafana** | $4-7/mo | 3-5d | 1/1/1/3 | **6** | Highest automotive OEM adoption, free tier |
 
-| ADR | Decision | Cost | Time | Key Reason |
-|-----|----------|------|------|------------|
-| ADR-010 | **Unity + CCS Test + pytest** | $0 | 2-4 hours + 1-2 days | Pure C, MIT license, 5K stars, actively maintained, designed for embedded |
+### T4 — Process (workflow, easy to reverse)
 
-## Cloud & Infrastructure
-
-| ADR | Decision | Cost | Time | Key Reason |
-|-----|----------|------|------|------------|
-| ADR-012 | **AWS IoT Core + Timestream + Grafana** | $4-7/month | 3-5 days | Highest automotive OEM adoption (Mercedes, VW, Toyota), free tier covers 500K msg/month |
-
-## Process & Documentation
-
-| ADR | Decision | Cost | Time | Key Reason |
-|-----|----------|------|------|------------|
-| ADR-001 | **ASPICE process area folder structure** | $0 | 2 hours | Assessor-friendly navigation, scales with project |
-| ADR-002 | **master-plan.md as source baseline** | $0 | 0 hours | Single strategic source of truth; ASPICE plans reference it |
-| ADR-003 | **Central docs/research/ repository** | $0 | 1 hour | Git-versioned research provenance |
-| ADR-004 | **MAN.3 live tracking set** (dashboard, logs, gates) | $0 | 3 hours | ASPICE MAN.3 evidence requirements met in-repo |
+| ADR | Decision | Cost | Time | Scores (C/T/S/R) | Total | Key Reason |
+|-----|----------|------|------|-------------------|-------|------------|
+| ADR-001 | **ASPICE folder structure** | $0 | 2h | 1/1/1/2 | **5** | Assessor-friendly, scales with project |
+| ADR-002 | **master-plan.md as baseline** | $0 | 0h | 1/1/1/1 | **4** | Single strategic source of truth |
+| ADR-003 | **Central docs/research/** | $0 | 1h | 1/1/1/1 | **4** | Git-versioned research provenance |
+| ADR-004 | **MAN.3 live tracking set** | $0 | 3h | 1/1/1/2 | **5** | ASPICE MAN.3 evidence in-repo |
 
 ---
 
-## Totals
+## Summary by Tier
 
-| Category | Total Cost | Total Dev Time |
-|----------|-----------|----------------|
-| Hardware (boards) | ~$60 | — |
-| Cloud (monthly) | ~$4-7/month | — |
-| Software/tools | $0 | — |
-| Development effort | — | ~36-50 days |
+| Tier | Count | Total Cost | Total Time | Avg Score |
+|------|-------|-----------|------------|-----------|
+| T1 — Architecture | 3 | $60 | 20-28 days | 8.7 |
+| T2 — Design | 5 | $4-7/mo | 14-24 days | 6.2 |
+| T4 — Process | 4 | $0 | 6 hours | 4.5 |
+| **All** | **12** | **$60 + $4-7/mo** | **~36-50 days** | **6.2** |
 
 ## Rejected Alternatives (Top Reasons)
 
-| Rejected | Why |
-|----------|-----|
-| STM32F446RE | No CAN-FD — legacy technology signal |
-| Arduino Mega 2560 | 8-bit, 8KB RAM, no CAN — resume damage for ASIL D |
-| Bare-metal (no AUTOSAR) | ASPICE SWE.2 non-compliant, 3/10 resume impact |
-| FreeRTOS without AUTOSAR layers | No AUTOSAR keywords, 5/10 resume impact |
-| Python-can for simulated ECUs | Zero code reuse with physical ECU firmware |
-| Vector CANoe | $10K-$15K+ — prohibitive for portfolio project |
-| Custom SOME/IP from scratch | 4-8 weeks wasted reimplementing existing solution |
-| CommonAPI + vsomeip | 6-repo toolchain, doubles effort, hides protocol details |
-| QEMU/Renode emulation | 3-15x more setup, STM32G474 not supported upstream |
-| Google Test (gtest) | C++17 required, C/C++ boundary boilerplate unnecessary for pure C |
-| CUnit | Abandoned since 2018, no mock generation |
-| CAN FD (via TCAN4550) | 8-13 extra days for unneeded bandwidth, complicates Safety Controller |
-| Ethernet + CAN hybrid | 6-10 weeks, requires replacing all MCU boards |
-| Azure IoT Hub | $25/month minimum for 500K messages (5x AWS cost) |
-| Self-hosted Mosquitto + InfluxDB | Loses "AWS IoT Core" automotive resume keyword |
+| Rejected | ADR | Tier | Why |
+|----------|-----|------|-----|
+| STM32F446RE | 005 | T1 | No CAN-FD — legacy technology signal |
+| Arduino Mega 2560 | 005 | T1 | 8-bit, 8KB RAM, no CAN — resume damage |
+| Bare-metal (no AUTOSAR) | 006 | T1 | ASPICE SWE.2 non-compliant, 3/10 resume |
+| FreeRTOS without AUTOSAR | 006 | T1 | No AUTOSAR keywords, 5/10 resume |
+| CAN FD (via TCAN4550) | 011 | T1 | 8-13 extra days for unneeded bandwidth |
+| Ethernet + CAN hybrid | 011 | T1 | 6-10 weeks, must replace all MCU boards |
+| Python-can simulation | 007 | T2 | Zero code reuse with physical firmware |
+| Vector CANoe | 007 | T2 | $10K-$15K+ — prohibitive for portfolio |
+| Custom SOME/IP | 008 | T2 | 4-8 weeks reimplementing existing solution |
+| CommonAPI + vsomeip | 008 | T2 | 6-repo toolchain, hides protocol details |
+| QEMU/Renode emulation | 009 | T2 | 3-15x setup, G474 not supported upstream |
+| Google Test (gtest) | 010 | T2 | C++17 required, unnecessary for pure C |
+| CUnit | 010 | T2 | Abandoned since 2018, no mock generation |
+| Azure IoT Hub | 012 | T2 | $25/month min (5x AWS cost) |
+| Self-hosted Mosquitto | 012 | T2 | Loses automotive resume keyword |
