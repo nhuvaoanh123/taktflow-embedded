@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-21
 **Branch**: `develop`
-**Phase**: Phase 0 IN PROGRESS — Master plan updated with 7-ECU hybrid architecture
+**Phase**: Phase 0 IN PROGRESS — ASPICE-aligned ALM structure complete, master plan paths updated
 
 ---
 
@@ -78,27 +78,57 @@
 taktflow-embedded/
 ├── .claude/
 │   ├── settings.json, hooks/, rules/ (28 files), skills/ (3)
-├── firmware/
-│   ├── cvc/src/, cvc/include/, cvc/test/    — Central Vehicle Computer (STM32, physical)
-│   ├── fzc/src/, fzc/include/, fzc/test/    — Front Zone Controller (STM32, physical)
-│   ├── rzc/src/, rzc/include/, rzc/test/    — Rear Zone Controller (STM32, physical)
-│   ├── sc/src/, sc/include/, sc/test/       — Safety Controller (TMS570, physical)
-│   ├── bcm/src/, bcm/include/, bcm/test/   — Body Control Module (simulated)
-│   ├── icu/src/, icu/include/, icu/test/   — Instrument Cluster Unit (simulated)
-│   ├── tcu/src/, tcu/include/, tcu/test/   — Telematics Control Unit (simulated)
-│   └── shared/bsw/                           — AUTOSAR-like BSW (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, RTE)
+├── firmware/                                  — Per-ECU firmware (7 ECUs + shared BSW)
+│   ├── cvc/src/, include/, cfg/, test/       — Central Vehicle Computer (STM32, ASIL D)
+│   ├── fzc/src/, include/, cfg/, test/       — Front Zone Controller (STM32, ASIL D)
+│   ├── rzc/src/, include/, cfg/, test/       — Rear Zone Controller (STM32, ASIL D)
+│   ├── sc/src/, include/, test/              — Safety Controller (TMS570, ASIL D, NO AUTOSAR)
+│   ├── bcm/src/, include/, cfg/, test/       — Body Control Module (Docker, QM)
+│   ├── icu/src/, include/, cfg/, test/       — Instrument Cluster Unit (Docker, QM)
+│   ├── tcu/src/, include/, cfg/, test/       — Telematics Control Unit (Docker, QM)
+│   └── shared/bsw/                           — AUTOSAR-like BSW
+│       ├── mcal/                             — CAN, SPI, ADC, PWM, Dio, Gpt
+│       ├── ecual/                            — CanIf, PduR, IoHwAb
+│       ├── services/                         — Com, Dcm, Dem, WdgM, BswM, E2E
+│       ├── rte/                              — Runtime Environment
+│       └── include/                          — Platform_Types, Std_Types
 ├── docker/                                   — Dockerfile, docker-compose for simulated ECUs
 ├── gateway/                                  — Raspberry Pi edge gateway (Python)
+│   ├── sap_qm_mock/                         — SAP QM mock API
+│   ├── tests/, models/                       — Gateway tests, ML models
 ├── hardware/                                 — Pin mappings, BOM, schematics
-├── scripts/                                  — Build scripts, vECU startup scripts
+├── scripts/                                  — trace-gen.py, baseline-tag.sh
+├── test/mil/, sil/, pil/                     — xIL testing
 ├── docs/
-│   ├── plans/master-plan.md                  — 7-ECU hybrid architecture, 15 phases (0-14), AUTOSAR BSW
-│   ├── safety/                               — EMPTY, awaiting Phase 1
-│   ├── aspice/                               — EMPTY, awaiting Phase 3
-│   └── reference/                            — process-playbook.md, lessons-learned.md
+│   ├── INDEX.md                              — Master document registry (entry point)
+│   ├── plans/master-plan.md                  — Master plan (source of truth)
+│   ├── safety/                               — ISO 26262 (concept, plan, analysis, requirements, validation)
+│   ├── aspice/                               — ASPICE deliverables (point of truth)
+│   │   ├── plans/                            — Execution plans by process area
+│   │   ├── system/                           — SYS.1-3 deliverables
+│   │   ├── software/                         — SWE.1-2 deliverables
+│   │   ├── hardware-eng/                     — HWE.1-3 deliverables
+│   │   ├── verification/                     — SWE.4-6, SYS.4-5 deliverables + xIL reports
+│   │   ├── quality/                          — SUP.1 QA plan
+│   │   ├── cm/                               — SUP.8 CM strategy, baselines, change requests
+│   │   └── traceability/                     — Traceability matrix
+│   └── reference/                            — Process playbook, lessons learned
 ├── CLAUDE.md
 └── .gitignore
 ```
+
+### Document Counts
+
+| Area | Files | Status |
+|------|-------|--------|
+| Safety (ISO 26262) | 17 | Planned stubs |
+| ASPICE deliverables | 32 | Planned stubs |
+| ASPICE execution plans | 8 | Active |
+| Firmware READMEs | 32 | Active |
+| Infrastructure stubs | 9 | Active |
+| Scripts | 2 | Stubs |
+| Hardware docs | 2 | Draft |
+| **Total new files** | **~100** | |
 
 ---
 

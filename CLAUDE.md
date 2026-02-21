@@ -28,15 +28,37 @@ firmware/
   icu/src/, include/, cfg/, test/     — Instrument Cluster Unit (Docker, simulated)
   tcu/src/, include/, cfg/, test/     — Telematics Control Unit (Docker, simulated)
   shared/bsw/                         — AUTOSAR-like BSW (MCAL, CanIf, PduR, Com, Dcm, Dem, WdgM, BswM, RTE)
+    mcal/                             — CAN, SPI, ADC, PWM, Dio, Gpt
+    ecual/                            — CanIf, PduR, IoHwAb
+    services/                         — Com, Dcm, Dem, WdgM, BswM, E2E
+    rte/                              — Runtime Environment
+    include/                          — Platform_Types, Std_Types
 docker/                               — Dockerfile, docker-compose for simulated ECUs
 gateway/                              — Raspberry Pi edge gateway (Python), SAP QM mock
+  sap_qm_mock/                        — SAP QM mock API
+  tests/, models/                     — Gateway tests, ML models
 hardware/                             — Pin mappings, BOM, schematics
-scripts/                              — Build scripts, vECU startup scripts
+scripts/                              — Build scripts, trace-gen.py, baseline-tag.sh
 test/mil/, test/sil/, test/pil/       — xIL testing (MIL, SIL, PIL)
-docs/plans/                           — Master plan (source of truth)
-docs/safety/                          — HARA, safety goals, FMEA, safety case
-docs/aspice/                          — Architecture, test reports, traceability
-docs/reference/                       — Process playbook, lessons learned
+docs/
+  INDEX.md                            — Master document registry (single entry point)
+  plans/                              — Master plan (source of truth)
+  safety/                             — ISO 26262 Parts 2-9
+    concept/                          — Item definition, HARA, safety goals, FSC
+    plan/                             — Safety plan, safety case
+    analysis/                         — FMEA, DFA, hardware metrics, ASIL decomposition
+    requirements/                     — FSR, TSR, SSR, HSR, HSI
+    validation/                       — Safety validation report
+  aspice/                             — ASPICE deliverables (point of truth)
+    plans/                            — Execution plans by process area (MAN.3, SYS, SWE)
+    system/                           — SYS.1-3: stakeholder reqs, system reqs, architecture, CAN matrix
+    software/                         — SWE.1-2: SW requirements (per ECU), SW architecture
+    hardware-eng/                     — HWE.1-3: HW requirements, HW design
+    verification/                     — SWE.4-6, SYS.4-5: unit/integration/system test, xIL reports
+    quality/                          — SUP.1: QA plan
+    cm/                               — SUP.8: CM strategy, baselines, change requests
+    traceability/                     — Traceability matrix (SG → FSR → TSR → SSR → code → test)
+  reference/                          — Process playbook, lessons learned
 ```
 
 ## Standards

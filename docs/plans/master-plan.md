@@ -364,11 +364,11 @@ SC  ──┘                                 ICU ──┤
 - [ ] Safety plan
 
 ### Files
-- `docs/safety/item-definition.md`
-- `docs/safety/hara.md`
-- `docs/safety/safety-goals.md`
-- `docs/safety/functional-safety-concept.md`
-- `docs/safety/safety-plan.md`
+- `docs/safety/concept/item-definition.md`
+- `docs/safety/concept/hara.md`
+- `docs/safety/concept/safety-goals.md`
+- `docs/safety/concept/functional-safety-concept.md`
+- `docs/safety/plan/safety-plan.md`
 
 ### DONE Criteria
 - [ ] All hazardous events identified and rated
@@ -397,10 +397,10 @@ SC  ──┘                                 ICU ──┤
 - [ ] ASIL decomposition decisions (if any)
 
 ### Files
-- `docs/safety/fmea.md`
-- `docs/safety/dfa.md`
-- `docs/safety/hardware-metrics.md`
-- `docs/safety/asil-decomposition.md`
+- `docs/safety/analysis/fmea.md`
+- `docs/safety/analysis/dfa.md`
+- `docs/safety/analysis/hardware-metrics.md`
+- `docs/safety/analysis/asil-decomposition.md`
 
 ### DONE Criteria
 - [ ] Every component has failure modes analyzed
@@ -424,12 +424,12 @@ SC  ──┘                                 ICU ──┤
 - [ ] Traceability matrix (SG → FSR → TSR → SSR → module)
 
 ### Files
-- `docs/safety/technical-safety-requirements.md`
-- `docs/safety/sw-safety-requirements.md`
-- `docs/safety/hw-safety-requirements.md`
-- `docs/safety/traceability-matrix.md`
-- `docs/aspice/system-architecture.md`
-- `docs/aspice/sw-architecture.md`
+- `docs/safety/requirements/technical-safety-reqs.md`
+- `docs/safety/requirements/sw-safety-reqs.md`
+- `docs/safety/requirements/hw-safety-reqs.md`
+- `docs/aspice/traceability/traceability-matrix.md`
+- `docs/aspice/system/system-architecture.md`
+- `docs/aspice/software/sw-architecture/sw-architecture.md`
 
 ### DONE Criteria
 - [ ] Every safety goal traces to TSR → SSR → architecture element
@@ -464,11 +464,11 @@ SC  ──┘                                 ICU ──┤
 - [ ] Bill of Materials (final, with supplier links)
 
 ### Files
-- `docs/aspice/can-message-matrix.md`
-- `docs/safety/hsi-specification.md`
+- `docs/aspice/system/can-message-matrix.md`
+- `docs/safety/requirements/hsi-specification.md`
 - `hardware/pin-mapping.md`
 - `hardware/bom.md`
-- `docs/aspice/vecu-specification.md`
+- `docs/aspice/software/sw-architecture/vecu-architecture.md`
 
 ### DONE Criteria
 - [ ] Every CAN message defined with ID, signals, timing, E2E protection
@@ -864,7 +864,7 @@ This bridges embedded engineering with enterprise business processes — showing
 - `gateway/models/` — trained ML model files
 - `gateway/config.py` — CAN IDs, MQTT topics, thresholds, SAP QM config
 - `gateway/requirements.txt`
-- `docs/aspice/cloud-architecture.md`
+- `docs/aspice/system/cloud-architecture.md`
 
 ### DONE Criteria
 - [ ] Pi receives all CAN messages in real-time
@@ -1004,12 +1004,12 @@ Real MCU executing firmware, but with simulated sensors/actuators from PC.
 - `test/pil/` — PIL configuration, CAN bridge scripts
 - `firmware/*/test/` — Unity unit tests per ECU
 - `gateway/tests/` — pytest for Python modules
-- `docs/aspice/mil-test-report.md`
-- `docs/aspice/unit-test-report.md`
-- `docs/aspice/sil-test-report.md`
-- `docs/aspice/pil-test-report.md`
-- `docs/aspice/coverage-report.md`
-- `docs/aspice/static-analysis-report.md`
+- `docs/aspice/verification/xil/mil-report.md`
+- `docs/aspice/verification/unit-test/unit-test-report.md`
+- `docs/aspice/verification/xil/sil-report.md`
+- `docs/aspice/verification/xil/pil-report.md`
+- `docs/aspice/verification/unit-test/coverage-report.md`
+- `docs/aspice/verification/unit-test/static-analysis-report.md`
 
 ### DONE Criteria
 - [ ] MIL: plant models produce physically plausible outputs, control algorithms validated
@@ -1057,9 +1057,9 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 - [ ] **HIL vs SIL comparison report**: document which failures are only caught at HIL level (e.g., EMC, timing jitter, ADC noise)
 
 ### Files
-- `docs/aspice/hil-test-report.md`
-- `docs/aspice/integration-test-report.md`
-- `docs/aspice/xil-comparison-report.md` — MIL vs SIL vs PIL vs HIL comparison
+- `docs/aspice/verification/xil/hil-report.md`
+- `docs/aspice/verification/integration-test/integration-test-report.md`
+- `docs/aspice/verification/xil/xil-comparison-report.md` — MIL vs SIL vs PIL vs HIL comparison
 - Photos of assembled platform
 
 ### DONE Criteria
@@ -1102,8 +1102,8 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 - [ ] Tag v1.0.0
 
 ### Files
-- `docs/aspice/system-test-report.md`
-- `docs/safety/safety-case.md`
+- `docs/aspice/verification/system-verification/system-verification-report.md`
+- `docs/safety/plan/safety-case.md`
 - `README.md`
 - `media/` — demo video or YouTube link
 
