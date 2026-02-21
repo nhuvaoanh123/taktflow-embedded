@@ -84,8 +84,8 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Document | Path | Process | Status |
 |----------|------|---------|--------|
-| Stakeholder Requirements | [aspice/system/stakeholder-requirements.md](aspice/system/stakeholder-requirements.md) | SYS.1 | planned |
-| System Requirements | [aspice/system/system-requirements.md](aspice/system/system-requirements.md) | SYS.2 | planned |
+| Stakeholder Requirements | [aspice/system/stakeholder-requirements.md](aspice/system/stakeholder-requirements.md) | SYS.1 | draft |
+| System Requirements | [aspice/system/system-requirements.md](aspice/system/system-requirements.md) | SYS.2 | draft |
 | System Architecture | [aspice/system/system-architecture.md](aspice/system/system-architecture.md) | SYS.3 | planned |
 | Interface Control Document | [aspice/system/interface-control-doc.md](aspice/system/interface-control-doc.md) | SYS.3 | planned |
 | CAN Message Matrix | [aspice/system/can-message-matrix.md](aspice/system/can-message-matrix.md) | SYS.3 | planned |
@@ -178,8 +178,8 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Process | ID | Key Document(s) | Coverage |
 |---------|----|------------------|----------|
-| Requirements Elicitation | SYS.1 | aspice/system/stakeholder-requirements.md | planned |
-| System Requirements | SYS.2 | aspice/system/system-requirements.md | planned |
+| Requirements Elicitation | SYS.1 | aspice/system/stakeholder-requirements.md | draft |
+| System Requirements | SYS.2 | aspice/system/system-requirements.md | draft |
 | System Architecture | SYS.3 | aspice/system/system-architecture.md, aspice/system/can-message-matrix.md | planned |
 | System Integration | SYS.4 | aspice/verification/system-integration/ | planned |
 | System Verification | SYS.5 | aspice/verification/system-verification/ | planned |
