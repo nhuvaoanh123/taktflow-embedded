@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-21
 **Branch**: `develop`
-**Phase**: Phases 0-5 DONE — Shared BSW Layer complete (16 modules, 195 tests), ready for Phase 6 (CVC firmware)
+**Phase**: Phases 0-6 DONE — CVC firmware complete (6 SWCs, 88 tests, ~5,930 LOC), ready for Phase 7 (FZC firmware)
 
 ---
 
@@ -143,16 +143,48 @@ Hardware abstraction pattern: `Module_Hw_*` extern functions (mocked in tests, r
 
 ---
 
-## Next Phase: Phase 6 — Central Vehicle Computer (CVC) Firmware
+## Phase 6: Central Vehicle Computer (CVC) Firmware (DONE)
 
-The next phase implements CVC application SWCs on top of the shared BSW:
-- Swc_Pedal: dual AS5048A pedal sensors, plausibility check
-- Swc_VehicleState: INIT → RUN → DEGRADED → LIMP → SAFE_STOP state machine
-- Swc_Dashboard: SSD1306 OLED display
-- Swc_EStop: E-stop detection and broadcast
-- Swc_Heartbeat: alive counter TX
-- RTE configuration for CVC (Rte_Cfg_Cvc.c)
-- main.c: BSW init, RTE init, 10ms tick loop
+23 files, ~5,930 LOC, 88 unit tests. CVC application SWCs built on shared BSW stack.
+
+### SWCs (6 modules, 88 tests)
+| Module | Tests | LOC | ASIL | Description |
+|--------|-------|-----|------|-------------|
+| Swc_Pedal | 25 | 482 | D | Dual AS5048A, plausibility, stuck detect, torque map, ramp/mode limit |
+| Swc_VehicleState | 20 | 356 | D | 6-state × 11-event transition table, BswM integration |
+| Swc_EStop | 10 | 158 | D | Debounce, permanent latch, 4× CAN broadcast, fail-safe |
+| Swc_Heartbeat | 15 | 216 | D | 50ms TX, alive counter, FZC/RZC timeout (3 misses), recovery |
+| Swc_Dashboard | 8 | 314 | QM | OLED state/speed/pedal/faults, 200ms refresh, fault resilience |
+| Ssd1306 | 10 | 338 | QM | I2C OLED driver, 5×7 font (95 ASCII), init/clear/cursor/string |
+
+### Configuration
+| File | LOC | Description |
+|------|-----|-------------|
+| Cvc_Cfg.h | 185 | 31 RTE signals, 14 Com PDUs, 18 DTCs, 4 E2E IDs, enums |
+| Rte_Cfg_Cvc.c | 97 | Signal table + 8 runnables with priorities |
+| Com_Cfg_Cvc.c | 118 | 17 signals, 8 TX + 6 RX PDUs with timeouts |
+| Dcm_Cfg_Cvc.c | 122 | 4 DIDs (F190/F191/F195/F010) with callbacks |
+| main.c | 338 | BSW init, self-test, 1ms/10ms/100ms tick loop |
+
+### Key Design
+- **Const transition table** for state machine — no branching, deterministic
+- **Zero-torque latch** on pedal fault — 50 fault-free cycles to clear
+- **E-stop permanent latch** — never clears once activated
+- **Heartbeat guard** — INIT → RUN only after both FZC + RZC heartbeats confirmed
+- **Display fault isolation** — QM OLED fault doesn't affect ASIL D vehicle operation
+
+---
+
+## Next Phase: Phase 7 — Front Zone Controller (FZC) Firmware
+
+The next phase implements FZC application SWCs:
+- Swc_Steering: servo control, angle feedback, rate limiting, return-to-center
+- Swc_Brake: servo control, brake force mapping, auto-brake on timeout
+- Swc_Lidar: TFMini-S parser, distance filtering, emergency thresholds
+- Swc_FzcSafety: local plausibility, sensor timeout, DTC reporting
+- Swc_Heartbeat: FZC heartbeat TX
+- UART MCAL for TFMini-S (FZC-specific)
+- RTE/Com configuration, main.c
 
 ---
 
