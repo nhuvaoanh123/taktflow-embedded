@@ -169,8 +169,16 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Document | Path | Status |
 |----------|------|--------|
+| Research Repository Index | [research/README.md](research/README.md) | active |
+| Research Link Log | [research/link-log.md](research/link-log.md) | active |
 | Process Playbook | [reference/process-playbook.md](reference/process-playbook.md) | active |
 | Lessons Learned | [reference/lessons-learned-security-hardening.md](reference/lessons-learned-security-hardening.md) | active |
+
+### Deliverables
+
+| Document | Path | Status |
+|----------|------|--------|
+| Deliverable Artifact Catalog | [deliverable-artifact/README.md](deliverable-artifact/README.md) | active |
 
 ---
 

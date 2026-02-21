@@ -8,6 +8,15 @@ Scope: phase 4 and architectural parts of phase 5
 - [ ] SYS.1 outputs baselined
 - [ ] Target hardware and pin constraints known
 
+## Current Artifact Status (SYS.2 Core)
+
+- [x] `docs/aspice/system/system-requirements.md` (input, drafted)
+- [x] `docs/aspice/system/system-architecture.md` (drafted)
+- [x] `docs/aspice/system/interface-control-doc.md` (drafted)
+- [x] `docs/aspice/system/can-message-matrix.md` (drafted)
+- [x] `docs/safety/requirements/hsi-specification.md` (drafted)
+- [ ] Cross-document consistency pass pending (CAN IDs/UDS ownership/alignment)
+
 ## Work Breakdown
 
 ## IA1 Communication Architecture Baseline
@@ -19,7 +28,7 @@ Scope: phase 4 and architectural parts of phase 5
 
 ## IA2 Hardware Software Interface Baseline
 
-- [ ] Publish `docs/safety/hsi-specification.md`
+- [ ] Publish `docs/safety/requirements/hsi-specification.md`
 - [ ] Finalize `hardware/pin-mapping.md` and verify against board schematics
 - [ ] Finalize `hardware/bom.md` with procurement substitutions
 - [ ] Publish vECU interface spec in `docs/aspice/software/sw-architecture/vecu-architecture.md`
