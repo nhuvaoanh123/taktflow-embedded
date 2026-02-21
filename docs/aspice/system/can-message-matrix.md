@@ -33,12 +33,12 @@ This is the authoritative reference for all CAN communication between ECUs. All 
 |-----------|-------|
 | Standard | CAN 2.0B (11-bit standard identifiers) |
 | Bit rate | 500 kbps |
-| Sample point | 87.5% (recommended for 500 kbps) |
+| Sample point | 80% |
 | SJW | 1 Tq |
-| Propagation segment | 1 Tq |
-| Phase segment 1 | 12 Tq |
-| Phase segment 2 | 2 Tq |
-| Time quanta per bit | 16 Tq |
+| NTSEG1 (prop + phase 1) | 7 Tq |
+| NTSEG2 (phase 2) | 2 Tq |
+| Time quanta per bit | 10 Tq (1 sync + 7 NTSEG1 + 2 NTSEG2) |
+| Prescaler | 34 (170 MHz / 34 = 5 MHz; 5 MHz / 10 Tq = 500 kbps) |
 | Topology | Linear bus, daisy-chain wiring |
 | Termination | 120 ohm at each physical end |
 | Wire | 22 AWG twisted pair (CAN_H, CAN_L) |
@@ -108,7 +108,6 @@ CAN IDs are assigned by safety priority. Lower CAN ID wins arbitration (higher p
 | 0x7E0 | UDS_Phys_Req_CVC | Tester | CVC | 8 | On-demand | No | QM | -- |
 | 0x7E1 | UDS_Phys_Req_FZC | Tester | FZC | 8 | On-demand | No | QM | -- |
 | 0x7E2 | UDS_Phys_Req_RZC | Tester | RZC | 8 | On-demand | No | QM | -- |
-| 0x7E3 | UDS_Phys_Req_SC | Tester | SC (listen only) | 8 | On-demand | No | QM | -- |
 | 0x7E8 | UDS_Resp_CVC | CVC | Tester | 8 | On-demand | No | QM | -- |
 | 0x7E9 | UDS_Resp_FZC | FZC | Tester | 8 | On-demand | No | QM | -- |
 | 0x7EA | UDS_Resp_RZC | RZC | Tester | 8 | On-demand | No | QM | -- |

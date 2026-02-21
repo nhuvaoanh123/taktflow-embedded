@@ -125,12 +125,12 @@ Taktflow Zonal Vehicle Platform
 |-------------|------|-----------|----------|
 | STM32G474RE MCU | Processor | -- | Motor control, current/temp/battery monitoring |
 | 12V Brushed DC Motor | Actuator | Via BTS7960 | Propulsion motor |
-| BTS7960 H-Bridge Driver | Actuator | TIM3_CH1/CH2 (RPWM/LPWM), GPIO PA5/PA6 (R_EN/L_EN) | Motor direction and speed control, 20 kHz PWM |
+| BTS7960 H-Bridge Driver | Actuator | TIM3_CH1/CH2 (RPWM/LPWM), GPIO PB0/PB1 (R_EN/L_EN) | Motor direction and speed control, 20 kHz PWM |
 | ACS723 Current Sensor | Sensor | ADC1_CH1 | Motor current measurement (0-30A, galvanic isolation) |
 | NTC Thermistor (Motor) | Sensor | ADC1_CH2 | Motor winding temperature (-40C to +125C) |
 | NTC Thermistor (Winding) | Sensor | ADC1_CH3 | Secondary winding temperature |
 | Battery Voltage Divider | Sensor | ADC1_CH4 | Battery voltage measurement (0-16V range) |
-| Motor Encoder | Sensor | TIM3 (quadrature) | Motor speed and direction feedback |
+| Motor Encoder | Sensor | TIM4 (quadrature, PB6/PB7) | Motor speed and direction feedback |
 | TJA1051T/3 CAN Transceiver | Interface | FDCAN1 | CAN bus physical layer |
 | TPS3823 External Watchdog | Safety HW | GPIO (WDI toggle) | Last-resort firmware hang detection |
 | AUTOSAR-like BSW | Software | Internal | Shared BSW stack (same as CVC) |
@@ -174,7 +174,7 @@ CAN Messages: 0x400 (light status), 0x401 (indicator state), 0x402 (door lock st
 | Swc_Dashboard | SWC | Via RTE | ncurses terminal UI: speedometer, temp, voltage, warnings |
 | Swc_DtcDisplay | SWC | Via RTE | Active/stored DTC display |
 
-CAN Messages: Receives ALL CAN messages (listen-only consumer). Sends: 0x7FF (DTC acknowledgments)
+CAN Messages: Receives ALL CAN messages (listen-only consumer). Sends: 0x7FF (DTC acknowledgments) <!-- TODO: Add 0x7FF to CAN matrix if not already present -->
 
 #### 3.2.7 TCU -- Telematics Control Unit (QM, Simulated)
 
@@ -354,12 +354,12 @@ CAN IDs are assigned by safety priority (lower CAN ID = higher arbitration prior
 | ID Range | Priority | Category | ASIL |
 |----------|----------|----------|------|
 | 0x001 | Highest | E-Stop broadcast | B |
-| 0x010-0x013 | Very High | Heartbeat messages (CVC, FZC, RZC, SC) | C |
+| 0x010-0x012 | Very High | Heartbeat messages (CVC, FZC, RZC) | C |
 | 0x100-0x1FF | High | Control commands (torque, steer, brake, vehicle state) | D |
 | 0x200-0x2FF | Medium | Status feedback (motor, steering, lidar, brake) | A-D |
 | 0x300-0x3FF | Normal | Sensor data (current, temp, battery, speed) | A-QM |
 | 0x400-0x4FF | Low | Body functions (lights, indicators, door lock) | QM |
-| 0x600-0x6FF | Lowest | Diagnostics (DTC broadcast) | QM |
+| 0x500-0x5FF | Lowest | DTC broadcast | QM |
 | 0x7DF | Standard | UDS functional request (ISO 14229) | QM |
 | 0x7E0-0x7E6 | Standard | UDS physical requests (per ECU) | QM |
 | 0x7E8-0x7EE | Standard | UDS physical responses (per ECU) | QM |
@@ -388,7 +388,7 @@ CAN IDs are assigned by safety priority (lower CAN ID = higher arbitration prior
 | 0x400 | Light Status | BCM | ICU | 4 | 100 | No | QM | Headlights, tail lights, fog |
 | 0x401 | Indicator State | BCM | ICU | 4 | 100 | No | QM | Left, right, hazard |
 | 0x402 | Door Lock Status | BCM | ICU | 2 | Event | No | QM | Lock state per door |
-| 0x600 | DTC Broadcast | Any | TCU, ICU | 8 | Event | No | QM | DTC number, status, ECU source |
+| 0x500 | DTC Broadcast | Any | TCU, ICU | 8 | Event | No | QM | DTC number, status, ECU source |
 | 0x7DF | UDS Func Request | Tester | TCU | 8 | On-demand | No | QM | ISO 14229 functional addressing |
 | 0x7E0-0x7E6 | UDS Phys Request | Tester | Per ECU | 8 | On-demand | No | QM | ISO 14229 physical addressing |
 | 0x7E8-0x7EE | UDS Response | Per ECU | Tester | 8 | On-demand | No | QM | ISO 14229 response |
@@ -409,7 +409,7 @@ CAN IDs are assigned by safety priority (lower CAN ID = higher arbitration prior
 | Body (3 msgs) | 3 | 4 | 100 | 83 | 2,490 |
 | **Total continuous** | | | | | **~105,643** |
 
-**Bus utilization**: 105,643 / 500,000 = **21.1%** (well below the 50% design target).
+**Bus utilization**: ~120,000 / 500,000 = **24%** (well below the 50% design target; see CAN message matrix for detailed per-message calculation).
 
 ### 5.5 E2E Protection Overview
 
@@ -425,7 +425,7 @@ CAN IDs are assigned by safety priority (lower CAN ID = higher arbitration prior
 
 **E2E-protected messages**: All messages with ASIL A or higher (0x001, 0x010-0x012, 0x100-0x103, 0x200-0x201, 0x210-0x211, 0x220, 0x300-0x302).
 
-**Non-E2E messages**: QM messages (0x303, 0x400-0x402, 0x600, UDS).
+**Non-E2E messages**: QM messages (0x303, 0x400-0x402, 0x500, UDS).
 
 **Receiver behavior on E2E failure**:
 1. First failure: Use last valid value
@@ -483,7 +483,7 @@ The SOME/IP layer is supplementary and does not carry safety-critical data.
 | DEGRADED | SAFE_STOP | Critical fault detected | Additional fault during degraded operation | Motor off, brakes applied |
 | LIMP | SAFE_STOP | Critical fault detected | Any additional fault in LIMP mode | Motor off, brakes applied |
 | SAFE_STOP | SHUTDOWN | Controlled shutdown complete | Vehicle speed = 0, all outputs disabled | Open kill relay, persist DTCs |
-| Any | SAFE_STOP | E-stop pressed | GPIO PC13 falling edge confirmed | Immediate motor off, brakes, CAN broadcast 0x001 |
+| Any | SAFE_STOP | E-stop pressed | GPIO PC13 rising edge confirmed (NC button) | Immediate motor off, brakes, CAN broadcast 0x001 |
 | Any | SHUTDOWN | SC kill relay opened | SC detected safety violation | Hardware power removal to actuators |
 
 **Transition rules**:
@@ -729,7 +729,7 @@ Per ISO 26262-4, elements of different ASIL levels sharing resources must demons
 | E2E Protection | CRC-8 + alive counter on all safety messages. Detects corruption, loss, delay, repetition. |
 | SC Listen-Only | SC cannot transmit on CAN, preventing bus corruption from safety monitor |
 | CAN ID Filtering | Each ECU's CAN acceptance filter configured to receive only relevant messages |
-| Bus Utilization | 21% bus load ensures adequate bandwidth for safety messages under worst-case arbitration |
+| Bus Utilization | 24% bus load ensures adequate bandwidth for safety messages under worst-case arbitration |
 | Babbling Node Protection | CAN error counters + bus-off recovery with attempt limiting (3 attempts per 10 sec) |
 
 ### 8.3 Diverse Redundancy Summary
@@ -761,9 +761,9 @@ The following table maps all 56 system requirements to their allocated architect
 | SYS-004 | Motor Torque Control via CAN | CVC (Com TX), RZC (Swc_Motor, BTS7960) | D |
 | SYS-005 | Motor Current Monitoring | RZC (ADC1_CH1, ACS723, Swc_CurrentMonitor) | A |
 | SYS-006 | Motor Temperature Monitoring and Derating | RZC (ADC1_CH2/CH3, NTC, Swc_TempMonitor) | A |
-| SYS-007 | Motor Direction Control and Plausibility | RZC (Swc_Motor, TIM3 encoder) | C |
+| SYS-007 | Motor Direction Control and Plausibility | RZC (Swc_Motor, TIM4 encoder) | C |
 | SYS-008 | Battery Voltage Monitoring | RZC (ADC1_CH4, Swc_Battery) | QM |
-| SYS-009 | Encoder Feedback for Speed Measurement | RZC (TIM3 quadrature, Swc_Motor) | QM |
+| SYS-009 | Encoder Feedback for Speed Measurement | RZC (TIM4 quadrature, Swc_Motor) | QM |
 
 ### 9.2 Steering Requirements
 
@@ -978,7 +978,7 @@ The HIL test bench consists of:
 | **CPU Clock** | 170 MHz | 170 MHz | 170 MHz | 300 MHz |
 | **CPU Load Estimate** | < 5% | < 5% | < 5% | < 1% |
 | **WCET (10 ms loop)** | < 2 ms | < 2 ms | < 2 ms | < 0.5 ms |
-| **Peripherals Used** | FDCAN1, SPI1, I2C1, GPIO (5) | FDCAN1, SPI2, USART1, TIM2, GPIO (3) | FDCAN1, TIM3, ADC1 (4ch), GPIO (4) | DCAN1, GIO (6), RTI |
+| **Peripherals Used** | FDCAN1, SPI1, I2C1, GPIO (5) | FDCAN1, SPI2, USART1, TIM2, GPIO (3) | FDCAN1, TIM3 (PWM), TIM4 (encoder), ADC1 (4ch), GPIO (4) | DCAN1, GIO (6), RTI |
 | **CAN TX Messages** | 5 (0x001, 0x010, 0x100-0x103) | 5 (0x011, 0x200, 0x201, 0x210-0x211, 0x220) | 5 (0x012, 0x300-0x303) | 0 (listen-only) |
 | **CAN RX Messages** | ~10 (all status + heartbeats) | ~6 (control commands + state) | ~4 (torque + state + E-stop) | ALL (listen to everything) |
 
