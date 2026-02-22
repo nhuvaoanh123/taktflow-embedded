@@ -3,6 +3,18 @@
 Process area: SYS.1 System Requirements Analysis
 Scope: phases 1 to 3 from master plan
 
+## Read This First (Authoritative Docs)
+
+This file is a workstream plan (tasks + gates). For the actual requirement content, read:
+
+- `docs/aspice/system/stakeholder-requirements.md` (primary SYS.1 stakeholder requirements)
+- `docs/aspice/system/system-requirements.md` (system-level technical requirements)
+- `docs/safety/concept/item-definition.md` (item boundary, functions, assumptions)
+- `docs/safety/concept/hara.md` (hazards, ASIL rationale)
+- `docs/safety/concept/safety-goals.md` (top-level safety goals)
+- `docs/safety/requirements/technical-safety-reqs.md` (TSRs)
+- `docs/aspice/traceability/traceability-matrix.md` (end-to-end tracing)
+
 ## Entry Criteria
 
 - [ ] Repository baseline is stable

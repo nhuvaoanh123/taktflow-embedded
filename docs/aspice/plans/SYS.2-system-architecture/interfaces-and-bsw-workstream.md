@@ -3,6 +3,18 @@
 Process area: SYS.2 System Architectural Design
 Scope: phase 4 and architectural parts of phase 5
 
+## Read This First (Authoritative Docs)
+
+This file is a workstream plan (tasks + gates). For the actual architecture/interface requirements, read:
+
+- `docs/aspice/system/system-requirements.md` (input requirements for architecture)
+- `docs/aspice/system/system-architecture.md` (primary SYS.2/SYS.3 architecture spec)
+- `docs/aspice/system/interface-control-doc.md` (interface contracts and ownership)
+- `docs/aspice/system/can-message-matrix.md` (message/signal-level communication baseline)
+- `docs/safety/requirements/hsi-specification.md` (hardware-software interface requirements)
+- `docs/aspice/software/sw-architecture/bsw-architecture.md` (BSW layering and dependencies)
+- `docs/aspice/traceability/traceability-matrix.md` (requirement allocation and trace links)
+
 ## Entry Criteria
 
 - [ ] SYS.1 outputs baselined

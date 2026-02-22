@@ -24,7 +24,8 @@
 | Front Zone Controller (FZC) | Steering, braking, lidar, ADAS | STM32G474RE Nucleo | D (SW) |
 | Rear Zone Controller (RZC) | Motor, current, temp, battery | STM32G474RE Nucleo | D (SW) |
 | Safety Controller (SC) | Independent safety monitor | TI TMS570LC43x LaunchPad | D (HW lockstep) |
-
+//comment: i know that the STM is IEC 61508(industrial use). function we can leverage is watchdog and voltage monitor, feedback monitoring, e2e.
+//Nucleo is still the weak link, too informal,
 #### 3 Simulated ECUs (Docker + SocketCAN, same C codebase)
 
 | ECU | Role | Runtime | ASIL |
