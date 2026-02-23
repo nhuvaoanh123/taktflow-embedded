@@ -52,23 +52,32 @@ SCALER_PATH = MODEL_DIR / "scaler.pkl"
 def generate_normal_data(n_samples: int = N_SAMPLES, seed: int = RANDOM_SEED) -> np.ndarray:
     """Generate synthetic *normal* CAN telemetry features.
 
-    Includes three operating regimes:
-      - Idle (~30%): motor off / standby (0-50 mA, 0-100 RPM)
+    Includes four operating regimes:
+      - Idle (~25%): motor off / standby (0-50 mA, 0-100 RPM, cool temp)
+      - Cooling (~10%): motor just stopped, temp still elevated (0-50 mA, 30-70°C)
       - Transition (~10%): ramp-up / ramp-down (50-500 mA)
-      - Driving (~60%): normal operation (500-3000 mA, 0-3500 RPM)
+      - Driving (~55%): normal operation (500-3000 mA, 0-3500 RPM)
     """
     rng = np.random.default_rng(seed)
 
-    n_idle = int(n_samples * 0.30)
+    n_idle = int(n_samples * 0.25)
+    n_cooling = int(n_samples * 0.10)
     n_transition = int(n_samples * 0.10)
-    n_driving = n_samples - n_idle - n_transition
+    n_driving = n_samples - n_idle - n_cooling - n_transition
 
-    # --- Idle state: motor off / standby ---
+    # --- Idle state: motor off / standby, cool temperature ---
     idle_current_mean = rng.uniform(0, 50, size=n_idle)
     idle_current_std = rng.uniform(0, 10, size=n_idle)
     idle_temp = rng.uniform(20, 30, size=n_idle)
     idle_rpm = rng.uniform(0, 100, size=n_idle)
     idle_voltage = rng.uniform(12000, 13000, size=n_idle)
+
+    # --- Cooling state: motor stopped but temp still elevated from driving ---
+    cool_current_mean = rng.uniform(0, 50, size=n_cooling)
+    cool_current_std = rng.uniform(0, 15, size=n_cooling)
+    cool_temp = rng.uniform(30, 70, size=n_cooling)
+    cool_rpm = rng.uniform(0, 100, size=n_cooling)
+    cool_voltage = rng.uniform(12000, 13000, size=n_cooling)
 
     # --- Transition state: ramp-up / ramp-down ---
     trans_current_mean = rng.uniform(50, 500, size=n_transition)
@@ -85,11 +94,11 @@ def generate_normal_data(n_samples: int = N_SAMPLES, seed: int = RANDOM_SEED) ->
     drive_voltage = rng.uniform(11500, 13000, size=n_driving)
 
     data = np.column_stack([
-        np.concatenate([idle_current_mean, trans_current_mean, drive_current_mean]),
-        np.concatenate([idle_current_std, trans_current_std, drive_current_std]),
-        np.concatenate([idle_temp, trans_temp, drive_temp]),
-        np.concatenate([idle_rpm, trans_rpm, drive_rpm]),
-        np.concatenate([idle_voltage, trans_voltage, drive_voltage]),
+        np.concatenate([idle_current_mean, cool_current_mean, trans_current_mean, drive_current_mean]),
+        np.concatenate([idle_current_std, cool_current_std, trans_current_std, drive_current_std]),
+        np.concatenate([idle_temp, cool_temp, trans_temp, drive_temp]),
+        np.concatenate([idle_rpm, cool_rpm, trans_rpm, drive_rpm]),
+        np.concatenate([idle_voltage, cool_voltage, trans_voltage, drive_voltage]),
     ])
     # Shuffle so the model doesn't see regime-ordered data
     rng.shuffle(data)

@@ -232,17 +232,28 @@ def on_mqtt_message(client, userdata, msg):
     elif topic == "taktflow/telemetry/stats/can_msgs_per_sec":
         state.can_msgs_sec = _parse_int(payload)
 
-    # Reset command — clear ALL fault, DTC, anomaly, and E-Stop state
+    # Reset command — full clean reset to INIT state
     elif topic == "taktflow/command/reset":
         state.anomaly_score = 0.0
         state.anomaly_alert = False
         state.anomaly_features = {}
         state.motor_faults = 0
         state.motor_overcurrent = 0
+        state.motor_rpm = 0
+        state.motor_current_ma = 0
+        state.motor_duty_pct = 0
         state.steer_fault = 0
+        state.steer_actual_deg = 0.0
+        state.steer_commanded_deg = 0.0
         state.brake_fault = 0
+        state.brake_position_pct = 0
+        state.brake_commanded_pct = 0
         state._estop_active = False
-        state.add_event("info", "System reset — faults, DTCs, anomaly cleared")
+        state.vehicle_state = 0  # INIT — plant sim will transition to RUN after 3s
+        state.sap_notifications.clear()
+        state.events.clear()
+        state.can_log.clear()
+        state.add_event("info", "System reset — all state cleared, re-initializing")
 
     # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ..., "features": {...}}
     elif topic.startswith("taktflow/anomaly/"):
@@ -275,8 +286,15 @@ def on_mqtt_message(client, userdata, msg):
         try:
             evt = json.loads(payload)
             qn_id = evt.get("notification_id", "?")
-            state.add_event("sap", f"SAP QM notification created: {qn_id}")
-            # Store notification in rolling list for the SAP QM panel
+            defect = evt.get("defect_text", "")
+            dtc = evt.get("dtc_code", "")
+            state.add_event("sap", f"SAP QM: {qn_id} — DTC {dtc} {defect}")
+            # Add timestamp and notification_type for frontend display
+            evt["ts"] = time.time()
+            if "notification_type" not in evt:
+                evt["notification_type"] = "Q3"
+            if "description" not in evt:
+                evt["description"] = evt.get("defect_text", "")
             state.sap_notifications.append(evt)
             if len(state.sap_notifications) > 20:
                 state.sap_notifications = state.sap_notifications[-20:]

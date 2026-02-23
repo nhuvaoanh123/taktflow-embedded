@@ -136,12 +136,23 @@ class PlantSimulator:
                 self.estop_active = bool(data[2] & 0x01)
                 if self.estop_active and not was_active:
                     log.info("E-STOP received — all outputs disabled")
-                elif was_active and not self.estop_active:
-                    log.info("E-STOP cleared — resetting faults")
+                elif not self.estop_active and was_active:
+                    log.info("E-STOP cleared — resetting faults, state -> INIT")
                     self.motor.reset_faults()
                     self.steering.clear_fault()
                     self.brake.clear_fault()
                     self._active_dtcs.clear()
+                    self.vehicle_state = VS_INIT
+                    self._startup_ticks = 0
+                elif not self.estop_active and not was_active:
+                    # Reset command (E-Stop clear when not active) — clear all faults
+                    log.info("Reset received — clearing all faults, state -> INIT")
+                    self.motor.reset_faults()
+                    self.steering.clear_fault()
+                    self.brake.clear_fault()
+                    self._active_dtcs.clear()
+                    self.vehicle_state = VS_INIT
+                    self._startup_ticks = 0
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
@@ -151,11 +162,12 @@ class PlantSimulator:
         elif arb_id == RX_STEER_COMMAND:
             if len(data) >= 4 and not self.estop_active:
                 raw = data[2] | (data[3] << 8)
-                self.steering.commanded_angle = max(-45.0, min(45.0, raw * 0.01 - 45.0))
+                angle = max(-45.0, min(45.0, raw * 0.01 - 45.0))
+                self.steering.record_command(angle)
 
         elif arb_id == RX_BRAKE_COMMAND:
             if len(data) >= 3 and not self.estop_active:
-                self.brake.commanded_pct = max(0.0, min(100.0, float(data[2])))
+                self.brake.record_command(float(data[2]))
 
     def _tx_motor_status(self):
         """Send Motor_Status (0x300) every 20ms."""
@@ -394,9 +406,10 @@ class PlantSimulator:
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (startup complete)")
                 elif self.vehicle_state == VS_SAFE_STOP and not self.estop_active:
-                    # After E-Stop cleared, return to RUN
-                    self.vehicle_state = VS_RUN
-                    log.info("Vehicle state -> RUN (E-Stop cleared)")
+                    # After E-Stop cleared, go to INIT (will transition to RUN after 3s)
+                    self.vehicle_state = VS_INIT
+                    self._startup_ticks = 0
+                    log.info("Vehicle state -> INIT (E-Stop cleared, re-initializing)")
 
                 # Transition to DEGRADED on faults (only from RUN)
                 has_fault = (

@@ -5,8 +5,13 @@ Physics:
 
 Fault detection:
   Rapid direction changes (oscillation) within a short window trigger fault.
+
+  NOTE: Fault detection runs in record_command() (called per CAN frame)
+  not in update() (called per physics tick), so rapid oscillations at
+  5ms intervals are captured even with 10ms physics ticks.
 """
 
+import time
 from collections import deque
 
 
@@ -25,36 +30,41 @@ class SteeringModel:
         self.servo_current_ma = 0
         self.fault = False
 
-        # Oscillation detection
+        # Oscillation detection (runs per CAN frame via record_command)
         self._prev_cmd = 0.0
         self._prev_direction = 0  # +1, -1, or 0
-        self._direction_changes: deque[float] = deque()  # timestamps
-        self._elapsed = 0.0
+        self._direction_changes: deque[float] = deque()  # monotonic timestamps
 
-    def update(self, commanded_deg: float, dt: float):
-        """Advance steering by dt seconds."""
-        self._elapsed += dt
+    def record_command(self, commanded_deg: float):
+        """Record a steer command from a CAN frame — called per frame, not per tick.
 
-        self.commanded_angle = max(self.MIN_ANGLE,
-                                   min(self.MAX_ANGLE, commanded_deg))
+        This captures rapid oscillations that would be lost if only checked
+        once per physics tick (10ms), since fault scenarios send at 5ms.
+        """
+        clamped = max(self.MIN_ANGLE, min(self.MAX_ANGLE, commanded_deg))
+        self.commanded_angle = clamped
 
-        # Detect direction changes in command
-        cmd_delta = self.commanded_angle - self._prev_cmd
+        cmd_delta = clamped - self._prev_cmd
         if abs(cmd_delta) > 1.0:  # ignore tiny jitter
             direction = 1 if cmd_delta > 0 else -1
             if self._prev_direction != 0 and direction != self._prev_direction:
-                self._direction_changes.append(self._elapsed)
+                self._direction_changes.append(time.monotonic())
             self._prev_direction = direction
-        self._prev_cmd = self.commanded_angle
+        self._prev_cmd = clamped
 
         # Expire old direction changes outside window
-        cutoff = self._elapsed - self.OSCILLATION_WINDOW_S
+        cutoff = time.monotonic() - self.OSCILLATION_WINDOW_S
         while self._direction_changes and self._direction_changes[0] < cutoff:
             self._direction_changes.popleft()
 
         # Set fault if too many direction changes in window
         if len(self._direction_changes) >= self.OSCILLATION_THRESHOLD:
             self.fault = True
+
+    def update(self, commanded_deg: float, dt: float):
+        """Advance steering physics by dt seconds. Fault detection is in record_command()."""
+        self.commanded_angle = max(self.MIN_ANGLE,
+                                   min(self.MAX_ANGLE, commanded_deg))
 
         # Physics
         error = self.commanded_angle - self.actual_angle
@@ -75,6 +85,7 @@ class SteeringModel:
         """Clear fault state (called on reset)."""
         self.fault = False
         self._direction_changes.clear()
+        self._prev_direction = 0
 
     @property
     def actual_raw(self) -> int:

@@ -3,8 +3,13 @@
 Fault detection:
   Rapid alternation between 0% and high brake force triggers fault
   (conflicting brake commands).
+
+  NOTE: Fault detection runs in record_command() (called per CAN frame)
+  not in update() (called per physics tick), so rapid alternations at
+  5ms intervals are captured even with 10ms physics ticks.
 """
 
+import time
 from collections import deque
 
 
@@ -22,30 +27,36 @@ class BrakeModel:
         self.servo_current_ma = 0
         self.fault = False
 
-        # Conflict detection
+        # Conflict detection (runs per CAN frame via record_command)
         self._prev_cmd = 0.0
-        self._large_swings: deque[float] = deque()  # timestamps
-        self._elapsed = 0.0
+        self._large_swings: deque[float] = deque()  # monotonic timestamps
 
-    def update(self, commanded_pct: float, dt: float):
-        self._elapsed += dt
+    def record_command(self, commanded_pct: float):
+        """Record a brake command from a CAN frame — called per frame, not per tick.
 
-        self.commanded_pct = max(0.0, min(100.0, commanded_pct))
+        This captures rapid alternations that would be lost if only checked
+        once per physics tick (10ms), since fault scenarios send at 5ms.
+        """
+        clamped = max(0.0, min(100.0, commanded_pct))
+        self.commanded_pct = clamped
 
-        # Detect large command swings
-        cmd_delta = abs(self.commanded_pct - self._prev_cmd)
+        cmd_delta = abs(clamped - self._prev_cmd)
         if cmd_delta >= self.CONFLICT_SWING_PCT:
-            self._large_swings.append(self._elapsed)
-        self._prev_cmd = self.commanded_pct
+            self._large_swings.append(time.monotonic())
+        self._prev_cmd = clamped
 
         # Expire old swings outside window
-        cutoff = self._elapsed - self.CONFLICT_WINDOW_S
+        cutoff = time.monotonic() - self.CONFLICT_WINDOW_S
         while self._large_swings and self._large_swings[0] < cutoff:
             self._large_swings.popleft()
 
         # Set fault if too many large swings in window
         if len(self._large_swings) >= self.CONFLICT_THRESHOLD:
             self.fault = True
+
+    def update(self, commanded_pct: float, dt: float):
+        """Advance physics by dt seconds. Fault detection is in record_command()."""
+        self.commanded_pct = max(0.0, min(100.0, commanded_pct))
 
         # Physics
         error = self.commanded_pct - self.actual_pct
