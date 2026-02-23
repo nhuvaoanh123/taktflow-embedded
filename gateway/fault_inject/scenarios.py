@@ -7,11 +7,22 @@ CAN frame layout matches taktflow.dbc.  All E2E-protected messages use
 CRC-8 SAE J1850 (poly 0x1D, init 0xFF) computed over [data_id] + payload[2:].
 """
 
+import json
 import os
 import time
 from typing import Optional
 
 import can
+import paho.mqtt.client as paho_mqtt
+
+# Module-level MQTT client (set by app.py at startup)
+_mqtt_client: paho_mqtt.Client | None = None
+
+
+def set_mqtt_client(client: paho_mqtt.Client) -> None:
+    """Set the module-level MQTT client (called by app.py on startup)."""
+    global _mqtt_client
+    _mqtt_client = client
 
 # ---------------------------------------------------------------------------
 # CAN IDs (from taktflow.dbc)
@@ -308,7 +319,8 @@ def reset() -> str:
     """Clear E-Stop and reset all actuators to safe idle state.
 
     Sends E-Stop clear (EStop_Active=0), then sets torque to 0,
-    steer to 0 deg, and brake to 0%.
+    steer to 0 deg, and brake to 0%.  Also publishes MQTT reset
+    command so the ML detector and ws_bridge clear their state.
     """
     bus = _get_bus()
     try:
@@ -319,6 +331,12 @@ def reset() -> str:
         _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
     finally:
         bus.shutdown()
+
+    # Publish MQTT reset command for ML detector and ws_bridge
+    if _mqtt_client is not None:
+        reset_payload = json.dumps({"action": "reset", "ts": time.time()})
+        _mqtt_client.publish("taktflow/command/reset", reset_payload, qos=1)
+
     return "Reset: E-Stop cleared, torque=0, steer=0, brake=0"
 
 

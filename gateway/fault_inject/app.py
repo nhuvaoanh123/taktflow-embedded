@@ -13,11 +13,12 @@ Runs on FAULT_PORT (default 8091).
 import logging
 import os
 
+import paho.mqtt.client as paho_mqtt
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .scenarios import SCENARIOS, reset as reset_scenario
+from .scenarios import SCENARIOS, reset as reset_scenario, set_mqtt_client
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +26,24 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger("fault_inject")
+
+# MQTT client for publishing reset/command messages
+_mqtt_client: paho_mqtt.Client | None = None
+
+
+def _init_mqtt() -> paho_mqtt.Client:
+    """Initialize MQTT client for fault-inject command publishing."""
+    host = os.environ.get("MQTT_HOST", "localhost")
+    port = int(os.environ.get("MQTT_PORT", "1883"))
+    client = paho_mqtt.Client(
+        paho_mqtt.CallbackAPIVersion.VERSION2,
+        client_id="taktflow-fault-inject",
+    )
+    client.connect_async(host, port, keepalive=30)
+    client.loop_start()
+    log.info("MQTT client connecting to %s:%d", host, port)
+    return client
+
 
 app = FastAPI(
     title="Taktflow Fault Injection API",
@@ -43,6 +62,13 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def _on_startup():
+    global _mqtt_client
+    _mqtt_client = _init_mqtt()
+    set_mqtt_client(_mqtt_client)
 
 
 @app.post("/api/fault/scenario/{name}")

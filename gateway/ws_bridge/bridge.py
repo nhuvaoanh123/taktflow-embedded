@@ -101,12 +101,14 @@ class TelemetryState:
 
         self.anomaly_score = 0.0
         self.anomaly_alert = False
+        self.anomaly_features: dict = {}
 
         self.can_msgs_sec = 0
         self.start_time = time.time()
 
         self.events: list[dict] = []
         self.can_log: list[dict] = []  # Rolling buffer of decoded CAN messages
+        self.sap_notifications: list[dict] = []  # Rolling SAP QM notifications
 
         # Heartbeat tracking
         self._hb_cvc_ts = 0.0
@@ -170,6 +172,7 @@ class TelemetryState:
             "anomaly": {
                 "score": round(self.anomaly_score, 3),
                 "alert": self.anomaly_alert,
+                "features": self.anomaly_features,
             },
             "stats": {
                 "can_msgs_sec": self.can_msgs_sec,
@@ -177,6 +180,7 @@ class TelemetryState:
             },
             "events": self.events[-20:],  # Last 20 events
             "can_log": self.can_log[-50:],  # Last 50 CAN messages
+            "sap_notifications": self.sap_notifications[-20:],
         }
 
     def add_event(self, event_type: str, message: str):
@@ -227,12 +231,22 @@ def on_mqtt_message(client, userdata, msg):
     elif topic == "taktflow/telemetry/stats/can_msgs_per_sec":
         state.can_msgs_sec = _parse_int(payload)
 
-    # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ...}
+    # Reset command — clear anomaly state
+    elif topic == "taktflow/command/reset":
+        state.anomaly_score = 0.0
+        state.anomaly_alert = False
+        state.anomaly_features = {}
+        state.add_event("info", "System reset — anomaly score cleared")
+
+    # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ..., "features": {...}}
     elif topic.startswith("taktflow/anomaly/"):
         if topic.endswith("/score"):
             try:
                 data = json.loads(payload)
                 state.anomaly_score = float(data.get("score", 0))
+                features = data.get("features")
+                if isinstance(features, dict):
+                    state.anomaly_features = features
             except (json.JSONDecodeError, TypeError, ValueError):
                 state.anomaly_score = _parse_float(payload)
             was_alert = state.anomaly_alert
@@ -256,6 +270,10 @@ def on_mqtt_message(client, userdata, msg):
             evt = json.loads(payload)
             qn_id = evt.get("notification_id", "?")
             state.add_event("sap", f"SAP QM notification created: {qn_id}")
+            # Store notification in rolling list for the SAP QM panel
+            state.sap_notifications.append(evt)
+            if len(state.sap_notifications) > 20:
+                state.sap_notifications = state.sap_notifications[-20:]
         except json.JSONDecodeError:
             pass
 

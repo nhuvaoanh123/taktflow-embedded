@@ -34,6 +34,7 @@ RX_BRAKE_COMMAND = 0x103
 RX_ESTOP = 0x001
 
 # CAN IDs we write (sensor feedback to ECUs)
+TX_VEHICLE_STATE = 0x100
 TX_STEERING_STATUS = 0x200
 TX_BRAKE_STATUS = 0x201
 TX_LIDAR_DISTANCE = 0x220
@@ -41,6 +42,14 @@ TX_MOTOR_STATUS = 0x300
 TX_MOTOR_CURRENT = 0x301
 TX_MOTOR_TEMP = 0x302
 TX_BATTERY_STATUS = 0x303
+
+# Vehicle state codes
+VS_INIT = 0
+VS_RUN = 1
+VS_DEGRADED = 2
+VS_LIMP = 3
+VS_SAFE_STOP = 4
+VS_SHUTDOWN = 5
 
 
 class PlantSimulator:
@@ -61,6 +70,10 @@ class PlantSimulator:
 
         # E-stop state
         self.estop_active = False
+
+        # Vehicle state — starts INIT, transitions to RUN after startup delay
+        self.vehicle_state = VS_INIT
+        self._startup_ticks = 0  # counts ticks since start (300 = 3s)
 
         # Timing counters (10ms base tick)
         self._tick = 0
@@ -104,9 +117,12 @@ class PlantSimulator:
 
         if arb_id == RX_ESTOP:
             if len(data) >= 3:
+                was_active = self.estop_active
                 self.estop_active = bool(data[2] & 0x01)
-                if self.estop_active:
+                if self.estop_active and not was_active:
                     log.info("E-STOP received — all outputs disabled")
+                elif was_active and not self.estop_active:
+                    log.info("E-STOP cleared")
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
@@ -251,6 +267,22 @@ class PlantSimulator:
         self.bus.send(can.Message(arbitration_id=TX_BRAKE_STATUS,
                                   data=data, is_extended_id=False))
 
+    def _tx_vehicle_state(self):
+        """Send Vehicle_State (0x100) every 100ms."""
+        payload = bytearray(8)
+        # Byte 2: VehicleState (4 bits)
+        payload[2] = self.vehicle_state & 0x0F
+        # Byte 3: FaultMask (8 bits) — 0 for normal
+        payload[3] = 0
+        # Byte 4: TorqueLimit (0-100)
+        payload[4] = 100 if self.vehicle_state == VS_RUN else 0
+        # Byte 5: SpeedLimit (0-100)
+        payload[5] = 100 if self.vehicle_state == VS_RUN else 0
+
+        data = self._encode_with_e2e(TX_VEHICLE_STATE, 0x06, payload)
+        self.bus.send(can.Message(arbitration_id=TX_VEHICLE_STATE,
+                                  data=data, is_extended_id=False))
+
     def _tx_lidar_distance(self):
         """Send Lidar_Distance (0x220) every 10ms."""
         payload = bytearray(8)
@@ -303,6 +335,21 @@ class PlantSimulator:
                 self.battery.update(self.motor.current_ma, dt)
                 self.lidar.update(dt)
 
+                # Vehicle state machine
+                self._startup_ticks += 1
+                if self.estop_active:
+                    if self.vehicle_state != VS_SAFE_STOP:
+                        self.vehicle_state = VS_SAFE_STOP
+                        log.info("Vehicle state -> SAFE_STOP (E-Stop)")
+                elif self.vehicle_state == VS_INIT and self._startup_ticks >= 300:
+                    # Transition to RUN after 3 seconds of startup
+                    self.vehicle_state = VS_RUN
+                    log.info("Vehicle state -> RUN (startup complete)")
+                elif self.vehicle_state == VS_SAFE_STOP and not self.estop_active:
+                    # After E-Stop cleared, return to RUN
+                    self.vehicle_state = VS_RUN
+                    log.info("Vehicle state -> RUN (E-Stop cleared)")
+
                 # TX schedule
                 # Every 10ms: motor current, lidar
                 self._tx_motor_current()
@@ -314,9 +361,10 @@ class PlantSimulator:
                     self._tx_steering_status()
                     self._tx_brake_status()
 
-                # Every 100ms: motor temperature
+                # Every 100ms: motor temperature, vehicle state
                 if self._tick % 10 == 0:
                     self._tx_motor_temp()
+                    self._tx_vehicle_state()
 
                 # Every 1000ms: battery
                 if self._tick % 100 == 0:

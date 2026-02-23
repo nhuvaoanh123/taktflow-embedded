@@ -53,7 +53,9 @@ TOPIC_VOLTAGE = "taktflow/can/Battery_Status/BatteryVoltage_mV"
 TOPIC_SCORE = "taktflow/anomaly/score"
 TOPIC_DTC = f"taktflow/alerts/dtc/{DTC_CODE}"
 
-SUBSCRIPTIONS = [TOPIC_CURRENT, TOPIC_TEMP, TOPIC_RPM, TOPIC_VOLTAGE]
+TOPIC_RESET = "taktflow/command/reset"
+
+SUBSCRIPTIONS = [TOPIC_CURRENT, TOPIC_TEMP, TOPIC_RPM, TOPIC_VOLTAGE, TOPIC_RESET]
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +86,7 @@ class SensorBuffers:
 
         current_arr = np.array(self.current)
         motor_current_mean = float(np.mean(current_arr))
-        motor_current_std = float(np.std(current_arr)) if len(current_arr) > 1 else 0.0
+        motor_current_std = float(np.std(current_arr)) if len(current_arr) > 1 else 5.0
 
         # For temp / rpm / voltage use the latest value, falling back to a
         # safe default if no message has arrived yet.
@@ -152,10 +154,20 @@ def make_on_connect(buffers: SensorBuffers):
     return on_connect
 
 
-def make_on_message(buffers: SensorBuffers):
+def make_on_message(buffers: SensorBuffers, reset_flag: dict):
     """Factory for the on_message callback."""
 
     def on_message(client: mqtt.Client, userdata, msg: mqtt.MQTTMessage):
+        # Handle reset command
+        if msg.topic == TOPIC_RESET:
+            logger.info("Reset command received — clearing buffers")
+            buffers.current.clear()
+            buffers.temp.clear()
+            buffers.rpm.clear()
+            buffers.voltage.clear()
+            reset_flag["pending"] = True
+            return
+
         try:
             value = float(msg.payload.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
@@ -182,12 +194,26 @@ def make_on_message(buffers: SensorBuffers):
 # ---------------------------------------------------------------------------
 # Inference loop
 # ---------------------------------------------------------------------------
-async def inference_loop(client: mqtt.Client, buffers: SensorBuffers, model, scaler):
+async def inference_loop(client: mqtt.Client, buffers: SensorBuffers,
+                        model, scaler, reset_flag: dict):
     """Run inference every INFERENCE_INTERVAL_S seconds."""
     logger.info("Inference loop started (interval=%.1fs)", INFERENCE_INTERVAL_S)
 
     while True:
         await asyncio.sleep(INFERENCE_INTERVAL_S)
+
+        # Handle pending reset — publish score 0.0 immediately
+        if reset_flag.get("pending"):
+            reset_flag["pending"] = False
+            score_payload = json.dumps({
+                "score": 0.0,
+                "raw": 0.0,
+                "ts": time.time(),
+                "features": {},
+            })
+            client.publish(TOPIC_SCORE, score_payload, qos=0)
+            logger.info("Reset: anomaly score cleared to 0.0")
+            continue
 
         features = buffers.compute_features()
         if features is None:
@@ -202,11 +228,22 @@ async def inference_loop(client: mqtt.Client, buffers: SensorBuffers, model, sca
             logger.exception("Inference error")
             continue
 
-        # Publish anomaly score
+        # Build feature dict for frontend display
+        feat = features[0]
+        feature_dict = {
+            "current_mean": round(float(feat[0]), 1),
+            "current_std": round(float(feat[1]), 1),
+            "temp": round(float(feat[2]), 1),
+            "rpm": round(float(feat[3]), 0),
+            "voltage": round(float(feat[4]), 0),
+        }
+
+        # Publish anomaly score with features
         score_payload = json.dumps({
             "score": round(anomaly_score, 4),
             "raw": round(raw_score, 6),
             "ts": time.time(),
+            "features": feature_dict,
         })
         client.publish(TOPIC_SCORE, score_payload, qos=0)
         logger.debug("anomaly score=%.4f  raw=%.6f", anomaly_score, raw_score)
@@ -242,6 +279,7 @@ async def main():
 
     # Sensor buffers
     buffers = SensorBuffers(maxlen=WINDOW_SIZE)
+    reset_flag: dict = {"pending": False}
 
     # MQTT client (paho-mqtt v2 API)
     client = mqtt.Client(
@@ -249,7 +287,7 @@ async def main():
         client_id="taktflow-ml-detector",
     )
     client.on_connect = make_on_connect(buffers)
-    client.on_message = make_on_message(buffers)
+    client.on_message = make_on_message(buffers, reset_flag)
 
     # Connect (non-blocking loop)
     logger.info("Connecting to MQTT broker %s:%s …", MQTT_HOST, MQTT_PORT)
@@ -257,7 +295,7 @@ async def main():
     client.loop_start()
 
     try:
-        await inference_loop(client, buffers, model, scaler)
+        await inference_loop(client, buffers, model, scaler, reset_flag)
     except asyncio.CancelledError:
         logger.info("Shutting down …")
     finally:

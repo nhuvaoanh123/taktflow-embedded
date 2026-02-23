@@ -52,23 +52,47 @@ SCALER_PATH = MODEL_DIR / "scaler.pkl"
 def generate_normal_data(n_samples: int = N_SAMPLES, seed: int = RANDOM_SEED) -> np.ndarray:
     """Generate synthetic *normal* CAN telemetry features.
 
-    Each feature is sampled uniformly within its healthy operating range.
+    Includes three operating regimes:
+      - Idle (~30%): motor off / standby (0-50 mA, 0-100 RPM)
+      - Transition (~10%): ramp-up / ramp-down (50-500 mA)
+      - Driving (~60%): normal operation (500-3000 mA, 0-3500 RPM)
     """
     rng = np.random.default_rng(seed)
 
-    motor_current_mean = rng.uniform(500, 3000, size=n_samples)
-    motor_current_std = rng.uniform(50, 200, size=n_samples)
-    motor_temp = rng.uniform(25, 70, size=n_samples)
-    rpm = rng.uniform(0, 3500, size=n_samples)
-    battery_voltage = rng.uniform(11500, 13000, size=n_samples)
+    n_idle = int(n_samples * 0.30)
+    n_transition = int(n_samples * 0.10)
+    n_driving = n_samples - n_idle - n_transition
+
+    # --- Idle state: motor off / standby ---
+    idle_current_mean = rng.uniform(0, 50, size=n_idle)
+    idle_current_std = rng.uniform(0, 10, size=n_idle)
+    idle_temp = rng.uniform(20, 30, size=n_idle)
+    idle_rpm = rng.uniform(0, 100, size=n_idle)
+    idle_voltage = rng.uniform(12000, 13000, size=n_idle)
+
+    # --- Transition state: ramp-up / ramp-down ---
+    trans_current_mean = rng.uniform(50, 500, size=n_transition)
+    trans_current_std = rng.uniform(5, 80, size=n_transition)
+    trans_temp = rng.uniform(25, 45, size=n_transition)
+    trans_rpm = rng.uniform(0, 1500, size=n_transition)
+    trans_voltage = rng.uniform(11500, 13000, size=n_transition)
+
+    # --- Driving state: normal operation ---
+    drive_current_mean = rng.uniform(500, 3000, size=n_driving)
+    drive_current_std = rng.uniform(50, 200, size=n_driving)
+    drive_temp = rng.uniform(25, 70, size=n_driving)
+    drive_rpm = rng.uniform(0, 3500, size=n_driving)
+    drive_voltage = rng.uniform(11500, 13000, size=n_driving)
 
     data = np.column_stack([
-        motor_current_mean,
-        motor_current_std,
-        motor_temp,
-        rpm,
-        battery_voltage,
+        np.concatenate([idle_current_mean, trans_current_mean, drive_current_mean]),
+        np.concatenate([idle_current_std, trans_current_std, drive_current_std]),
+        np.concatenate([idle_temp, trans_temp, drive_temp]),
+        np.concatenate([idle_rpm, trans_rpm, drive_rpm]),
+        np.concatenate([idle_voltage, trans_voltage, drive_voltage]),
     ])
+    # Shuffle so the model doesn't see regime-ordered data
+    rng.shuffle(data)
     return data
 
 
