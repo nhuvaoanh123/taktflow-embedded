@@ -1,10 +1,25 @@
----
+﻿---
 document_id: MAN3-DECISION-LOG
 title: "Architecture Decision Log"
 version: "1.0"
 status: active
 updated: "2026-02-22"
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Architecture Decision Log
 
@@ -339,3 +354,4 @@ CAN 2.0B at 500 kbps is the zero-cost, zero-risk baseline that satisfies all pro
 
 ### Why chosen wins
 AWS IoT Core costs ~$4-7/month (comparable to self-hosted at ~$6/month) but adds managed infrastructure, device provisioning, device shadows, and the highest automotive industry credibility. Azure costs 4-5x more ($25+/month) for the same message volume and locks dashboards behind Power BI Pro licensing. Self-hosted is cheapest and technically excellent but sacrifices the "AWS IoT Core" resume keyword that automotive hiring managers specifically look for. The AWS stack is the optimal balance of cost, credibility, and managed simplicity for a portfolio project targeting automotive employers.
+

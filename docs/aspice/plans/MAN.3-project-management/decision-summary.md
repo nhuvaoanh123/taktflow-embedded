@@ -1,10 +1,25 @@
----
+﻿---
 document_id: MAN3-DECISION-SUMMARY
 title: "Decision Summary — Quick Reference"
 version: "2.0"
 status: active
 updated: "2026-02-22"
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Decision Summary
 
@@ -91,3 +106,4 @@ Quick reference for all approved decisions with tier ranking and impact scores. 
 | CUnit | 010 | T2 | Abandoned since 2018, no mock generation |
 | Azure IoT Hub | 012 | T2 | $25/month min (5x AWS cost) |
 | Self-hosted Mosquitto | 012 | T2 | Loses automotive resume keyword |
+
