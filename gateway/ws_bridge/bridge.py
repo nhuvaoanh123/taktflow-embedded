@@ -292,7 +292,10 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         elif sig_name == "MotorDirection":
             state.motor_direction = _parse_int(payload)
         elif sig_name == "MotorFaultStatus":
+            old = state.motor_faults
             state.motor_faults = _parse_int(payload)
+            if state.motor_faults and not old:
+                state.add_event("fault", f"Motor fault detected (code {state.motor_faults})")
         elif sig_name == "DutyPercent":
             state.motor_duty_pct = _parse_int(payload)
         elif sig_name == "DeratingPercent":
@@ -305,7 +308,10 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         if sig_name == "Current_mA":
             state.motor_current_ma = _parse_int(payload)
         elif sig_name == "OvercurrentFlag":
+            old = state.motor_overcurrent
             state.motor_overcurrent = _parse_int(payload)
+            if state.motor_overcurrent and not old:
+                state.add_event("fault", f"Motor overcurrent! I={state.motor_current_ma}mA")
 
     # Motor Temperature (0x302)
     elif msg_name == "Motor_Temperature":
@@ -321,7 +327,10 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         elif sig_name == "CommandedAngle":
             state.steer_commanded_deg = _parse_float(payload)
         elif sig_name == "SteerFaultStatus":
+            old = state.steer_fault
             state.steer_fault = _parse_int(payload)
+            if state.steer_fault and not old:
+                state.add_event("fault", "Steering fault detected — servo failure")
         elif sig_name == "ServoCurrent_mA":
             state.steer_servo_ma = _parse_int(payload)
 
@@ -332,7 +341,10 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         elif sig_name == "BrakeCommandEcho":
             state.brake_commanded_pct = _parse_int(payload)
         elif sig_name == "BrakeFaultStatus":
+            old = state.brake_fault
             state.brake_fault = _parse_int(payload)
+            if state.brake_fault and not old:
+                state.add_event("fault", "Brake fault detected")
         elif sig_name == "ServoCurrent_mA":
             state.brake_servo_ma = _parse_int(payload)
 
@@ -372,6 +384,12 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
             state.torque_limit = _parse_int(payload)
         elif sig_name == "SpeedLimit":
             state.speed_limit = _parse_int(payload)
+
+    # E-Stop
+    elif msg_name == "EStop_Broadcast":
+        val = _parse_int(payload)
+        if val:
+            state.add_event("fault", "E-STOP activated! Emergency shutdown")
 
     # Heartbeats
     elif msg_name == "CVC_Heartbeat":
