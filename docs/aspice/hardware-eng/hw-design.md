@@ -1,4 +1,4 @@
----
+﻿---
 document_id: HWDES
 title: "Hardware Design"
 version: "1.0"
@@ -6,6 +6,21 @@ status: draft
 aspice_process: HWE.2
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Hardware Design
 
@@ -826,3 +841,4 @@ Peak current (8.5A) is within the 10A PSU rating. The motor stall current (25A) 
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete HW design: system block diagram, per-ECU circuit descriptions (CVC/FZC/RZC/SC), CAN bus design with bit timing, power distribution, kill relay circuit, grounding strategy, assembly notes |
+
