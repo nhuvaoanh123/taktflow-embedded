@@ -1,4 +1,4 @@
----
+﻿---
 document_id: PROCUREMENT-REQUIREMENTS-CHRONICLE
 title: "Project Requirements and Procurement Chronicle (Merged)"
 version: "2.3"
@@ -11,6 +11,22 @@ merged_sources:
   - docs/aspice/hardware-eng/hw-requirements.md
   - docs/aspice/system/system-requirements.md
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
+
 
 # Project Requirements and Procurement Chronicle (Merged)
 
@@ -192,3 +208,6 @@ Single-file merge of requirements baseline + procurement validation, kept in chr
 - `taktflow-embedded/docs/aspice/hardware-eng/hw-requirements.md`
 - `taktflow-embedded/hardware/bom-list.md`
 - `taktflow-embedded/hardware/bom.md`
+
+
+

@@ -1,10 +1,25 @@
----
+﻿---
 document_id: PIN-MAP
 title: "Pin Mapping"
 version: "1.0"
 status: draft
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Pin Mapping
 
@@ -257,3 +272,4 @@ The following solder bridge changes are required on the Nucleo-64 boards:
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial preliminary pin mapping |
 | 1.0 | 2026-02-21 | System | Complete pin mapping: CVC (13 pins), FZC (14 pins), RZC (17 pins), SC (9 pins). Added AF numbers, Nucleo header references, voltage levels, net names, ASIL, pin conflict checks, solder bridge modifications, unused pin handling |
+
