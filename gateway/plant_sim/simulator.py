@@ -42,6 +42,17 @@ TX_MOTOR_STATUS = 0x300
 TX_MOTOR_CURRENT = 0x301
 TX_MOTOR_TEMP = 0x302
 TX_BATTERY_STATUS = 0x303
+TX_DTC_BROADCAST = 0x500
+
+# DTC codes (from defect_catalog.py — must match SAP QM mock)
+DTC_OVERCURRENT = 0xE301
+DTC_STEER_FAULT = 0xE201
+DTC_BRAKE_FAULT = 0xE202
+DTC_BATTERY_UV = 0xE401
+
+# ECU source IDs
+ECU_FZC = 2
+ECU_RZC = 3
 
 # Vehicle state codes
 VS_INIT = 0
@@ -74,6 +85,10 @@ class PlantSimulator:
         # Vehicle state — starts INIT, transitions to RUN after startup delay
         self.vehicle_state = VS_INIT
         self._startup_ticks = 0  # counts ticks since start (300 = 3s)
+
+        # DTC tracking — only fire each DTC once until cleared
+        self._active_dtcs: set[int] = set()
+        self._dtc_occurrence: dict[int, int] = {}
 
         # Timing counters (10ms base tick)
         self._tick = 0
@@ -122,7 +137,11 @@ class PlantSimulator:
                 if self.estop_active and not was_active:
                     log.info("E-STOP received — all outputs disabled")
                 elif was_active and not self.estop_active:
-                    log.info("E-STOP cleared")
+                    log.info("E-STOP cleared — resetting faults")
+                    self.motor.reset_faults()
+                    self.steering.clear_fault()
+                    self.brake.clear_fault()
+                    self._active_dtcs.clear()
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
@@ -231,6 +250,35 @@ class PlantSimulator:
         payload[3] = self.battery.status & 0x0F
         self.bus.send(can.Message(arbitration_id=TX_BATTERY_STATUS,
                                   data=payload, is_extended_id=False))
+
+    def _send_dtc(self, dtc_code: int, ecu_source: int):
+        """Send DTC_Broadcast (0x500, 8 bytes, no E2E). Only fires once per DTC."""
+        if dtc_code in self._active_dtcs:
+            return
+        self._active_dtcs.add(dtc_code)
+        count = self._dtc_occurrence.get(dtc_code, 0) + 1
+        self._dtc_occurrence[dtc_code] = count
+
+        payload = bytearray(8)
+        payload[0] = dtc_code & 0xFF
+        payload[1] = (dtc_code >> 8) & 0xFF
+        payload[2] = 0x01  # DTC_Status: active
+        payload[3] = ecu_source & 0xFF
+        payload[4] = min(255, count)
+        self.bus.send(can.Message(arbitration_id=TX_DTC_BROADCAST,
+                                  data=payload, is_extended_id=False))
+        log.info("DTC 0x%04X from ECU %d (occurrence %d)", dtc_code, ecu_source, count)
+
+    def _check_and_send_dtcs(self):
+        """Check all fault conditions and send DTCs."""
+        if self.motor.overcurrent:
+            self._send_dtc(DTC_OVERCURRENT, ECU_RZC)
+        if self.steering.fault:
+            self._send_dtc(DTC_STEER_FAULT, ECU_FZC)
+        if self.brake.fault:
+            self._send_dtc(DTC_BRAKE_FAULT, ECU_FZC)
+        if self.battery.status == 0:  # critical_UV
+            self._send_dtc(DTC_BATTERY_UV, ECU_RZC)
 
     def _tx_steering_status(self):
         """Send Steering_Status (0x200) every 20ms."""
@@ -350,6 +398,18 @@ class PlantSimulator:
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (E-Stop cleared)")
 
+                # Transition to DEGRADED on faults (only from RUN)
+                has_fault = (
+                    self.motor.overcurrent or self.steering.fault
+                    or self.brake.fault
+                )
+                if has_fault and self.vehicle_state == VS_RUN:
+                    self.vehicle_state = VS_DEGRADED
+                    log.info("Vehicle state -> DEGRADED (fault detected)")
+                elif not has_fault and self.vehicle_state == VS_DEGRADED:
+                    self.vehicle_state = VS_RUN
+                    log.info("Vehicle state -> RUN (faults cleared)")
+
                 # TX schedule
                 # Every 10ms: motor current, lidar
                 self._tx_motor_current()
@@ -361,10 +421,11 @@ class PlantSimulator:
                     self._tx_steering_status()
                     self._tx_brake_status()
 
-                # Every 100ms: motor temperature, vehicle state
+                # Every 100ms: motor temperature, vehicle state, DTC check
                 if self._tick % 10 == 0:
                     self._tx_motor_temp()
                     self._tx_vehicle_state()
+                    self._check_and_send_dtcs()
 
                 # Every 1000ms: battery
                 if self._tick % 100 == 0:

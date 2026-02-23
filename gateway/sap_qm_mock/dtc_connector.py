@@ -94,8 +94,9 @@ class DTCConnector:
         self, payload: dict[str, Any], client: mqtt.Client
     ) -> None:
         """Map a DTC alert to a SAP QM notification and publish the event."""
-        dtc_code: str = payload.get("dtc_code", "")
-        ecu_source: Optional[int] = payload.get("ecu_id")
+        # Field names match mqtt_publisher.py: "dtc", "ecu_source"
+        dtc_code: str = payload.get("dtc") or payload.get("dtc_code", "")
+        ecu_source: Optional[int] = payload.get("ecu_source") or payload.get("ecu_id")
         description: str = payload.get(
             "description", f"DTC alert: {dtc_code}"
         )
