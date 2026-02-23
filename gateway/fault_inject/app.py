@@ -40,7 +40,7 @@ _mqtt_client: paho_mqtt.Client | None = None
 # ---------------------------------------------------------------------------
 # Controller lock — single in-memory lock for fault-inject control
 # ---------------------------------------------------------------------------
-LOCK_DURATION_SEC = int(os.environ.get("LOCK_DURATION_SEC", "300"))  # 5 min default
+LOCK_DURATION_SEC = int(os.environ.get("LOCK_DURATION_SEC", "120"))  # 2 min default
 
 _control_lock = {
     "client_id": None,      # str | None — who holds it
