@@ -1,4 +1,4 @@
----
+﻿---
 document_id: SWR-CVC
 title: "Software Requirements — CVC"
 version: "1.0"
@@ -8,6 +8,21 @@ ecu: CVC
 asil: D
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Software Requirements — Central Vehicle Computer (CVC)
 
@@ -716,3 +731,4 @@ Write access to DIDs 0xF190 and calibration DIDs shall require UDS Security Acce
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete SWR specification: 35 requirements (SWR-CVC-001 to SWR-CVC-035), full traceability |
+

@@ -1,4 +1,4 @@
----
+﻿---
 document_id: SWR-TCU
 title: "Software Requirements — TCU"
 version: "1.0"
@@ -8,6 +8,21 @@ ecu: TCU
 asil: QM
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Software Requirements — Telematics Control Unit (TCU)
 
@@ -479,3 +494,4 @@ The TCU software shall execute a main loop at a 10 ms cycle time (100 Hz) using 
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete SWR specification: 15 requirements (SWR-TCU-001 to SWR-TCU-015), UDS services, OBD-II, DTC management, full traceability |
+
