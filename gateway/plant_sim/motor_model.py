@@ -16,7 +16,7 @@ class MotorModel:
     FRICTION = 0.005            # friction coefficient (Nm/RPM)
     INERTIA = 0.002             # kg*m^2
     R_THERMAL = 0.008           # degC per mA^2 (heating factor)
-    R_COOL = 200.0              # thermal resistance degC/W
+    R_COOL = 80.0               # thermal resistance degC/W
     C_THERMAL = 50.0            # thermal capacitance J/degC
     T_AMBIENT = 25.0            # ambient temperature degC
 
@@ -32,8 +32,12 @@ class MotorModel:
         self.stall_fault = False
         self._last_time = time.monotonic()
 
-    def update(self, duty_pct: float, direction: int, dt: float = None):
-        """Advance motor physics by dt seconds."""
+    def update(self, duty_pct: float, direction: int, dt: float = None,
+               brake_load: float = 0.0):
+        """Advance motor physics by dt seconds.
+
+        brake_load: 0.0-1.0 mechanical resistance from brake (0=free, 1=locked).
+        """
         now = time.monotonic()
         if dt is None:
             dt = now - self._last_time
@@ -44,15 +48,16 @@ class MotorModel:
 
         self.duty_pct = max(0.0, min(100.0, duty_pct))
         self.direction = direction
+        brake_load = max(0.0, min(1.0, brake_load))
 
         if direction == 0 or self.duty_pct < 1.0:
             self.enabled = False
         else:
             self.enabled = True
 
-        # RPM dynamics
+        # RPM dynamics — brake opposes motor, reducing achievable speed
         if self.enabled and not self.stall_fault:
-            target_rpm = self.NO_LOAD_RPM * (self.duty_pct / 100.0)
+            target_rpm = self.NO_LOAD_RPM * (self.duty_pct / 100.0) * (1.0 - brake_load)
             # First-order approach to target
             tau = 0.3  # time constant in seconds
             self.rpm += (target_rpm - self.rpm) * (dt / tau)
@@ -66,6 +71,7 @@ class MotorModel:
         # Current model: proportional to torque load
         if self.enabled:
             load_factor = 1.0 - (self.rpm / self.NO_LOAD_RPM)
+            load_factor = max(load_factor, brake_load)
             load_factor = max(0.0, min(1.0, load_factor))
             self.current_ma = self.STALL_CURRENT_MA * (self.duty_pct / 100.0) * load_factor
         else:

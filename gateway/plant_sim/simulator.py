@@ -387,8 +387,10 @@ class PlantSimulator:
                     self.steering.update(0, dt)
                     self.brake.update(100, dt)
                 else:
+                    brake_load = self.brake.actual_pct / 100.0
                     self.motor.update(self.motor.duty_pct,
-                                      self.motor.direction, dt)
+                                      self.motor.direction, dt,
+                                      brake_load=brake_load)
                     self.steering.update(self.steering.commanded_angle, dt)
                     self.brake.update(self.brake.commanded_pct, dt)
 

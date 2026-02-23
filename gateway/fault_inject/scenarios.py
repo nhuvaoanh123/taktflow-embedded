@@ -178,20 +178,25 @@ def normal_drive() -> str:
 
 
 def overcurrent() -> str:
-    """Send very high torque request (95% duty).
+    """Send very high torque request (95% duty) with emergency brake locked.
 
-    The plant simulator models the resulting high current draw.  When
-    current exceeds 20 A the RZC sets OvercurrentFlag, which the Safety
-    Controller heartbeat monitor detects, triggers a DTC broadcast, and
-    ultimately generates an SAP QM notification via the gateway.
+    Simulates a mechanical jam: the motor drives at full power while the
+    brake holds the wheels.  RPM stays near zero, so the load factor
+    remains ~1.0 and current stays above 20 A (overcurrent threshold).
+
+    The RZC sets OvercurrentFlag, the Safety Controller detects it,
+    triggers a DTC broadcast, and ultimately generates an SAP QM
+    notification via the gateway.
     """
     bus = _get_bus()
     try:
+        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(100, brake_mode=2))
         _send(bus, CAN_TORQUE_REQUEST, _torque_frame(95, 1))
     finally:
         bus.shutdown()
-    return ("Overcurrent: 95% torque request sent.  Plant sim will model "
-            "overcurrent -> RZC DTC -> SC detection -> SAP notification.")
+    return ("Overcurrent: 95% torque + 100% brake (mechanical jam).  "
+            "Plant sim models sustained overcurrent -> RZC DTC -> "
+            "SC detection -> SAP notification.")
 
 
 def steer_fault() -> str:
@@ -354,8 +359,8 @@ SCENARIOS: dict[str, dict] = {
     "overcurrent": {
         "fn": overcurrent,
         "description": (
-            "Overcurrent: 95% torque request triggers plant-sim overcurrent "
-            "-> RZC DTC -> SC detection -> SAP notification."
+            "Overcurrent: 95% torque + 100% brake (mechanical jam) "
+            "-> sustained overcurrent -> RZC DTC -> SC detection -> SAP notification."
         ),
     },
     "steer_fault": {
