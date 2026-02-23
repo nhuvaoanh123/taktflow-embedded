@@ -105,6 +105,7 @@ class TelemetryState:
 
         self.can_msgs_sec = 0
         self.start_time = time.time()
+        self._estop_active = False
 
         self.events: list[dict] = []
         self.can_log: list[dict] = []  # Rolling buffer of decoded CAN messages
@@ -231,12 +232,17 @@ def on_mqtt_message(client, userdata, msg):
     elif topic == "taktflow/telemetry/stats/can_msgs_per_sec":
         state.can_msgs_sec = _parse_int(payload)
 
-    # Reset command — clear anomaly state
+    # Reset command — clear ALL fault, DTC, anomaly, and E-Stop state
     elif topic == "taktflow/command/reset":
         state.anomaly_score = 0.0
         state.anomaly_alert = False
         state.anomaly_features = {}
-        state.add_event("info", "System reset — anomaly score cleared")
+        state.motor_faults = 0
+        state.motor_overcurrent = 0
+        state.steer_fault = 0
+        state.brake_fault = 0
+        state._estop_active = False
+        state.add_event("info", "System reset — faults, DTCs, anomaly cleared")
 
     # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ..., "features": {...}}
     elif topic.startswith("taktflow/anomaly/"):
@@ -403,11 +409,15 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         elif sig_name == "SpeedLimit":
             state.speed_limit = _parse_int(payload)
 
-    # E-Stop
-    elif msg_name == "EStop_Broadcast":
+    # E-Stop — only react to the EStop_Active signal, not Source/E2E fields
+    elif msg_name == "EStop_Broadcast" and sig_name == "EStop_Active":
         val = _parse_int(payload)
-        if val:
+        if val and not getattr(state, "_estop_active", False):
+            state._estop_active = True
             state.add_event("fault", "E-STOP activated! Emergency shutdown")
+        elif not val and getattr(state, "_estop_active", False):
+            state._estop_active = False
+            state.add_event("info", "E-STOP cleared")
 
     # Heartbeats
     elif msg_name == "CVC_Heartbeat":
