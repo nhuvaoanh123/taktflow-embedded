@@ -14,10 +14,10 @@
 
 # Master Plan: Zonal Vehicle Platform — ASIL D Portfolio
 
-**Status**: IN PROGRESS
+**Status**: IN PROGRESS (Phases 0-16 DONE)
 **Created**: 2026-02-20
 **Updated**: 2026-02-23
-**Target**: 19.5 working days
+**Target**: 24.5 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
@@ -396,16 +396,20 @@ SC  ──┘                                 TCU ──┘
 | 2 | Safety Analysis (FMEA, DFA, Hardware Metrics) | 1 | DONE |
 | 3 | Requirements & System Architecture | 1 | DONE |
 | 4 | CAN Protocol & HSI Design | 1 | DONE |
-| 5 | Shared BSW Layer (AUTOSAR-like) | 2 | DONE |
-| 6 | Firmware: Central Vehicle Computer (SWCs) | 1 | DONE |
-| 7 | Firmware: Front Zone Controller (SWCs) | 1 | DONE |
-| 8 | Firmware: Rear Zone Controller (SWCs) | 1 | DONE |
-| 9 | Firmware: Safety Controller (TMS570) | 1 | DONE |
-| 10 | Simulated ECUs: BCM, ICU, TCU (Docker + SocketCAN) | 1.5 | DONE |
-| 11 | Edge Gateway: Pi + CAN + Cloud + ML + SAP QM | 2.5 | PENDING |
-| 12 | Verification: MIL + Unit Tests + SIL + PIL | 2 | PENDING |
-| 13 | HIL: Hardware Assembly + Integration Testing | 1.5 | PENDING |
-| 14 | Demo Scenarios + Video + Portfolio Polish | 1.5 | PENDING |
+| 5 | Shared BSW Layer (16 AUTOSAR-like modules) | 2 | DONE |
+| 6 | CVC Firmware (6 SWCs, 88 tests) | 1 | DONE |
+| 7 | FZC Firmware (steering, braking, lidar) | 1 | DONE |
+| 8 | RZC Firmware (motor control, current, battery) | 1 | DONE |
+| 9 | Safety Controller (TMS570 independent monitor) | 1 | DONE |
+| 10 | BCM, ICU, TCU Firmware (simulated ECUs) | 1 | DONE |
+| 11 | POSIX Port + Docker SIL (7 ECUs containerized) | 2 | DONE |
+| 12 | DBC File + Plant Simulator (physics models) | 1.5 | DONE |
+| 13 | CAN-to-MQTT Gateway + WebSocket Bridge | 1.5 | DONE |
+| 14 | Live Telemetry Dashboard (/embedded) | 2 | DONE |
+| 15 | SAP QM Mock API (OData endpoints) | 1.5 | DONE |
+| 16 | Edge ML Anomaly Detection + Fault Injection | 1 | DONE |
+| 17 | VPS Deployment + Live Demo | 1.5 | PENDING |
+| 18 | Physical Hardware Build + HIL Testing | 3 | PENDING |
 
 ---
 
