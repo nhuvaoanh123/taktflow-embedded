@@ -1,4 +1,4 @@
----
+﻿---
 document_id: TSR
 title: "Technical Safety Requirements"
 version: "1.0"
@@ -7,6 +7,21 @@ iso_26262_part: 4
 aspice_process: SYS.2
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Technical Safety Requirements
 
@@ -1119,3 +1134,4 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete TSR specification: 51 requirements (TSR-001 to TSR-051), full traceability, ECU allocation |
+

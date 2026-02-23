@@ -1,4 +1,4 @@
----
+﻿---
 document_id: HSR
 title: "Hardware Safety Requirements"
 version: "1.0"
@@ -7,6 +7,21 @@ iso_26262_part: 5
 aspice_process: HWE.1
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Hardware Safety Requirements
 
@@ -641,3 +656,4 @@ Note: One additional HSR (HSR-RZC-007) is QM as battery voltage monitoring suppo
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete HSR specification: 25 requirements across 4 ECUs (CVC: 5, FZC: 7, RZC: 7, SC: 6), diagnostic coverage analysis, full traceability |
+

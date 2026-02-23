@@ -1,4 +1,4 @@
----
+﻿---
 document_id: HSI
 title: "Hardware-Software Interface Specification"
 version: "1.0"
@@ -8,6 +8,21 @@ iso_26262_clause: "7"
 aspice_process: SYS.3
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Hardware-Software Interface Specification
 
@@ -841,3 +856,4 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete HSI specification: 4 ECUs (CVC, FZC, RZC, SC) with pin mappings, peripheral configurations, memory maps, startup sequences, timing constraints, MPU configuration, safety HW features, interrupt priorities, power domain analysis, traceability |
+
