@@ -10,9 +10,9 @@
 #   docker compose down              Stop all services
 #   docker compose logs -f cvc       Follow CVC logs
 #
-# Prerequisites:
+# Prerequisites (on VPS host, one-time):
 #   sudo modprobe vcan
-#   (can-setup service handles vcan0 creation)
+#   echo vcan | sudo tee /etc/modules-load.d/vcan.conf   # persist across reboots
 # =============================================================================
 
 services:
@@ -21,12 +21,26 @@ services:
     image: ubuntu:22.04
     command: >
       /bin/sh -c "
-        ip link add vcan0 type vcan 2>/dev/null || true &&
-        ip link set vcan0 up &&
-        echo 'vcan0 is up'
+        modprobe vcan 2>/dev/null || true;
+        if ip link show vcan0 > /dev/null 2>&1; then
+          ip link set vcan0 up;
+          echo '[can-setup] vcan0 already existed — set UP';
+        elif ip link add vcan0 type vcan; then
+          ip link set vcan0 up;
+          echo '[can-setup] created vcan0 — set UP';
+        else
+          echo '[can-setup] ERROR: cannot create vcan0 — vcan module not loaded';
+          echo '[can-setup] Run on VPS host:  sudo modprobe vcan';
+          echo '[can-setup] Persist:  echo vcan | sudo tee /etc/modules-load.d/vcan.conf';
+          exit 1;
+        fi;
+        ip -d link show vcan0
       "
     cap_add:
       - NET_ADMIN
+      - SYS_MODULE
+    volumes:
+      - /lib/modules:/lib/modules:ro
     network_mode: host
     restart: "no"
 
