@@ -1,9 +1,24 @@
----
+﻿---
 paths:
   - "firmware/src/**/*.c"
   - "firmware/src/**/*.h"
   - "firmware/src/**/*.cpp"
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Input Validation Standards
 
@@ -73,3 +88,4 @@ Validate ALL data at system boundaries BEFORE processing. Never trust external i
 - Never log raw input without sanitization — could contain control characters
 - Never use input directly in format strings — always use parameterized formats
 - Never assume input encoding — explicitly validate or reject
+
