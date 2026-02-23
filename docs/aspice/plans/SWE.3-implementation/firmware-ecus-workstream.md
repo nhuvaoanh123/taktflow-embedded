@@ -1,3 +1,17 @@
+﻿## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 # SWE.3 Firmware Implementation Plan (Physical ECUs)
 
 Process area: SWE.3 Software Detailed Design and Unit Construction
@@ -53,3 +67,4 @@ Scope: phases 5 to 9 for physical ECU path
 - [ ] All ECU projects build cleanly
 - [ ] All safety-critical behaviors exercised at least once
 - [ ] Safety Controller can force stop regardless of zone state
+
