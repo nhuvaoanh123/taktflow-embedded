@@ -1,10 +1,25 @@
----
+﻿---
 document_id: VER-INDEX
 title: "Verification Documentation Index"
 version: "0.1"
 status: draft
 aspice_processes: "SWE.4, SWE.5, SWE.6, SYS.4, SYS.5"
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Verification Documentation Index
 
@@ -51,3 +66,4 @@ Right side of the V-model — all verification and validation evidence.
 | SIL Report | [xil/sil-report.md](xil/sil-report.md) | Software-in-the-Loop | Planned |
 | PIL Report | [xil/pil-report.md](xil/pil-report.md) | Processor-in-the-Loop | Planned |
 | HIL Report | [xil/hil-report.md](xil/hil-report.md) | Hardware-in-the-Loop | Planned |
+
