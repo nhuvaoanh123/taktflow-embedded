@@ -18,7 +18,9 @@
 services:
   # --- vcan0 setup (runs once, exits) ---
   can-setup:
-    image: ubuntu:22.04
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.can-setup
     command: >
       /bin/sh -c "
         modprobe vcan 2>/dev/null || true;
