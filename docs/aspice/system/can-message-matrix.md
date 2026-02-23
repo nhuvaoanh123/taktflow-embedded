@@ -1,4 +1,4 @@
----
+﻿---
 document_id: CAN-MATRIX
 title: "CAN Message Matrix"
 version: "1.0"
@@ -6,6 +6,21 @@ status: draft
 aspice_process: SYS.3
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # CAN Message Matrix
 
@@ -750,3 +765,4 @@ The ICU listens to all messages on the bus for dashboard display purposes. No CA
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete CAN message matrix: 31 message types, 16 E2E-protected messages with full signal definitions, bus load analysis (24% worst-case), Data ID assignment table, timing diagram, per-ECU message summary |
+

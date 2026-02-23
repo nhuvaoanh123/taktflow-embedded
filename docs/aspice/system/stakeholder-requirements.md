@@ -1,4 +1,4 @@
----
+﻿---
 document_id: STKR
 title: "Stakeholder Requirements"
 version: "1.0"
@@ -6,6 +6,21 @@ status: draft
 aspice_process: SYS.1
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Stakeholder Requirements
 
@@ -59,6 +74,11 @@ Each requirement follows this structure:
 - **Status**: draft
 
 The platform shall demonstrate competence with the full ISO 26262 safety lifecycle from item definition (Part 3) through safety validation (Part 4), including HARA, safety goals, functional safety concept, technical safety concept, software and hardware safety requirements, safety analyses (FMEA, DFA), and a structured safety case. All work products shall be structured to the level of completeness expected in a production ASIL D project.
+<!-- HITL-LOCK START:COMMENT-BLOCK-15 -->
+> **Why:** STK-001 is the anchor stakeholder requirement for this portfolio: hiring/reviewer stakeholders need evidence of end-to-end ISO 26262 lifecycle competence, not isolated coding tasks.
+> **Tradeoff:** keeping this requirement lifecycle-wide strengthens portfolio credibility, but increases documentation and traceability workload across all phases.
+> **Alternative:** narrow STK-001 to a subset (for example concept + implementation only), which reduces effort but weakens assessor/hiring signal for full functional-safety capability.
+<!-- HITL-LOCK END:COMMENT-BLOCK-15 -->
 
 ---
 
@@ -70,6 +90,12 @@ The platform shall demonstrate competence with the full ISO 26262 safety lifecyc
 
 The platform shall demonstrate Automotive SPICE Level 2 process maturity across the system engineering (SYS.1 through SYS.5), software engineering (SWE.1 through SWE.6), and support (SUP.1, SUP.8) process areas. Each process area shall produce the defined work products with bidirectional traceability between requirements, architecture, implementation, and verification.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-16 -->
+> **Why:** STK-002 ensures the project is evaluated as an engineering process capability (planning, traceability, verification discipline), not only as a technical prototype.
+> **Tradeoff:** targeting ASPICE maturity increases process/document overhead and slows raw implementation speed, but improves governance credibility and repeatability.
+> **Alternative:** treat ASPICE as informal guidance only, which reduces workload short-term but weakens evidence quality for assessor/hiring expectations.
+<!-- HITL-LOCK END:COMMENT-BLOCK-16 -->
+
 ---
 
 ### STK-003: AUTOSAR-like BSW Architecture Demonstration
@@ -80,6 +106,12 @@ The platform shall demonstrate Automotive SPICE Level 2 process maturity across 
 
 The platform shall implement an AUTOSAR Classic-like layered basic software (BSW) architecture with the following modules: MCAL (CAN, SPI, ADC, PWM, Dio, Gpt), ECU Abstraction (CanIf, PduR, IoHwAb), Services (Com, Dcm, Dem, WdgM, BswM, E2E), and RTE. The architecture shall demonstrate the separation of concerns between application software components and BSW modules.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-17 -->
+> **Why:** STK-003 exists to demonstrate AUTOSAR-style architectural competence (layering, interface boundaries, separation of concerns) without requiring full commercial AUTOSAR licensing/toolchain overhead.
+> **Tradeoff:** AUTOSAR-like BSW gives strong architecture and process signal at lower cost, but does not provide formal AUTOSAR conformance/certification claims.
+> **Alternative:** use a full AUTOSAR Classic stack/tooling for higher conformance fidelity, accepting significant cost, setup complexity, and reduced project finishability.
+<!-- HITL-LOCK END:COMMENT-BLOCK-17 -->
+
 ---
 
 ### STK-004: Diverse Redundancy and Multi-Vendor Safety Architecture
@@ -89,6 +121,12 @@ The platform shall implement an AUTOSAR Classic-like layered basic software (BSW
 - **Status**: draft
 
 The platform shall demonstrate a diverse redundancy architecture using at least two different MCU vendors for safety-critical and zone control functions. The independent safety monitoring function shall use a lockstep CPU from a different vendor than the zone controllers to provide hardware-diverse fault detection.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-18 -->
+> **Why:** the board choice (STM32G474RE Nucleo for zone ECUs + TI TMS570 LaunchPad for Safety Controller) was made to maximize architectural learning signal per cost: mixed-vendor diversity, lockstep safety monitor path, and fast prototyping availability.
+> **Tradeoff:** these boards are practical and affordable, but they are development platforms (not production automotive ECUs), so the diversity claim remains architecture-level until bench measurements validate timing, fault detection, and independence behavior.
+> **Alternative:** use automotive production-grade ECUs/MCUs for stronger hardware realism and conformance confidence, accepting significantly higher cost, tooling complexity, and longer bring-up time.
+<!-- HITL-LOCK END:COMMENT-BLOCK-18 -->
 
 ---
 
@@ -102,6 +140,12 @@ The platform shall demonstrate a diverse redundancy architecture using at least 
 
 The platform shall provide a drive-by-wire function that converts operator pedal input into proportional motor torque. The pedal input shall be sensed using dual redundant sensors, and the system shall detect disagreement between the two sensors and transition to a safe state when plausibility checks fail.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-19 -->
+> **Why:** STK-005 is intentionally simple because SYS.1 captures stakeholder WHAT (expected behavior + safety outcome), while technical HOW (thresholds, timing, diagnostics, implementation) is allocated to SYS.2/TSR/SSR/SWR levels.
+> **Tradeoff:** concise stakeholder wording improves clarity and traceability boundaries, but can feel under-specified unless downstream requirements are complete and linked.
+> **Alternative:** embed detailed technical constraints directly in STK-005, which may feel more concrete early but blurs lifecycle layering and increases requirement duplication risk.
+<!-- HITL-LOCK END:COMMENT-BLOCK-19 -->
+
 ---
 
 ### STK-006: Steering Control Function
@@ -111,6 +155,12 @@ The platform shall provide a drive-by-wire function that converts operator pedal
 - **Status**: draft
 
 The platform shall provide a steering control function that translates steering commands into proportional steering servo angle. The system shall provide position feedback, rate limiting, and angle limiting. On detection of a steering fault, the system shall return the steering to the center position in a controlled manner.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-20 -->
+> **Why:** even on development/hobby-grade boards and actuators, steering feedback is still meaningful for demonstrating closed-loop safety logic (command-vs-feedback checks, fault detection, and safe return-to-center behavior).
+> **Tradeoff:** prototype hardware has higher noise/backlash/variance than automotive-grade hardware, so results are valid for architecture and control-safety behavior but not for production-accuracy claims.
+> **Alternative:** skip feedback and use open-loop steering control, which simplifies implementation but removes key safety evidence for mismatch detection and fail-safe steering behavior.
+<!-- HITL-LOCK END:COMMENT-BLOCK-20 -->
 
 ---
 
@@ -433,9 +483,64 @@ Bidirectional traceability from stakeholder requirements to system requirements 
 | STK-O-002 | Review STK-025 demo scenario list against master plan scenario definitions | Project Manager | Before SYS.2 |
 | STK-O-003 | Confirm STK-032 SAP QM scope with project stakeholders | Project Manager | Phase 0 |
 
+## Review Findings (2026-02-23)
+
+- `RECOMMENDED (NOT DONE)` [Severity: HIGH] Open-item schedule status is stale relative to current phase history.
+  - Finding: `STK-O-003` target is `Phase 0` but remains open in the stakeholder document.
+  - Meaningful metric: 1 of 3 stakeholder open items has a missed target phase with no disposition update.
+  - Why it matters: stale open-item targets reduce governance credibility and make phase-readiness tracking ambiguous.
+  - Target path: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md`.
+  - Completion signal: item is either closed with evidence or re-planned with new owner/date and rationale.
+
+- `RECOMMENDED (NOT DONE)` [Severity: MEDIUM] Section numbering is internally inconsistent.
+  - Finding: document moves from `## 10. Regulatory and Standards Requirements` back to `## 6. Traceability`, then `## 7` and `## 8`.
+  - Meaningful metric: at least 3 top-level sections are out of numeric order.
+  - Why it matters: numbering drift creates review friction and weakens document control quality for assessments.
+  - Target path: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md`.
+  - Completion signal: top-level headings are renumbered (or converted to unnumbered style) with monotonic order.
+
+- `RECOMMENDED (NOT DONE)` [Severity: MEDIUM] Stakeholder-to-system derivation wording conflicts with known process-scope requirement.
+  - Finding: `STK-O-001` says "Validate all STK requirements with full system requirements derivation", while STK-027 is explicitly handled as process scope in SYSREQ mapping.
+  - Meaningful metric: derivation rule currently implies 32/32 SYS derivation, but agreed mapping behavior is 31 direct + 1 process-scope.
+  - Why it matters: contradictory derivation rules can produce repeated audit discussions about "missing" SYS children.
+  - Target path: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` and `taktflow-embedded/docs/aspice/system/system-requirements.md`.
+  - Completion signal: derivation rule explicitly allows documented process-scope exceptions (with trace record).
+
+- `RECOMMENDED (NOT DONE)` [Severity: MEDIUM] Several STK clauses include solution/verification constraints that may be over-specific for SYS.1.
+  - Finding: examples include explicit MC/DC/formal-method language in STK-016 and specific UDS service IDs in STK-012.
+  - Meaningful metric: at least 2 stakeholder requirements embed detailed implementation/verification constraints.
+  - Why it matters: overly detailed SYS.1 statements can reduce flexibility and blur separation between stakeholder intent and SYS.2/SWE requirements.
+  - Target path: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md`.
+  - Completion signal: requirement wording clearly distinguishes stakeholder intent vs downstream technical allocation constraints.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-14 -->
+> **Why:** cleaning governance and derivation language at SYS.1 prevents repeated traceability disputes in later SYS.2/SWE reviews.
+> **Tradeoff:** tightening requirement boundaries now takes editing effort, but lowers future rework and audit ambiguity.
+> **Alternative:** leave SYS.1 as-is and resolve conflicts downstream, which is faster short-term but increases lifecycle drift risk.
+<!-- HITL-LOCK END:COMMENT-BLOCK-14 -->
+
+## Document Architecture Fit Assessment (2026-02-23)
+
+- Purpose-fit verdict: `FIT FOR SYS.1 INTENT CAPTURE (PARTIAL FOR STRICT SYS.1 BOUNDARY)`.
+- Scope fit:
+  - Strong: stakeholder context, requirement inventory, and portfolio/audit narrative are clearly represented.
+  - Partial: some requirements include downstream technical/verification constraints that are typically SYS.2/SWE-level allocations.
+- Structural strengths:
+  - Clear requirement taxonomy (portfolio, functional, safety, performance, usability, regulatory).
+  - Stable requirement ID convention (`STK-001..032`) and source mapping.
+  - Explicit traceability intent toward SYS requirements.
+- Structural gaps:
+  - Top-level section numbering is non-monotonic after section 10.
+  - Open-item governance timing is stale for at least one target phase.
+  - Derivation wording implies full STK-to-SYS derivation despite documented process-scope exception.
+- Usage recommendation:
+  - Keep this document as the stakeholder-intent baseline.
+  - Move implementation/verification specificity to SYS.2/SWE artifacts and keep SYS.1 wording outcome-oriented.
+
 ## 8. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete stakeholder requirements: 32 requirements (STK-001 to STK-032), 6 stakeholders, traceability matrix |
+
