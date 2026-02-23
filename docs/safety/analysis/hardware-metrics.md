@@ -1,4 +1,4 @@
----
+﻿---
 document_id: HW-METRICS
 title: "Hardware Architectural Metrics"
 version: "1.0"
@@ -7,6 +7,21 @@ iso_26262_part: 5
 iso_26262_clause: "8"
 date: 2026-02-21
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Hardware Architectural Metrics
 
@@ -692,3 +707,4 @@ All safety goals meet their PMHF targets:
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete hardware metrics: failure rate data for all components, SPFM/LFM per ECU, PMHF per safety goal, diagnostic coverage summary, system-level compliance assessment |
+

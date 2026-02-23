@@ -1,10 +1,25 @@
----
+﻿---
 document_id: SAFETY-INDEX
 title: "Safety Documentation Index"
 version: "0.1"
 status: draft
 iso_26262_parts: "2, 3, 4, 5, 6, 9"
 ---
+
+## Human-in-the-Loop (HITL) Comment Lock
+
+`HITL` means human-reviewer-owned comment content.
+
+**Marker standard (code-friendly):**
+- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
+- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
+- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+
+**Rules:**
+- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
+- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
+- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+
 
 # Safety Documentation Index
 
@@ -56,3 +71,4 @@ Master index for all ISO 26262 safety work products.
 Safety Goal → FSR → TSR → SSR/HSR → Code → Test
 
 See [../traceability/traceability-matrix.md](../traceability/traceability-matrix.md)
+
