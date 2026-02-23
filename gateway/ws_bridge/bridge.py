@@ -111,6 +111,11 @@ class TelemetryState:
         self.can_log: list[dict] = []  # Rolling buffer of decoded CAN messages
         self.sap_notifications: list[dict] = []  # Rolling SAP QM notifications
 
+        # Controller lock state (relayed from fault_inject via MQTT)
+        self.control_locked = False
+        self.control_client_id: str | None = None
+        self.control_remaining_sec = 0
+
         # Heartbeat tracking
         self._hb_cvc_ts = 0.0
         self._hb_fzc_ts = 0.0
@@ -182,6 +187,11 @@ class TelemetryState:
             "events": self.events[-20:],  # Last 20 events
             "can_log": self.can_log[-50:],  # Last 50 CAN messages
             "sap_notifications": self.sap_notifications[-20:],
+            "control": {
+                "locked": self.control_locked,
+                "client_id": self.control_client_id or "",
+                "remaining_sec": self.control_remaining_sec,
+            },
         }
 
     def add_event(self, event_type: str, message: str):
@@ -254,6 +264,16 @@ def on_mqtt_message(client, userdata, msg):
         state.events.clear()
         state.can_log.clear()
         state.add_event("info", "System reset — all state cleared, re-initializing")
+
+    # Controller lock state (from fault_inject API)
+    elif topic == "taktflow/control/lock":
+        try:
+            lock_data = json.loads(payload)
+            state.control_locked = bool(lock_data.get("locked", False))
+            state.control_client_id = lock_data.get("client_id") or None
+            state.control_remaining_sec = int(lock_data.get("remaining_sec", 0))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
 
     # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ..., "features": {...}}
     elif topic.startswith("taktflow/anomaly/"):
