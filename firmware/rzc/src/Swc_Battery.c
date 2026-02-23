@@ -1,0 +1,223 @@
+/**
+ * @file    Swc_Battery.c
+ * @brief   RZC battery voltage monitoring -- 4-sample average, hysteresis, CAN TX
+ * @date    2026-02-23
+ *
+ * @safety_req SWR-RZC-017, SWR-RZC-018
+ * @traces_to  SSR-RZC-017, SSR-RZC-018, TSR-038
+ *
+ * @details  Implements the RZC battery monitoring SWC:
+ *           1. Reads battery voltage via IoHwAb (voltage divider ADC)
+ *           2. 4-sample moving average for noise reduction
+ *           3. Threshold-based status: DISABLE_LOW / WARN_LOW / NORMAL /
+ *              WARN_HIGH / DISABLE_HIGH
+ *           4. Hysteresis on recovery: +500mV from threshold to clear fault
+ *           5. DTC reporting on DISABLE states
+ *           6. CAN broadcast: [voltage_hi, voltage_lo, status, alive, 0,0,0,0]
+ *           7. RTE signals: RZC_SIG_BATTERY_MV, RZC_SIG_BATTERY_STATUS
+ *
+ *           All variables are static file-scope. No dynamic memory.
+ *
+ * @standard AUTOSAR SWC pattern, ISO 26262 Part 6
+ * @copyright Taktflow Systems 2026
+ */
+
+#include "Swc_Battery.h"
+#include "Rzc_Cfg.h"
+
+/* ==================================================================
+ * External Dependencies
+ * ================================================================== */
+
+extern Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV);
+extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
+extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
+extern Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr,
+                                     uint8 Length);
+extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+
+/* ==================================================================
+ * Constants
+ * ================================================================== */
+
+/** DEM event status values */
+#define DEM_EVENT_STATUS_PASSED  0u
+#define DEM_EVENT_STATUS_FAILED  1u
+
+/* ==================================================================
+ * Module State
+ * ================================================================== */
+
+static uint8   Batt_Initialized;
+static uint16  Batt_Voltage_mV;
+static uint8   Batt_Status;
+static uint16  Batt_AvgBuffer[RZC_BATT_AVG_WINDOW];
+static uint8   Batt_AvgIndex;
+static uint8   Batt_AliveCounter;
+
+/* ==================================================================
+ * Internal: Compute average from buffer
+ * ================================================================== */
+
+static uint16 Batt_ComputeAverage(void)
+{
+    uint32 sum;
+    uint8  i;
+
+    sum = 0u;
+    for (i = 0u; i < RZC_BATT_AVG_WINDOW; i++) {
+        sum += (uint32)Batt_AvgBuffer[i];
+    }
+
+    return (uint16)(sum / (uint32)RZC_BATT_AVG_WINDOW);
+}
+
+/* ==================================================================
+ * Internal: Determine status with hysteresis
+ * ================================================================== */
+
+static uint8 Batt_DetermineStatus(uint16 avg_mV, uint8 prev_status)
+{
+    uint8 new_status;
+
+    /* --- Evaluate from low to high --- */
+
+    if (avg_mV < RZC_BATT_DISABLE_LOW_MV) {
+        /* Below absolute low disable threshold */
+        new_status = RZC_BATT_STATUS_DISABLE_LOW;
+    } else if (avg_mV < RZC_BATT_WARN_LOW_MV) {
+        /* Between disable-low and warn-low */
+        new_status = RZC_BATT_STATUS_WARN_LOW;
+    } else if (avg_mV < RZC_BATT_WARN_HIGH_MV) {
+        /* Normal operating range */
+        new_status = RZC_BATT_STATUS_NORMAL;
+    } else if (avg_mV < RZC_BATT_DISABLE_HIGH_MV) {
+        /* Between warn-high and disable-high */
+        new_status = RZC_BATT_STATUS_WARN_HIGH;
+    } else {
+        /* Above absolute high disable threshold */
+        new_status = RZC_BATT_STATUS_DISABLE_HIGH;
+    }
+
+    /* --- Apply hysteresis on recovery --- */
+
+    /* To recover from DISABLE_LOW, voltage must exceed threshold + hysteresis */
+    if (prev_status == RZC_BATT_STATUS_DISABLE_LOW) {
+        if (avg_mV < (RZC_BATT_DISABLE_LOW_MV + RZC_BATT_HYSTERESIS_MV)) {
+            new_status = RZC_BATT_STATUS_DISABLE_LOW;
+        }
+    }
+
+    /* To recover from WARN_LOW, voltage must exceed threshold + hysteresis */
+    if (prev_status == RZC_BATT_STATUS_WARN_LOW) {
+        if ((new_status == RZC_BATT_STATUS_NORMAL) &&
+            (avg_mV < (RZC_BATT_WARN_LOW_MV + RZC_BATT_HYSTERESIS_MV))) {
+            new_status = RZC_BATT_STATUS_WARN_LOW;
+        }
+    }
+
+    /* To recover from DISABLE_HIGH, voltage must drop below threshold - hysteresis */
+    if (prev_status == RZC_BATT_STATUS_DISABLE_HIGH) {
+        if (avg_mV >= (RZC_BATT_DISABLE_HIGH_MV - RZC_BATT_HYSTERESIS_MV)) {
+            new_status = RZC_BATT_STATUS_DISABLE_HIGH;
+        }
+    }
+
+    /* To recover from WARN_HIGH, voltage must drop below threshold - hysteresis */
+    if (prev_status == RZC_BATT_STATUS_WARN_HIGH) {
+        if ((new_status == RZC_BATT_STATUS_NORMAL) &&
+            (avg_mV >= (RZC_BATT_WARN_HIGH_MV - RZC_BATT_HYSTERESIS_MV))) {
+            new_status = RZC_BATT_STATUS_WARN_HIGH;
+        }
+    }
+
+    return new_status;
+}
+
+/* ==================================================================
+ * API: Swc_Battery_Init
+ * ================================================================== */
+
+void Swc_Battery_Init(void)
+{
+    uint8 i;
+
+    Batt_Voltage_mV    = 0u;
+    Batt_Status        = RZC_BATT_STATUS_NORMAL;
+    Batt_AvgIndex      = 0u;
+    Batt_AliveCounter  = 0u;
+
+    for (i = 0u; i < RZC_BATT_AVG_WINDOW; i++) {
+        Batt_AvgBuffer[i] = 0u;
+    }
+
+    Batt_Initialized = TRUE;
+}
+
+/* ==================================================================
+ * API: Swc_Battery_MainFunction (100ms cyclic)
+ * ================================================================== */
+
+void Swc_Battery_MainFunction(void)
+{
+    uint16 raw_voltage;
+    uint16 avg_voltage;
+    uint8  tx_data[8];
+    uint8  i;
+
+    if (Batt_Initialized != TRUE) {
+        return;
+    }
+
+    /* ----------------------------------------------------------
+     * Step 1: Read voltage via IoHwAb, add to 4-sample average
+     * ---------------------------------------------------------- */
+    raw_voltage = 0u;
+    (void)IoHwAb_ReadBatteryVoltage(&raw_voltage);
+
+    Batt_AvgBuffer[Batt_AvgIndex] = raw_voltage;
+    Batt_AvgIndex++;
+    if (Batt_AvgIndex >= RZC_BATT_AVG_WINDOW) {
+        Batt_AvgIndex = 0u;
+    }
+
+    avg_voltage = Batt_ComputeAverage();
+    Batt_Voltage_mV = avg_voltage;
+
+    /* ----------------------------------------------------------
+     * Step 2: Determine status with thresholds and hysteresis
+     * ---------------------------------------------------------- */
+    Batt_Status = Batt_DetermineStatus(avg_voltage, Batt_Status);
+
+    /* ----------------------------------------------------------
+     * Step 3: Report DTC on DISABLE states
+     * ---------------------------------------------------------- */
+    if ((Batt_Status == RZC_BATT_STATUS_DISABLE_LOW) ||
+        (Batt_Status == RZC_BATT_STATUS_DISABLE_HIGH)) {
+        Dem_ReportErrorStatus(RZC_DTC_BATTERY, DEM_EVENT_STATUS_FAILED);
+    }
+
+    /* ----------------------------------------------------------
+     * Step 4: Write RTE signals
+     * ---------------------------------------------------------- */
+    (void)Rte_Write(RZC_SIG_BATTERY_MV, (uint32)Batt_Voltage_mV);
+    (void)Rte_Write(RZC_SIG_BATTERY_STATUS, (uint32)Batt_Status);
+
+    /* ----------------------------------------------------------
+     * Step 5: CAN broadcast
+     * [voltage_hi, voltage_lo, status, alive, 0, 0, 0, 0]
+     * ---------------------------------------------------------- */
+    for (i = 0u; i < 8u; i++) {
+        tx_data[i] = 0u;
+    }
+
+    tx_data[0] = (uint8)((Batt_Voltage_mV >> 8u) & 0xFFu);
+    tx_data[1] = (uint8)(Batt_Voltage_mV & 0xFFu);
+    tx_data[2] = Batt_Status;
+    tx_data[3] = Batt_AliveCounter;
+
+    (void)Com_SendSignal(RZC_COM_TX_BATTERY_STATUS, tx_data, 8u);
+
+    /* Increment alive counter with wrap at 255 */
+    Batt_AliveCounter++;
+}
