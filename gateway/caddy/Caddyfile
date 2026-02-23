@@ -1,0 +1,5 @@
+sil.taktflow-systems.com {
+    reverse_proxy /ws/telemetry ws-bridge:8080
+    reverse_proxy /api/sap/* sap-qm-mock:8090
+    reverse_proxy /api/fault/* fault-inject:8091
+}

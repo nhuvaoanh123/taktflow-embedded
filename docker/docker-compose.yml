@@ -1,13 +1,13 @@
 # =============================================================================
-# docker-compose.yml — Orchestration for all 7 simulated ECUs
+# docker-compose.yml — Full SIL Demo Platform
 #
-# Creates vcan0 virtual CAN interface, then starts all 7 simulated ECUs
-# as Docker containers sharing the host network (SocketCAN).
+# 7 simulated ECUs + plant simulator + MQTT + CAN gateway + WebSocket bridge
+# + Caddy reverse proxy + SAP QM mock + ML inference + fault injection
 #
 # Usage:
-#   docker compose up --build        Start all ECUs (foreground)
-#   docker compose up --build -d     Start all ECUs (background)
-#   docker compose down              Stop all ECUs
+#   docker compose up --build        Start all services (foreground)
+#   docker compose up --build -d     Start all services (background)
+#   docker compose down              Stop all services
 #   docker compose logs -f cvc       Follow CVC logs
 #
 # Prerequisites:
@@ -157,3 +157,108 @@ services:
       - CAN_CHANNEL=vcan0
       - DBC_PATH=/app/taktflow.dbc
     restart: unless-stopped
+
+  # --- Mosquitto MQTT Broker (internal only) ---
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    network_mode: host
+    volumes:
+      - ../gateway/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # --- CAN-to-MQTT Gateway ---
+  can-gateway:
+    build:
+      context: ..
+      dockerfile: gateway/can_gateway/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - CAN_CHANNEL=vcan0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+    restart: unless-stopped
+
+  # --- WebSocket Telemetry Bridge ---
+  ws-bridge:
+    build:
+      context: ..
+      dockerfile: gateway/ws_bridge/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - WS_PORT=8080
+    restart: unless-stopped
+
+  # --- Caddy Reverse Proxy (auto-TLS) ---
+  caddy:
+    image: caddy:2
+    network_mode: host
+    volumes:
+      - ../gateway/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      ws-bridge:
+        condition: service_started
+    restart: unless-stopped
+
+  # --- SAP QM Mock API ---
+  sap-qm-mock:
+    build:
+      context: ..
+      dockerfile: gateway/sap_qm_mock/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - SAP_PORT=8090
+    restart: unless-stopped
+
+  # --- ML Anomaly Detection ---
+  ml-inference:
+    build:
+      context: ..
+      dockerfile: gateway/ml_inference/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+    restart: unless-stopped
+
+  # --- Fault Injection API ---
+  fault-inject:
+    build:
+      context: ..
+      dockerfile: gateway/fault_inject/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_CHANNEL=vcan0
+      - FAULT_PORT=8091
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
