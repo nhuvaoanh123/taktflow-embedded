@@ -50,7 +50,7 @@ typedef struct {
 
 /* ---- External dependencies ---- */
 extern void Dio_FlipChannel(uint8 ChannelId);
-extern void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Dem.h"
 
 /* ---- API Functions ---- */
 

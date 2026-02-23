@@ -172,6 +172,12 @@ The platform shall provide a steering control function that translates steering 
 
 The platform shall provide a braking control function that applies proportional braking force via a brake servo actuator. The system shall autonomously apply braking in the event of CAN communication loss (fail-safe default). Emergency braking shall be triggered automatically by the obstacle detection system.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-21 -->
+> **Why:** STK-007 makes braking a safety-default behavior: normal proportional braking for control quality, plus automatic braking when communication or obstacle risk indicates the system may no longer be controllably safe.
+> **Tradeoff:** fail-safe default braking improves hazard containment under comms faults, but can increase nuisance interventions if fault detection is too sensitive.
+> **Alternative:** fail-silent behavior on CAN loss (hold last command/no automatic braking), which may reduce nuisance events but creates higher risk of delayed hazard response.
+<!-- HITL-LOCK END:COMMENT-BLOCK-21 -->
+
 ---
 
 ### STK-008: Forward Obstacle Detection Function
@@ -182,6 +188,12 @@ The platform shall provide a braking control function that applies proportional 
 
 The platform shall detect obstacles in the forward path using a lidar sensor and implement a graduated response with at least three distance thresholds: audible warning, automatic speed reduction, and emergency braking. The system shall detect lidar sensor faults and substitute a safe default (obstacle assumed present).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-22 -->
+> **Why:** STK-008 ensures obstacle handling is progressive and fail-safe: warn early, mitigate speed, then brake if risk continues, and default to safe behavior if lidar trust is lost.
+> **Tradeoff:** conservative fail-safe defaults improve safety robustness, but can increase false-positive interventions and reduce smooth drivability.
+> **Alternative:** use obstacle logic as advisory-only (warning without automatic intervention), which reduces nuisance actions but weakens safety response for late/failed operator reaction.
+<!-- HITL-LOCK END:COMMENT-BLOCK-22 -->
+
 ---
 
 ### STK-009: Independent Safety Monitoring Function
@@ -191,6 +203,12 @@ The platform shall detect obstacles in the forward path using a lidar sensor and
 - **Status**: draft
 
 The platform shall include an independent safety monitoring function, implemented on a separate ECU from the zone controllers, that monitors all zone ECU heartbeats, performs cross-plausibility checks on safety-critical signals, and controls a hardware kill relay to force the system into a safe state when a safety violation is detected. The monitoring ECU shall operate in CAN listen-only mode.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-23 -->
+> **Why:** STK-009 establishes a true independent safety path: monitor ECU observes all safety traffic (listen-only CAN), validates heartbeat/plausibility, and enforces safety through a hardware kill relay outside normal control-command authority.
+> **Tradeoff:** listen-only mode improves independence and prevents accidental unsafe CAN injections, but limits recovery/control actions to hardware enforcement paths rather than active bus-command arbitration by the safety ECU.
+> **Alternative:** allow the safety ECU to actively transmit override CAN commands, which adds intervention flexibility but weakens independence argument and increases risk of monitor-induced bus interaction faults.
+<!-- HITL-LOCK END:COMMENT-BLOCK-23 -->
 
 ---
 

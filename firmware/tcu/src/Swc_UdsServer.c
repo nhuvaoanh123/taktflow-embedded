@@ -370,6 +370,7 @@ static void handle_security_access(const uint8* reqData, uint16 reqLen,
 static void handle_clear_dtc(const uint8* reqData, uint16 reqLen,
                               uint8* rspData, uint16* rspLen)
 {
+    (void)reqData;
     (void)reqLen;
 
     /* Requires security level 1 */
@@ -578,4 +579,90 @@ void Swc_UdsServer_ProcessRequest(const uint8* reqData, uint16 reqLen,
 uint8 Swc_UdsServer_GetSession(void)
 {
     return current_session;
+}
+
+/* ---- DCM DID Reader Callbacks ----
+ *
+ * These functions are referenced by the DID table in Dcm_Cfg_Tcu.c.
+ * They provide data for ReadDataByIdentifier (0x22) via the BSW DCM path.
+ */
+
+Std_ReturnType Dcm_ReadDid_Vin(uint8* Data, uint8 Length)
+{
+    uint8 i;
+    if (Data == NULL_PTR) { return E_NOT_OK; }
+    for (i = 0u; (i < TCU_VIN_LENGTH) && (i < Length); i++) {
+        Data[i] = vin_data[i];
+    }
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_SwVersion(uint8* Data, uint8 Length)
+{
+    uint8 i;
+    if (Data == NULL_PTR) { return E_NOT_OK; }
+    for (i = 0u; (i < SW_VERSION_LEN) && (i < Length); i++) {
+        Data[i] = sw_version[i];
+    }
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_HwVersion(uint8* Data, uint8 Length)
+{
+    uint8 i;
+    if (Data == NULL_PTR) { return E_NOT_OK; }
+    for (i = 0u; (i < HW_VERSION_LEN) && (i < Length); i++) {
+        Data[i] = hw_version[i];
+    }
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_VehicleSpeed(uint8* Data, uint8 Length)
+{
+    uint32 val = 0u;
+    if ((Data == NULL_PTR) || (Length < 2u)) { return E_NOT_OK; }
+    (void)Rte_Read(TCU_SIG_VEHICLE_SPEED, &val);
+    Data[0] = (uint8)(val >> 8u);
+    Data[1] = (uint8)(val & 0xFFu);
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_MotorTemp(uint8* Data, uint8 Length)
+{
+    uint32 val = 0u;
+    if ((Data == NULL_PTR) || (Length < 2u)) { return E_NOT_OK; }
+    (void)Rte_Read(TCU_SIG_MOTOR_TEMP, &val);
+    Data[0] = (uint8)(val >> 8u);
+    Data[1] = (uint8)(val & 0xFFu);
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_BatteryVoltage(uint8* Data, uint8 Length)
+{
+    uint32 val = 0u;
+    if ((Data == NULL_PTR) || (Length < 2u)) { return E_NOT_OK; }
+    (void)Rte_Read(TCU_SIG_BATTERY_VOLTAGE, &val);
+    Data[0] = (uint8)(val >> 8u);
+    Data[1] = (uint8)(val & 0xFFu);
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_MotorCurrent(uint8* Data, uint8 Length)
+{
+    uint32 val = 0u;
+    if ((Data == NULL_PTR) || (Length < 2u)) { return E_NOT_OK; }
+    (void)Rte_Read(TCU_SIG_MOTOR_CURRENT, &val);
+    Data[0] = (uint8)(val >> 8u);
+    Data[1] = (uint8)(val & 0xFFu);
+    return E_OK;
+}
+
+Std_ReturnType Dcm_ReadDid_MotorRpm(uint8* Data, uint8 Length)
+{
+    uint32 val = 0u;
+    if ((Data == NULL_PTR) || (Length < 2u)) { return E_NOT_OK; }
+    (void)Rte_Read(TCU_SIG_MOTOR_RPM, &val);
+    Data[0] = (uint8)(val >> 8u);
+    Data[1] = (uint8)(val & 0xFFu);
+    return E_OK;
 }

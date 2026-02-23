@@ -41,6 +41,8 @@ extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
  * Constants
  * ================================================================== */
 
+#define DEM_EVENT_STATUS_FAILED  1u
+
 /** Stall grace cycles: 200ms / 10ms = 20 */
 #define ENC_STALL_GRACE_CYCLES  (RZC_ENCODER_STALL_GRACE_MS / 10u)
 

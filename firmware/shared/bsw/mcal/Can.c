@@ -166,3 +166,16 @@ Std_ReturnType Can_GetErrorCounters(uint8 Controller, uint8* tec, uint8* rec)
     Can_Hw_GetErrorCounters(tec, rec);
     return E_OK;
 }
+
+Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId, uint8* ErrorStatePtr)
+{
+    (void)ControllerId;
+
+    if (ErrorStatePtr == NULL_PTR) {
+        return E_NOT_OK;
+    }
+
+    /* 0 = CAN_ERRORSTATE_ACTIVE (normal operation) */
+    *ErrorStatePtr = Can_Hw_IsBusOff() ? 2u : 0u;
+    return E_OK;
+}

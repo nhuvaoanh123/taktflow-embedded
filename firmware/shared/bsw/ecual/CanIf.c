@@ -86,3 +86,10 @@ void CanIf_RxIndication(Can_IdType CanId, const uint8* SduPtr, uint8 Dlc)
 
     /* Unknown CAN ID — silently discard per SWR-BSW-011 */
 }
+
+void CanIf_ControllerBusOff(uint8 controllerId)
+{
+    (void)controllerId;
+    /* Bus-off notification from CAN driver — log only, no recovery action
+     * in the interface layer. BswM handles mode transitions. */
+}

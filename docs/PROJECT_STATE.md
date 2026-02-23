@@ -4,7 +4,7 @@
 
 **Last updated**: 2026-02-23
 **Branch**: `main`
-**Phase**: Phases 0-8 DONE — CVC (88 tests), FZC (120 tests), RZC (101 tests) firmware complete; ready for Phase 9 (Safety Controller)
+**Phase**: Phases 0-10 DONE — All 7 ECUs implemented: CVC (88), FZC (120), RZC (101), SC (76), BCM (21), ICU (24), TCU (35) + BSW (212) + POSIX MCAL (14) = 691 total unit tests
 
 ## Human-in-the-Loop (HITL) Comment Lock
 
@@ -475,10 +475,76 @@ Phase 5 should be treated as an implemented middleware baseline, not final truth
 
 ---
 
-## Next Phase: Phase 9 — Safety Controller (SC) Firmware
+## Phase 9: Safety Controller (SC) Firmware (DONE)
 
-TI TMS570LC43x hardware lockstep processor. Independent safety monitor.
-No AUTOSAR — bare-metal direct DCAN/GPIO implementation for maximum independence.
+30 files, ~1,500 LOC, 76 unit tests. TI TMS570LC43x bare-metal safety monitor — NO AUTOSAR BSW.
+
+### SC Modules (8 modules, 76 tests)
+| Module | Tests | ASIL | Description |
+|--------|-------|------|-------------|
+| sc_e2e | 8 | D | CRC-8 (poly 0x1D) validation, alive counter, 3-consecutive-failure detection |
+| sc_can | 10 | D | DCAN1 silent-mode, 7 mailboxes, E2E-validated receive, 200ms bus silence timeout |
+| sc_heartbeat | 12 | D | Per-ECU (CVC/FZC/RZC) timeout tracking, 150ms+50ms confirmation window |
+| sc_plausibility | 10 | D | Torque-vs-current cross-check, 16-entry lookup, 50ms debounce, backup cutoff |
+| sc_relay | 10 | D | Kill relay GPIO control, energize-to-run, readback verification, de-energize latch |
+| sc_led | 4 | QM | 4 LEDs (CVC/FZC/RZC/SYS), off/blink/steady states, 500ms blink period |
+| sc_watchdog | 4 | D | TPS3823 WDI toggle, 5-condition gating (monitoring+RAM+CAN+ESM+canary) |
+| sc_esm | 4 | D | ESM group 1 channel 2 (lockstep), high-level ISR relay kill, <100 cycles |
+| sc_selftest | 10 | D | 7-step startup BIST + runtime periodic + stack canary (0xDEADBEEF) |
+
+### Key Design
+- **Bare-metal, no RTOS** — intentionally simple (~400 LOC production), auditable
+- **Listen-only CAN** — DCAN1 silent mode, SC never transmits
+- **Kill relay** — energize-to-run pattern, de-energize = safe state, power cycle to re-energize
+- **Diverse from zone ECUs** — TI TMS570 (Cortex-R5F lockstep) vs ST STM32 (Cortex-M4F)
+- **26 SWRs (SWR-SC-001 to SWR-SC-026), 17 SSRs (SSR-SC-001 to SSR-SC-017)**
+
+---
+
+## Phase 10: Simulated ECUs — BCM, ICU, TCU (DONE)
+
+51 files, 94 unit tests. 3 Docker-containerized ECUs completing the 7-ECU zonal architecture. All QM rated. Reuse full BSW stack with POSIX MCAL backend.
+
+### Phase 10.0: POSIX MCAL Backend (8 files, 14 tests)
+| Module | Tests | Description |
+|--------|-------|-------------|
+| Can_Posix | 14 | SocketCAN backend (RAW socket, non-blocking, vcan0), function-pointer mocking |
+| Gpt_Posix | — | clock_gettime(CLOCK_MONOTONIC) timer, 4 channels |
+| Dio_Posix | — | 256-channel static array, read/write |
+| Adc_Posix | — | 16×8 injectable values, instant conversion |
+| Pwm_Posix | — | 8-channel duty cycle storage |
+| Spi_Posix | — | No-op stub |
+
+### Phase 10.1: Docker Infrastructure (5 files)
+- `Makefile.posix` — gcc build for bcm/icu/tcu targets, shared BSW auto-discovery
+- `Dockerfile.vecu` — Multi-stage (builder + runtime), all 3 binaries, `ECU_NAME` selection
+- `docker-compose.yml` — 4 services (can-setup + bcm + icu + tcu), `network_mode: host`
+- `vecu-start.sh` / `vecu-stop.sh` — vcan0 setup/teardown + docker compose
+
+### Phase 10.2: BCM (13 files, 21 tests)
+| Module | Tests | Description |
+|--------|-------|-------------|
+| Swc_Lights | 8 | Auto headlamp (DRIVING+speed>0), manual override, tail follows head |
+| Swc_Indicators | 8 | Turn signal (bits 1-2), hazard (bit 3/estop), 33-tick flash (~1.5Hz) |
+| Swc_DoorLock | 5 | Manual lock, auto-lock (speed>10), auto-unlock (parked transition) |
+| + Bcm_Cfg.h, Rte_Cfg_Bcm.c, Com_Cfg_Bcm.c, bcm_main.c | | |
+
+### Phase 10.3: ICU (10 files, 24 tests)
+| Module | Tests | Description |
+|--------|-------|-------------|
+| Swc_Dashboard | 17 | Speed/torque gauges, 4 temp zones, 3 battery zones, warnings, ECU health |
+| Swc_DtcDisplay | 7 | 16-entry circular DTC buffer, duplicate detection, ISO 14229 status bits |
+| + Icu_Cfg.h, Rte_Cfg_Icu.c, Com_Cfg_Icu.c, icu_main.c | | ncurses guarded by PLATFORM_POSIX_TEST |
+
+### Phase 10.4: TCU (14 files, 35 tests)
+| Module | Tests | Description |
+|--------|-------|-------------|
+| Swc_UdsServer | 15 | ISO 14229 UDS: 0x10/0x22/0x2E/0x14/0x19/0x27/0x3E, session timeout, security |
+| Swc_DtcStore | 10 | 64-entry circular DTC store, freeze frames, aging, auto-capture from broadcast |
+| Swc_Obd2Pids | 10 | SAE J1979: Mode 01 (6 PIDs), Mode 03/04 (DTCs), Mode 09 (VIN) |
+| + Tcu_Cfg.h, Rte_Cfg_Tcu.c, Com_Cfg_Tcu.c, Dcm_Cfg_Tcu.c, tcu_main.c | | |
+
+### 37 SWRs covered (SWR-BCM: 12, SWR-ICU: 10, SWR-TCU: 15)
 
 ---
 

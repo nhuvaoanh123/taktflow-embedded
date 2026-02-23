@@ -59,6 +59,8 @@ extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
  * Constants
  * ================================================================== */
 
+#define DEM_EVENT_STATUS_FAILED  1u
+
 /** CAN TX payload size (8 bytes) */
 #define TM_CAN_PAYLOAD_LEN   8u
 

@@ -1,5 +1,8 @@
 # Phase 10: Simulated ECUs (BCM, ICU, TCU) Implementation Plan
 
+**Status: DONE** (2026-02-23)
+**Actual: 51 files, 94 unit tests, 37 SWRs covered**
+
 ## Context
 
 Phases 0-9 are DONE. The 3 simulated ECUs complete the 7-ECU zonal architecture:
@@ -458,11 +461,11 @@ After Phase 10.4:
 
 ## DONE Criteria (from master plan)
 
-- [ ] All 3 simulated ECUs build and run on Linux
-- [ ] BCM sends light/indicator/lock messages on vcan0
-- [ ] ICU displays live dashboard from all CAN traffic
-- [ ] TCU responds to UDS requests (0x10, 0x22, 0x19, 0x14)
-- [ ] Docker-compose brings up all 3 with single command
-- [ ] CAN bridge mode connects simulated ECUs to real CAN bus
-- [ ] ~84 unit tests pass with @verifies traceability
-- [ ] 37/37 SWRs covered (BCM-12 + ICU-10 + TCU-15)
+- [x] All 3 simulated ECUs build and run on Linux
+- [x] BCM sends light/indicator/lock messages on vcan0
+- [x] ICU displays live dashboard from all CAN traffic
+- [x] TCU responds to UDS requests (0x10, 0x22, 0x19, 0x14)
+- [x] Docker-compose brings up all 3 with single command
+- [ ] CAN bridge mode connects simulated ECUs to real CAN bus (TODO:HARDWARE)
+- [x] 94 unit tests with @verifies traceability (exceeded 84 estimate)
+- [x] 37/37 SWRs covered (BCM-12 + ICU-10 + TCU-15)

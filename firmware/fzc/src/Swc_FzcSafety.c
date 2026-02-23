@@ -40,6 +40,8 @@ extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
  * Constants
  * ================================================================== */
 
+#define DEM_EVENT_STATUS_FAILED  1u
+
 #define SAFETY_WDI_CHANNEL     0u    /* PB0 — TPS3823 WDI pin */
 
 #define SAFETY_STATUS_OK       0u

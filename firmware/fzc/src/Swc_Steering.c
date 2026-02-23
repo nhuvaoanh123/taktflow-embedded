@@ -318,6 +318,7 @@ void Swc_Steering_MainFunction(void)
 
     Steering_PrevCommandAngle = cmd_angle;
     Steering_CommandAngle     = cmd_angle;
+    (void)new_cmd_received; /* TODO:POST-BETA — use for rate-of-change plausibility */
 
     /* ----------------------------------------------------------
      * Step 3: Read actual angle from IoHwAb (SPI)

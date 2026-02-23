@@ -17,17 +17,23 @@
 /* TX: UDS response (0x644) */
 static uint8 tcu_tx_uds_rsp_buf[COM_PDU_SIZE];
 
-/* RX shadow buffers */
+/* RX shadow buffers for UDS and heartbeat PDUs — not yet wired to
+ * Com signal config (no mapped signals).  Restore when Com routing
+ * is extended to cover these PDUs. */
+#if 0
 static uint8 tcu_rx_uds_func_buf[COM_PDU_SIZE];     /* 0x7DF functional */
 static uint8 tcu_rx_uds_phys_buf[COM_PDU_SIZE];     /* 0x604 physical   */
+static uint8 tcu_rx_hb_cvc_buf[COM_PDU_SIZE];        /* 0x010            */
+static uint8 tcu_rx_hb_fzc_buf[COM_PDU_SIZE];        /* 0x011            */
+static uint8 tcu_rx_hb_rzc_buf[COM_PDU_SIZE];        /* 0x012            */
+#endif
+
+/* RX shadow buffers (only for PDUs with mapped signals) */
 static uint8 tcu_rx_vehicle_state_buf[COM_PDU_SIZE]; /* 0x100            */
 static uint8 tcu_rx_motor_current_buf[COM_PDU_SIZE]; /* 0x301            */
 static uint8 tcu_rx_motor_temp_buf[COM_PDU_SIZE];    /* 0x302            */
 static uint8 tcu_rx_battery_buf[COM_PDU_SIZE];       /* 0x303            */
 static uint8 tcu_rx_dtc_bcast_buf[COM_PDU_SIZE];     /* 0x500            */
-static uint8 tcu_rx_hb_cvc_buf[COM_PDU_SIZE];        /* 0x010            */
-static uint8 tcu_rx_hb_fzc_buf[COM_PDU_SIZE];        /* 0x011            */
-static uint8 tcu_rx_hb_rzc_buf[COM_PDU_SIZE];        /* 0x012            */
 
 /* ---- Signal Configuration ---- */
 

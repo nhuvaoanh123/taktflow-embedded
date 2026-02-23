@@ -101,6 +101,12 @@ static const Dcm_DidTableType tcu_did_table[] = {
  *   bit 2 = extended (0x03)
  */
 
+/* TODO:POST-BETA — Wire service/session/security tables into
+ * Dcm_ConfigType when DCM extension is implemented. Tables preserved
+ * below for reuse. */
+
+#if 0  /* Restore when Dcm_ConfigType gains service/session/security fields */
+
 typedef struct {
     uint8  serviceId;
     uint8  sessionAccess;   /**< Bitmask: bit0=default, bit1=prog, bit2=extended */
@@ -153,6 +159,8 @@ static const Dcm_SecurityConfigType tcu_security_config[] = {
         .lockoutTimeMs = 10000u,
     },
 };
+
+#endif  /* Restore when Dcm_ConfigType gains service/session/security fields */
 
 /* ---- Aggregate DCM Configuration ---- */
 

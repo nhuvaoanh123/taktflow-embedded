@@ -61,6 +61,20 @@ typedef struct {
 
     /* E-Stop DIO */
     uint8   EStopDioChannel;        /**< DIO channel for emergency stop     */
+
+    /* Buzzer and watchdog DIO (FZC/RZC) */
+    uint8   BuzzerDioChannel;       /**< DIO channel for buzzer output      */
+    uint8   WdiDioChannel;          /**< DIO channel for watchdog WDI pin   */
+
+    /* RZC-specific: dual-PWM H-bridge, ADC channels, encoder */
+    uint8   MotorPwmRpwmCh;        /**< PWM channel for BTS7960 RPWM (fwd) */
+    uint8   MotorPwmLpwmCh;        /**< PWM channel for BTS7960 LPWM (rev) */
+    uint8   MotorCurrentAdcCh;     /**< ADC channel for ACS723 current     */
+    uint8   MotorTempAdcCh;        /**< ADC channel for NTC thermistor     */
+    uint8   BatteryAdcCh;          /**< ADC channel for battery voltage    */
+    uint8   EncoderTimCh;          /**< Timer channel for encoder mode     */
+    uint8   MotorREnChannel;       /**< DIO for BTS7960 R_EN              */
+    uint8   MotorLEnChannel;       /**< DIO for BTS7960 L_EN              */
 } IoHwAb_ConfigType;
 
 /* ---- External MCAL Dependencies ---- */

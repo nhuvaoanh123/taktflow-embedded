@@ -133,3 +133,10 @@ boolean SC_Heartbeat_IsAnyConfirmed(void)
     }
     return FALSE;
 }
+
+boolean SC_Heartbeat_IsFzcBrakeFault(void)
+{
+    /* TODO:POST-BETA — Parse FZC heartbeat payload byte 1 for brake fault flag.
+     * Currently returns FALSE (no brake-fault detection via heartbeat data). */
+    return FALSE;
+}

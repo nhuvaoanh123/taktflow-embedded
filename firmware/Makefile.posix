@@ -1,5 +1,5 @@
 # =============================================================================
-# Makefile.posix — Linux/POSIX build for simulated ECUs (BCM, ICU, TCU)
+# Makefile.posix — Linux/POSIX build for simulated ECUs (all 7)
 #
 # Builds AUTOSAR-like BSW + ECU application code using gcc with SocketCAN
 # backend (Can_Posix.c). Runs inside Docker containers on vcan0.
@@ -8,6 +8,10 @@
 #   make -f Makefile.posix TARGET=bcm          Build BCM binary
 #   make -f Makefile.posix TARGET=icu          Build ICU binary
 #   make -f Makefile.posix TARGET=tcu          Build TCU binary
+#   make -f Makefile.posix TARGET=cvc          Build CVC binary
+#   make -f Makefile.posix TARGET=fzc          Build FZC binary
+#   make -f Makefile.posix TARGET=rzc          Build RZC binary
+#   make -f Makefile.posix TARGET=sc           Build SC binary
 #   make -f Makefile.posix TARGET=bcm test     Build and run BCM tests
 #   make -f Makefile.posix TARGET=bcm clean    Remove build artifacts
 #
@@ -16,7 +20,7 @@
 
 # --- Toolchain ---
 CC      = gcc
-CFLAGS  = -Wall -Wextra -Werror -std=c99 -DPLATFORM_POSIX
+CFLAGS  = -Wall -Wextra -Werror -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_POSIX
 LDFLAGS =
 
 # --- Debug flags (always on for simulated ECUs) ---
@@ -24,10 +28,10 @@ CFLAGS += -Og -g3 -DDEBUG
 
 # --- Validate TARGET ---
 ifndef TARGET
-  $(error TARGET is required. Usage: make -f Makefile.posix TARGET=bcm|icu|tcu)
+  $(error TARGET is required. Usage: make -f Makefile.posix TARGET=bcm|icu|tcu|cvc|fzc|rzc|sc)
 endif
 
-VALID_TARGETS = bcm icu tcu
+VALID_TARGETS = bcm icu tcu cvc fzc rzc sc
 ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
   $(error Invalid TARGET='$(TARGET)'. Must be one of: $(VALID_TARGETS))
 endif
@@ -42,6 +46,23 @@ RTE_DIR       = $(BSW_DIR)/rte
 UNITY_DIR     = $(BSW_DIR)/test/unity
 BUILD_DIR     = build
 
+# =============================================================================
+# SC is bare-metal TMS570 (no AUTOSAR BSW). All other ECUs use shared BSW.
+# =============================================================================
+
+ifeq ($(TARGET),sc)
+
+# --- SC-specific configuration (no BSW) ---
+CFLAGS += -Isc/include
+
+# SC sources: all .c files in sc/src/ (includes sc_hw_posix.c)
+SC_SRCS = $(wildcard sc/src/*.c)
+APP_SRCS = $(SC_SRCS)
+
+else
+
+# --- AUTOSAR BSW ECU configuration ---
+
 # --- Include paths ---
 CFLAGS += -I$(BSW_DIR)/include
 CFLAGS += -I$(MCAL_DIR)
@@ -52,8 +73,13 @@ CFLAGS += -I$(RTE_DIR)
 CFLAGS += -I$(TARGET)/include
 
 # --- Shared BSW sources ---
+# MCAL: main modules + POSIX backends
 BSW_SRCS = \
     $(MCAL_DIR)/Can.c \
+    $(MCAL_DIR)/Spi.c \
+    $(MCAL_DIR)/Adc.c \
+    $(MCAL_DIR)/Dio.c \
+    $(MCAL_DIR)/Pwm.c \
     $(MCAL_POSIX)/Can_Posix.c \
     $(MCAL_POSIX)/Gpt_Posix.c \
     $(MCAL_POSIX)/Dio_Posix.c \
@@ -62,6 +88,7 @@ BSW_SRCS = \
     $(MCAL_POSIX)/Spi_Posix.c \
     $(ECUAL_DIR)/CanIf.c \
     $(ECUAL_DIR)/PduR.c \
+    $(ECUAL_DIR)/IoHwAb.c \
     $(SERVICES_DIR)/Com.c \
     $(SERVICES_DIR)/Dcm.c \
     $(SERVICES_DIR)/Dem.c \
@@ -70,14 +97,22 @@ BSW_SRCS = \
     $(SERVICES_DIR)/BswM.c \
     $(RTE_DIR)/Rte.c
 
+# --- FZC additionally needs Uart MCAL ---
+ifeq ($(TARGET),fzc)
+  BSW_SRCS += $(MCAL_DIR)/Uart.c
+  BSW_SRCS += $(MCAL_POSIX)/Uart_Posix.c
+endif
+
 # --- ECU-specific sources ---
 ECU_SRCS = $(wildcard $(TARGET)/src/*.c) $(wildcard $(TARGET)/cfg/*.c)
 
 # --- All application sources ---
 APP_SRCS = $(BSW_SRCS) $(ECU_SRCS)
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 
-# --- Output binary ---
+endif  # SC vs AUTOSAR BSW
+
+# --- Object files and output ---
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OUTPUT = $(BUILD_DIR)/$(TARGET)_posix
 
 # --- Per-target link flags ---

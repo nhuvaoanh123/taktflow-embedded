@@ -1,7 +1,7 @@
 # =============================================================================
-# Dockerfile.vecu — Multi-stage build for simulated ECUs (BCM, ICU, TCU)
+# Dockerfile.vecu — Multi-stage build for all 7 simulated ECUs
 #
-# Builds all 3 ECU binaries in a single builder stage, then copies them
+# Builds all 7 ECU binaries in a single builder stage, then copies them
 # into a minimal runtime image. The ECU_NAME env var selects which binary
 # to run at container startup.
 #
@@ -10,7 +10,7 @@
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Build stage — compile all 3 ECU binaries with POSIX/SocketCAN backend
+# Build stage — compile all 7 ECU binaries with POSIX/SocketCAN backend
 # ---------------------------------------------------------------------------
 FROM ubuntu:22.04 AS builder
 
@@ -25,10 +25,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY firmware/ /build/firmware/
 WORKDIR /build/firmware
 
-# Build all 3 simulated ECU binaries
+# Build all 7 simulated ECU binaries
 RUN make -f Makefile.posix TARGET=bcm && \
     make -f Makefile.posix TARGET=icu && \
-    make -f Makefile.posix TARGET=tcu
+    make -f Makefile.posix TARGET=tcu && \
+    make -f Makefile.posix TARGET=cvc && \
+    make -f Makefile.posix TARGET=fzc && \
+    make -f Makefile.posix TARGET=rzc && \
+    make -f Makefile.posix TARGET=sc
 
 # ---------------------------------------------------------------------------
 # Runtime stage — minimal image with CAN utilities
@@ -45,11 +49,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /build/firmware/build/bcm_posix /usr/local/bin/bcm
 COPY --from=builder /build/firmware/build/icu_posix /usr/local/bin/icu
 COPY --from=builder /build/firmware/build/tcu_posix /usr/local/bin/tcu
+COPY --from=builder /build/firmware/build/cvc_posix /usr/local/bin/cvc
+COPY --from=builder /build/firmware/build/fzc_posix /usr/local/bin/fzc
+COPY --from=builder /build/firmware/build/rzc_posix /usr/local/bin/rzc
+COPY --from=builder /build/firmware/build/sc_posix  /usr/local/bin/sc
 
 # Default CAN interface (host vcan0 via network_mode: host)
 ENV CAN_INTERFACE=vcan0
 
-# ECU_NAME selects which binary to run (bcm | icu | tcu)
+# ECU_NAME selects which binary to run (bcm|icu|tcu|cvc|fzc|rzc|sc)
 ARG ECU_NAME=bcm
 ENV ECU_NAME=${ECU_NAME}
 

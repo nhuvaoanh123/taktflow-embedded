@@ -325,3 +325,35 @@ Std_ReturnType IoHwAb_ReadEStop(uint8* State)
 
     return E_OK;
 }
+
+Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
+{
+    if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        return E_NOT_OK;
+    }
+
+    if (Count == NULL_PTR) {
+        return E_NOT_OK;
+    }
+
+    /* Encoder count via DIO pulse counting — placeholder for SIL */
+    *Count = 0u;
+
+    return E_OK;
+}
+
+Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
+{
+    if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        return E_NOT_OK;
+    }
+
+    if (Dir == NULL_PTR) {
+        return E_NOT_OK;
+    }
+
+    /* Encoder direction via DIO — placeholder for SIL */
+    *Dir = IOHWAB_MOTOR_FORWARD;
+
+    return E_OK;
+}

@@ -31,9 +31,7 @@ static uint8 dio_channel_state[DIO_POSIX_MAX_CHANNELS];
  */
 uint8 Dio_Hw_ReadPin(uint8 ChannelId)
 {
-    if (ChannelId >= (uint8)DIO_POSIX_MAX_CHANNELS) {
-        return STD_LOW;
-    }
+    /* uint8 range 0..255 fits in 256-element array — no bounds check needed */
     return dio_channel_state[ChannelId];
 }
 
@@ -44,8 +42,6 @@ uint8 Dio_Hw_ReadPin(uint8 ChannelId)
  */
 void Dio_Hw_WritePin(uint8 ChannelId, uint8 Level)
 {
-    if (ChannelId >= (uint8)DIO_POSIX_MAX_CHANNELS) {
-        return;
-    }
+    /* uint8 range 0..255 fits in 256-element array — no bounds check needed */
     dio_channel_state[ChannelId] = (Level != STD_LOW) ? STD_HIGH : STD_LOW;
 }

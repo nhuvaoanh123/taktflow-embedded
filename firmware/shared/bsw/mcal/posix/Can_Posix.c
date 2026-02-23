@@ -100,7 +100,7 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
     addr.can_family  = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
 
-    if (CAN_POSIX_BIND_FN(fd, &addr, (uint32)sizeof(addr)) < 0) {
+    if (CAN_POSIX_BIND_FN(fd, (struct sockaddr *)&addr, (uint32)sizeof(addr)) < 0) {
         CAN_POSIX_CLOSE_FN(fd);
         can_posix_fd = -1;
         return E_NOT_OK;

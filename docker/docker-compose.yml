@@ -1,14 +1,14 @@
 # =============================================================================
-# docker-compose.yml — Orchestration for simulated ECUs (BCM, ICU, TCU)
+# docker-compose.yml — Orchestration for all 7 simulated ECUs
 #
-# Creates vcan0 virtual CAN interface, then starts all 3 simulated ECUs
+# Creates vcan0 virtual CAN interface, then starts all 7 simulated ECUs
 # as Docker containers sharing the host network (SocketCAN).
 #
 # Usage:
 #   docker compose up --build        Start all ECUs (foreground)
 #   docker compose up --build -d     Start all ECUs (background)
 #   docker compose down              Stop all ECUs
-#   docker compose logs -f bcm       Follow BCM logs
+#   docker compose logs -f cvc       Follow CVC logs
 #
 # Prerequisites:
 #   sudo modprobe vcan
@@ -29,6 +29,70 @@ services:
       - NET_ADMIN
     network_mode: host
     restart: "no"
+
+  # --- Central Vehicle Computer ---
+  cvc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=cvc
+    restart: unless-stopped
+
+  # --- Front Zone Controller ---
+  fzc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=fzc
+    restart: unless-stopped
+
+  # --- Rear Zone Controller ---
+  rzc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=rzc
+    restart: unless-stopped
+
+  # --- Safety Controller ---
+  sc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=sc
+    restart: unless-stopped
 
   # --- Body Control Module ---
   bcm:
@@ -78,4 +142,18 @@ services:
     environment:
       - CAN_INTERFACE=vcan0
       - ECU_NAME=tcu
+    restart: unless-stopped
+
+  # --- Plant Physics Simulator ---
+  plant-sim:
+    build:
+      context: ..
+      dockerfile: gateway/plant_sim/Dockerfile
+    network_mode: host
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_CHANNEL=vcan0
+      - DBC_PATH=/app/taktflow.dbc
     restart: unless-stopped

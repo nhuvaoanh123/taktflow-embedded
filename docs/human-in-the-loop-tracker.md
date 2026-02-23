@@ -31,19 +31,19 @@ Status labels:
 
 ## Current Block
 
-- Block ID: `B-031`
-- Scope: `STK-006 review comment write-down`
-- Location: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md:142`
+- Block ID: `B-034`
+- Scope: `STK-009 review comment write-down`
+- Location: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md:172`
 - Status: `DONE`
 - Notes:
-  - Added HITL comment block for STK-006 with `Why + Tradeoff + Alternative`.
-  - Clarified why steering feedback is still meaningful on dev boards and documented its evidence boundary.
+  - Added HITL comment block for STK-009 with `Why + Tradeoff + Alternative`.
+  - Captured rationale for CAN listen-only monitoring and independent hardware kill-relay enforcement.
 
 ## Next Block
 
-- Block ID: `B-032`
-- Scope: `Requirement-by-requirement review continuation (STK-007 next)`
-- Location: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md:152`
+- Block ID: `B-035`
+- Scope: `Requirement-by-requirement review continuation (STK-010 next)`
+- Location: `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md:182`
 - Status: `IN PROGRESS`
 
 ## Block History
@@ -74,6 +74,9 @@ Status labels:
 | 2026-02-23 | B-029 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-004 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block for board-selection rationale under diverse redundancy requirement |
 | 2026-02-23 | B-030 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-005 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block explaining stakeholder-level simplicity vs downstream detail allocation |
 | 2026-02-23 | B-031 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-006 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block for steering-feedback meaning and prototype-limit boundary |
+| 2026-02-23 | B-032 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-007 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block for proportional braking + fail-safe default behavior |
+| 2026-02-23 | B-033 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-008 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block for graduated obstacle response and safe-default lidar-fault handling |
+| 2026-02-23 | B-034 | `taktflow-embedded/docs/aspice/system/stakeholder-requirements.md` | STK-009 review comment write-down | DONE | Added HITL `Why + Tradeoff + Alternative` block for independent monitoring, CAN listen-only policy, and kill-relay enforcement path |
 
 ## Update Rule
 

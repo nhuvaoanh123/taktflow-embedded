@@ -80,3 +80,9 @@ Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
     /* Route TX through CanIf */
     return CanIf_Transmit(TxPduId, PduInfoPtr);
 }
+
+Std_ReturnType PduR_DcmTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    /* DCM transmit path — route through generic PduR_Transmit */
+    return PduR_Transmit(TxPduId, PduInfoPtr);
+}
