@@ -1,0 +1,141 @@
+# =============================================================================
+# Makefile.posix — Linux/POSIX build for simulated ECUs (BCM, ICU, TCU)
+#
+# Builds AUTOSAR-like BSW + ECU application code using gcc with SocketCAN
+# backend (Can_Posix.c). Runs inside Docker containers on vcan0.
+#
+# Usage:
+#   make -f Makefile.posix TARGET=bcm          Build BCM binary
+#   make -f Makefile.posix TARGET=icu          Build ICU binary
+#   make -f Makefile.posix TARGET=tcu          Build TCU binary
+#   make -f Makefile.posix TARGET=bcm test     Build and run BCM tests
+#   make -f Makefile.posix TARGET=bcm clean    Remove build artifacts
+#
+# Output:  build/<TARGET>_posix
+# =============================================================================
+
+# --- Toolchain ---
+CC      = gcc
+CFLAGS  = -Wall -Wextra -Werror -std=c99 -DPLATFORM_POSIX
+LDFLAGS =
+
+# --- Debug flags (always on for simulated ECUs) ---
+CFLAGS += -Og -g3 -DDEBUG
+
+# --- Validate TARGET ---
+ifndef TARGET
+  $(error TARGET is required. Usage: make -f Makefile.posix TARGET=bcm|icu|tcu)
+endif
+
+VALID_TARGETS = bcm icu tcu
+ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
+  $(error Invalid TARGET='$(TARGET)'. Must be one of: $(VALID_TARGETS))
+endif
+
+# --- Directories ---
+BSW_DIR       = shared/bsw
+MCAL_DIR      = $(BSW_DIR)/mcal
+MCAL_POSIX    = $(BSW_DIR)/mcal/posix
+ECUAL_DIR     = $(BSW_DIR)/ecual
+SERVICES_DIR  = $(BSW_DIR)/services
+RTE_DIR       = $(BSW_DIR)/rte
+UNITY_DIR     = $(BSW_DIR)/test/unity
+BUILD_DIR     = build
+
+# --- Include paths ---
+CFLAGS += -I$(BSW_DIR)/include
+CFLAGS += -I$(MCAL_DIR)
+CFLAGS += -I$(MCAL_POSIX)
+CFLAGS += -I$(ECUAL_DIR)
+CFLAGS += -I$(SERVICES_DIR)
+CFLAGS += -I$(RTE_DIR)
+CFLAGS += -I$(TARGET)/include
+
+# --- Shared BSW sources ---
+BSW_SRCS = \
+    $(MCAL_DIR)/Can.c \
+    $(MCAL_POSIX)/Can_Posix.c \
+    $(MCAL_POSIX)/Gpt_Posix.c \
+    $(MCAL_POSIX)/Dio_Posix.c \
+    $(MCAL_POSIX)/Adc_Posix.c \
+    $(MCAL_POSIX)/Pwm_Posix.c \
+    $(MCAL_POSIX)/Spi_Posix.c \
+    $(ECUAL_DIR)/CanIf.c \
+    $(ECUAL_DIR)/PduR.c \
+    $(SERVICES_DIR)/Com.c \
+    $(SERVICES_DIR)/Dcm.c \
+    $(SERVICES_DIR)/Dem.c \
+    $(SERVICES_DIR)/E2E.c \
+    $(SERVICES_DIR)/WdgM.c \
+    $(SERVICES_DIR)/BswM.c \
+    $(RTE_DIR)/Rte.c
+
+# --- ECU-specific sources ---
+ECU_SRCS = $(wildcard $(TARGET)/src/*.c) $(wildcard $(TARGET)/cfg/*.c)
+
+# --- All application sources ---
+APP_SRCS = $(BSW_SRCS) $(ECU_SRCS)
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+
+# --- Output binary ---
+OUTPUT = $(BUILD_DIR)/$(TARGET)_posix
+
+# --- Per-target link flags ---
+# ICU needs ncurses for instrument cluster display
+ifeq ($(TARGET),icu)
+  LDFLAGS += -lncurses
+endif
+
+# --- Test sources ---
+TEST_SRCS = $(wildcard $(TARGET)/test/*.c)
+TEST_BINS = $(patsubst $(TARGET)/test/%.c,$(BUILD_DIR)/test/$(TARGET)/%,$(TEST_SRCS))
+UNITY_SRC = $(UNITY_DIR)/unity.c
+
+# =============================================================================
+# Targets
+# =============================================================================
+
+.PHONY: all test clean
+
+all: $(OUTPUT)
+
+# --- Build the ECU binary ---
+$(OUTPUT): $(APP_OBJS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $(APP_OBJS) $(LDFLAGS)
+	@echo "=== Built $(OUTPUT) ==="
+
+# --- Compile object files ---
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- Build directory ---
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# --- Test target: build and run ECU tests ---
+test: $(OUTPUT) $(TEST_BINS)
+	@echo "=== Running $(TARGET) tests ==="
+	@passed=0; failed=0; total=0; \
+	for t in $(TEST_BINS); do \
+		total=$$((total + 1)); \
+		echo "--- Running $$t ---"; \
+		if ./$$t; then \
+			passed=$$((passed + 1)); \
+		else \
+			failed=$$((failed + 1)); \
+		fi; \
+	done; \
+	echo "=== Results: $$passed/$$total passed, $$failed failed ==="; \
+	if [ $$failed -ne 0 ]; then exit 1; fi
+
+# --- Build individual test binaries ---
+$(BUILD_DIR)/test/$(TARGET)/%: $(TARGET)/test/%.c $(UNITY_SRC) | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -DUNIT_TEST -I$(UNITY_DIR) -I$(TARGET)/src -I$(TARGET)/cfg \
+		$< $(UNITY_SRC) -o $@
+
+# --- Clean ---
+clean:
+	rm -rf $(BUILD_DIR)
+	@echo "=== Cleaned build directory ==="
