@@ -2,7 +2,7 @@
 
 > Auto-updated before context compression. Read this to restore full context.
 
-**Last updated**: 2026-02-21
+**Last updated**: 2026-02-23
 **Branch**: `develop`
 **Phase**: Phases 0-6 DONE — CVC firmware complete (6 SWCs, 88 tests, ~5,930 LOC), ready for Phase 7 (FZC firmware)
 
@@ -264,7 +264,17 @@ All integration points researched and confirmed feasible:
 
 ---
 
-## Git State
+## Procurement & Requirements Chronicle (Merged)
+
+Single-source status for requirements + procurement is now tracked in:
+- `taktflow-embedded/hardware/procurement-validation.md`
+
+Current headline status (2026-02-23):
+- Core matched/covered: NUCLEO x3, SN65HVD230, BTS7960, relay, IRLZ44N, 1N4007, E-stop, OLED, buzzer, TFMini-S, lab PSU.
+- Newly closed: Raspberry Pi 4 + MicroSD, TJA1051 full quantity, ACS723, servos, TPS3823 x4, 120R terminations, diametric magnets, NTC 10k coverage, optional oscilloscope purchase.
+- Open technical confirmations: explicit 6V rail implementation and final infrastructure/fuse as-built completeness.
+
+Use this chronicle for append-only procurement updates in date order.`r`n`r`n## Git State
 
 - **Branching**: Git Flow (main → develop → feature/)
 - **Remote**: github.com/nhuvaoanh123/taktflow-embedded
@@ -282,3 +292,6 @@ All integration points researched and confirmed feasible:
 - ~$2K hardware budget
 - Refine every document 3 times (see memory/refinement-process.md)
 - Search web freely without asking
+
+
+

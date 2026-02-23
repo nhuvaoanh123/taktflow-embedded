@@ -20,7 +20,7 @@ Scope: 7-ECU zonal demo platform (4 physical ECUs + 3 simulated ECUs), Pi gatewa
 | 4 | CAN transceiver module for STM32 ECUs | 3 | TJA1051-based 3.3V breakout | 4 | 12 |
 | 5 | CAN transceiver module for TMS570 | 1 | SN65HVD230 breakout | 5 | 5 |
 | 6 | USB-CAN adapter (Pi capture/injection) | 1 | CANable 2.0 | 35 | 35 |
-| 7 | USB-CAN adapter (PC bridge to simulated ECUs) | 1 | CANable 2.0 | 35 | 35 |
+| 7 | USB-CAN adapter (PC bridge to simuilated ECUs) | 1 | CANable 2.0 | 35 | 35 |
 | 8 | AS5048A magnetic angle sensor + magnet | 3 | AS5048A breakout + diametric magnet | 15 | 45 |
 | 9 | TFMini-S lidar (UART) | 1 | Benewake TFMini-S | 25 | 25 |
 | 10 | ACS723 current sensor | 1 | ACS723 module | 8 | 8 |
