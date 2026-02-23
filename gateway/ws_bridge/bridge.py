@@ -25,6 +25,36 @@ log = logging.getLogger("ws_bridge")
 # Vehicle state names
 VEHICLE_STATES = {0: "INIT", 1: "RUN", 2: "DEGRADED", 3: "LIMP", 4: "SAFE_STOP", 5: "SHUTDOWN"}
 
+# CAN message → sender ECU (from CAN matrix / DBC)
+MSG_SENDER = {
+    "EStop_Broadcast": "CVC",
+    "CVC_Heartbeat": "CVC", "FZC_Heartbeat": "FZC", "RZC_Heartbeat": "RZC",
+    "Vehicle_State": "CVC", "Torque_Request": "CVC",
+    "Steer_Command": "CVC", "Brake_Command": "CVC",
+    "Steering_Status": "FZC", "Brake_Status": "FZC",
+    "Brake_Fault": "FZC", "Motor_Cutoff_Req": "FZC", "Lidar_Distance": "FZC",
+    "Motor_Status": "RZC", "Motor_Current": "RZC",
+    "Motor_Temperature": "RZC", "Battery_Status": "RZC",
+    "Body_Status": "BCM", "Light_Status": "BCM",
+    "Indicator_State": "BCM", "Door_Lock_Status": "BCM",
+    "DTC_Broadcast": "ANY",
+}
+
+# CAN message → hex ID (from DBC)
+MSG_CAN_ID = {
+    "EStop_Broadcast": "0x001",
+    "CVC_Heartbeat": "0x010", "FZC_Heartbeat": "0x011", "RZC_Heartbeat": "0x012",
+    "Vehicle_State": "0x100", "Torque_Request": "0x101",
+    "Steer_Command": "0x102", "Brake_Command": "0x103",
+    "Steering_Status": "0x200", "Brake_Status": "0x201",
+    "Brake_Fault": "0x210", "Motor_Cutoff_Req": "0x211", "Lidar_Distance": "0x220",
+    "Motor_Status": "0x300", "Motor_Current": "0x301",
+    "Motor_Temperature": "0x302", "Battery_Status": "0x303",
+    "Body_Status": "0x360", "Light_Status": "0x400",
+    "Indicator_State": "0x401", "Door_Lock_Status": "0x402",
+    "DTC_Broadcast": "0x500",
+}
+
 
 class TelemetryState:
     """Aggregated telemetry snapshot, updated by MQTT messages."""
@@ -76,6 +106,7 @@ class TelemetryState:
         self.start_time = time.time()
 
         self.events: list[dict] = []
+        self.can_log: list[dict] = []  # Rolling buffer of decoded CAN messages
 
         # Heartbeat tracking
         self._hb_cvc_ts = 0.0
@@ -145,6 +176,7 @@ class TelemetryState:
                 "uptime_sec": int(now - self.start_time),
             },
             "events": self.events[-20:],  # Last 20 events
+            "can_log": self.can_log[-50:],  # Last 50 CAN messages
         }
 
     def add_event(self, event_type: str, message: str):
@@ -195,11 +227,18 @@ def on_mqtt_message(client, userdata, msg):
     elif topic == "taktflow/telemetry/stats/can_msgs_per_sec":
         state.can_msgs_sec = _parse_int(payload)
 
-    # Anomaly
+    # Anomaly — ML detector publishes JSON {"score": 0.75, "raw": -0.12, "ts": ...}
     elif topic.startswith("taktflow/anomaly/"):
         if topic.endswith("/score"):
-            state.anomaly_score = _parse_float(payload)
+            try:
+                data = json.loads(payload)
+                state.anomaly_score = float(data.get("score", 0))
+            except (json.JSONDecodeError, TypeError, ValueError):
+                state.anomaly_score = _parse_float(payload)
+            was_alert = state.anomaly_alert
             state.anomaly_alert = state.anomaly_score > 0.7
+            if state.anomaly_alert and not was_alert:
+                state.add_event("anomaly", f"ML anomaly detected — score {state.anomaly_score:.3f}")
 
     # DTC alerts
     elif topic.startswith("taktflow/alerts/dtc/"):
@@ -221,8 +260,31 @@ def on_mqtt_message(client, userdata, msg):
             pass
 
 
+def _append_can_log(msg_name: str, sig_name: str, value):
+    """Append a decoded signal to the CAN log, coalescing signals from the same frame."""
+    now = time.time()
+    # Coalesce signals from the same CAN frame (arrive within 50ms)
+    if state.can_log:
+        last = state.can_log[-1]
+        if last["msg_name"] == msg_name and (now - last["ts"]) < 0.05:
+            last["signals"][sig_name] = value
+            return
+    state.can_log.append({
+        "ts": now,
+        "msg_name": msg_name,
+        "msg_id": MSG_CAN_ID.get(msg_name, "0x???"),
+        "sender": MSG_SENDER.get(msg_name, "?"),
+        "signals": {sig_name: value},
+    })
+    if len(state.can_log) > 200:
+        state.can_log = state.can_log[-200:]
+
+
 def _update_signal(msg_name: str, sig_name: str, payload: str):
     """Update the telemetry state from a decoded CAN signal."""
+    # Log every signal to the CAN rolling buffer
+    _append_can_log(msg_name, sig_name, payload)
+
     # Motor Status (0x300)
     if msg_name == "Motor_Status":
         if sig_name == "MotorSpeed_RPM":
