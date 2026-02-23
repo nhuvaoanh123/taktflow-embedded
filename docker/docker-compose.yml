@@ -1,0 +1,81 @@
+# =============================================================================
+# docker-compose.yml — Orchestration for simulated ECUs (BCM, ICU, TCU)
+#
+# Creates vcan0 virtual CAN interface, then starts all 3 simulated ECUs
+# as Docker containers sharing the host network (SocketCAN).
+#
+# Usage:
+#   docker compose up --build        Start all ECUs (foreground)
+#   docker compose up --build -d     Start all ECUs (background)
+#   docker compose down              Stop all ECUs
+#   docker compose logs -f bcm       Follow BCM logs
+#
+# Prerequisites:
+#   sudo modprobe vcan
+#   (can-setup service handles vcan0 creation)
+# =============================================================================
+
+services:
+  # --- vcan0 setup (runs once, exits) ---
+  can-setup:
+    image: ubuntu:22.04
+    command: >
+      /bin/sh -c "
+        ip link add vcan0 type vcan 2>/dev/null || true &&
+        ip link set vcan0 up &&
+        echo 'vcan0 is up'
+      "
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
+    restart: "no"
+
+  # --- Body Control Module ---
+  bcm:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=bcm
+    restart: unless-stopped
+
+  # --- Instrument Cluster Unit ---
+  icu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=icu
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # --- Telematics Control Unit ---
+  tcu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=tcu
+    restart: unless-stopped

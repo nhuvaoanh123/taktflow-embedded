@@ -1,0 +1,56 @@
+# =============================================================================
+# Dockerfile.vecu — Multi-stage build for simulated ECUs (BCM, ICU, TCU)
+#
+# Builds all 3 ECU binaries in a single builder stage, then copies them
+# into a minimal runtime image. The ECU_NAME env var selects which binary
+# to run at container startup.
+#
+# Build:  docker build -f Dockerfile.vecu -t taktflow/vecu .
+# Run:    docker run --network host --cap-add NET_ADMIN -e ECU_NAME=bcm taktflow/vecu
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Build stage — compile all 3 ECU binaries with POSIX/SocketCAN backend
+# ---------------------------------------------------------------------------
+FROM ubuntu:22.04 AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    can-utils \
+    libsocketcan-dev \
+    iproute2 \
+    libncurses-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY firmware/ /build/firmware/
+WORKDIR /build/firmware
+
+# Build all 3 simulated ECU binaries
+RUN make -f Makefile.posix TARGET=bcm && \
+    make -f Makefile.posix TARGET=icu && \
+    make -f Makefile.posix TARGET=tcu
+
+# ---------------------------------------------------------------------------
+# Runtime stage — minimal image with CAN utilities
+# ---------------------------------------------------------------------------
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    can-utils \
+    iproute2 \
+    libncurses6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy compiled binaries from builder
+COPY --from=builder /build/firmware/build/bcm_posix /usr/local/bin/bcm
+COPY --from=builder /build/firmware/build/icu_posix /usr/local/bin/icu
+COPY --from=builder /build/firmware/build/tcu_posix /usr/local/bin/tcu
+
+# Default CAN interface (host vcan0 via network_mode: host)
+ENV CAN_INTERFACE=vcan0
+
+# ECU_NAME selects which binary to run (bcm | icu | tcu)
+ARG ECU_NAME=bcm
+ENV ECU_NAME=${ECU_NAME}
+
+ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/${ECU_NAME}"]
