@@ -270,9 +270,13 @@ services:
     depends_on:
       can-setup:
         condition: service_completed_successfully
+      mqtt-broker:
+        condition: service_started
     environment:
       - CAN_CHANNEL=vcan0
       - FAULT_PORT=8091
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
     restart: unless-stopped
 
 volumes:
