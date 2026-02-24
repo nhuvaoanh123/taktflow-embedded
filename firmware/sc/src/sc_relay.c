@@ -11,23 +11,12 @@
  */
 #include "sc_relay.h"
 #include "sc_cfg.h"
-
-/* ==================================================================
- * External: GIO access (provided by platform or mock)
- * ================================================================== */
-
-extern void  gioSetBit(uint8 port, uint8 pin, uint8 value);
-extern uint8 gioGetBit(uint8 port, uint8 pin);
-
-/* ==================================================================
- * External: Module state getters (provided by other SC modules or mock)
- * ================================================================== */
-
-extern boolean SC_Heartbeat_IsAnyConfirmed(void);
-extern boolean SC_Plausibility_IsFaulted(void);
-extern boolean SC_SelfTest_IsHealthy(void);
-extern boolean SC_ESM_IsErrorActive(void);
-extern boolean SC_CAN_IsBusOff(void);
+#include "sc_gio.h"
+#include "sc_heartbeat.h"
+#include "sc_plausibility.h"
+#include "sc_selftest.h"
+#include "sc_esm.h"
+#include "sc_can.h"
 
 /* ==================================================================
  * Module State

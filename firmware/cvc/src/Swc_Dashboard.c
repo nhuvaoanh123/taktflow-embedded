@@ -12,24 +12,9 @@
 
 #include "Swc_Dashboard.h"
 #include "Cvc_Cfg.h"
-
-/* ==================================================================
- * External dependencies (provided by BSW or mocked in test)
- * ================================================================== */
-
-extern Std_ReturnType Ssd1306_Init(void);
-extern void           Ssd1306_Clear(void);
-extern void           Ssd1306_SetCursor(uint8 page, uint8 col);
-extern Std_ReturnType Ssd1306_WriteString(const char* str);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-
-/* ==================================================================
- * DEM event status constants
- * ================================================================== */
-
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
+#include "Ssd1306.h"
+#include "Rte.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Module-local state
@@ -76,7 +61,7 @@ static void uint16_to_str(uint16 val, char* buf)
 
     /* Extract digits in reverse order */
     while ((val > 0u) && (i < 5u)) {
-        tmp[i] = (char)('0' + (char)(val % 10u));
+        tmp[i] = (char)((uint8)'0' + (uint8)(val % 10u));
         val    = val / 10u;
         i++;
     }

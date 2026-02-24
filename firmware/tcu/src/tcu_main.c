@@ -57,8 +57,8 @@ int main(void)
     sa.sa_handler = tcu_signal_handler;
     sa.sa_flags   = 0;
     sigemptyset(&sa.sa_mask);
-    (void)sigaction(SIGINT,  &sa, (struct sigaction*)0);
-    (void)sigaction(SIGTERM, &sa, (struct sigaction*)0);
+    (void)sigaction(SIGINT,  &sa, NULL_PTR);
+    (void)sigaction(SIGTERM, &sa, NULL_PTR);
 
     (void)printf("[TCU] Telematics Control Unit starting...\n");
 
@@ -73,13 +73,13 @@ int main(void)
     (void)Can_SetControllerMode(0u, CAN_CS_STARTED);
 
     /* ECUAL */
-    CanIf_Init((const CanIf_ConfigType*)0); /* TODO:POST-BETA -- provide full CanIf config */
-    PduR_Init((const PduR_ConfigType*)0);   /* TODO:POST-BETA -- provide full PduR config  */
+    CanIf_Init(NULL_PTR); /* TODO:POST-BETA -- provide full CanIf config */
+    PduR_Init(NULL_PTR);  /* TODO:POST-BETA -- provide full PduR config  */
 
     /* Services */
     Com_Init(&tcu_com_config);
     Dcm_Init(&tcu_dcm_config);
-    Dem_Init((const void*)0);
+    Dem_Init(NULL_PTR);
 
     /* RTE */
     Rte_Init(&tcu_rte_config);

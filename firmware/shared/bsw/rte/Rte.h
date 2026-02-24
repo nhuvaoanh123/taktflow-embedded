@@ -13,6 +13,7 @@
 #define RTE_H
 
 #include "Std_Types.h"
+#include "WdgM.h"
 
 /* ---- Constants ---- */
 
@@ -60,10 +61,6 @@ typedef struct {
     const Rte_RunnableConfigType*   runnableConfig; /**< Runnable config array */
     uint8                           runnableCount;  /**< Number of runnables */
 } Rte_ConfigType;
-
-/* ---- External Dependencies ---- */
-
-extern Std_ReturnType WdgM_CheckpointReached(uint8 SEId);
 
 /* ---- API Functions ---- */
 

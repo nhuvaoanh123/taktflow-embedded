@@ -45,21 +45,13 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType IoHwAb_ReadMotorTemp(sint16* Temp_dC);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Com_SendSignal(uint16 SignalId,
-                                     const uint8* DataPtr, uint8 Length);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-
-/* ==================================================================
- * Constants
- * ================================================================== */
-
-#define DEM_EVENT_STATUS_FAILED  1u
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Com.h"
+#include "Dem.h"
 
 /** CAN TX payload size (8 bytes) */
 #define TM_CAN_PAYLOAD_LEN   8u

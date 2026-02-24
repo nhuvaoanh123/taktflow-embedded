@@ -66,4 +66,12 @@ void PduR_CanIfRxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
  */
 Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
 
+/**
+ * @brief DCM-specific transmit path — routes through PduR_Transmit
+ * @param TxPduId     TX PDU ID
+ * @param PduInfoPtr  Data to transmit
+ * @return E_OK on success, E_NOT_OK on error
+ */
+Std_ReturnType PduR_DcmTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
+
 #endif /* PDUR_H */

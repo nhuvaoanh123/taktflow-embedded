@@ -91,7 +91,7 @@ static void Rte_DispatchRunnables(uint32 tick)
         uint8 se = rte_config->runnableConfig[best_idx].seId;
         if (se < RTE_MAX_RUNNABLES) {
             if (se_checkpointed[se] == FALSE) {
-                WdgM_CheckpointReached(se);
+                (void)WdgM_CheckpointReached(se);
                 se_checkpointed[se] = TRUE;
             }
         }

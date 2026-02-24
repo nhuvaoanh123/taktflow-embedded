@@ -23,10 +23,10 @@
 #include "Icu_Cfg.h"
 
 /* ==================================================================
- * External dependencies (provided by BSW or mocked in test)
+ * BSW includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
+#include "Rte.h"
 
 /* ==================================================================
  * Vehicle state name lookup table

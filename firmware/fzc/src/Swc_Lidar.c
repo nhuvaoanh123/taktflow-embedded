@@ -25,20 +25,13 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies (provided by BSW or mocked in test)
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType Uart_ReadRxData(uint8* Buffer, uint8 Length, uint8* BytesRead);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-
-/* ==================================================================
- * Constants
- * ================================================================== */
-
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
+#include "Uart.h"
+#include "Rte.h"
+#include "Com.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Module State (all static file-scope — ASIL C: no dynamic memory)

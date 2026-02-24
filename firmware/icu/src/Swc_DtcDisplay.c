@@ -30,10 +30,10 @@
 #include "Icu_Cfg.h"
 
 /* ==================================================================
- * External dependencies (provided by BSW or mocked in test)
+ * BSW includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
+#include "Rte.h"
 
 /* ==================================================================
  * Module-local state
@@ -148,6 +148,8 @@ void Swc_DtcDisplay_50ms(void)
     } else if (broadcast_raw == 0u) {
         /* Reset last_broadcast so a re-sent DTC can be processed */
         last_broadcast = 0u;
+    } else {
+        /* No action — same DTC already processed */
     }
 
     /* ---- ncurses rendering (excluded from test builds) ---- */

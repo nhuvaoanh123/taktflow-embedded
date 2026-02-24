@@ -27,21 +27,12 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count);
-extern Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
-
-/* ==================================================================
- * Constants
- * ================================================================== */
-
-#define DEM_EVENT_STATUS_FAILED  1u
+#include "Rte.h"
+#include "IoHwAb.h"
+#include "Dem.h"
 
 /** Stall grace cycles: 200ms / 10ms = 20 */
 #define ENC_STALL_GRACE_CYCLES  (RZC_ENCODER_STALL_GRACE_MS / 10u)

@@ -24,15 +24,9 @@
 
 #include "Swc_VehicleState.h"
 #include "Cvc_Cfg.h"
-
-/* ==================================================================
- * External BSW API declarations
- * ================================================================== */
-
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType BswM_RequestMode(uint8 RequesterId, uint8 RequestedMode);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Rte.h"
+#include "BswM.h"
+#include "Dem.h"
 
 /* ==================================================================
  * BswM mode mapping — vehicle state to BswM mode
@@ -53,12 +47,6 @@ static const uint8 state_to_bswm_mode[CVC_STATE_COUNT] = {
     BSWM_SAFE_STOP,   /* CVC_STATE_SAFE_STOP -> BSWM_SAFE_STOP */
     BSWM_SHUTDOWN     /* CVC_STATE_SHUTDOWN  -> BSWM_SHUTDOWN   */
 };
-
-/* ==================================================================
- * DEM event status
- * ================================================================== */
-
-#define DEM_EVENT_STATUS_FAILED  1u
 
 /* ==================================================================
  * Transition table: [current_state][event] -> next_state

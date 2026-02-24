@@ -13,6 +13,8 @@
 #define WDGM_H
 
 #include "Std_Types.h"
+#include "Dem.h"
+#include "IoHwAb.h"
 
 /* ---- Constants ---- */
 
@@ -47,10 +49,6 @@ typedef struct {
     uint8   seCount;
     uint8   wdtDioChannel;      /**< DIO channel for external watchdog */
 } WdgM_ConfigType;
-
-/* ---- External dependencies ---- */
-extern void Dio_FlipChannel(uint8 ChannelId);
-#include "Dem.h"
 
 /* ---- API Functions ---- */
 

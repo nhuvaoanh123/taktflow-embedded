@@ -21,12 +21,11 @@
 #include "Bcm_Cfg.h"
 
 /* ====================================================================
- * External BSW interfaces
+ * BSW includes
  * ==================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Rte.h"
+#include "Dem.h"
 
 /* ====================================================================
  * Static module state

@@ -96,6 +96,8 @@ Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataP
             uint16 val = *((const uint16*)SignalDataPtr);
             com_tx_pdu_buf[sig->PduId][byte_offset]     = (uint8)(val & 0xFFu);
             com_tx_pdu_buf[sig->PduId][byte_offset + 1u] = (uint8)((val >> 8u) & 0xFFu);
+        } else {
+            /* BitSize > 16 not supported — no action */
         }
 
         com_tx_pending[sig->PduId] = TRUE;
@@ -169,6 +171,8 @@ void Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr)
                 uint16 val = (uint16)com_rx_pdu_buf[ComRxPduId][byte_offset] |
                              ((uint16)com_rx_pdu_buf[ComRxPduId][byte_offset + 1u] << 8u);
                 *((uint16*)sig->ShadowBuffer) = val;
+            } else {
+                /* BitSize > 16 not supported — no action */
             }
         }
     }

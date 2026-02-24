@@ -25,23 +25,13 @@
 
 #include "Swc_Pedal.h"
 #include "Cvc_Cfg.h"
-
-/* ==================================================================
- * External Dependencies (provided by BSW or mocked in test)
- * ================================================================== */
-
-extern Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-/** DEM event status values (local defines to avoid Dem.h dependency) */
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
 
 /** 14-bit sensor maximum value (AS5048A) */
 #define PEDAL_SENSOR_MAX        16383u
@@ -311,6 +301,8 @@ void Swc_Pedal_MainFunction(void)
         new_fault = CVC_PEDAL_SENSOR1_FAIL;
     } else if (ret2 != E_OK) {
         new_fault = CVC_PEDAL_SENSOR2_FAIL;
+    } else {
+        /* Both sensors OK — no fault */
     }
 
     /* Store raw values */

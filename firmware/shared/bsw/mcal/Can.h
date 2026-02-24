@@ -125,4 +125,12 @@ void Can_MainFunction_BusOff(void);
  */
 Std_ReturnType Can_GetErrorCounters(uint8 Controller, uint8* tec, uint8* rec);
 
+/**
+ * @brief Get controller error state (AUTOSAR Can_GetControllerErrorState)
+ * @param ControllerId  Controller ID (0)
+ * @param ErrorStatePtr Output: 0 = ACTIVE, 1 = PASSIVE, 2 = BUS_OFF
+ * @return E_OK on success, E_NOT_OK on null pointer
+ */
+Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId, uint8* ErrorStatePtr);
+
 #endif /* CAN_H */

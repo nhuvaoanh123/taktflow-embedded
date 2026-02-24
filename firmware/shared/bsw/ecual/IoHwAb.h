@@ -95,6 +95,7 @@ extern void Pwm_SetOutputToIdle(uint8 ChannelNumber);
 /* DIO driver */
 extern uint8 Dio_ReadChannel(uint8 ChannelId);
 extern void  Dio_WriteChannel(uint8 ChannelId, uint8 Level);
+extern void  Dio_FlipChannel(uint8 ChannelId);
 
 /* ---- API Functions ---- */
 
@@ -168,5 +169,19 @@ Std_ReturnType IoHwAb_SetBrakeServoPWM(uint16 DutyCycle);
  * @return E_OK on success, E_NOT_OK on null pointer
  */
 Std_ReturnType IoHwAb_ReadEStop(uint8* State);
+
+/**
+ * @brief  Read encoder pulse count (RZC motor encoder)
+ * @param  Count  Output: accumulated pulse count
+ * @return E_OK on success, E_NOT_OK on null pointer or not initialized
+ */
+Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count);
+
+/**
+ * @brief  Read encoder direction (RZC motor encoder)
+ * @param  Dir  Output: IOHWAB_MOTOR_FORWARD or IOHWAB_MOTOR_REVERSE
+ * @return E_OK on success, E_NOT_OK on null pointer or not initialized
+ */
+Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir);
 
 #endif /* IOHWAB_H */

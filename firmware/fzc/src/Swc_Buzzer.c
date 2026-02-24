@@ -29,11 +29,11 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
+#include "Rte.h"
+#include "IoHwAb.h"
 
 /* ==================================================================
  * Constants

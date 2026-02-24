@@ -14,9 +14,9 @@
 #include "Swc_DtcStore.h"
 #include "Tcu_Cfg.h"
 
-/* ---- External BSW interfaces ---- */
+/* ---- BSW Includes ---- */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
+#include "Rte.h"
 
 /* ---- External DTC Store interfaces ---- */
 
@@ -47,14 +47,14 @@ static uint32 build_supported_bitmap(void)
 {
     uint32 bitmap = 0u;
 
-    /* PID 0x04 -> bit 28 */
-    bitmap |= (1u << (32u - OBD_PID_ENGINE_LOAD));
-    /* PID 0x05 -> bit 27 */
-    bitmap |= (1u << (32u - OBD_PID_COOLANT_TEMP));
-    /* PID 0x0C -> bit 20 */
-    bitmap |= (1u << (32u - OBD_PID_ENGINE_RPM));
-    /* PID 0x0D -> bit 19 */
-    bitmap |= (1u << (32u - OBD_PID_VEHICLE_SPEED));
+    /* PID 0x04 -> bit 28 (32 - 4 = 28) */
+    bitmap |= ((uint32)1u << 28u);
+    /* PID 0x05 -> bit 27 (32 - 5 = 27) */
+    bitmap |= ((uint32)1u << 27u);
+    /* PID 0x0C -> bit 20 (32 - 12 = 20) */
+    bitmap |= ((uint32)1u << 20u);
+    /* PID 0x0D -> bit 19 (32 - 13 = 19) */
+    bitmap |= ((uint32)1u << 19u);
 
     return bitmap;
 }
@@ -206,7 +206,7 @@ void Swc_Obd2Pids_Init(void)
 Std_ReturnType Swc_Obd2Pids_HandleRequest(uint8 mode, uint8 pid,
                                             uint8* response, uint16* len)
 {
-    if ((response == (uint8*)0) || (len == (uint16*)0)) {
+    if ((response == NULL_PTR) || (len == NULL_PTR)) {
         return E_NOT_OK;
     }
 

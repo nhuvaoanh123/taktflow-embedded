@@ -19,23 +19,11 @@
  */
 #include "Swc_EStop.h"
 #include "Cvc_Cfg.h"
-
-/* ====================================================================
- * External BSW interfaces
- * ==================================================================== */
-
-extern Std_ReturnType IoHwAb_ReadEStop(uint8* State);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr);
-extern Std_ReturnType E2E_Protect(const void* Config, void* State,
-                                  uint8* DataPtr, uint16 Length);
-extern void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-
-/* ====================================================================
- * DEM event status (local definition to avoid Dem.h dependency)
- * ==================================================================== */
-
-#define DEM_EVENT_STATUS_FAILED  1u
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Com.h"
+#include "E2E.h"
+#include "Dem.h"
 
 /* ====================================================================
  * Internal constants

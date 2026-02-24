@@ -28,19 +28,16 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Rte.h"
+#include "IoHwAb.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-#define DEM_EVENT_STATUS_FAILED  1u
 
 #define SAFETY_WDI_CHANNEL     0u    /* PB0 — TPS3823 WDI pin */
 

@@ -11,24 +11,14 @@
  */
 #include "sc_plausibility.h"
 #include "sc_cfg.h"
+#include "sc_can.h"
+#include "sc_gio.h"
 
 /* ==================================================================
- * External: CAN message access (provided by sc_can or mock)
+ * SC module includes
  * ================================================================== */
 
-extern boolean SC_CAN_GetMessage(uint8 mbIndex, uint8* data, uint8* dlc);
-
-/* ==================================================================
- * External: Heartbeat fault query
- * ================================================================== */
-
-extern boolean SC_Heartbeat_IsFzcBrakeFault(void);
-
-/* ==================================================================
- * External: GIO access (provided by platform or mock)
- * ================================================================== */
-
-extern void gioSetBit(uint8 port, uint8 pin, uint8 value);
+#include "sc_heartbeat.h"
 
 /* ==================================================================
  * Torque-to-Current Lookup Table

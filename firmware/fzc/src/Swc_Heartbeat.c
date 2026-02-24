@@ -22,13 +22,12 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Rte.h"
+#include "Com.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants

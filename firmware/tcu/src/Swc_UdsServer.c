@@ -22,10 +22,9 @@
 #include "Swc_DtcStore.h"
 #include "Tcu_Cfg.h"
 
-/* ---- External BSW interfaces ---- */
+/* ---- BSW Includes ---- */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
+#include "Rte.h"
 
 /* ---- Internal Constants ---- */
 
@@ -412,7 +411,7 @@ static void handle_read_dtc_info(const uint8* reqData, uint16 reqLen,
         uint8 count = Swc_DtcStore_GetCount();
         rspData[2] = 0xFFu;  /* Status availability mask */
         rspData[3] = 0x00u;  /* DTC format: ISO 14229 */
-        rspData[4] = (uint8)(count >> 8u);
+        rspData[4] = (uint8)((uint16)count >> 8u);
         rspData[5] = (uint8)(count);
         *rspLen = 6u;
         break;

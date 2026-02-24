@@ -27,22 +27,17 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies (provided by BSW or mocked in test)
+ * BSW Includes
  * ================================================================== */
 
-extern void            Pwm_SetDutyCycle(uint8 Channel, uint16 DutyCycle);
-extern Std_ReturnType  Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType  Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType  Com_SendSignal(uint8 SignalId, const void* SignalDataPtr);
-extern void            Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Com.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-/** DEM event status values (local defines to avoid Dem.h dependency) */
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
 
 /** Brake servo PWM channel (TIM2_CH2) */
 #define BRAKE_PWM_CHANNEL          2u

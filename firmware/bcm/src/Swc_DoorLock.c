@@ -23,12 +23,11 @@
 #include "Bcm_Cfg.h"
 
 /* ====================================================================
- * External BSW interfaces
+ * BSW includes
  * ==================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "Rte.h"
+#include "Dem.h"
 
 /* ====================================================================
  * Internal constants
@@ -113,6 +112,8 @@ void Swc_DoorLock_100ms(void)
         lock_state = DOOR_LOCKED;
     } else if ((body_cmd & LOCK_CMD_MASK) == 0u) {
         /* Manual unlock only if no auto-lock condition applies below */
+    } else {
+        /* No action — lock state unchanged */
     }
 
     /* --- 3. Auto-lock: speed > threshold ------------------------------ */

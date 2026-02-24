@@ -33,23 +33,16 @@
 #include "Fzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies (provided by BSW or mocked in test)
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType IoHwAb_ReadSteeringAngle(sint16* Angle);
-extern void           Pwm_SetDutyCycle(uint8 Channel, uint16 DutyCycle);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-/** DEM event status values (local defines to avoid Dem.h dependency) */
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
 
 /** PWM channel for steering servo */
 #define STEER_PWM_CHANNEL          1u

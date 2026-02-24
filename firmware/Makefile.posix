@@ -241,7 +241,7 @@ CPPCHECK_FLAGS = \
     --suppress=missingIncludeSystem \
     --suppressions-list=$(MISRA_SUPPR) \
     --inline-suppr \
-    --error-exitcode=0
+    --error-exitcode=1
 
 # --- misra: Run MISRA check on all sources, output to terminal ---
 misra: $(_BUILD_DIR)

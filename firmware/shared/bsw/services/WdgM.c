@@ -108,7 +108,7 @@ void WdgM_MainFunction(void)
         se->aliveCounter = 0u;
     }
 
-    if (all_ok) {
+    if (all_ok != FALSE) {
         wdgm_global_status = WDGM_GLOBAL_STATUS_OK;
         Dio_FlipChannel(wdgm_config->wdtDioChannel);
     } else {

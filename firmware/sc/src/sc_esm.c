@@ -11,12 +11,7 @@
  */
 #include "sc_esm.h"
 #include "sc_cfg.h"
-
-/* ==================================================================
- * External: GIO access
- * ================================================================== */
-
-extern void gioSetBit(uint8 port, uint8 pin, uint8 value);
+#include "sc_gio.h"
 
 /* ==================================================================
  * External: ESM hardware register access (HALCoGen-style)

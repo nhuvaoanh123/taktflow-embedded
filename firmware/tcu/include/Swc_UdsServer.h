@@ -73,4 +73,17 @@ void Swc_UdsServer_ProcessRequest(const uint8* reqData, uint16 reqLen,
  */
 uint8 Swc_UdsServer_GetSession(void);
 
+/* ---- DCM DID Read Callbacks ----
+ * Referenced by DID table in Dcm_Cfg_Tcu.c for ReadDataByIdentifier (0x22).
+ */
+
+Std_ReturnType Dcm_ReadDid_Vin(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_SwVersion(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_HwVersion(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_VehicleSpeed(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_MotorTemp(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_BatteryVoltage(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_MotorCurrent(uint8* Data, uint8 Length);
+Std_ReturnType Dcm_ReadDid_MotorRpm(uint8* Data, uint8 Length);
+
 #endif /* SWC_UDSSERVER_H */

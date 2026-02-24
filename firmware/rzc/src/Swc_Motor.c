@@ -33,22 +33,16 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies (provided by BSW or mocked in test)
+ * BSW Includes
  * ================================================================== */
 
-extern void           IoHwAb_SetMotorPWM(uint8 Direction, uint16 DutyCycle);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-/** DEM event status values (local defines to avoid Dem.h dependency) */
-#define DEM_EVENT_STATUS_PASSED    0u
-#define DEM_EVENT_STATUS_FAILED    1u
 
 /** Command timeout threshold in cycles: 100ms / 10ms = 10 cycles */
 #define MOTOR_CMD_TIMEOUT_CYCLES   10u
@@ -108,7 +102,7 @@ static uint32  Motor_PrevTorqueCmdRaw;
 static uint16 Motor_AbsSint16(sint16 val)
 {
     if (val < 0) {
-        return (uint16)((sint16)(0 - val));
+        return (uint16)(-val);
     }
     return (uint16)val;
 }
@@ -124,7 +118,7 @@ static void Motor_DisableOutputs(void)
 {
     Dio_WriteChannel(RZC_MOTOR_R_EN_CHANNEL, 0u);
     Dio_WriteChannel(RZC_MOTOR_L_EN_CHANNEL, 0u);
-    IoHwAb_SetMotorPWM(RZC_DIR_STOP, 0u);
+    (void)IoHwAb_SetMotorPWM(RZC_DIR_STOP, 0u);
 }
 
 /* ==================================================================
@@ -282,7 +276,7 @@ void Swc_Motor_MainFunction(void)
         limited_torque = torque_cmd;
         /* For negative: limit the magnitude */
         if (Motor_AbsSint16(limited_torque) > (uint16)mode_limit) {
-            limited_torque = (sint16)(0 - (sint16)mode_limit);
+            limited_torque = -(sint16)mode_limit;
         }
     } else {
         limited_torque = 0;
@@ -459,7 +453,7 @@ void Swc_Motor_MainFunction(void)
         /* Set both R_EN and L_EN HIGH (BTS7960 requires both) */
         Dio_WriteChannel(RZC_MOTOR_R_EN_CHANNEL, 1u);
         Dio_WriteChannel(RZC_MOTOR_L_EN_CHANNEL, 1u);
-        IoHwAb_SetMotorPWM(Motor_Direction, duty_hw);
+        (void)IoHwAb_SetMotorPWM(Motor_Direction, duty_hw);
     } else {
         /* Disable motor: both EN LOW, PWM 0 */
         Motor_DisableOutputs();

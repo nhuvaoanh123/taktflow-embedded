@@ -51,4 +51,10 @@ boolean SC_Heartbeat_IsTimedOut(uint8 ecuIndex);
  */
 boolean SC_Heartbeat_IsAnyConfirmed(void);
 
+/**
+ * @brief  Check if FZC brake fault flag is set
+ * @return TRUE if FZC has reported a brake-related fault
+ */
+boolean SC_Heartbeat_IsFzcBrakeFault(void);
+
 #endif /* SC_HEARTBEAT_H */

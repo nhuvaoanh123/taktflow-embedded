@@ -26,23 +26,13 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV);
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr,
-                                     uint8 Length);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-
-/* ==================================================================
- * Constants
- * ================================================================== */
-
-/** DEM event status values */
-#define DEM_EVENT_STATUS_PASSED  0u
-#define DEM_EVENT_STATUS_FAILED  1u
+#include "IoHwAb.h"
+#include "Rte.h"
+#include "Com.h"
+#include "Dem.h"
 
 /* ==================================================================
  * Module State

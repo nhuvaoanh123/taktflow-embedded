@@ -12,6 +12,7 @@
 #include "sc_can.h"
 #include "sc_cfg.h"
 #include "sc_e2e.h"
+#include "sc_heartbeat.h"
 
 /* ==================================================================
  * External: HALCoGen-style register access (provided by platform or mock)
@@ -20,12 +21,6 @@
 extern uint32  dcan1_reg_read(uint32 offset);
 extern void    dcan1_reg_write(uint32 offset, uint32 value);
 extern boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc);
-
-/* ==================================================================
- * External: Heartbeat notification
- * ================================================================== */
-
-extern void SC_Heartbeat_NotifyRx(uint8 ecuIndex);
 
 /* ==================================================================
  * DCAN1 Register Offsets

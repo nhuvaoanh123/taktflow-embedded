@@ -11,13 +11,7 @@
  */
 #include "sc_heartbeat.h"
 #include "sc_cfg.h"
-
-/* ==================================================================
- * External: GIO access (provided by platform or mock)
- * ================================================================== */
-
-extern void  gioSetBit(uint8 port, uint8 pin, uint8 value);
-extern uint8 gioGetBit(uint8 port, uint8 pin);
+#include "sc_gio.h"
 
 /* ==================================================================
  * Module State

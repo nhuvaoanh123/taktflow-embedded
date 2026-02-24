@@ -26,6 +26,7 @@
 #include "sc_watchdog.h"
 #include "sc_esm.h"
 #include "sc_selftest.h"
+#include "sc_gio.h"
 
 /* ==================================================================
  * External: Platform initialization (HALCoGen-generated or mock)
@@ -51,9 +52,6 @@ extern void rtiClearTick(void);
 
 /** Set GIO pin direction (0=input, 1=output) */
 extern void gioSetDirection(uint8 port, uint8 pin, uint8 direction);
-
-/** Set GIO pin value */
-extern void gioSetBit(uint8 port, uint8 pin, uint8 value);
 
 /* ==================================================================
  * Internal: Configure GIO pins

@@ -14,10 +14,9 @@
 #include "Swc_DtcStore.h"
 #include "Tcu_Cfg.h"
 
-/* ---- External BSW interfaces ---- */
+/* ---- BSW Includes ---- */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
+#include "Rte.h"
 
 /* ---- Internal State ---- */
 
@@ -103,8 +102,10 @@ void Swc_DtcStore_10ms(void)
     }
 
     /* Aging: increment counter for DTCs not currently failing */
-    uint8 i;
-    for (i = 0u; i < dtc_count; i++) {
+    uint8 i = 0u;
+    while (i < dtc_count) {
+        boolean removed = FALSE;
+
         if ((dtc_entries[i].status & DTC_STATUS_TEST_FAILED) == 0u) {
             if (dtc_entries[i].agingCounter < 0xFFFFu) {
                 dtc_entries[i].agingCounter++;
@@ -120,12 +121,14 @@ void Swc_DtcStore_10ms(void)
                 if (dtc_write_idx > 0u) {
                     dtc_write_idx--;
                 }
-                /* Re-check current index since we shifted */
-                if (i > 0u) {
-                    i--;
-                }
+                removed = TRUE;
             }
         }
+
+        if (removed == FALSE) {
+            i++;
+        }
+        /* If removed, re-check same index (shifted entry) */
     }
 }
 
@@ -137,7 +140,7 @@ uint8 Swc_DtcStore_GetCount(void)
 const DtcStoreEntry_t* Swc_DtcStore_GetByIndex(uint8 index)
 {
     if (index >= dtc_count) {
-        return (const DtcStoreEntry_t*)0;
+        return NULL_PTR;
     }
     return &dtc_entries[index];
 }
@@ -201,7 +204,7 @@ Std_ReturnType Swc_DtcStore_Add(uint32 dtcCode, uint8 status)
 
 uint8 Swc_DtcStore_GetByMask(uint8 statusMask, uint32* dtcCodes, uint8 maxCount)
 {
-    if ((dtcCodes == (uint32*)0) || (maxCount == 0u)) {
+    if ((dtcCodes == NULL_PTR) || (maxCount == 0u)) {
         return 0u;
     }
 

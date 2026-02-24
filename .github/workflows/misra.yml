@@ -2,7 +2,7 @@
 # MISRA C:2012 Compliance Check — GitHub Actions
 #
 # Runs cppcheck with MISRA addon on all firmware sources.
-# Currently non-blocking (error-exitcode=0). Switch to 1 after triage.
+# BLOCKING — error-exitcode=1. New violations will fail CI.
 # =============================================================================
 
 name: MISRA C Check

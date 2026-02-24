@@ -32,15 +32,18 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
- * External Dependencies
+ * BSW Includes
  * ================================================================== */
 
-extern Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr);
-extern Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data);
-extern void           Dio_WriteChannel(uint8 Channel, uint8 Level);
-extern void           Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus);
-extern Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId,
-                                                  uint8* ErrorStatePtr);
+#include "Rte.h"
+#include "IoHwAb.h"
+#include "Dem.h"
+
+/* ==================================================================
+ * BSW Includes (additional)
+ * ================================================================== */
+
+#include "Can.h"
 
 /* ==================================================================
  * Constants
@@ -49,10 +52,6 @@ extern Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId,
 /** DIO output levels */
 #define DIO_LEVEL_LOW       0u
 #define DIO_LEVEL_HIGH      1u
-
-/** DEM event status values */
-#define DEM_EVENT_STATUS_PASSED  0u
-#define DEM_EVENT_STATUS_FAILED  1u
 
 /** Safety status codes */
 #define SAFETY_STATUS_OK        0u

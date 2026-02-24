@@ -12,6 +12,7 @@
  */
 #include "sc_selftest.h"
 #include "sc_cfg.h"
+#include "sc_gio.h"
 
 /* ==================================================================
  * External: Hardware test functions (provided by platform or mock)
@@ -28,10 +29,6 @@ extern boolean hw_watchdog_test(void);
 /* Runtime test externs */
 extern boolean hw_flash_crc_incremental(void);
 extern boolean hw_dcan_error_check(void);
-
-/* GIO access */
-extern void  gioSetBit(uint8 port, uint8 pin, uint8 value);
-extern uint8 gioGetBit(uint8 port, uint8 pin);
 
 /* ==================================================================
  * Module State
