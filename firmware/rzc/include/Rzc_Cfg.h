@@ -135,14 +135,14 @@
 /** Zero-cal: 64 samples averaged at startup */
 #define RZC_CURRENT_ZEROCAL_SAMPLES  64u
 
-/** Zero-cal expected center (12-bit ADC midpoint) */
+/** Zero-cal expected center (12-bit ADC midpoint, assumes 3.3V supply: Vcc/2 = 1.65V) */
 #define RZC_CURRENT_ZEROCAL_CENTER 2048u
 
 /** Zero-cal acceptable offset range from center */
 #define RZC_CURRENT_ZEROCAL_RANGE   200u
 
-/** ACS723 sensitivity: 400mV/A = 0.4 mV/mA */
-#define RZC_CURRENT_SENSITIVITY_UV  400u
+/** ACS723 sensitivity: 100mV/A for 20A variant (ACS723LLCTR-20AB-T) */
+#define RZC_CURRENT_SENSITIVITY_UV  100u
 
 /** Moving average window size */
 #define RZC_CURRENT_AVG_WINDOW        4u
