@@ -313,7 +313,7 @@ The FZC hardware shall provide a piezo buzzer driven by a GPIO pin:
 The RZC hardware shall include an ACS723LLCTR-20AB-T Hall-effect current sensor in the motor supply path:
 
 1. **Placement**: In series with the motor supply line between the BTS7960 output and the motor. The sensor shall measure bidirectional current (positive = forward, negative = reverse).
-2. **Output**: Analog voltage output proportional to current (sensitivity: 400 mV/A, zero-current output: VCC/2 = 1.65V), connected to ADC1 channel 1 (PA0).
+2. **Output**: Analog voltage output proportional to current (sensitivity: 100 mV/A for ACS723LLCTR-20AB-T 20A variant, zero-current output: VCC/2 = 1.65V), connected to ADC1 channel 1 (PA0).
 3. **Decoupling**: 100 nF capacitor on VCC pin and 1 nF capacitor on the output pin (for noise filtering without excessive bandwidth reduction, maintaining 80 kHz bandwidth).
 4. **ADC reference**: ADC VREF+ connected to a stable 3.3V reference (internal or external, accuracy +/- 1%).
 5. **PCB layout**: The ACS723 current path shall be on a wide trace (minimum 2 mm for 25A capacity) and the signal output trace shall be routed on a separate layer from the power trace.

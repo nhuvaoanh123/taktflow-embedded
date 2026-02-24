@@ -698,7 +698,7 @@ Before applying any non-zero PWM to the motor, the RZC software shall verify: (a
 - **Verified by**: TC-RZC-004, TC-RZC-005
 - **Status**: draft
 
-The RZC software shall configure ADC1 channel 1 for motor current sensing at 1 kHz (timer-triggered conversion). Each ADC result (12-bit) shall be converted to milliamps: current_mA = (adc_value - adc_zero_offset) * (Vref_mV / 4096) / sensitivity_mV_per_A * 1000. The zero-offset (calibrated at zero current) and sensitivity (400 mV/A for ACS723LLCTR-20AB-T) shall be compile-time constants. A moving average filter (4 samples) shall reduce ADC noise while maintaining sufficient bandwidth for 10 ms overcurrent detection.
+The RZC software shall configure ADC1 channel 1 for motor current sensing at 1 kHz (timer-triggered conversion). Each ADC result (12-bit) shall be converted to milliamps: current_mA = (adc_value - adc_zero_offset) * (Vref_mV / 4096) / sensitivity_mV_per_A * 1000. The zero-offset (calibrated at zero current) and sensitivity (100 mV/A for ACS723LLCTR-20AB-T 20A variant) shall be compile-time constants. A moving average filter (4 samples) shall reduce ADC noise while maintaining sufficient bandwidth for 10 ms overcurrent detection.
 
 ---
 

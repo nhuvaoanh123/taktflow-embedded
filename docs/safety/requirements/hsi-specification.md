@@ -461,7 +461,7 @@ Total self-test time: < 560 ms.
 | PB1 | MOTOR_L_EN | GPIO | -- | Output | RZC_MOT_LEN | BTS7960 L_EN | 10k pull-down, active HIGH |
 | PB6 | ENCODER_A | TIM4_CH1 | AF2 | Input | RZC_ENC_A | Motor encoder A | 10k pull-up |
 | PB7 | ENCODER_B | TIM4_CH2 | AF2 | Input | RZC_ENC_B | Motor encoder B | 10k pull-up |
-| PA0 | CURRENT_SENSE | ADC1_IN1 | Analog | Input | RZC_ISENSE | ACS723 output | 400 mV/A, mid-rail zero |
+| PA0 | CURRENT_SENSE | ADC1_IN1 | Analog | Input | RZC_ISENSE | ACS723 output | 100 mV/A, mid-rail zero |
 | PA1 | TEMP_NTC1 | ADC1_IN2 | Analog | Input | RZC_NTC1 | NTC #1 (motor winding) | 10k pullup divider |
 | PA2 | TEMP_NTC2 | ADC1_IN3 | Analog | Input | RZC_NTC2 | NTC #2 (board) | 10k pullup divider |
 | PA3 | BATT_VOLTAGE | ADC1_IN4 | Analog | Input | RZC_VBAT | Voltage divider | 47k/10k, Zener clamp |

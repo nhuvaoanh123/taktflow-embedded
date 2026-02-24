@@ -479,7 +479,7 @@ The ADC interface for the ACS723 Hall-effect current sensor shall meet:
 2. **Resolution**: 12-bit (4096 counts over 0-3.3V range).
 3. **Sample rate**: Minimum 1 kHz (1 ms conversion period) for current monitoring.
 4. **Conversion time**: Less than 5 us per sample (ADC clock = 170 MHz / 4 = 42.5 MHz, 12.5 ADC cycles = 0.29 us per conversion).
-5. **ACS723 output**: Analog voltage, sensitivity = 400 mV/A, zero-current output = VCC/2 = 1.65V for bidirectional measurement.
+5. **ACS723 output**: Analog voltage, sensitivity = 100 mV/A (ACS723LLCTR-20AB-T, 20A variant), zero-current output = VCC/2 = 1.65V for bidirectional measurement.
 6. **ADC input impedance**: ACS723 output impedance is approximately 1k ohm. STM32 ADC input requires less than 50k ohm source impedance at the specified sample time.
 7. **Filtering**: 1 nF capacitor on ACS723 output pin (bandwidth filter, 80 kHz) plus 100 nF capacitor at ADC input (anti-aliasing, 1.6 kHz cutoff with 1k source impedance).
 8. **ADC reference**: VREF+ connected to VDDA (3.3V) with 1 uF + 100 nF decoupling.

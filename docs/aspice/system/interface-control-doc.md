@@ -371,12 +371,12 @@ checksum    = (sum of bytes 0..7) & 0xFF   // Must equal byte[8]
 | Pin | PA0 |
 | Sensor | ACS723LLCTR-20AB-T |
 | Sensing range | +/- 20 A (bidirectional) |
-| Sensitivity | 400 mV/A |
+| Sensitivity | 100 mV/A (ACS723LLCTR-20AB-T, 20A variant) |
 | Zero-current output | VCC/2 = 1.65 V (at 3.3V supply) |
 | Zero-current ADC count | ~2048 (at 12-bit, 3.3V VREF) |
-| Full-scale positive (20A) | 1.65 + (20 * 0.4) = 9.65 V (clamped to 3.3V by ADC) |
-| Usable range at 3.3V | +/- 4.125 A linear; clipped above 4.125 A |
-| Note | ACS723-20A model outputs 0.165V to 3.135V for +/-20A at 3.3V VCC |
+| Full-scale positive (20A) | 1.65 + (20 * 0.1) = 3.65 V (clamped to 3.3V by ADC) |
+| Usable range at 3.3V | +/- 16.5 A linear; clipped above 16.5 A |
+| Note | At 100 mV/A, output spans 0V (-16.5A) to 3.3V (+16.5A) at 3.3V VCC |
 | Bandwidth | 80 kHz (-3 dB) with 1 nF output capacitor |
 | Galvanic isolation | 2.1 kV RMS (Hall-effect, no copper path to ADC) |
 | Sample rate | 1 kHz (timer-triggered) |
@@ -391,10 +391,10 @@ current_mA = ((adc_value - adc_zero_offset) * Vref_mV) / (4096 * sensitivity_mV_
 Where:
   adc_zero_offset = calibrated at startup (nominal: 2048)
   Vref_mV = 3300
-  sensitivity_mV_per_A = 400
+  sensitivity_mV_per_A = 100
 
-Simplified: current_mA = (adc_value - 2048) * 3300 / (4096 * 0.4)
-           current_mA = (adc_value - 2048) * 2.0142
+Simplified: current_mA = (adc_value - 2048) * 3300 / (4096 * 0.1)
+           current_mA = (adc_value - 2048) * 8.0566
 ```
 
 **Overcurrent Detection**:

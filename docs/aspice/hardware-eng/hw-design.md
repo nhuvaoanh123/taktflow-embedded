@@ -410,11 +410,11 @@ Same schematic as CVC (Section 5.1.1) using FDCAN1 on PA12 (TX) and PA11 (RX) wi
                                                   GND
 
   Galvanic isolation between high-current path (IP+/IP-) and signal output.
-  Sensitivity: 400 mV/A (ACS723-20AB variant).
+  Sensitivity: 100 mV/A (ACS723LLCTR-20AB-T, 20A variant).
   Zero-current output: VCC/2 = 1.65V (bidirectional sensing).
-  Full-scale: +/-20A = 1.65V +/- 8.0V = -6.35V to 9.65V (clamped by VCC to 0-3.3V).
-  Practical range: +/-8.25A before output saturates at 0V/3.3V.
-  For 25A motor: use BTS7960 IS pins as backup for currents > 8.25A.
+  Full-scale: +/-20A = 1.65V +/- 2.0V = -0.35V to 3.65V (clamped by VCC to 0-3.3V).
+  Practical range: +/-16.5A before output saturates at 0V/3.3V.
+  For 25A motor: use BTS7960 IS pins as backup for currents > 16.5A.
   1nF capacitor: bandwidth filter (80 kHz).
   100nF capacitor: anti-aliasing at ADC input (1.6 kHz cutoff).
   Zener clamp (BZX84C3V3) across ADC input for overvoltage protection.

@@ -114,7 +114,7 @@ The RZC software shall configure TIM1 for motor PWM output: channel 1 (RPWM) and
 - **Verification method**: Unit test + PIL
 - **Status**: draft
 
-The RZC software shall configure ADC1 channel 1 for motor current sensing at 1 kHz (timer-triggered conversion). Each ADC result (12-bit) shall be converted to milliamps using the formula: current_mA = (adc_value - adc_zero_offset) * (Vref_mV / 4096) / sensitivity_mV_per_A * 1000, where adc_zero_offset (calibrated at zero current, default: 2048 for mid-rail) and sensitivity (400 mV/A for ACS723LLCTR-20AB-T) are compile-time calibratable constants. A moving average filter (4 samples) shall reduce ADC noise while maintaining sufficient bandwidth for 10 ms overcurrent detection.
+The RZC software shall configure ADC1 channel 1 for motor current sensing at 1 kHz (timer-triggered conversion). Each ADC result (12-bit) shall be converted to milliamps using the formula: current_mA = (adc_value - adc_zero_offset) * (Vref_mV / 4096) / sensitivity_mV_per_A * 1000, where adc_zero_offset (calibrated at zero current, default: 2048 for mid-rail) and sensitivity (100 mV/A for ACS723LLCTR-20AB-T 20A variant) are compile-time calibratable constants. A moving average filter (4 samples) shall reduce ADC noise while maintaining sufficient bandwidth for 10 ms overcurrent detection.
 
 ---
 
@@ -604,7 +604,7 @@ The RZC software shall persist DTCs in a dedicated flash sector. Each entry shal
 | ID | Assumption | Impact |
 |----|-----------|--------|
 | SWR-RZC-A-001 | FreeRTOS is the RTOS on the RZC | WCET and priority assignment |
-| SWR-RZC-A-002 | ACS723 sensitivity (400 mV/A) is stable across operating temperature | Current measurement accuracy |
+| SWR-RZC-A-002 | ACS723 sensitivity (100 mV/A) is stable across operating temperature | Current measurement accuracy |
 | SWR-RZC-A-003 | NTC beta parameter (3950) is accurate for the selected thermistor | Temperature accuracy |
 | SWR-RZC-A-004 | Encoder PPR (360) matches the selected motor encoder | Speed calculation |
 

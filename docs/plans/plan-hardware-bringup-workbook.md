@@ -1355,7 +1355,7 @@ These are open safety items that must be measured and documented during bring-up
 | ID | What to Measure | Tool | How | Expected | Actual | Document In |
 |----|----------------|------|-----|----------|--------|-------------|
 | HSR-O-001 | Kill relay dropout time | Oscilloscope | Ch1=GIO_A0, Ch2=actuator rail voltage. Trigger on GIO_A0 falling edge. Measure time from GIO_A0 LOW to actuator rail <1V. | < 10ms | ___ms | hw-safety-reqs.md |
-| HSR-O-002 | ACS723 sensitivity at room temp | Multimeter + known load | Apply a known current (e.g., 1A using a resistive load). Read ADC. Calculate mV/A. | ~400 mV/A | ___mV/A | hw-safety-reqs.md |
+| HSR-O-002 | ACS723 sensitivity at room temp | Multimeter + known load | Apply a known current (e.g., 1A using a resistive load). Read ADC. Calculate mV/A. | ~100 mV/A | ___mV/A | hw-safety-reqs.md |
 | HSR-O-005 | TPS3823 POR pulse width | Oscilloscope | Trigger on power-up (3.3V rail rising edge). Measure NRST LOW duration. | >= 200ms | ___ms | hw-safety-reqs.md |
 
 ---

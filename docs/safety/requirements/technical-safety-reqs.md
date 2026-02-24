@@ -162,7 +162,7 @@ Upon receiving a zero-torque CAN message from the CVC (CAN ID 0x100, passing E2E
 - **Verification method**: Test (PIL + hardware test)
 - **Status**: draft
 
-The RZC shall sample motor current via the ACS723 current sensor on ADC1 channel 1 at a minimum rate of 1 kHz (1 ms period). The ADC shall be configured for 12-bit resolution with a conversion time of less than 5 us. The raw ADC value shall be converted to milliamps using the ACS723 sensitivity (400 mV/A for ACS723LLCTR-20AB-T, calibratable). If the converted current exceeds the overcurrent threshold (calibratable, default: 25000 mA) for a continuous debounce period of 10 ms (10 consecutive samples), the RZC shall disable the motor driver (R_EN = LOW, L_EN = LOW, RPWM = 0, LPWM = 0) within 1 ms of debounce expiry.
+The RZC shall sample motor current via the ACS723 current sensor on ADC1 channel 1 at a minimum rate of 1 kHz (1 ms period). The ADC shall be configured for 12-bit resolution with a conversion time of less than 5 us. The raw ADC value shall be converted to milliamps using the ACS723 sensitivity (100 mV/A for ACS723LLCTR-20AB-T 20A variant, calibratable). If the converted current exceeds the overcurrent threshold (calibratable, default: 25000 mA) for a continuous debounce period of 10 ms (10 consecutive samples), the RZC shall disable the motor driver (R_EN = LOW, L_EN = LOW, RPWM = 0, LPWM = 0) within 1 ms of debounce expiry.
 
 **Rationale**: 1 kHz sampling ensures at least 10 samples within the 10 ms debounce window. The debounce prevents false triggers from motor inrush current (which can reach 3x rated current for less than 5 ms). The ACS723 provides galvanic isolation between the motor power path and the MCU.
 
@@ -1115,7 +1115,7 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 | TSR-A-002 | Steering servo mechanical bandwidth is sufficient for 30 deg/s rate-limited return-to-center within 200 ms | TSR-012 fallback depends on servo speed |
 | TSR-A-003 | CAN bus utilization at 500 kbps with all messages at specified rates does not exceed 50% bus load | E2E timing and heartbeat reliability depends on acceptable bus load |
 | TSR-A-004 | TMS570LC43x DCAN1 can operate in listen-only mode without affecting bus arbitration | SC independence depends on silent mode operation |
-| TSR-A-005 | ACS723 sensitivity (400 mV/A) is stable across the operating temperature range | TSR-006 current measurement accuracy depends on sensor stability |
+| TSR-A-005 | ACS723 sensitivity (100 mV/A) is stable across the operating temperature range | TSR-006 current measurement accuracy depends on sensor stability |
 
 ### 6.2 Open Items
 
