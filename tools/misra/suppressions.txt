@@ -1,141 +1,25 @@
-# =============================================================================
-# MISRA C:2012 Cppcheck Suppressions
-#
-# Each suppression must have a comment explaining WHY it is suppressed.
-# Categories:
-#   - False positive: cppcheck limitation on embedded patterns
-#   - POSIX backend:  Not target firmware, POSIX simulation only
-#   - Intentional:    Formally deviated in misra-deviation-register.md
-#
-# Format: <suppression-id>[:<file>:<line>]
-# =============================================================================
-
-# =============================================================================
-# ADVISORY RULES — project-wide suppression with justification
-# =============================================================================
-
-# Rule 2.3 (Advisory): Unused type declarations
-# Justification: Shared headers (Platform_Types.h, Std_Types.h) define types
-# used across all ECUs. Each ECU only uses a subset. Removing types would
-# break other ECUs.
 misra-c2012-2.3
-
-# Rule 2.4 (Advisory): Unused tag declarations
-# Justification: Same as 2.3 — shared headers define struct/enum tags used
-# by different ECUs.
 misra-c2012-2.4
-
-# Rule 2.5 (Advisory): Unused macro declarations
-# Justification: Shared BSW headers define macros for the full AUTOSAR API.
-# Each ECU uses a subset. This is standard embedded shared-header practice.
 misra-c2012-2.5
-
-# Rule 5.9 (Advisory): Internal linkage identifiers not unique
-# Justification: Static helper functions (e.g., clamp(), map()) reuse names
-# across independent compilation units. No linkage conflict possible.
 misra-c2012-5.9
-
-# Rule 8.7 (Advisory): Object with external linkage should be at block scope
-# Justification: Module-level static variables follow AUTOSAR BSW pattern.
-# Moving to block scope would reduce readability and break module structure.
 misra-c2012-8.7
-
-# Rule 8.9 (Advisory): Object could be declared at block scope
-# Justification: Same as 8.7 — module-level variables used for state tracking
-# across multiple functions in the same module.
 misra-c2012-8.9
-
-# Rule 9.3 (Advisory): Partial array initialization
-# Justification: Zero-initialization via `= {0u}` is well-defined in C99+,
-# zeroing all remaining elements. This is standard embedded practice for
-# PDU buffers and is safer than uninitialized arrays.
 misra-c2012-9.3
-
-# Rule 10.8 (Advisory): Composite expression cast to wider type
-# Justification: Explicit widening casts in arithmetic (e.g., uint16 result
-# from uint8 operands) are intentional for overflow prevention.
 misra-c2012-10.8
-
-# Rule 12.1 (Advisory): Explicit precedence with parentheses
-# Justification: Standard C operator precedence used in simple expressions.
-# Adding parentheses to every sub-expression reduces readability.
 misra-c2012-12.1
-
-# Rule 15.5 (Advisory): Single point of exit
-# Justification: Early return on parameter validation is the project's
-# defensive programming pattern, REQUIRED at ASIL D per ISO 26262 Part 6
-# Section 8.4.3. Safety takes precedence over this advisory rule.
 misra-c2012-15.5
-
-# Rule 17.8 (Advisory): Function parameter modified
-# Justification: Decrementing loop counters passed as parameters is standard
-# embedded C. The parameter is a local copy — no aliasing risk.
 misra-c2012-17.8
-
-# =============================================================================
-# POSIX BACKEND — simulation-only files, not target firmware
-# These files intentionally use POSIX APIs (stdio, signal, time, stdlib)
-# that violate MISRA by design. They are never deployed to hardware.
-# =============================================================================
-
-# Rule 21.5 (Required): <signal.h> shall not be used
-# Justification: POSIX signal handlers for graceful shutdown in Docker
-# simulation. Not present in target firmware.
 misra-c2012-21.5:*/bcm_main.c
 misra-c2012-21.5:*/icu_main.c
 misra-c2012-21.5:*/tcu_main.c
-
-# Rule 21.6 (Required): <stdio.h> shall not be used
-# Justification: printf/fprintf for POSIX simulation diagnostics only.
 misra-c2012-21.6:*/tcu_main.c
 misra-c2012-21.6:*/*_hw_posix.c
-
-# Rule 21.8 (Required): <stdlib.h> termination functions shall not be used
-# Justification: exit() in POSIX simulation for fatal error handling.
 misra-c2012-21.8:*/*_hw_posix.c
-
-# Rule 21.10 (Required): <time.h> shall not be used
-# Justification: clock_gettime() for POSIX timer simulation backend.
 misra-c2012-21.10:*/*_hw_posix.c
-
-# Rule 17.7 (Required): Return value discarded — POSIX backend only
-# Justification: POSIX API calls (close(), write()) in simulation backend
-# where return values are non-actionable in a simulation context.
 misra-c2012-17.7:*/*_hw_posix.c
-
-# Rule 8.4 (Required): Compatible declaration not visible — POSIX backend only
-# Justification: POSIX backend files implement platform-specific HW stubs
-# with extern linkage but no shared header (POSIX-only, never on target).
 misra-c2012-8.4:*/*_hw_posix.c
-
-# =============================================================================
-# AUTOSAR PATTERN DEVIATIONS — formally deviated in misra-deviation-register.md
-# These violations are inherent to the AUTOSAR BSW design pattern and cannot
-# be fixed without breaking the standardized API.
-# =============================================================================
-
-# Rule 11.5 (Required): Conversion from void* to pointer to object
-# Justification: AUTOSAR Com module uses generic void* for signal data
-# to support multiple signal types (uint8, uint16, sint16). This is an
-# inherent AUTOSAR SWS_COMModule design pattern. Formally deviated: DEV-001.
 misra-c2012-11.5:*/Com.c
-
-# Rule 11.8 (Required): Cast removes const qualification
-# Justification: AUTOSAR BSW callbacks receive const PduInfoType* but
-# need to store the data pointer for internal processing. Standard
-# AUTOSAR BSW pattern. Formally deviated: DEV-002.
 misra-c2012-11.8:*/CanIf.c
 misra-c2012-11.8:*/Dcm.c
-
-# =============================================================================
-# FALSE POSITIVES — cppcheck limitations on embedded/AUTOSAR patterns
-# =============================================================================
-
-# Rule 17.3 (Required): Implicit function declaration — false positive
-# Justification: Dcm module uses function pointer table for DID callbacks.
-# cppcheck misidentifies indirect function pointer calls as implicit decls.
 misra-c2012-17.3:*/Dcm.c
-
-# Rule 17.3 (Required): Implicit function declaration — POSIX backend
-# Justification: SC POSIX backend uses platform APIs. Not target firmware.
 misra-c2012-17.3:*/sc_hw_posix.c
