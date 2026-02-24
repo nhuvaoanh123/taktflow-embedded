@@ -30,7 +30,7 @@ deviation but are tracked for completeness at ASIL D.
 | ID | Rule | Category | File(s) | Status |
 |----|------|----------|---------|--------|
 | DEV-001 | 11.5 | Required | `Com.c` | Approved |
-| DEV-002 | 11.8 | Required | `CanIf.c`, `Dcm.c` | Approved |
+| DEV-002 | 11.8 | Required | `Com.c`, `CanIf.c`, `Dcm.c` | Approved |
 
 ---
 
@@ -63,6 +63,7 @@ deviation but are tracked for completeness at ASIL D.
 
 - **Category:** Required
 - **Location:**
+  - `firmware/shared/bsw/services/Com.c` — casting `ShadowBuffer` pointer (5 instances in signal packing/unpacking)
   - `firmware/shared/bsw/ecual/CanIf.c:78` — storing `const PduInfoType*` data pointer
   - `firmware/shared/bsw/services/Dcm.c:51` — storing `const uint8*` request data
 - **Code:**
