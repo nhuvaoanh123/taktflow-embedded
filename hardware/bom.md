@@ -83,7 +83,7 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 19 | 12V DC Brushed Motor (with encoder mount) | 1 | $15.00 | $15.00 | Amazon | 775 Motor 12V 12000RPM | Not ordered | Phase 2 |
 | 20 | BTS7960 H-Bridge Motor Driver Module (43A) | 1 | $12.00 | $12.00 | Amazon / AliExpress | BTS7960 module | Not ordered | Phase 2 |
-| 21 | MG996R Metal Gear Servo (360 degree, 50Hz) | 2 | $8.00 | $16.00 | Amazon | MG996R (TowerPro or equiv.) | Not ordered | Phase 2 |
+| 21 | MG996R Metal Gear Servo (180 degree, 50Hz) | 2 | $8.00 | $16.00 | Amazon | MG996R (TowerPro or equiv.) | Not ordered | Phase 2 |
 | | **Subtotal: Actuators** | | | **$43.00** | | | | |
 
 ### 3.5 Safety Hardware
