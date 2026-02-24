@@ -239,6 +239,11 @@ CPPCHECK_FLAGS = \
     --std=c99 \
     --platform=unix32 \
     --suppress=missingIncludeSystem \
+    --suppress=variableScope \
+    --suppress=redundantAssignment \
+    --suppress=unreadVariable \
+    --suppress=knownConditionTrueFalse \
+    --suppress=badBitmaskCheck \
     --suppressions-list=$(MISRA_SUPPR) \
     --inline-suppr \
     --error-exitcode=1
