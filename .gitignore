@@ -37,6 +37,7 @@ __pycache__/
 
 # MISRA rule texts (copyright, not redistributable)
 tools/misra/*.txt
+!tools/misra/suppressions.txt
 
 # Dependencies
 node_modules/
