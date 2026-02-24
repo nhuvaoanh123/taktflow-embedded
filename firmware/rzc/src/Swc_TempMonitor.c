@@ -202,8 +202,11 @@ void Swc_TempMonitor_MainFunction(void)
     /* ------------------------------------------------------------ */
     /* 2. Read temperature from IoHwAb                               */
     /* ------------------------------------------------------------ */
-    temp_dC = 0;
-    (void)IoHwAb_ReadMotorTemp(&temp_dC);
+    {
+        uint16 raw_temp = 0U;
+        (void)IoHwAb_ReadMotorTemp(&raw_temp);
+        temp_dC = (sint16)raw_temp;
+    }
 
     /* ------------------------------------------------------------ */
     /* 3. Range check: plausible NTC bounds                          */
@@ -267,8 +270,7 @@ void Swc_TempMonitor_MainFunction(void)
     tx_data[TM_CAN_BYTE_DERATE]  = TM_DeratingPct;
     tx_data[TM_CAN_BYTE_ALIVE]   = TM_AliveCounter;
 
-    (void)Com_SendSignal((uint16)RZC_COM_TX_MOTOR_TEMP,
-                         tx_data, TM_CAN_PAYLOAD_LEN);
+    (void)Com_SendSignal((uint16)RZC_COM_TX_MOTOR_TEMP, tx_data);
 
     /* ------------------------------------------------------------ */
     /* 10. Increment alive counter (wrap at 15)                      */
