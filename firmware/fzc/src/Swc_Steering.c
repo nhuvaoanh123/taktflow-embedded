@@ -316,8 +316,11 @@ void Swc_Steering_MainFunction(void)
     /* ----------------------------------------------------------
      * Step 3: Read actual angle from IoHwAb (SPI)
      * ---------------------------------------------------------- */
-    actual_angle = 0;
-    ret = IoHwAb_ReadSteeringAngle(&actual_angle);
+    {
+        uint16 raw_angle = 0U;
+        ret = IoHwAb_ReadSteeringAngle(&raw_angle);
+        actual_angle = (sint16)raw_angle;
+    }
 
     if (ret != E_OK) {
         /* SPI failure: immediate fault */
