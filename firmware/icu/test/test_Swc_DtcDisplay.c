@@ -282,6 +282,186 @@ void test_DtcDisplay_clear_all(void)
 }
 
 /* ====================================================================
+ * HARDENED: Boundary value tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: GetEntry — out-of-range index returns NULL
+ *  Boundary value: index == count (just past valid), index == max, index == 255 */
+void test_DtcDisplay_get_entry_out_of_range(void)
+{
+    /* Empty buffer — index 0 should be NULL */
+    TEST_ASSERT_TRUE(Swc_DtcDisplay_GetEntry(0u) == NULL_PTR);
+    TEST_ASSERT_TRUE(Swc_DtcDisplay_GetEntry(15u) == NULL_PTR);
+    TEST_ASSERT_TRUE(Swc_DtcDisplay_GetEntry(255u) == NULL_PTR);
+
+    /* Add 1 entry, check boundary */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xC00100u, 0x01u);
+    Swc_DtcDisplay_50ms();
+    TEST_ASSERT_NOT_NULL(Swc_DtcDisplay_GetEntry(0u));
+    TEST_ASSERT_TRUE(Swc_DtcDisplay_GetEntry(1u) == NULL_PTR);
+}
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: DTC code — boundary DTC code values (min and max 24-bit)
+ *  Boundary value: code 0x000001 (minimum valid) and 0xFFFFFF (maximum 24-bit) */
+void test_DtcDisplay_boundary_dtc_codes(void)
+{
+    const DtcEntry_t* entry;
+
+    /* Minimum non-zero 24-bit code */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0x000001u, 0x01u);
+    Swc_DtcDisplay_50ms();
+    entry = Swc_DtcDisplay_GetEntry(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT32(0x000001u, entry->code);
+
+    /* Clear and reset for next test */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = 0u;
+    Swc_DtcDisplay_50ms();
+
+    /* Maximum 24-bit code */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xFFFFFFu, 0x09u);
+    Swc_DtcDisplay_50ms();
+    entry = Swc_DtcDisplay_GetEntry(1u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFu, entry->code);
+}
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: status byte — all status bits set (0xFF)
+ *  Boundary value: maximum status byte value */
+void test_DtcDisplay_max_status_byte(void)
+{
+    const DtcEntry_t* entry;
+
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xABCDEFu, 0xFFu);
+    Swc_DtcDisplay_50ms();
+
+    entry = Swc_DtcDisplay_GetEntry(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, entry->status);
+}
+
+/* ====================================================================
+ * HARDENED: Zero/null broadcast handling
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: broadcast — zero broadcast is ignored
+ *  Verify no DTC is added for zero broadcast value */
+void test_DtcDisplay_zero_broadcast_ignored(void)
+{
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = 0u;
+    Swc_DtcDisplay_50ms();
+    Swc_DtcDisplay_50ms();
+    Swc_DtcDisplay_50ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, Swc_DtcDisplay_GetCount());
+}
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: broadcast — same broadcast value is deduplicated
+ *  Verify identical consecutive broadcasts do not create duplicates */
+void test_DtcDisplay_same_broadcast_deduplicated(void)
+{
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xC00100u, 0x01u);
+
+    /* Send same broadcast 3 times — should only add once due to last_broadcast check */
+    Swc_DtcDisplay_50ms();
+    Swc_DtcDisplay_50ms();
+    Swc_DtcDisplay_50ms();
+
+    TEST_ASSERT_EQUAL_UINT8(1u, Swc_DtcDisplay_GetCount());
+}
+
+/* ====================================================================
+ * HARDENED: Circular buffer replacement verification
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-008
+ *  Equivalence class: circular buffer — oldest-by-timestamp replacement
+ *  Verify the entry with the lowest timestamp is replaced when buffer is full */
+void test_DtcDisplay_circular_replaces_oldest_by_timestamp(void)
+{
+    uint8 i;
+    const DtcEntry_t* entry;
+
+    /* Fill all 16 slots */
+    for (i = 0u; i < DTC_MAX_ENTRIES; i++) {
+        mock_rte_signals[ICU_SIG_DTC_BROADCAST] =
+            encode_dtc_broadcast((uint32)(0xA00000u + i), 0x01u);
+        Swc_DtcDisplay_50ms();
+
+        /* Clear broadcast to allow next unique broadcast */
+        mock_rte_signals[ICU_SIG_DTC_BROADCAST] = 0u;
+        Swc_DtcDisplay_50ms();
+    }
+    TEST_ASSERT_EQUAL_UINT8(DTC_MAX_ENTRIES, Swc_DtcDisplay_GetCount());
+
+    /* Entry 0 has the oldest timestamp — add a new DTC */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xBEEF01u, 0x09u);
+    Swc_DtcDisplay_50ms();
+
+    /* The original DTC at index 0 (0xA00000) should have been replaced */
+    boolean original_found = FALSE;
+    boolean new_found      = FALSE;
+    for (i = 0u; i < DTC_MAX_ENTRIES; i++) {
+        entry = Swc_DtcDisplay_GetEntry(i);
+        if (entry != NULL_PTR) {
+            if (entry->code == 0xA00000u) { original_found = TRUE; }
+            if (entry->code == 0xBEEF01u) { new_found = TRUE; }
+        }
+    }
+    TEST_ASSERT_FALSE(original_found);  /* Oldest should be gone */
+    TEST_ASSERT_TRUE(new_found);        /* New DTC should be present */
+}
+
+/* ====================================================================
+ * HARDENED: Fault injection tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-008
+ *  Fault injection: call 50ms without init — should not execute */
+void test_DtcDisplay_not_init_does_nothing(void)
+{
+    initialized = FALSE;
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xC00100u, 0x01u);
+
+    Swc_DtcDisplay_50ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, Swc_DtcDisplay_GetCount());
+}
+
+/** @verifies SWR-ICU-008
+ *  Fault injection: clear then re-add — buffer operates correctly after clear */
+void test_DtcDisplay_clear_then_readd(void)
+{
+    /* Add 2 DTCs */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xC00100u, 0x01u);
+    Swc_DtcDisplay_50ms();
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xC00200u, 0x04u);
+    Swc_DtcDisplay_50ms();
+    TEST_ASSERT_EQUAL_UINT8(2u, Swc_DtcDisplay_GetCount());
+
+    /* Clear */
+    Swc_DtcDisplay_ClearAll();
+    TEST_ASSERT_EQUAL_UINT8(0u, Swc_DtcDisplay_GetCount());
+
+    /* Re-add — should work from clean state */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = 0u;
+    Swc_DtcDisplay_50ms();  /* reset last_broadcast */
+
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST] = encode_dtc_broadcast(0xD00100u, 0x09u);
+    Swc_DtcDisplay_50ms();
+    TEST_ASSERT_EQUAL_UINT8(1u, Swc_DtcDisplay_GetCount());
+
+    const DtcEntry_t* entry = Swc_DtcDisplay_GetEntry(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT32(0xD00100u, entry->code);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -297,6 +477,22 @@ int main(void)
     RUN_TEST(test_DtcDisplay_active_status_flag);
     RUN_TEST(test_DtcDisplay_pending_status_flag);
     RUN_TEST(test_DtcDisplay_clear_all);
+
+    /* HARDENED: Boundary values */
+    RUN_TEST(test_DtcDisplay_get_entry_out_of_range);
+    RUN_TEST(test_DtcDisplay_boundary_dtc_codes);
+    RUN_TEST(test_DtcDisplay_max_status_byte);
+
+    /* HARDENED: Zero/null broadcast */
+    RUN_TEST(test_DtcDisplay_zero_broadcast_ignored);
+    RUN_TEST(test_DtcDisplay_same_broadcast_deduplicated);
+
+    /* HARDENED: Circular buffer */
+    RUN_TEST(test_DtcDisplay_circular_replaces_oldest_by_timestamp);
+
+    /* HARDENED: Fault injection */
+    RUN_TEST(test_DtcDisplay_not_init_does_nothing);
+    RUN_TEST(test_DtcDisplay_clear_then_readd);
 
     return UNITY_END();
 }

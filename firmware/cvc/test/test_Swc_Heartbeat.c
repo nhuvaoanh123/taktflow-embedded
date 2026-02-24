@@ -478,6 +478,241 @@ void test_Heartbeat_RTE_write_rzc_comm_each_cycle(void)
 }
 
 /* ====================================================================
+ * HARDENED TESTS — Boundary Value, Fault Injection, Defensive Checks
+ * ==================================================================== */
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-021: TX timing boundary — exactly 4 cycles (no TX yet)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-021
+ *  Equivalence class: VALID — boundary: 4 cycles = 40ms, no TX yet
+ *  Boundary: tx_timer = 4 (one below threshold of 5) */
+void test_Heartbeat_No_TX_at_4_cycles(void)
+{
+    run_cycles(4u);
+
+    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+}
+
+/** @verifies SWR-CVC-021
+ *  Equivalence class: VALID — boundary: exactly 5 cycles = 50ms, TX fires
+ *  Boundary: tx_timer = 5 (exactly at threshold) */
+void test_Heartbeat_TX_at_exactly_5_cycles(void)
+{
+    run_cycles(5u);
+
+    TEST_ASSERT_EQUAL(1u, mock_com_send_count);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-021: Alive counter wrap at max (15)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-021
+ *  Equivalence class: VALID — alive counter boundary: wraps from 15 to 0
+ *  Boundary: alive_counter = CVC_HB_ALIVE_MAX (15), next should be 0 */
+void test_Heartbeat_Alive_wrap_exact_boundary(void)
+{
+    uint8 cycle;
+
+    /* Run 15 TX periods to get alive counter to 14 (0..14 = 15 values) */
+    for (cycle = 0u; cycle < 15u; cycle++) {
+        run_cycles(5u);
+    }
+
+    /* After 15 TXes, alive counter should be 15 (wraps after next) */
+    /* 16th TX: counter was 15, next cycle resets to 0 */
+    run_cycles(5u);
+
+    /* The alive counter in data byte should be <= CVC_HB_ALIVE_MAX */
+    TEST_ASSERT_TRUE(mock_com_send_data[0] <= CVC_HB_ALIVE_MAX);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-022: RX indication with unknown ECU ID — ignored
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-022
+ *  Equivalence class: INVALID — unknown ECU ID in RxIndication
+ *  Boundary: ecuId != CVC_ECU_ID_FZC and != CVC_ECU_ID_RZC */
+void test_Heartbeat_RxIndication_unknown_ecu_ignored(void)
+{
+    /* Run enough for both timeouts */
+    run_cycles(5u);
+    run_cycles(5u);
+    run_cycles(5u);
+
+    /* Indicate with unknown ECU ID — should have no effect */
+    Swc_Heartbeat_RxIndication(0xFFu);
+
+    mock_rte_write_count = 0u;
+    run_cycles(5u);
+
+    /* FZC and RZC should still be timed out */
+    boolean fzc_timeout = FALSE;
+    boolean rzc_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            fzc_timeout = TRUE;
+        }
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_RZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            rzc_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(fzc_timeout);
+    TEST_ASSERT_TRUE(rzc_timeout);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-022: RX indication with ECU ID = 0 — ignored
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-022
+ *  Equivalence class: INVALID — ECU ID boundary: 0 (not a valid ECU)
+ *  Boundary: ecuId = 0 */
+void test_Heartbeat_RxIndication_ecu_id_zero_ignored(void)
+{
+    Swc_Heartbeat_RxIndication(0u);
+
+    /* Run timeout check — both should still time out */
+    run_cycles(5u);
+    run_cycles(5u);
+    run_cycles(5u);
+
+    boolean fzc_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            fzc_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(fzc_timeout);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-022: Timeout boundary — exactly 2 misses (below threshold)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-022
+ *  Equivalence class: VALID — 2 misses (below 3-miss threshold), no timeout
+ *  Boundary: miss_count = 2 (one below CVC_HB_MAX_MISS = 3) */
+void test_Heartbeat_FZC_no_timeout_at_2_misses(void)
+{
+    /* 2 check periods without FZC RX */
+    run_cycles(5u);
+    run_cycles(5u);
+
+    /* FZC should NOT yet be in timeout */
+    boolean found_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            found_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_FALSE(found_timeout);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-022: FZC timeout does not affect RZC and vice versa
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-022
+ *  Equivalence class: VALID — FZC timeout while RZC receives heartbeats
+ *  Fault injection: asymmetric ECU failure */
+void test_Heartbeat_FZC_timeout_RZC_ok(void)
+{
+    /* Indicate RZC heartbeat each period, never FZC */
+    run_cycles(5u);
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
+    run_cycles(5u);
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
+    run_cycles(5u);
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
+
+    /* After 3 periods: FZC should timeout, RZC should be OK */
+    boolean fzc_timeout = FALSE;
+    boolean rzc_ok = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            fzc_timeout = TRUE;
+        }
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_RZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_OK)) {
+            rzc_ok = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(fzc_timeout);
+    TEST_ASSERT_TRUE(rzc_ok);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-022: DTC not re-reported once already in timeout
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-022
+ *  Equivalence class: VALID — DTC reported once, not again on subsequent misses
+ *  Boundary: fzc_comm_status already == CVC_COMM_TIMEOUT */
+void test_Heartbeat_DTC_not_re_reported_after_timeout(void)
+{
+    /* Trigger FZC timeout (3 misses) */
+    run_cycles(5u);
+    run_cycles(5u);
+    run_cycles(5u);
+
+    uint8 dtc_count_at_timeout = mock_dem_report_count;
+
+    /* Run 3 more periods — DTC should not be re-reported */
+    run_cycles(5u);
+    run_cycles(5u);
+    run_cycles(5u);
+
+    /* Count FZC timeout DTCs in the additional reports */
+    uint8 fzc_timeout_dtcs = 0u;
+    uint8 i;
+    for (i = dtc_count_at_timeout; i < mock_dem_report_count; i++) {
+        if (i < 8u) {
+            if ((mock_dem_event_ids[i] == CVC_DTC_CAN_FZC_TIMEOUT) &&
+                (mock_dem_event_statuses[i] == DEM_EVENT_STATUS_FAILED)) {
+                fzc_timeout_dtcs++;
+            }
+        }
+    }
+    /* No additional FZC timeout FAILED DTCs after initial report */
+    TEST_ASSERT_EQUAL(0u, fzc_timeout_dtcs);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-021: MainFunction before Init — no action
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-021
+ *  Equivalence class: INVALID — uninitialized module
+ *  Boundary: initialized == FALSE */
+void test_Heartbeat_MainFunction_before_init_no_action(void)
+{
+    /* Reset initialized flag (source included) */
+    initialized = FALSE;
+
+    mock_com_send_count = 0u;
+    run_cycles(10u);
+
+    /* Should do nothing — not initialized */
+    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+
+    /* Restore */
+    Swc_Heartbeat_Init();
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -500,6 +735,17 @@ int main(void)
     RUN_TEST(test_Heartbeat_RTE_write_rzc_comm_each_cycle);
     RUN_TEST(test_Heartbeat_TX_data_includes_ecu_id_and_state);
     RUN_TEST(test_Heartbeat_No_TX_before_50ms);
+
+    /* --- HARDENED TESTS --- */
+    RUN_TEST(test_Heartbeat_No_TX_at_4_cycles);
+    RUN_TEST(test_Heartbeat_TX_at_exactly_5_cycles);
+    RUN_TEST(test_Heartbeat_Alive_wrap_exact_boundary);
+    RUN_TEST(test_Heartbeat_RxIndication_unknown_ecu_ignored);
+    RUN_TEST(test_Heartbeat_RxIndication_ecu_id_zero_ignored);
+    RUN_TEST(test_Heartbeat_FZC_no_timeout_at_2_misses);
+    RUN_TEST(test_Heartbeat_FZC_timeout_RZC_ok);
+    RUN_TEST(test_Heartbeat_DTC_not_re_reported_after_timeout);
+    RUN_TEST(test_Heartbeat_MainFunction_before_init_no_action);
 
     return UNITY_END();
 }

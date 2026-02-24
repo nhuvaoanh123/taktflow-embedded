@@ -426,6 +426,300 @@ void test_Display_fault_does_not_crash(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Value, Fault Injection, Defensive Checks
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-027: State display — all valid states rendered
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — INIT state renders "ST:INIT"
+ *  Boundary: vehicle_state == CVC_STATE_INIT (0, minimum valid) */
+void test_State_display_init(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = CVC_STATE_INIT;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("ST:INIT"));
+}
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — LIMP state renders "ST:LIMP"
+ *  Boundary: vehicle_state == CVC_STATE_LIMP (3) */
+void test_State_display_limp(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = CVC_STATE_LIMP;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("ST:LIMP"));
+}
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — SHUTDOWN state renders "ST:SHUT"
+ *  Boundary: vehicle_state == CVC_STATE_SHUTDOWN (5, maximum valid) */
+void test_State_display_shutdown(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = CVC_STATE_SHUTDOWN;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("ST:SHUT"));
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-027: Invalid state — renders "????" fallback
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: INVALID — vehicle_state out of range
+ *  Boundary: vehicle_state == CVC_STATE_COUNT (6, first invalid) */
+void test_State_display_out_of_range_shows_fallback(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = 6u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("ST:????"));
+}
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: INVALID — vehicle_state at max uint32
+ *  Boundary: vehicle_state == 0xFFFFFFFF */
+void test_State_display_max_uint32_shows_fallback(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = 0xFFFFFFFFuL;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("ST:????"));
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-027: Refresh boundary — exactly 19 cycles (no refresh)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — 19 cycles = 190ms, no refresh yet
+ *  Boundary: refresh_counter = 19 (one below threshold of 20) */
+void test_Refresh_no_update_at_19_cycles(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_VEHICLE_STATE] = CVC_STATE_RUN;
+    mock_display_write_count = 0u;
+
+    /* Run 20 to trigger first refresh */
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    /* Reset and run only 19 — no second refresh */
+    mock_display_write_count = 0u;
+    for (i = 0u; i < 19u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_display_write_count);
+
+    /* One more cycle = exactly 20 — triggers refresh */
+    Swc_Dashboard_MainFunction();
+    TEST_ASSERT_TRUE(mock_display_write_count > 0u);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-028: Speed display — boundary values
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — speed = 0 (minimum)
+ *  Boundary: motor_speed == 0 */
+void test_Speed_display_zero(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_MOTOR_SPEED] = 0u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("SPD:0"));
+}
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — speed = 65535 (max uint16)
+ *  Boundary: motor_speed == 0xFFFF */
+void test_Speed_display_max_uint16(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_MOTOR_SPEED] = 65535u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("SPD:65535"));
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-028: Fault mask display — zero shows "OK"
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — no faults renders "FLT:OK"
+ *  Boundary: fault_mask == 0 */
+void test_Fault_display_no_faults_shows_ok(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_FAULT_MASK] = 0u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("FLT:OK"));
+}
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — single fault bit renders hex
+ *  Boundary: fault_mask == 0x01 (minimum non-zero) */
+void test_Fault_display_single_bit_shows_hex(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_FAULT_MASK] = 1u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("FLT:1"));
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-028: I2C fault — single failure is retried, not latched
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — 1 failed refresh recovers on next success
+ *  Boundary: retry_count = 1 (below threshold of 2) */
+void test_I2c_single_failure_recovers(void)
+{
+    uint8 i;
+
+    /* First refresh fails */
+    mock_ssd1306_write_result = E_NOT_OK;
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    /* Second refresh succeeds — retry_count should reset */
+    mock_ssd1306_write_result = E_OK;
+    mock_display_write_count = 0u;
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    /* Third refresh — should still render (not faulted) */
+    mock_display_write_count = 0u;
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(mock_display_write_count > 0u);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-028: DTC not re-reported after fault latch
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-028
+ *  Equivalence class: VALID — DTC reported once on fault latch
+ *  Boundary: display_fault transitions TRUE -> remains TRUE */
+void test_DTC_reported_once_on_fault_latch(void)
+{
+    uint8 i;
+
+    mock_ssd1306_write_result = E_NOT_OK;
+
+    /* Two refresh cycles to trigger fault latch */
+    for (i = 0u; i < 40u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    uint8 dtc_count_at_latch = mock_dem_call_count;
+    TEST_ASSERT_TRUE(dtc_count_at_latch > 0u);
+
+    /* Further cycles should not re-report DTC (display_fault latched) */
+    for (i = 0u; i < 40u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(dtc_count_at_latch, mock_dem_call_count);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-027: Pedal display — percentage rendering
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — pedal at 0 renders "PED:0%"
+ *  Boundary: pedal_position == 0 (minimum) */
+void test_Pedal_display_zero(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_PEDAL_POSITION] = 0u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("PED:0%"));
+}
+
+/** @verifies SWR-CVC-027
+ *  Equivalence class: VALID — pedal at 1000 renders "PED:100%"
+ *  Boundary: pedal_position == 1000 (full scale) */
+void test_Pedal_display_full_scale(void)
+{
+    uint8 i;
+
+    mock_rte_signals[CVC_SIG_PEDAL_POSITION] = 1000u;
+
+    for (i = 0u; i < 20u; i++) {
+        Swc_Dashboard_MainFunction();
+    }
+
+    TEST_ASSERT_TRUE(display_contains("PED:100%"));
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -444,6 +738,22 @@ int main(void)
     RUN_TEST(test_Refresh_rate_200ms);
     RUN_TEST(test_I2c_fault_reports_dtc);
     RUN_TEST(test_Display_fault_does_not_crash);
+
+    /* --- HARDENED TESTS --- */
+    RUN_TEST(test_State_display_init);
+    RUN_TEST(test_State_display_limp);
+    RUN_TEST(test_State_display_shutdown);
+    RUN_TEST(test_State_display_out_of_range_shows_fallback);
+    RUN_TEST(test_State_display_max_uint32_shows_fallback);
+    RUN_TEST(test_Refresh_no_update_at_19_cycles);
+    RUN_TEST(test_Speed_display_zero);
+    RUN_TEST(test_Speed_display_max_uint16);
+    RUN_TEST(test_Fault_display_no_faults_shows_ok);
+    RUN_TEST(test_Fault_display_single_bit_shows_hex);
+    RUN_TEST(test_I2c_single_failure_recovers);
+    RUN_TEST(test_DTC_reported_once_on_fault_latch);
+    RUN_TEST(test_Pedal_display_zero);
+    RUN_TEST(test_Pedal_display_full_scale);
 
     return UNITY_END();
 }

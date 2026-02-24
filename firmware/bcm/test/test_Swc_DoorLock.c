@@ -236,6 +236,224 @@ void test_DoorLock_not_init_does_nothing(void)
 }
 
 /* ====================================================================
+ * HARDENED: Boundary value tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: auto-lock speed — boundary at threshold (10/11)
+ *  Boundary value: speed == 10 should NOT lock, speed == 11 should lock */
+void test_DoorLock_boundary_speed_at_threshold(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+
+    /* speed == 10 — exactly at threshold, should NOT auto-lock (> not >=) */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED] = 10u;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+
+    /* speed == 11 — one above threshold, SHOULD auto-lock */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED] = 11u;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: auto-lock speed — max uint32 speed
+ *  Boundary value: maximum representable speed should lock */
+void test_DoorLock_boundary_max_speed_locks(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0xFFFFFFFFu;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+
+    Swc_DoorLock_100ms();
+
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: auto-lock speed — zero speed should not lock
+ *  Boundary value: speed == 0 */
+void test_DoorLock_boundary_speed_zero_no_lock(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+
+    Swc_DoorLock_100ms();
+
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/* ====================================================================
+ * HARDENED: State transition edge cases
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: parked detection — Is_Parked for all vehicle states
+ *  Partition: INIT(0) and READY(1) are parked, all others are not */
+void test_DoorLock_parked_detection_all_states(void)
+{
+    /* Parked states: INIT (0) and READY (1) */
+    TEST_ASSERT_TRUE(BCM_VSTATE_INIT <= BCM_VSTATE_READY);
+    TEST_ASSERT_TRUE(BCM_VSTATE_READY <= BCM_VSTATE_READY);
+
+    /* Non-parked states: DRIVING (2), DEGRADED (3), ESTOP (4), FAULT (5) */
+    TEST_ASSERT_TRUE(BCM_VSTATE_DRIVING > BCM_VSTATE_READY);
+    TEST_ASSERT_TRUE(BCM_VSTATE_DEGRADED > BCM_VSTATE_READY);
+    TEST_ASSERT_TRUE(BCM_VSTATE_ESTOP > BCM_VSTATE_READY);
+    TEST_ASSERT_TRUE(BCM_VSTATE_FAULT > BCM_VSTATE_READY);
+}
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: auto-unlock — transition from each non-parked to READY
+ *  Tests all non-parked -> parked transitions trigger unlock */
+void test_DoorLock_auto_unlock_from_all_non_parked_states(void)
+{
+    uint32 non_parked_states[] = {
+        BCM_VSTATE_DRIVING, BCM_VSTATE_DEGRADED,
+        BCM_VSTATE_ESTOP, BCM_VSTATE_FAULT
+    };
+    uint8 i;
+
+    for (i = 0u; i < 4u; i++) {
+        /* Re-initialize */
+        Swc_DoorLock_Init();
+
+        /* First cycle: establish non-parked state and lock via speed */
+        mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+        mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 20u;
+        mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = non_parked_states[i];
+        Swc_DoorLock_100ms();
+        TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+
+        /* Second cycle: transition to READY (parked) with low speed */
+        mock_rte_signals[BCM_SIG_VEHICLE_SPEED] = 0u;
+        mock_rte_signals[BCM_SIG_VEHICLE_STATE] = BCM_VSTATE_READY;
+        Swc_DoorLock_100ms();
+        TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+    }
+}
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: no unlock on parked->parked transition
+ *  Verify INIT->READY does NOT trigger auto-unlock (both are parked) */
+void test_DoorLock_no_unlock_parked_to_parked(void)
+{
+    /* Init sets prev_vehicle_state = INIT (parked) */
+    /* Manual lock */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 8u);
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+
+    /* Still parked, no manual unlock command but also no transition */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    Swc_DoorLock_100ms();
+    /* Should still be locked — no was_parked=FALSE -> now_parked=TRUE */
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/* ====================================================================
+ * HARDENED: Manual lock and auto-lock interaction
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: manual lock cmd — non-lock bits in byte 1 ignored
+ *  Verify only bit 8 (byte 1 bit 0) triggers lock */
+void test_DoorLock_manual_lock_only_bit8_matters(void)
+{
+    /* Set byte 1 high bits but NOT bit 0 of byte 1 */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0xFE00u; /* bits 9-15 set, bit 8 clear */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    Swc_DoorLock_100ms();
+
+    /* Should NOT lock — only bit 8 triggers manual lock */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/** @verifies SWR-BCM-009
+ *  Equivalence class: auto-lock overrides manual — speed overrides unlock
+ *  Verify that auto-lock (speed > threshold) wins even without manual cmd */
+void test_DoorLock_auto_lock_overrides_no_manual(void)
+{
+    /* No manual command, but speed triggers auto-lock */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 50u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+
+    /* Speed drops below threshold — lock should persist (no auto-unlock
+       unless transitioning to parked) */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED] = 5u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE] = BCM_VSTATE_DRIVING;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/* ====================================================================
+ * HARDENED: Fault injection tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-009
+ *  Fault injection: invalid vehicle state value (255) — should not crash,
+ *  should NOT be considered parked */
+void test_DoorLock_fault_invalid_vehicle_state(void)
+{
+    /* First establish a non-parked previous state */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 20u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+
+    /* Invalid state 255 — Is_Parked(255) returns FALSE (255 > READY) */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE] = 255u;
+    Swc_DoorLock_100ms();
+    /* No auto-unlock (not transitioning to parked), no auto-lock (speed=0) */
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_DOOR_LOCK_STATE]);
+}
+
+/** @verifies SWR-BCM-009
+ *  Fault injection: repeated calls without init — no writes */
+void test_DoorLock_repeated_calls_without_init(void)
+{
+    initialized = FALSE;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 8u);
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 50u;
+    mock_rte_write_count = 0u;
+
+    Swc_DoorLock_100ms();
+    Swc_DoorLock_100ms();
+    Swc_DoorLock_100ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_rte_write_count);
+}
+
+/** @verifies SWR-BCM-009
+ *  Fault injection: re-initialization resets lock and prev state */
+void test_DoorLock_reinit_resets_state(void)
+{
+    /* Lock via speed */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 20u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    Swc_DoorLock_100ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, lock_state);
+
+    /* Re-init */
+    Swc_DoorLock_Init();
+    TEST_ASSERT_EQUAL_UINT32(0u, lock_state);
+    TEST_ASSERT_EQUAL_UINT32(BCM_VSTATE_INIT, prev_vehicle_state);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -249,6 +467,25 @@ int main(void)
     RUN_TEST(test_DoorLock_auto_lock_above_10_speed);
     RUN_TEST(test_DoorLock_auto_unlock_when_parked);
     RUN_TEST(test_DoorLock_not_init_does_nothing);
+
+    /* HARDENED: Boundary values */
+    RUN_TEST(test_DoorLock_boundary_speed_at_threshold);
+    RUN_TEST(test_DoorLock_boundary_max_speed_locks);
+    RUN_TEST(test_DoorLock_boundary_speed_zero_no_lock);
+
+    /* HARDENED: State transition edge cases */
+    RUN_TEST(test_DoorLock_parked_detection_all_states);
+    RUN_TEST(test_DoorLock_auto_unlock_from_all_non_parked_states);
+    RUN_TEST(test_DoorLock_no_unlock_parked_to_parked);
+
+    /* HARDENED: Manual/auto-lock interaction */
+    RUN_TEST(test_DoorLock_manual_lock_only_bit8_matters);
+    RUN_TEST(test_DoorLock_auto_lock_overrides_no_manual);
+
+    /* HARDENED: Fault injection */
+    RUN_TEST(test_DoorLock_fault_invalid_vehicle_state);
+    RUN_TEST(test_DoorLock_repeated_calls_without_init);
+    RUN_TEST(test_DoorLock_reinit_resets_state);
 
     return UNITY_END();
 }

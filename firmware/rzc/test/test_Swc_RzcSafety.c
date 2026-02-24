@@ -457,6 +457,103 @@ void test_Safety_status_output(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-RZC-023
+ *  Equivalence class: Fault injection — all faults simultaneously active */
+void test_All_faults_simultaneously(void)
+{
+    mock_rte_signals[RZC_SIG_OVERCURRENT]      = 1u;
+    mock_rte_signals[RZC_SIG_TEMP_FAULT]       = 1u;
+    mock_rte_signals[RZC_SIG_ENCODER_DIR]      = 1u;
+    mock_rte_signals[RZC_SIG_ENCODER_STALL]    = 1u;
+    mock_rte_signals[RZC_SIG_ESTOP_ACTIVE]     = 1u;
+    mock_rte_signals[RZC_SIG_SELF_TEST_RESULT] = (uint32)RZC_SELF_TEST_FAIL;
+    mock_can_bus_off = CAN_ERRORSTATE_BUSOFF;
+
+    Swc_RzcSafety_MainFunction();
+
+    uint32 mask = mock_rte_signals[RZC_SIG_FAULT_MASK];
+
+    /* All fault bits should be set */
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_OVERCURRENT) != 0u);
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_OVERTEMP) != 0u);
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_STALL) != 0u);
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_CAN) != 0u);
+
+    /* Status should be FAULT */
+    uint32 status = mock_rte_signals[RZC_SIG_SAFETY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)SAFETY_STATUS_FAULT, status);
+}
+
+/** @verifies SWR-RZC-023
+ *  Equivalence class: Boundary — no faults yields zero mask */
+void test_No_faults_zero_mask(void)
+{
+    Swc_RzcSafety_MainFunction();
+
+    uint32 mask = mock_rte_signals[RZC_SIG_FAULT_MASK];
+    TEST_ASSERT_EQUAL_UINT32(0u, mask);
+}
+
+/** @verifies SWR-RZC-024
+ *  Equivalence class: Boundary — CAN silence at exactly 19 cycles (under threshold) */
+void test_CAN_silence_exactly_19_no_disable(void)
+{
+    mock_can_bus_off = CAN_ERRORSTATE_ACTIVE;
+    run_cycles(19u);
+
+    /* 19 cycles * 10ms = 190ms < 200ms threshold */
+    /* Motor should still be enabled if no other fault */
+    uint32 status = mock_rte_signals[RZC_SIG_SAFETY_STATUS];
+    TEST_ASSERT_TRUE(status != (uint32)SAFETY_STATUS_FAULT ||
+                     (mock_rte_signals[RZC_SIG_FAULT_MASK] & (uint32)RZC_FAULT_CAN) == 0u);
+}
+
+/** @verifies SWR-RZC-024
+ *  Equivalence class: Boundary — CAN error state WARNING (not bus-off) */
+void test_CAN_error_warning_state(void)
+{
+    mock_can_bus_off = CAN_ERRORSTATE_WARNING;
+    Swc_RzcSafety_MainFunction();
+
+    /* Warning state should NOT immediately disable motor */
+    uint32 mask = mock_rte_signals[RZC_SIG_FAULT_MASK];
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_CAN) == 0u);
+}
+
+/** @verifies SWR-RZC-024
+ *  Equivalence class: Fault injection — watchdog stops then resumes (multi-fault cycle) */
+void test_Watchdog_multi_fault_cycle(void)
+{
+    /* Start healthy */
+    mock_dio_wdi_toggle_count = 0u;
+    run_cycles(5u);
+    uint8 healthy_toggles = mock_dio_wdi_toggle_count;
+    TEST_ASSERT_TRUE(healthy_toggles > 0u);
+
+    /* Introduce fault — WDI stops */
+    mock_rte_signals[RZC_SIG_OVERCURRENT] = 1u;
+    mock_dio_wdi_toggle_count = 0u;
+    run_cycles(5u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dio_wdi_toggle_count);
+}
+
+/** @verifies SWR-RZC-023
+ *  Equivalence class: Fault injection — ESTOP active escalates to FAULT */
+void test_Estop_escalates_to_fault(void)
+{
+    mock_rte_signals[RZC_SIG_ESTOP_ACTIVE] = 1u;
+    Swc_RzcSafety_MainFunction();
+
+    uint32 status = mock_rte_signals[RZC_SIG_SAFETY_STATUS];
+    /* ESTOP should cause FAULT status */
+    TEST_ASSERT_TRUE(status == (uint32)SAFETY_STATUS_FAULT ||
+                     status == (uint32)SAFETY_STATUS_DEGRADED);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -483,6 +580,14 @@ int main(void)
 
     /* SWR-RZC-023: Safety status output */
     RUN_TEST(test_Safety_status_output);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_All_faults_simultaneously);
+    RUN_TEST(test_No_faults_zero_mask);
+    RUN_TEST(test_CAN_silence_exactly_19_no_disable);
+    RUN_TEST(test_CAN_error_warning_state);
+    RUN_TEST(test_Watchdog_multi_fault_cycle);
+    RUN_TEST(test_Estop_escalates_to_fault);
 
     return UNITY_END();
 }

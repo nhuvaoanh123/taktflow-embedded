@@ -440,6 +440,281 @@ void test_Dashboard_ecu_health_ok(void)
 }
 
 /* ====================================================================
+ * HARDENED: Temperature zone boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-005
+ *  Equivalence class: temp zone — exact boundary at 59/60 (GREEN/YELLOW)
+ *  Boundary value: temp == 59 is last GREEN, temp == 60 is first YELLOW */
+void test_Dashboard_temp_boundary_59_60(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 59u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_GREEN, dash_data.temp_zone);
+
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 60u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_YELLOW, dash_data.temp_zone);
+}
+
+/** @verifies SWR-ICU-005
+ *  Equivalence class: temp zone — exact boundary at 79/80 (YELLOW/ORANGE)
+ *  Boundary value: temp == 79 is last YELLOW, temp == 80 is first ORANGE */
+void test_Dashboard_temp_boundary_79_80(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 79u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_YELLOW, dash_data.temp_zone);
+
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 80u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_ORANGE, dash_data.temp_zone);
+}
+
+/** @verifies SWR-ICU-005
+ *  Equivalence class: temp zone — exact boundary at 99/100 (ORANGE/RED)
+ *  Boundary value: temp == 99 is last ORANGE, temp == 100 is first RED */
+void test_Dashboard_temp_boundary_99_100(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 99u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_ORANGE, dash_data.temp_zone);
+
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 100u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_RED, dash_data.temp_zone);
+}
+
+/** @verifies SWR-ICU-005
+ *  Equivalence class: temp zone — max uint32 temperature
+ *  Boundary value: maximum representable temperature should be RED */
+void test_Dashboard_temp_max_value_red(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP] = 0xFFFFFFFFu;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_RED, dash_data.temp_zone);
+}
+
+/* ====================================================================
+ * HARDENED: Battery zone boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-006
+ *  Equivalence class: battery zone — exact boundary at 10000/9999 (YELLOW/RED)
+ *  Boundary value: 10000 is last YELLOW, 9999 is first RED */
+void test_Dashboard_battery_boundary_10000_9999(void)
+{
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 10000u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_YELLOW, dash_data.battery_zone);
+
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 9999u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_RED, dash_data.battery_zone);
+}
+
+/** @verifies SWR-ICU-006
+ *  Equivalence class: battery zone — exact boundary at 11000/11001 (YELLOW/GREEN)
+ *  Boundary value: 11000 is last YELLOW (not strictly >), 11001 is GREEN */
+void test_Dashboard_battery_boundary_11000_11001(void)
+{
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 11000u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_YELLOW, dash_data.battery_zone);
+
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 11001u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_GREEN, dash_data.battery_zone);
+}
+
+/** @verifies SWR-ICU-006
+ *  Equivalence class: battery zone — zero voltage should be RED
+ *  Boundary value: 0 mV is well below threshold */
+void test_Dashboard_battery_zero_voltage_red(void)
+{
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 0u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_RED, dash_data.battery_zone);
+}
+
+/* ====================================================================
+ * HARDENED: Torque clamping boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-004
+ *  Equivalence class: torque clamping — values above 100 clamped to 100
+ *  Boundary value: 100, 101, max uint32 */
+void test_Dashboard_torque_clamping_boundary(void)
+{
+    mock_rte_signals[ICU_SIG_TORQUE_PCT] = 100u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(100u, dash_data.display_torque);
+
+    mock_rte_signals[ICU_SIG_TORQUE_PCT] = 101u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(100u, dash_data.display_torque);
+
+    mock_rte_signals[ICU_SIG_TORQUE_PCT] = 0xFFFFFFFFu;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(100u, dash_data.display_torque);
+}
+
+/** @verifies SWR-ICU-004
+ *  Equivalence class: torque — zero value passes through
+ *  Boundary value: 0% torque */
+void test_Dashboard_torque_zero(void)
+{
+    mock_rte_signals[ICU_SIG_TORQUE_PCT] = 0u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_torque);
+}
+
+/* ====================================================================
+ * HARDENED: Speed computation boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-003
+ *  Equivalence class: speed — RPM value 1 gives near-zero speed
+ *  Boundary value: minimum non-zero RPM */
+void test_Dashboard_speed_rpm_1(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_RPM] = 1u;
+    Swc_Dashboard_50ms();
+    /* 1 * 60 / 1000 = 0 (integer truncation) */
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_speed);
+}
+
+/** @verifies SWR-ICU-003
+ *  Equivalence class: speed — RPM value 17 gives speed 1 (first non-zero)
+ *  Boundary value: minimum RPM for speed >= 1 */
+void test_Dashboard_speed_rpm_boundary_first_nonzero(void)
+{
+    /* 16 * 60 / 1000 = 0.96 -> 0 */
+    mock_rte_signals[ICU_SIG_MOTOR_RPM] = 16u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_speed);
+
+    /* 17 * 60 / 1000 = 1.02 -> 1 */
+    mock_rte_signals[ICU_SIG_MOTOR_RPM] = 17u;
+    Swc_Dashboard_50ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, dash_data.display_speed);
+}
+
+/* ====================================================================
+ * HARDENED: Warning flags combination tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-007
+ *  Equivalence class: warning flags — multiple warnings simultaneously
+ *  Verify bitmask accumulates correctly */
+void test_Dashboard_warning_multiple_flags(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP]       = 105u;  /* RED -> TEMPERATURE */
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE]  = 8000u; /* RED -> BATTERY */
+    mock_rte_signals[ICU_SIG_ESTOP_ACTIVE]     = 1u;    /* -> ESTOP */
+    mock_rte_signals[ICU_SIG_OVERCURRENT_FLAG] = 1u;    /* -> OVERCURRENT */
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST]    = 0x00C001u; /* -> CHECK_ENGINE */
+
+    Swc_Dashboard_50ms();
+
+    TEST_ASSERT_TRUE((dash_data.warning_flags & DASH_WARN_TEMPERATURE) != 0u);
+    TEST_ASSERT_TRUE((dash_data.warning_flags & DASH_WARN_BATTERY) != 0u);
+    TEST_ASSERT_TRUE((dash_data.warning_flags & DASH_WARN_ESTOP) != 0u);
+    TEST_ASSERT_TRUE((dash_data.warning_flags & DASH_WARN_OVERCURRENT) != 0u);
+    TEST_ASSERT_TRUE((dash_data.warning_flags & DASH_WARN_CHECK_ENGINE) != 0u);
+}
+
+/** @verifies SWR-ICU-007
+ *  Equivalence class: warning flags — no warnings when all clear
+ *  Verify bitmask is zero with healthy signals */
+void test_Dashboard_warning_none_when_healthy(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP]       = 40u;    /* GREEN */
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE]  = 12000u; /* GREEN */
+    mock_rte_signals[ICU_SIG_ESTOP_ACTIVE]     = 0u;
+    mock_rte_signals[ICU_SIG_OVERCURRENT_FLAG] = 0u;
+    mock_rte_signals[ICU_SIG_DTC_BROADCAST]    = 0u;
+
+    Swc_Dashboard_50ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, dash_data.warning_flags);
+}
+
+/* ====================================================================
+ * HARDENED: ECU heartbeat edge cases
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-009
+ *  Equivalence class: heartbeat stale counter — saturates at 255
+ *  Verify stale counter does not overflow past 255 */
+void test_Dashboard_heartbeat_stale_counter_saturates(void)
+{
+    uint16 i;
+
+    /* All heartbeats at value 5, never changing */
+    mock_rte_signals[ICU_SIG_HEARTBEAT_CVC] = 5u;
+    mock_rte_signals[ICU_SIG_HEARTBEAT_FZC] = 5u;
+    mock_rte_signals[ICU_SIG_HEARTBEAT_RZC] = 5u;
+
+    /* Run 300 cycles — far past 255 saturation point */
+    for (i = 0u; i < 300u; i++) {
+        Swc_Dashboard_50ms();
+    }
+
+    /* Should be timed out and stale counter capped at 255 */
+    TEST_ASSERT_TRUE(dash_data.ecu_health_cvc == FALSE);
+    TEST_ASSERT_TRUE(hb_stale_cvc == 255u);
+}
+
+/* ====================================================================
+ * HARDENED: Fault injection tests
+ * ==================================================================== */
+
+/** @verifies SWR-ICU-002
+ *  Fault injection: call 50ms without init — should not execute */
+void test_Dashboard_not_init_does_nothing(void)
+{
+    initialized = FALSE;
+    mock_rte_signals[ICU_SIG_MOTOR_RPM] = 5000u;
+
+    Swc_Dashboard_50ms();
+
+    /* display_speed should remain 0 (set in Init, not updated) */
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_speed);
+}
+
+/** @verifies SWR-ICU-004
+ *  Fault injection: vehicle state out-of-range — returns "UNKNOWN"
+ *  Error guessing: maximum uint8 value */
+void test_Dashboard_vehicle_state_max_value(void)
+{
+    const char* result = Dashboard_GetVehicleStateStr(255u);
+    TEST_ASSERT_EQUAL_STRING("UNKNOWN", result);
+}
+
+/** @verifies SWR-ICU-002
+ *  Fault injection: re-initialization resets all computed values */
+void test_Dashboard_reinit_resets_all(void)
+{
+    mock_rte_signals[ICU_SIG_MOTOR_RPM]       = 5000u;
+    mock_rte_signals[ICU_SIG_MOTOR_TEMP]      = 105u;
+    mock_rte_signals[ICU_SIG_BATTERY_VOLTAGE] = 8000u;
+    Swc_Dashboard_50ms();
+
+    /* Verify non-zero values */
+    TEST_ASSERT_TRUE(dash_data.display_speed > 0u);
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_RED, dash_data.temp_zone);
+
+    /* Re-init */
+    Swc_Dashboard_Init();
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_speed);
+    TEST_ASSERT_EQUAL_UINT32(0u, dash_data.display_torque);
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_GREEN, dash_data.temp_zone);
+    TEST_ASSERT_EQUAL_UINT8(DASH_ZONE_GREEN, dash_data.battery_zone);
+    TEST_ASSERT_EQUAL_UINT8(0u, dash_data.warning_flags);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -477,6 +752,37 @@ int main(void)
     /* SWR-ICU-009: ECU health monitoring */
     RUN_TEST(test_Dashboard_ecu_health_timeout);
     RUN_TEST(test_Dashboard_ecu_health_ok);
+
+    /* HARDENED: Temperature zone boundaries */
+    RUN_TEST(test_Dashboard_temp_boundary_59_60);
+    RUN_TEST(test_Dashboard_temp_boundary_79_80);
+    RUN_TEST(test_Dashboard_temp_boundary_99_100);
+    RUN_TEST(test_Dashboard_temp_max_value_red);
+
+    /* HARDENED: Battery zone boundaries */
+    RUN_TEST(test_Dashboard_battery_boundary_10000_9999);
+    RUN_TEST(test_Dashboard_battery_boundary_11000_11001);
+    RUN_TEST(test_Dashboard_battery_zero_voltage_red);
+
+    /* HARDENED: Torque clamping */
+    RUN_TEST(test_Dashboard_torque_clamping_boundary);
+    RUN_TEST(test_Dashboard_torque_zero);
+
+    /* HARDENED: Speed computation */
+    RUN_TEST(test_Dashboard_speed_rpm_1);
+    RUN_TEST(test_Dashboard_speed_rpm_boundary_first_nonzero);
+
+    /* HARDENED: Warning flag combinations */
+    RUN_TEST(test_Dashboard_warning_multiple_flags);
+    RUN_TEST(test_Dashboard_warning_none_when_healthy);
+
+    /* HARDENED: ECU heartbeat edge cases */
+    RUN_TEST(test_Dashboard_heartbeat_stale_counter_saturates);
+
+    /* HARDENED: Fault injection */
+    RUN_TEST(test_Dashboard_not_init_does_nothing);
+    RUN_TEST(test_Dashboard_vehicle_state_max_value);
+    RUN_TEST(test_Dashboard_reinit_resets_all);
 
     return UNITY_END();
 }

@@ -277,6 +277,167 @@ void test_EStop_DTC_reported_on_activation(void)
 }
 
 /* ====================================================================
+ * HARDENED TESTS — Boundary Value, NULL Pointer, Fault Injection
+ * ==================================================================== */
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-018: Debounce boundary — exact threshold cycle count
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-018
+ *  Equivalence class: VALID — activation on exactly the 1st cycle (threshold=1)
+ *  Boundary: debounce_counter == ESTOP_DEBOUNCE_THRESHOLD (=1) */
+void test_EStop_Debounce_exact_threshold_boundary(void)
+{
+    /* With threshold=1, first MainFunction cycle with HIGH should activate */
+    mock_estop_state = STD_HIGH;
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(TRUE, Swc_EStop_IsActive());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-018: Consecutive read failures — fail-safe stays active
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-018
+ *  Equivalence class: FAULT — multiple consecutive read failures
+ *  Fault injection: IoHwAb_ReadEStop returns E_NOT_OK repeatedly */
+void test_EStop_Consecutive_read_failures_stay_active(void)
+{
+    mock_estop_read_result = E_NOT_OK;
+
+    Swc_EStop_MainFunction();
+    TEST_ASSERT_EQUAL(TRUE, Swc_EStop_IsActive());
+
+    /* Subsequent calls with failure — remains active (latched) */
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(TRUE, Swc_EStop_IsActive());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-018: Read failure after normal LOW — fail-safe activation
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-018
+ *  Equivalence class: FAULT — read failure after stable LOW period
+ *  Fault injection: sudden I2C/GPIO failure triggers fail-safe */
+void test_EStop_ReadFailure_after_low_activates(void)
+{
+    /* Several cycles with LOW — no activation */
+    mock_estop_state       = STD_LOW;
+    mock_estop_read_result = E_OK;
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    TEST_ASSERT_EQUAL(FALSE, Swc_EStop_IsActive());
+
+    /* Now read fails — fail-safe must activate */
+    mock_estop_read_result = E_NOT_OK;
+    Swc_EStop_MainFunction();
+    TEST_ASSERT_EQUAL(TRUE, Swc_EStop_IsActive());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-019: E2E protection applied on every broadcast
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-019
+ *  Equivalence class: VALID — E2E_Protect called for every CAN broadcast
+ *  Boundary: exactly ESTOP_BROADCAST_COUNT (4) E2E protect calls */
+void test_EStop_E2E_protect_called_on_all_broadcasts(void)
+{
+    mock_estop_state = STD_HIGH;
+
+    /* 4 cycles = 4 broadcasts (activation + 3 repeats) */
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(4u, mock_e2e_protect_count);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-019: No broadcast after count exhausted
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-019
+ *  Equivalence class: VALID — broadcast stops after 4 transmissions
+ *  Boundary: repeat_counter == ESTOP_BROADCAST_COUNT */
+void test_EStop_No_broadcast_after_count_exhausted(void)
+{
+    mock_estop_state = STD_HIGH;
+
+    /* Exhaust all 4 broadcasts */
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(4u, mock_com_send_count);
+
+    /* 5th, 6th cycles — no more broadcasts */
+    mock_com_send_count = 0u;
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+    /* But latch is still active */
+    TEST_ASSERT_EQUAL(TRUE, Swc_EStop_IsActive());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-020: DTC only reported once (on first activation)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-020
+ *  Equivalence class: VALID — DTC reported exactly once
+ *  Boundary: Dem_ReportErrorStatus called only on activation transition */
+void test_EStop_DTC_reported_only_once(void)
+{
+    mock_estop_state = STD_HIGH;
+
+    Swc_EStop_MainFunction();
+    TEST_ASSERT_EQUAL(1u, mock_dem_report_count);
+
+    /* Subsequent cycles with latch active — DTC should not repeat */
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+    Swc_EStop_MainFunction();
+
+    TEST_ASSERT_EQUAL(1u, mock_dem_report_count);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-018: MainFunction before Init — no action
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-018
+ *  Equivalence class: INVALID — uninitialized module
+ *  Boundary: initialized == FALSE */
+void test_EStop_MainFunction_before_init_no_action(void)
+{
+    /* Reset the initialized flag by re-including source state
+     * Since we include Swc_EStop.c, we can manipulate 'initialized' */
+    initialized = FALSE;
+
+    mock_estop_state = STD_HIGH;
+    mock_com_send_count = 0u;
+    Swc_EStop_MainFunction();
+
+    /* Should do nothing — not initialized */
+    TEST_ASSERT_EQUAL(FALSE, Swc_EStop_IsActive());
+    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+
+    /* Restore for tearDown */
+    Swc_EStop_Init();
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -294,6 +455,15 @@ int main(void)
     RUN_TEST(test_EStop_RTE_write_on_activation);
     RUN_TEST(test_EStop_No_false_activation_when_low);
     RUN_TEST(test_EStop_ReadFailure_failsafe_active);
+
+    /* --- HARDENED TESTS --- */
+    RUN_TEST(test_EStop_Debounce_exact_threshold_boundary);
+    RUN_TEST(test_EStop_Consecutive_read_failures_stay_active);
+    RUN_TEST(test_EStop_ReadFailure_after_low_activates);
+    RUN_TEST(test_EStop_E2E_protect_called_on_all_broadcasts);
+    RUN_TEST(test_EStop_No_broadcast_after_count_exhausted);
+    RUN_TEST(test_EStop_DTC_reported_only_once);
+    RUN_TEST(test_EStop_MainFunction_before_init_no_action);
 
     return UNITY_END();
 }

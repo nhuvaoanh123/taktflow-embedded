@@ -280,6 +280,109 @@ void test_HB_notify_invalid_index(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-SC-005
+ *  Equivalence class: Boundary — timeout at exactly 14 ticks (one under) */
+void test_hb_timeout_at_14_no_fault(void)
+{
+    uint8 i;
+    for (i = 0u; i < (SC_HB_TIMEOUT_TICKS - 1u); i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_FZC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_RZC));
+}
+
+/** @verifies SWR-SC-006
+ *  Equivalence class: Boundary — confirmation at exactly 4 ticks (one under) */
+void test_hb_confirmation_at_4_not_confirmed(void)
+{
+    uint8 i;
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    for (i = 0u; i < (SC_HB_CONFIRM_TICKS - 1u); i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
+}
+
+/** @verifies SWR-SC-005
+ *  Equivalence class: Boundary — rapid notify/monitor interleaving */
+void test_hb_rapid_notify_monitor(void)
+{
+    uint8 i;
+    for (i = 0u; i < 100u; i++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+        SC_Heartbeat_NotifyRx(SC_ECU_FZC);
+        SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+        SC_Heartbeat_Monitor();
+    }
+
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_FZC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_RZC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
+}
+
+/** @verifies SWR-SC-006
+ *  Equivalence class: Fault injection — single ECU timeout then resume
+ *  after confirmation starts */
+void test_hb_single_ecu_late_resume(void)
+{
+    uint8 i;
+
+    /* All ECUs timeout */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    /* Start confirmation: 2 ticks in */
+    SC_Heartbeat_Monitor();
+    SC_Heartbeat_Monitor();
+
+    /* RZC resumes but CVC and FZC remain timed out */
+    SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+
+    /* Complete confirmation window */
+    for (i = 0u; i < (SC_HB_CONFIRM_TICKS - 2u); i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    /* CVC and FZC should be confirmed */
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsAnyConfirmed());
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_RZC));
+}
+
+/** @verifies SWR-SC-005
+ *  Equivalence class: Boundary — LED cleared when heartbeat resumes before confirmation */
+void test_hb_led_cleared_on_resume(void)
+{
+    uint8 i;
+
+    /* Trigger timeout to set LEDs */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a_state[SC_PIN_LED_CVC]);
+
+    /* Heartbeat resumes */
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    for (i = 0u; i < 5u; i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    /* LED should be cleared for CVC */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a_state[SC_PIN_LED_CVC]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -305,6 +408,13 @@ int main(void)
     /* Boundary / safety */
     RUN_TEST(test_HB_invalid_ecu_index);
     RUN_TEST(test_HB_notify_invalid_index);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_hb_timeout_at_14_no_fault);
+    RUN_TEST(test_hb_confirmation_at_4_not_confirmed);
+    RUN_TEST(test_hb_rapid_notify_monitor);
+    RUN_TEST(test_hb_single_ecu_late_resume);
+    RUN_TEST(test_hb_led_cleared_on_resume);
 
     return UNITY_END();
 }

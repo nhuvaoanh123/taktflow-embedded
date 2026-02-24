@@ -557,6 +557,321 @@ void test_UdsServer_session_timeout_5s(void)
 }
 
 /* ====================================================================
+ * HARDENED: NULL pointer and zero-length tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-002
+ *  Equivalence class: NULL pointer — all NULL combinations on ProcessRequest
+ *  Fault injection: NULL reqData, NULL rspData, NULL rspLen */
+void test_UdsServer_null_params_no_crash(void)
+{
+    uint8 req[] = { UDS_SID_TESTER_PRESENT, 0x00u };
+    uint8 rsp[256];
+    uint16 len = 0u;
+
+    /* NULL reqData */
+    Swc_UdsServer_ProcessRequest(NULL_PTR, 2u, rsp, &len);
+    TEST_ASSERT_EQUAL_UINT16(0u, len);
+
+    /* NULL rspData */
+    len = 0u;
+    Swc_UdsServer_ProcessRequest(req, 2u, NULL_PTR, &len);
+    TEST_ASSERT_EQUAL_UINT16(0u, len);
+
+    /* NULL rspLen */
+    Swc_UdsServer_ProcessRequest(req, 2u, rsp, NULL_PTR);
+    /* No crash = pass */
+
+    /* Zero length request */
+    len = 99u;
+    Swc_UdsServer_ProcessRequest(req, 0u, rsp, &len);
+    /* Should return without processing; len depends on impl */
+}
+
+/** @verifies SWR-TCU-002
+ *  Equivalence class: unsupported SID — service not in dispatch table
+ *  Error guessing: SID 0xAA not handled */
+void test_UdsServer_unsupported_sid_nrc(void)
+{
+    uint8 req[] = { 0xAAu };
+    send_uds(req, 1u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SID, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(0xAAu, rsp_buf[1]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SERVICE_NOT_SUPPORTED, rsp_buf[2]);
+}
+
+/* ====================================================================
+ * HARDENED: Session control boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-003
+ *  Equivalence class: session control — too-short message -> NRC 0x13
+ *  Boundary value: reqLen == 1 (minimum invalid) */
+void test_UdsServer_session_ctrl_too_short(void)
+{
+    uint8 req[] = { UDS_SID_DIAG_SESSION_CTRL };
+    send_uds(req, 1u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SID, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_DIAG_SESSION_CTRL, rsp_buf[1]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_INCORRECT_MSG_LENGTH, rsp_buf[2]);
+}
+
+/** @verifies SWR-TCU-003
+ *  Equivalence class: session control — switch to programming session
+ *  Partition: all three valid sessions (default, programming, extended) */
+void test_UdsServer_session_control_to_programming(void)
+{
+    uint8 req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_PROGRAMMING };
+    send_uds(req, 2u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_DIAG_SESSION_CTRL + 0x40u, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SESSION_PROGRAMMING, rsp_buf[1]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SESSION_PROGRAMMING, Swc_UdsServer_GetSession());
+}
+
+/** @verifies SWR-TCU-003
+ *  Equivalence class: session control — back to default resets security
+ *  Verify security is cleared on return to default session */
+void test_UdsServer_session_back_to_default_resets_security(void)
+{
+    /* Switch to extended and unlock security */
+    uint8 sess_req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_EXTENDED };
+    send_uds(sess_req, 2u);
+
+    uint8 seed_req[] = { UDS_SID_SECURITY_ACCESS, 0x01u };
+    send_uds(seed_req, 2u);
+    uint32 seed = ((uint32)rsp_buf[2] << 24u) | ((uint32)rsp_buf[3] << 16u) |
+                  ((uint32)rsp_buf[4] << 8u)  | ((uint32)rsp_buf[5]);
+    uint32 key = seed ^ TCU_SECURITY_LEVEL1_XOR;
+    uint8 key_req[6] = { UDS_SID_SECURITY_ACCESS, 0x02u,
+                         (uint8)(key >> 24u), (uint8)(key >> 16u),
+                         (uint8)(key >> 8u), (uint8)key };
+    send_uds(key_req, 6u);
+
+    /* Now switch back to default */
+    uint8 def_req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_DEFAULT };
+    send_uds(def_req, 2u);
+
+    /* Security should be reset — WriteDID should fail */
+    uint8 write_req[3 + TCU_VIN_LENGTH];
+    write_req[0] = UDS_SID_WRITE_DID; write_req[1] = 0xF1u; write_req[2] = 0x90u;
+    uint8 v;
+    for (v = 0u; v < TCU_VIN_LENGTH; v++) { write_req[3u + v] = 'X'; }
+    send_uds(write_req, 3u + TCU_VIN_LENGTH);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SECURITY_ACCESS_DENIED, rsp_buf[2]);
+}
+
+/* ====================================================================
+ * HARDENED: ReadDID boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-004
+ *  Equivalence class: ReadDID — too-short message -> NRC 0x13
+ *  Boundary value: reqLen == 2 (need at least 3 for DID) */
+void test_UdsServer_read_did_too_short(void)
+{
+    uint8 req[] = { UDS_SID_READ_DID, 0xF1u };
+    send_uds(req, 2u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SID, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_READ_DID, rsp_buf[1]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_INCORRECT_MSG_LENGTH, rsp_buf[2]);
+}
+
+/* ====================================================================
+ * HARDENED: WriteDID with security unlocked
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-005
+ *  Equivalence class: WriteDID VIN — success after security unlock
+ *  Partition: unlock -> write -> readback to verify */
+void test_UdsServer_write_did_vin_success_after_unlock(void)
+{
+    /* Switch to extended session and unlock security */
+    uint8 sess_req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_EXTENDED };
+    send_uds(sess_req, 2u);
+
+    uint8 seed_req[] = { UDS_SID_SECURITY_ACCESS, 0x01u };
+    send_uds(seed_req, 2u);
+    uint32 seed = ((uint32)rsp_buf[2] << 24u) | ((uint32)rsp_buf[3] << 16u) |
+                  ((uint32)rsp_buf[4] << 8u)  | ((uint32)rsp_buf[5]);
+    uint32 key = seed ^ TCU_SECURITY_LEVEL1_XOR;
+    uint8 key_req[6] = { UDS_SID_SECURITY_ACCESS, 0x02u,
+                         (uint8)(key >> 24u), (uint8)(key >> 16u),
+                         (uint8)(key >> 8u), (uint8)key };
+    send_uds(key_req, 6u);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_SECURITY_ACCESS + 0x40u, rsp_buf[0]);
+
+    /* Write VIN */
+    uint8 write_req[3 + TCU_VIN_LENGTH];
+    write_req[0] = UDS_SID_WRITE_DID; write_req[1] = 0xF1u; write_req[2] = 0x90u;
+    uint8 i;
+    for (i = 0u; i < TCU_VIN_LENGTH; i++) { write_req[3u + i] = 'Z'; }
+    send_uds(write_req, 3u + TCU_VIN_LENGTH);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_WRITE_DID + 0x40u, rsp_buf[0]);
+
+    /* Read back VIN */
+    uint8 read_req[] = { UDS_SID_READ_DID, 0xF1u, 0x90u };
+    send_uds(read_req, 3u);
+    TEST_ASSERT_EQUAL_UINT8('Z', rsp_buf[3]);
+    TEST_ASSERT_EQUAL_UINT8('Z', rsp_buf[3 + TCU_VIN_LENGTH - 1u]);
+}
+
+/* ====================================================================
+ * HARDENED: TesterPresent suppress-positive-response
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-011
+ *  Equivalence class: TesterPresent — suppress positive response bit
+ *  Verify sub-function 0x80 suppresses the response (rspLen == 0) */
+void test_UdsServer_tester_present_suppress_positive_rsp(void)
+{
+    uint8 req[] = { UDS_SID_TESTER_PRESENT, 0x80u };
+    send_uds(req, 2u);
+
+    /* Suppress positive response: rsp_len should be 0 */
+    TEST_ASSERT_EQUAL_UINT16(0u, rsp_len);
+}
+
+/** @verifies SWR-TCU-011
+ *  Equivalence class: TesterPresent — invalid sub-function -> NRC
+ *  Boundary value: sub-function 0x01 (only 0x00 valid after masking) */
+void test_UdsServer_tester_present_invalid_subfunc(void)
+{
+    uint8 req[] = { UDS_SID_TESTER_PRESENT, 0x01u };
+    send_uds(req, 2u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SID, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SUBFUNCTION_NOT_SUPPORTED, rsp_buf[2]);
+}
+
+/* ====================================================================
+ * HARDENED: SecurityAccess lockout timer expiry
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-006
+ *  Equivalence class: security lockout — timer expires and allows retry
+ *  Verify that after lockout ticks expire, security attempts reset */
+void test_UdsServer_security_lockout_timer_expiry(void)
+{
+    /* Switch to extended session */
+    uint8 sess_req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_EXTENDED };
+    send_uds(sess_req, 2u);
+
+    /* Trigger lockout: 3 failed attempts */
+    uint8 attempt;
+    for (attempt = 0u; attempt < TCU_UDS_MAX_SECURITY_ATTEMPTS; attempt++) {
+        uint8 seed_req[] = { UDS_SID_SECURITY_ACCESS, 0x01u };
+        send_uds(seed_req, 2u);
+        uint8 bad_key[] = { UDS_SID_SECURITY_ACCESS, 0x02u, 0xBAu, 0xDFu, 0x00u, 0xDu };
+        send_uds(bad_key, 6u);
+    }
+
+    /* Verify locked out */
+    uint8 seed_req[] = { UDS_SID_SECURITY_ACCESS, 0x01u };
+    send_uds(seed_req, 2u);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_EXCEEDED_ATTEMPTS, rsp_buf[2]);
+
+    /* Run lockout timer to expiry */
+    uint16 tick;
+    for (tick = 0u; tick < TCU_UDS_SECURITY_LOCKOUT_TICKS; tick++) {
+        Swc_UdsServer_10ms();
+    }
+
+    /* Should be able to request seed again */
+    send_uds(seed_req, 2u);
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_SECURITY_ACCESS + 0x40u, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(0x01u, rsp_buf[1]);
+}
+
+/* ====================================================================
+ * HARDENED: ReadDTCInformation sub-functions
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-013
+ *  Equivalence class: ReadDTCInfo — sub 0x01 with DTCs in store
+ *  Verify DTC count is returned correctly */
+void test_UdsServer_read_dtc_info_sub01_with_dtcs(void)
+{
+    mock_dtc_count = 3u;
+
+    uint8 req[] = { UDS_SID_READ_DTC_INFO, 0x01u };
+    send_uds(req, 2u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_READ_DTC_INFO + 0x40u, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(0x01u, rsp_buf[1]);
+    /* Count in bytes 4-5 (big-endian): 0x00, 0x03 */
+    TEST_ASSERT_EQUAL_UINT8(0u, rsp_buf[4]);
+    TEST_ASSERT_EQUAL_UINT8(3u, rsp_buf[5]);
+}
+
+/** @verifies SWR-TCU-013
+ *  Equivalence class: ReadDTCInfo — sub 0x02 with status mask
+ *  Verify DTC list is returned by mask */
+void test_UdsServer_read_dtc_info_sub02_by_mask(void)
+{
+    mock_dtc_count     = 2u;
+    mock_dtc_codes[0]  = 0xC00100u;
+    mock_dtc_statuses[0] = DTC_STATUS_CONFIRMED;
+    mock_dtc_codes[1]  = 0xC00200u;
+    mock_dtc_statuses[1] = DTC_STATUS_CONFIRMED;
+
+    uint8 req[] = { UDS_SID_READ_DTC_INFO, 0x02u, DTC_STATUS_CONFIRMED };
+    send_uds(req, 3u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_READ_DTC_INFO + 0x40u, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(0x02u, rsp_buf[1]);
+    /* Should have data after availability mask at byte 2 */
+    TEST_ASSERT_TRUE(rsp_len > 3u);
+}
+
+/** @verifies SWR-TCU-013
+ *  Equivalence class: ReadDTCInfo — unsupported sub-function -> NRC
+ *  Error guessing: sub-function 0xFF */
+void test_UdsServer_read_dtc_info_invalid_subfunc(void)
+{
+    uint8 req[] = { UDS_SID_READ_DTC_INFO, 0xFFu };
+    send_uds(req, 2u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SID, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(UDS_NRC_SUBFUNCTION_NOT_SUPPORTED, rsp_buf[2]);
+}
+
+/* ====================================================================
+ * HARDENED: ClearDTC with security unlocked
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-007
+ *  Equivalence class: ClearDTC — success after security unlock
+ *  Verify DTC clear is called and positive response returned */
+void test_UdsServer_clear_dtc_success_after_unlock(void)
+{
+    /* Switch to extended session and unlock */
+    uint8 sess_req[] = { UDS_SID_DIAG_SESSION_CTRL, UDS_SESSION_EXTENDED };
+    send_uds(sess_req, 2u);
+
+    uint8 seed_req[] = { UDS_SID_SECURITY_ACCESS, 0x01u };
+    send_uds(seed_req, 2u);
+    uint32 seed = ((uint32)rsp_buf[2] << 24u) | ((uint32)rsp_buf[3] << 16u) |
+                  ((uint32)rsp_buf[4] << 8u)  | ((uint32)rsp_buf[5]);
+    uint32 key = seed ^ TCU_SECURITY_LEVEL1_XOR;
+    uint8 key_req[6] = { UDS_SID_SECURITY_ACCESS, 0x02u,
+                         (uint8)(key >> 24u), (uint8)(key >> 16u),
+                         (uint8)(key >> 8u), (uint8)key };
+    send_uds(key_req, 6u);
+
+    /* Clear DTC */
+    mock_dtc_clear_called = 0u;
+    uint8 clear_req[] = { UDS_SID_CLEAR_DTC, 0xFFu, 0xFFu, 0xFFu };
+    send_uds(clear_req, 4u);
+
+    TEST_ASSERT_EQUAL_UINT8(UDS_SID_CLEAR_DTC + 0x40u, rsp_buf[0]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_dtc_clear_called);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -594,6 +909,36 @@ int main(void)
 
     /* SWR-TCU-012: Session timeout */
     RUN_TEST(test_UdsServer_session_timeout_5s);
+
+    /* HARDENED: NULL pointer / zero-length */
+    RUN_TEST(test_UdsServer_null_params_no_crash);
+    RUN_TEST(test_UdsServer_unsupported_sid_nrc);
+
+    /* HARDENED: Session control boundary */
+    RUN_TEST(test_UdsServer_session_ctrl_too_short);
+    RUN_TEST(test_UdsServer_session_control_to_programming);
+    RUN_TEST(test_UdsServer_session_back_to_default_resets_security);
+
+    /* HARDENED: ReadDID boundary */
+    RUN_TEST(test_UdsServer_read_did_too_short);
+
+    /* HARDENED: WriteDID success path */
+    RUN_TEST(test_UdsServer_write_did_vin_success_after_unlock);
+
+    /* HARDENED: TesterPresent variants */
+    RUN_TEST(test_UdsServer_tester_present_suppress_positive_rsp);
+    RUN_TEST(test_UdsServer_tester_present_invalid_subfunc);
+
+    /* HARDENED: Security lockout timer */
+    RUN_TEST(test_UdsServer_security_lockout_timer_expiry);
+
+    /* HARDENED: ReadDTCInfo */
+    RUN_TEST(test_UdsServer_read_dtc_info_sub01_with_dtcs);
+    RUN_TEST(test_UdsServer_read_dtc_info_sub02_by_mask);
+    RUN_TEST(test_UdsServer_read_dtc_info_invalid_subfunc);
+
+    /* HARDENED: ClearDTC success */
+    RUN_TEST(test_UdsServer_clear_dtc_success_after_unlock);
 
     return UNITY_END();
 }

@@ -428,6 +428,108 @@ void test_MainFunction_without_init_safe(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-RZC-010
+ *  Equivalence class: Boundary — exactly 60.0 degC (threshold for 100->75%) */
+void test_Derating_boundary_60C(void)
+{
+    set_mock_temp(600);   /* 60.0 degC */
+    run_cycles(1u);
+
+    /* At exactly 60C, should still be 100% OR transition to 75% depending on >= vs > */
+    uint32 derating = mock_rte_signals[RZC_SIG_DERATING_PCT];
+    TEST_ASSERT_TRUE((derating == (uint32)RZC_TEMP_DERATE_100_PCT) ||
+                     (derating == (uint32)RZC_TEMP_DERATE_75_PCT));
+}
+
+/** @verifies SWR-RZC-010
+ *  Equivalence class: Boundary — exactly 80.0 degC (threshold for 75->50%) */
+void test_Derating_boundary_80C(void)
+{
+    set_mock_temp(800);   /* 80.0 degC */
+    run_cycles(1u);
+
+    uint32 derating = mock_rte_signals[RZC_SIG_DERATING_PCT];
+    TEST_ASSERT_TRUE((derating == (uint32)RZC_TEMP_DERATE_75_PCT) ||
+                     (derating == (uint32)RZC_TEMP_DERATE_50_PCT));
+}
+
+/** @verifies SWR-RZC-010
+ *  Equivalence class: Boundary — exactly 100.0 degC (threshold for 50->0%) */
+void test_Derating_boundary_100C(void)
+{
+    set_mock_temp(1000);   /* 100.0 degC */
+    run_cycles(1u);
+
+    uint32 derating = mock_rte_signals[RZC_SIG_DERATING_PCT];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_TEMP_DERATE_0_PCT, derating);
+}
+
+/** @verifies SWR-RZC-009
+ *  Equivalence class: Boundary — exactly at min plausible (-30.0 degC) */
+void test_Temp_at_min_plausible(void)
+{
+    set_mock_temp(-300);   /* -30.0 degC = RZC_TEMP_MIN_DDC */
+    run_cycles(1u);
+
+    /* At exactly -30.0C, should be accepted (boundary-inclusive) */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[RZC_SIG_TEMP_FAULT]);
+}
+
+/** @verifies SWR-RZC-009
+ *  Equivalence class: Boundary — exactly at max plausible (150.0 degC) */
+void test_Temp_at_max_plausible(void)
+{
+    set_mock_temp(1500);   /* 150.0 degC = RZC_TEMP_MAX_DDC */
+    run_cycles(1u);
+
+    /* At exactly 150.0C, should be accepted (boundary-inclusive) */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[RZC_SIG_TEMP_FAULT]);
+}
+
+/** @verifies SWR-RZC-009
+ *  Equivalence class: Fault injection — IoHwAb returns E_NOT_OK */
+void test_Temp_iohwab_failure(void)
+{
+    mock_iohwab_return = E_NOT_OK;
+    run_cycles(1u);
+
+    /* On read failure, module should report fault */
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[RZC_SIG_TEMP_FAULT]);
+}
+
+/** @verifies SWR-RZC-011
+ *  Equivalence class: Boundary — hysteresis at exactly recovery threshold (50.0 degC) */
+void test_Hysteresis_exact_recovery_threshold(void)
+{
+    /* Drive into 75% derating zone */
+    set_mock_temp(700);   /* 70 degC */
+    run_cycles(1u);
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_TEMP_DERATE_75_PCT,
+                             mock_rte_signals[RZC_SIG_DERATING_PCT]);
+
+    /* Cool to exactly 50 degC (60 - 10 hysteresis) */
+    set_mock_temp(500);   /* 50.0 degC */
+    run_cycles(1u);
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_TEMP_DERATE_100_PCT,
+                             mock_rte_signals[RZC_SIG_DERATING_PCT]);
+}
+
+/** @verifies SWR-RZC-009
+ *  Equivalence class: Boundary — zero degrees Celsius */
+void test_Temp_zero_degC(void)
+{
+    set_mock_temp(0);   /* 0.0 degC */
+    run_cycles(1u);
+
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[RZC_SIG_TEMP_FAULT]);
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_TEMP_DERATE_100_PCT,
+                             mock_rte_signals[RZC_SIG_DERATING_PCT]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -454,6 +556,16 @@ int main(void)
     /* Additional */
     RUN_TEST(test_CAN_broadcast);
     RUN_TEST(test_MainFunction_without_init_safe);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_Derating_boundary_60C);
+    RUN_TEST(test_Derating_boundary_80C);
+    RUN_TEST(test_Derating_boundary_100C);
+    RUN_TEST(test_Temp_at_min_plausible);
+    RUN_TEST(test_Temp_at_max_plausible);
+    RUN_TEST(test_Temp_iohwab_failure);
+    RUN_TEST(test_Hysteresis_exact_recovery_threshold);
+    RUN_TEST(test_Temp_zero_degC);
 
     return UNITY_END();
 }

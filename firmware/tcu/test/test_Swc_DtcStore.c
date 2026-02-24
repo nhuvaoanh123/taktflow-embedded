@@ -328,6 +328,207 @@ void test_DtcStore_auto_capture_from_broadcast(void)
 }
 
 /* ====================================================================
+ * HARDENED: NULL pointer and boundary tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: GetByMask — NULL dtcCodes pointer returns 0
+ *  NULL pointer: verify safe handling */
+void test_DtcStore_get_by_mask_null_ptr(void)
+{
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+
+    uint8 result = Swc_DtcStore_GetByMask(DTC_STATUS_CONFIRMED, NULL_PTR, 10u);
+    TEST_ASSERT_EQUAL_UINT8(0u, result);
+}
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: GetByMask — maxCount == 0 returns 0
+ *  Boundary value: zero-length output buffer */
+void test_DtcStore_get_by_mask_zero_max(void)
+{
+    uint32 codes[4];
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+
+    uint8 result = Swc_DtcStore_GetByMask(DTC_STATUS_CONFIRMED, codes, 0u);
+    TEST_ASSERT_EQUAL_UINT8(0u, result);
+}
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: Add — zero DTC code is rejected
+ *  Boundary value: dtcCode == 0 returns E_NOT_OK */
+void test_DtcStore_add_zero_code_rejected(void)
+{
+    Std_ReturnType result = Swc_DtcStore_Add(0u, DTC_STATUS_CONFIRMED);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, result);
+    TEST_ASSERT_EQUAL_UINT8(0u, Swc_DtcStore_GetCount());
+}
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: GetByIndex — out of range returns NULL
+ *  Boundary value: index == count, index == 99, index == 255 */
+void test_DtcStore_get_by_index_out_of_range(void)
+{
+    TEST_ASSERT_NULL(Swc_DtcStore_GetByIndex(0u));  /* Empty store */
+
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+    TEST_ASSERT_NOT_NULL(Swc_DtcStore_GetByIndex(0u));
+    TEST_ASSERT_NULL(Swc_DtcStore_GetByIndex(1u));   /* index == count */
+    TEST_ASSERT_NULL(Swc_DtcStore_GetByIndex(99u));
+    TEST_ASSERT_NULL(Swc_DtcStore_GetByIndex(255u));
+}
+
+/* ====================================================================
+ * HARDENED: Aging to auto-clear tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-009
+ *  Equivalence class: aging — DTC auto-cleared after 40 cycles
+ *  Boundary value: exactly TCU_DTC_AGING_CLEAR_CYCLES cycles */
+void test_DtcStore_aging_auto_clear_at_40_cycles(void)
+{
+    /* Add DTC with status that does NOT have TEST_FAILED bit set
+       (aging only increments when TEST_FAILED is clear) */
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+    TEST_ASSERT_EQUAL_UINT8(1u, Swc_DtcStore_GetCount());
+
+    /* Clear TEST_FAILED bit so aging can proceed */
+    const DtcStoreEntry_t* entry = Swc_DtcStore_GetByIndex(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+
+    /* Need to manually clear TEST_FAILED since Add doesn't clear it.
+       The DTC was added with only CONFIRMED, so TEST_FAILED is not set.
+       Run aging cycles. */
+    mock_rte_signals[TCU_SIG_DTC_BROADCAST] = 0u;
+
+    uint16 cycle;
+    for (cycle = 0u; cycle < TCU_DTC_AGING_CLEAR_CYCLES; cycle++) {
+        Swc_DtcStore_10ms();
+    }
+
+    /* After 40 aging cycles, the DTC should be auto-cleared */
+    TEST_ASSERT_EQUAL_UINT8(0u, Swc_DtcStore_GetCount());
+}
+
+/** @verifies SWR-TCU-009
+ *  Equivalence class: aging — re-detection resets aging counter
+ *  Verify that re-adding same DTC resets agingCounter to 0 */
+void test_DtcStore_redetection_resets_aging(void)
+{
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+    mock_rte_signals[TCU_SIG_DTC_BROADCAST] = 0u;
+
+    /* Age 20 cycles */
+    uint16 cycle;
+    for (cycle = 0u; cycle < 20u; cycle++) {
+        Swc_DtcStore_10ms();
+    }
+
+    const DtcStoreEntry_t* entry = Swc_DtcStore_GetByIndex(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_TRUE(entry->agingCounter > 0u);
+
+    /* Re-add same DTC — aging should reset to 0 */
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_TEST_FAILED);
+    entry = Swc_DtcStore_GetByIndex(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT16(0u, entry->agingCounter);
+}
+
+/* ====================================================================
+ * HARDENED: Circular overwrite verification
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: buffer full — circular overwrite replaces entry
+ *  Verify the new DTC code exists after overwrite */
+void test_DtcStore_circular_overwrite_verification(void)
+{
+    uint8 i;
+    boolean found;
+
+    /* Fill all 64 slots */
+    for (i = 0u; i < DTC_STORE_MAX_ENTRIES; i++) {
+        Swc_DtcStore_Add((uint32)(0x100u + i), DTC_STATUS_CONFIRMED);
+    }
+    TEST_ASSERT_EQUAL_UINT8(DTC_STORE_MAX_ENTRIES, Swc_DtcStore_GetCount());
+
+    /* Add one more — should overwrite slot 0 */
+    Swc_DtcStore_Add(0xDEADu, DTC_STATUS_CONFIRMED);
+    TEST_ASSERT_EQUAL_UINT8(DTC_STORE_MAX_ENTRIES, Swc_DtcStore_GetCount());
+
+    /* Verify 0xDEAD exists in the store */
+    found = FALSE;
+    for (i = 0u; i < DTC_STORE_MAX_ENTRIES; i++) {
+        const DtcStoreEntry_t* e = Swc_DtcStore_GetByIndex(i);
+        if ((e != NULL_PTR) && (e->dtcCode == 0xDEADu)) {
+            found = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found);
+}
+
+/* ====================================================================
+ * HARDENED: GetByMask filtering tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-008
+ *  Equivalence class: GetByMask — filter only matching status
+ *  Verify unmatched DTCs are excluded */
+void test_DtcStore_get_by_mask_filtering(void)
+{
+    uint32 codes[4];
+
+    Swc_DtcStore_Add(0x001u, DTC_STATUS_CONFIRMED);
+    Swc_DtcStore_Add(0x002u, DTC_STATUS_PENDING);
+    Swc_DtcStore_Add(0x003u, DTC_STATUS_CONFIRMED | DTC_STATUS_TEST_FAILED);
+    Swc_DtcStore_Add(0x004u, DTC_STATUS_TEST_FAILED_THIS_OP);
+
+    /* Only CONFIRMED: should match 0x001 and 0x003 */
+    uint8 found = Swc_DtcStore_GetByMask(DTC_STATUS_CONFIRMED, codes, 4u);
+    TEST_ASSERT_EQUAL_UINT8(2u, found);
+
+    /* Only PENDING: should match 0x002 */
+    found = Swc_DtcStore_GetByMask(DTC_STATUS_PENDING, codes, 4u);
+    TEST_ASSERT_EQUAL_UINT8(1u, found);
+    TEST_ASSERT_EQUAL_UINT32(0x002u, codes[0]);
+}
+
+/* ====================================================================
+ * HARDENED: Fault injection tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-008
+ *  Fault injection: 10ms called without init — should not process */
+void test_DtcStore_10ms_without_init_no_crash(void)
+{
+    dtc_initialized = FALSE;
+    mock_rte_signals[TCU_SIG_DTC_BROADCAST] = 0x005678u;
+
+    Swc_DtcStore_10ms();
+
+    /* tick_counter should not have incremented */
+    TEST_ASSERT_EQUAL_UINT32(0u, tick_counter);
+}
+
+/** @verifies SWR-TCU-008
+ *  Fault injection: duplicate status OR operation
+ *  Verify status bits accumulate correctly */
+void test_DtcStore_duplicate_status_or_accumulation(void)
+{
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_TEST_FAILED);
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_CONFIRMED);
+    Swc_DtcStore_Add(0x001234u, DTC_STATUS_PENDING);
+
+    const DtcStoreEntry_t* entry = Swc_DtcStore_GetByIndex(0u);
+    TEST_ASSERT_NOT_NULL(entry);
+    TEST_ASSERT_EQUAL_UINT8(
+        DTC_STATUS_TEST_FAILED | DTC_STATUS_CONFIRMED | DTC_STATUS_PENDING,
+        entry->status);
+    TEST_ASSERT_EQUAL_UINT8(1u, Swc_DtcStore_GetCount());  /* Still 1 entry */
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -348,6 +549,26 @@ int main(void)
     RUN_TEST(test_DtcStore_freeze_frame_capture);
     RUN_TEST(test_DtcStore_aging_counter);
     RUN_TEST(test_DtcStore_auto_capture_from_broadcast);
+
+    /* HARDENED: NULL pointer / boundary */
+    RUN_TEST(test_DtcStore_get_by_mask_null_ptr);
+    RUN_TEST(test_DtcStore_get_by_mask_zero_max);
+    RUN_TEST(test_DtcStore_add_zero_code_rejected);
+    RUN_TEST(test_DtcStore_get_by_index_out_of_range);
+
+    /* HARDENED: Aging to auto-clear */
+    RUN_TEST(test_DtcStore_aging_auto_clear_at_40_cycles);
+    RUN_TEST(test_DtcStore_redetection_resets_aging);
+
+    /* HARDENED: Circular overwrite */
+    RUN_TEST(test_DtcStore_circular_overwrite_verification);
+
+    /* HARDENED: GetByMask filtering */
+    RUN_TEST(test_DtcStore_get_by_mask_filtering);
+
+    /* HARDENED: Fault injection */
+    RUN_TEST(test_DtcStore_10ms_without_init_no_crash);
+    RUN_TEST(test_DtcStore_duplicate_status_or_accumulation);
 
     return UNITY_END();
 }

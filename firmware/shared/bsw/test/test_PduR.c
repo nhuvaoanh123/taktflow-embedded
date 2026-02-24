@@ -194,6 +194,105 @@ void test_PduR_RxIndication_null_pdu(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-013: Hardened Boundary Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_RxIndication_routes_second_com_pdu(void)
+{
+    uint8 data[] = {0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99};
+    PduInfoType pdu = { data, 8u };
+
+    PduR_CanIfRxIndication(1u, &pdu);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_rx_count);
+    TEST_ASSERT_EQUAL(1u, mock_com_rx_pdu_id);
+    TEST_ASSERT_EQUAL_HEX8(0x22, mock_com_rx_data[0]);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_RxIndication_routes_third_com_pdu(void)
+{
+    uint8 data[] = {0xAB, 0xCD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    PduInfoType pdu = { data, 8u };
+
+    PduR_CanIfRxIndication(2u, &pdu);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_rx_count);
+    TEST_ASSERT_EQUAL(2u, mock_com_rx_pdu_id);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dcm_rx_count);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_DcmTransmit_delegates_to_pdur_transmit(void)
+{
+    uint8 data[] = {0x50, 0x01, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00};
+    PduInfoType pdu = { data, 8u };
+
+    Std_ReturnType ret = PduR_DcmTransmit(0u, &pdu);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_canif_tx_count);
+    TEST_ASSERT_EQUAL_HEX8(0x50, mock_canif_tx_data[0]);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_DcmTransmit_null_pdu_returns_not_ok(void)
+{
+    Std_ReturnType ret = PduR_DcmTransmit(0u, NULL_PTR);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_Transmit_null_pdu_no_canif_call(void)
+{
+    Std_ReturnType ret = PduR_Transmit(0u, NULL_PTR);
+
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_canif_tx_count);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_RxIndication_before_init_discarded(void)
+{
+    /* Enter uninitialized state */
+    PduR_Init(NULL_PTR);
+
+    uint8 data[] = {0x01};
+    PduInfoType pdu = { data, 1u };
+
+    PduR_CanIfRxIndication(0u, &pdu);
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_rx_count);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dcm_rx_count);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_Transmit_before_init_returns_not_ok(void)
+{
+    PduR_Init(NULL_PTR);
+
+    uint8 data[] = {0x01};
+    PduInfoType pdu = { data, 1u };
+
+    Std_ReturnType ret = PduR_Transmit(0u, &pdu);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_canif_tx_count);
+}
+
+/** @verifies SWR-BSW-013 */
+void test_PduR_DcmTransmit_before_init_returns_not_ok(void)
+{
+    PduR_Init(NULL_PTR);
+
+    uint8 data[] = {0x01};
+    PduInfoType pdu = { data, 1u };
+
+    Std_ReturnType ret = PduR_DcmTransmit(0u, &pdu);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -209,6 +308,16 @@ int main(void)
     RUN_TEST(test_PduR_Transmit_canif_failure);
     RUN_TEST(test_PduR_Init_null_config);
     RUN_TEST(test_PduR_RxIndication_null_pdu);
+
+    /* Hardened boundary tests */
+    RUN_TEST(test_PduR_RxIndication_routes_second_com_pdu);
+    RUN_TEST(test_PduR_RxIndication_routes_third_com_pdu);
+    RUN_TEST(test_PduR_DcmTransmit_delegates_to_pdur_transmit);
+    RUN_TEST(test_PduR_DcmTransmit_null_pdu_returns_not_ok);
+    RUN_TEST(test_PduR_Transmit_null_pdu_no_canif_call);
+    RUN_TEST(test_PduR_RxIndication_before_init_discarded);
+    RUN_TEST(test_PduR_Transmit_before_init_returns_not_ok);
+    RUN_TEST(test_PduR_DcmTransmit_before_init_returns_not_ok);
 
     return UNITY_END();
 }

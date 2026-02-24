@@ -313,6 +313,128 @@ void test_SelfTest_runtime_flash_fail(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-SC-021
+ *  Equivalence class: Fault injection — canary set to zero (partial corruption) */
+void test_selftest_canary_zero(void)
+{
+    stack_canary = 0u;
+
+    TEST_ASSERT_FALSE(SC_SelfTest_StackCanaryOk());
+}
+
+/** @verifies SWR-SC-021
+ *  Equivalence class: Boundary — canary off-by-one (0xDEADBEEE) */
+void test_selftest_canary_off_by_one(void)
+{
+    stack_canary = SC_STACK_CANARY_VALUE - 1u;
+
+    TEST_ASSERT_FALSE(SC_SelfTest_StackCanaryOk());
+}
+
+/** @verifies SWR-SC-021
+ *  Equivalence class: Boundary — canary inverted (0x21524110) */
+void test_selftest_canary_inverted(void)
+{
+    stack_canary = ~SC_STACK_CANARY_VALUE;
+
+    TEST_ASSERT_FALSE(SC_SelfTest_StackCanaryOk());
+}
+
+/** @verifies SWR-SC-019
+ *  Equivalence class: Fault injection — GPIO readback failure (step 5) returns 5 */
+void test_selftest_startup_gpio_fail(void)
+{
+    mock_gpio_readback_pass = FALSE;
+
+    uint8 result = SC_SelfTest_Startup();
+
+    TEST_ASSERT_EQUAL_UINT8(5u, result);
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-019
+ *  Equivalence class: Fault injection — lamp test failure (step 6) returns 6 */
+void test_selftest_startup_lamp_fail(void)
+{
+    mock_lamp_test_pass = FALSE;
+
+    uint8 result = SC_SelfTest_Startup();
+
+    TEST_ASSERT_EQUAL_UINT8(6u, result);
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-019
+ *  Equivalence class: Fault injection — watchdog test failure (step 7) returns 7 */
+void test_selftest_startup_wdt_fail(void)
+{
+    mock_wdt_test_pass = FALSE;
+
+    uint8 result = SC_SelfTest_Startup();
+
+    TEST_ASSERT_EQUAL_UINT8(7u, result);
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-020
+ *  Equivalence class: Boundary — runtime DCAN error makes unhealthy */
+void test_selftest_runtime_dcan_fail(void)
+{
+    SC_SelfTest_Startup();
+
+    mock_dcan_error_ok = FALSE;
+
+    uint16 i;
+    for (i = 0u; i < (SC_SELFTEST_RUNTIME_PERIOD + 10u); i++) {
+        SC_SelfTest_Runtime();
+    }
+
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-019
+ *  Equivalence class: Boundary — double startup call (idempotent on success) */
+void test_selftest_startup_double_call(void)
+{
+    uint8 result1 = SC_SelfTest_Startup();
+    uint8 result2 = SC_SelfTest_Startup();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, result1);
+    TEST_ASSERT_EQUAL_UINT8(0u, result2);
+    TEST_ASSERT_TRUE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-020
+ *  Equivalence class: Boundary — runtime before startup does not crash */
+void test_selftest_runtime_before_startup(void)
+{
+    /* Do not call SC_SelfTest_Startup, just run runtime */
+    uint16 i;
+    for (i = 0u; i < 50u; i++) {
+        SC_SelfTest_Runtime();
+    }
+
+    /* Should not crash — healthy depends on startup having passed */
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/** @verifies SWR-SC-019
+ *  Equivalence class: Fault injection — first step fails, later steps not reached */
+void test_selftest_first_fail_blocks_remaining(void)
+{
+    mock_lockstep_bist_pass = FALSE;
+
+    uint8 result = SC_SelfTest_Startup();
+
+    /* Should fail at step 1 — does not continue to steps 2-7 */
+    TEST_ASSERT_EQUAL_UINT8(1u, result);
+    TEST_ASSERT_FALSE(SC_SelfTest_IsHealthy());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -335,6 +457,18 @@ int main(void)
     /* SWR-SC-020: Runtime self-test */
     RUN_TEST(test_SelfTest_runtime_healthy);
     RUN_TEST(test_SelfTest_runtime_flash_fail);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_selftest_canary_zero);
+    RUN_TEST(test_selftest_canary_off_by_one);
+    RUN_TEST(test_selftest_canary_inverted);
+    RUN_TEST(test_selftest_startup_gpio_fail);
+    RUN_TEST(test_selftest_startup_lamp_fail);
+    RUN_TEST(test_selftest_startup_wdt_fail);
+    RUN_TEST(test_selftest_runtime_dcan_fail);
+    RUN_TEST(test_selftest_startup_double_call);
+    RUN_TEST(test_selftest_runtime_before_startup);
+    RUN_TEST(test_selftest_first_fail_blocks_remaining);
 
     return UNITY_END();
 }

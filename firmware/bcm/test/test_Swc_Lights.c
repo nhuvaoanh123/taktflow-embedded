@@ -293,6 +293,168 @@ void test_Lights_not_init_does_nothing(void)
 }
 
 /* ====================================================================
+ * HARDENED TESTS — Boundary, NULL, Fault Injection, Equivalence Classes
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-004
+ *  Equivalence class: speed boundary — speed == 0 is OFF, speed == 1 is ON
+ *  Boundary value: speed at exact zero boundary while DRIVING */
+void test_Lights_boundary_speed_zero_driving(void)
+{
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+
+    Swc_Lights_10ms();
+
+    /* Speed == 0 even in DRIVING state => headlamp OFF */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-004
+ *  Equivalence class: speed boundary — max uint32 speed value
+ *  Boundary value: maximum representable speed */
+void test_Lights_boundary_max_speed(void)
+{
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0xFFFFFFFFu;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+
+    Swc_Lights_10ms();
+
+    /* Very high speed while driving => headlamp ON */
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-004
+ *  Equivalence class: vehicle state — invalid states not DRIVING
+ *  Partition: INIT, READY, DEGRADED, ESTOP, FAULT all keep lights OFF */
+void test_Lights_off_for_all_non_driving_states(void)
+{
+    uint32 non_driving_states[] = {
+        BCM_VSTATE_INIT, BCM_VSTATE_READY,
+        BCM_VSTATE_DEGRADED, BCM_VSTATE_ESTOP, BCM_VSTATE_FAULT
+    };
+    uint8 i;
+
+    for (i = 0u; i < 5u; i++) {
+        mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 100u;
+        mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = non_driving_states[i];
+        mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+
+        Swc_Lights_10ms();
+
+        TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    }
+}
+
+/** @verifies SWR-BCM-004
+ *  Equivalence class: vehicle state — invalid state value beyond enum range
+ *  Fault injection: out-of-range vehicle state value */
+void test_Lights_fault_invalid_vehicle_state(void)
+{
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 50u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = 255u;  /* Invalid state */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+
+    Swc_Lights_10ms();
+
+    /* Invalid state != DRIVING, so headlamp should be OFF */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-005
+ *  Equivalence class: manual override — override combined with auto-ON
+ *  Tests override + auto conditions both true simultaneously */
+void test_Lights_manual_override_plus_auto_on(void)
+{
+    /* Both auto-on condition (DRIVING + speed > 0) AND manual override */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 50u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0x01u;
+
+    Swc_Lights_10ms();
+
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-005
+ *  Equivalence class: body_cmd — non-override bits should not activate lights
+ *  Tests that only bit 0 of body_cmd activates manual override */
+void test_Lights_body_cmd_non_override_bits_ignored(void)
+{
+    /* Set all bits EXCEPT bit 0 */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0xFEu;  /* All bits except bit 0 */
+
+    Swc_Lights_10ms();
+
+    /* Only bit 0 is manual override — lights should remain OFF */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-005
+ *  Equivalence class: manual override — toggle on then off
+ *  Verifies override deactivation restores auto behavior */
+void test_Lights_manual_override_toggle_off(void)
+{
+    /* Override ON while parked */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0x01u;
+    Swc_Lights_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+
+    /* Override OFF — should revert to auto (parked + speed 0 = OFF) */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0x00u;
+    Swc_Lights_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/** @verifies SWR-BCM-003
+ *  Fault injection: call 10ms repeatedly without init — no crash, no writes */
+void test_Lights_repeated_calls_without_init(void)
+{
+    initialized = FALSE;
+    mock_rte_write_count = 0u;
+
+    /* Multiple calls should be safe */
+    Swc_Lights_10ms();
+    Swc_Lights_10ms();
+    Swc_Lights_10ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_rte_write_count);
+}
+
+/** @verifies SWR-BCM-003
+ *  Fault injection: re-initialization after normal operation resets outputs */
+void test_Lights_reinit_resets_state(void)
+{
+    /* First, drive with lights on */
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 50u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_DRIVING;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    Swc_Lights_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+
+    /* Re-initialize — parked state, should go off */
+    Swc_Lights_Init();
+    mock_rte_signals[BCM_SIG_VEHICLE_SPEED]    = 0u;
+    mock_rte_signals[BCM_SIG_VEHICLE_STATE]    = BCM_VSTATE_READY;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    Swc_Lights_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_HEADLAMP]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_LIGHT_TAIL]);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -313,6 +475,21 @@ int main(void)
 
     /* SWR-BCM-005: Manual override */
     RUN_TEST(test_Lights_manual_override_on);
+
+    /* HARDENED: Boundary value tests */
+    RUN_TEST(test_Lights_boundary_speed_zero_driving);
+    RUN_TEST(test_Lights_boundary_max_speed);
+
+    /* HARDENED: Equivalence class / partition tests */
+    RUN_TEST(test_Lights_off_for_all_non_driving_states);
+    RUN_TEST(test_Lights_manual_override_plus_auto_on);
+    RUN_TEST(test_Lights_body_cmd_non_override_bits_ignored);
+    RUN_TEST(test_Lights_manual_override_toggle_off);
+
+    /* HARDENED: Fault injection tests */
+    RUN_TEST(test_Lights_fault_invalid_vehicle_state);
+    RUN_TEST(test_Lights_repeated_calls_without_init);
+    RUN_TEST(test_Lights_reinit_resets_state);
 
     return UNITY_END();
 }

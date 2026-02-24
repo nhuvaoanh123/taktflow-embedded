@@ -1,0 +1,203 @@
+# =============================================================================
+# SIL (Software-in-the-Loop) Nightly Integration Tests — GitHub Actions
+#
+# Builds the full Docker SIL platform (7 vECUs + plant simulator + fault
+# injection API), runs all SIL test scenarios via verdict_checker.py, and
+# uploads JUnit XML results + container logs as artifacts.
+#
+# Schedule:  Nightly at 02:00 UTC
+# Manual:    workflow_dispatch (run on demand)
+#
+# This workflow is intentionally NOT triggered on push/PR — the full SIL
+# suite is too slow for per-commit CI. Unit tests and MISRA checks run
+# on every push via test.yml and misra.yml respectively.
+#
+# Standards:
+#   ISO 26262 Part 6, Section 10 — Software Integration & Testing
+#   ASPICE SWE.5 — SW Component Verification & Integration
+#   IEC 61508-3, Section 7.4.8 — Software Module Testing
+# =============================================================================
+
+name: SIL Nightly Tests
+
+on:
+  schedule:
+    # Run every night at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual trigger from Actions UI
+
+env:
+  CAN_CHANNEL: vcan0
+  MQTT_HOST: localhost
+  FAULT_PORT: 8091
+
+jobs:
+  sil-tests:
+    name: SIL Integration Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # -----------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------
+      # 2. Set up Python 3.11
+      # -----------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # -----------------------------------------------------------------
+      # 3. Install system dependencies
+      # -----------------------------------------------------------------
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            can-utils \
+            iproute2 \
+            linux-modules-extra-$(uname -r) || true
+          echo "System dependencies installed"
+
+      # -----------------------------------------------------------------
+      # 4. Set up vcan0 interface
+      # -----------------------------------------------------------------
+      - name: Set up vcan0 virtual CAN interface
+        run: |
+          sudo modprobe vcan
+          sudo ip link add dev vcan0 type vcan
+          sudo ip link set up vcan0
+          ip -d link show vcan0
+          echo "vcan0 interface is UP"
+
+      # -----------------------------------------------------------------
+      # 5. Install Python dependencies
+      # -----------------------------------------------------------------
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r test/sil/requirements.txt
+
+      # -----------------------------------------------------------------
+      # 6. Build Docker images
+      # -----------------------------------------------------------------
+      - name: Build Docker images
+        run: |
+          docker compose -f docker/docker-compose.yml build
+        env:
+          DOCKER_BUILDKIT: 1
+
+      # -----------------------------------------------------------------
+      # 7. Run SIL test suite
+      # -----------------------------------------------------------------
+      - name: Run SIL test suite
+        id: sil_tests
+        run: |
+          chmod +x test/sil/run_sil.sh
+          ./test/sil/run_sil.sh --timeout=${{ env.SIL_SCENARIO_TIMEOUT || '60' }} 2>&1 | tee sil_output.log
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      # -----------------------------------------------------------------
+      # 8. Upload JUnit XML, logs, and coverage as artifacts
+      # -----------------------------------------------------------------
+      - name: Upload SIL test results (JUnit XML + logs)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sil-test-results
+          path: |
+            test/sil/results/
+            sil_output.log
+          retention-days: 30
+
+      # -----------------------------------------------------------------
+      # 9. Upload results summary
+      # -----------------------------------------------------------------
+      - name: Upload SIL results summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sil-results-summary
+          path: |
+            test/sil/results/**/summary.txt
+            test/sil/results/**/*.xml
+          retention-days: 90
+
+      # -----------------------------------------------------------------
+      # 10. Post summary to GitHub Actions job summary
+      # -----------------------------------------------------------------
+      - name: Post SIL results to job summary
+        if: always()
+        run: |
+          echo "## SIL Nightly Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`${GITHUB_SHA::8}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Find the latest results directory
+          LATEST_DIR=$(ls -td test/sil/results/*/ 2>/dev/null | head -1)
+
+          if [ -n "$LATEST_DIR" ] && [ -f "${LATEST_DIR}summary.txt" ]; then
+            echo "### Verdict Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat "${LATEST_DIR}summary.txt" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Verdict Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "No summary file found. Check full logs in artifacts." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Include last 50 lines of verdict output for quick review
+          if [ -f sil_output.log ]; then
+            echo "### Verdict Output (last 50 lines)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -50 sil_output.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # List JUnit XML files found
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$LATEST_DIR" ]; then
+            XML_COUNT=$(find "$LATEST_DIR" -name '*.xml' 2>/dev/null | wc -l)
+            LOG_COUNT=$(find "$LATEST_DIR" -name '*.log' 2>/dev/null | wc -l)
+            echo "- JUnit XML reports: **${XML_COUNT}**" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Container log files: **${LOG_COUNT}**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # -----------------------------------------------------------------
+      # Failure notification (comment on workflow run)
+      # -----------------------------------------------------------------
+      - name: Annotate failure
+        if: steps.sil_tests.outputs.exit_code != '0' && steps.sil_tests.outputs.exit_code != ''
+        run: |
+          echo "::error::SIL nightly tests failed. Review artifacts for details."
+          echo "::error::One or more SIL test scenarios did not pass. See sil-test-results artifact."
+          exit 1
+
+      # -----------------------------------------------------------------
+      # Final status gate
+      # -----------------------------------------------------------------
+      - name: Check final status
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.sil_tests.outputs.exit_code }}"
+          if [ "$EXIT_CODE" = "0" ]; then
+            echo "All SIL tests passed."
+          elif [ -z "$EXIT_CODE" ]; then
+            echo "::error::SIL test runner did not produce an exit code — infrastructure failure."
+            exit 1
+          else
+            echo "::error::SIL tests failed with exit code $EXIT_CODE."
+            exit 1
+          fi

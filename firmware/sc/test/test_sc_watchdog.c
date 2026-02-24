@@ -128,6 +128,75 @@ void test_WDG_Feed_stuck_on_fail(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-SC-022
+ *  Equivalence class: Boundary — alternating pass/fail maintains last good state */
+void test_wdg_alternating_pass_fail(void)
+{
+    SC_Watchdog_Feed(TRUE);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_WDI]);
+
+    SC_Watchdog_Feed(FALSE);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_WDI]);  /* Stuck at 1 */
+
+    SC_Watchdog_Feed(TRUE);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_WDI]);  /* Toggles again */
+}
+
+/** @verifies SWR-SC-022
+ *  Equivalence class: Boundary — long sequence of successful feeds */
+void test_wdg_long_feed_sequence(void)
+{
+    uint8 i;
+    for (i = 0u; i < 100u; i++) {
+        SC_Watchdog_Feed(TRUE);
+    }
+
+    /* After 100 toggles from 0: 0->1->0->...->0 (even count = 0) */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_WDI]);
+}
+
+/** @verifies SWR-SC-022
+ *  Equivalence class: Fault injection — feed after prolonged failure */
+void test_wdg_resume_after_failure(void)
+{
+    /* Fail for 10 cycles */
+    uint8 i;
+    for (i = 0u; i < 10u; i++) {
+        SC_Watchdog_Feed(FALSE);
+    }
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_WDI]);
+
+    /* Resume feeding */
+    SC_Watchdog_Feed(TRUE);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_WDI]);
+
+    SC_Watchdog_Feed(TRUE);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_WDI]);
+}
+
+/** @verifies SWR-SC-022
+ *  Equivalence class: Boundary — WDI pin state after Init then immediate fail */
+void test_wdg_init_then_fail(void)
+{
+    SC_Watchdog_Feed(FALSE);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_WDI]);
+}
+
+/** @verifies SWR-SC-022
+ *  Equivalence class: Boundary — single feed cycle */
+void test_wdg_single_feed(void)
+{
+    uint8 count_before = mock_gio_set_count;
+    SC_Watchdog_Feed(TRUE);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_WDI]);
+    TEST_ASSERT_TRUE(mock_gio_set_count > count_before);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -139,6 +208,13 @@ int main(void)
     RUN_TEST(test_WDG_Feed_toggles);
     RUN_TEST(test_WDG_Feed_no_toggle_on_fail);
     RUN_TEST(test_WDG_Feed_stuck_on_fail);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_wdg_alternating_pass_fail);
+    RUN_TEST(test_wdg_long_feed_sequence);
+    RUN_TEST(test_wdg_resume_after_failure);
+    RUN_TEST(test_wdg_init_then_fail);
+    RUN_TEST(test_wdg_single_feed);
 
     return UNITY_END();
 }

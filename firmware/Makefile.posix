@@ -25,6 +25,10 @@ CC      = gcc
 CFLAGS  = -Wall -Wextra -Werror -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_POSIX
 LDFLAGS =
 
+# --- Coverage flags (set by coverage target) ---
+COV_CFLAGS  =
+COV_LDFLAGS =
+
 # --- Debug flags (always on for simulated ECUs) ---
 CFLAGS += -Og -g3 -DDEBUG
 
@@ -140,19 +144,19 @@ UNITY_SRC = $(UNITY_DIR)/unity.c
 # Targets
 # =============================================================================
 
-.PHONY: all test clean
+.PHONY: all test clean coverage
 
 all: $(OUTPUT)
 
 # --- Build the ECU binary ---
 $(OUTPUT): $(APP_OBJS) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(APP_OBJS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(COV_CFLAGS) -o $@ $(APP_OBJS) $(LDFLAGS) $(COV_LDFLAGS)
 	@echo "=== Built $(OUTPUT) ==="
 
 # --- Compile object files ---
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(COV_CFLAGS) -c $< -o $@
 
 # --- Build directory ---
 $(BUILD_DIR):
@@ -177,13 +181,88 @@ test: $(OUTPUT) $(TEST_BINS)
 # --- Build individual test binaries ---
 $(BUILD_DIR)/test/$(TARGET)/%: $(TARGET)/test/%.c $(UNITY_SRC) | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -DUNIT_TEST -I$(UNITY_DIR) -I$(TARGET)/src -I$(TARGET)/cfg \
-		$< $(UNITY_SRC) -o $@
+	$(CC) $(CFLAGS) $(COV_CFLAGS) -DUNIT_TEST -I$(UNITY_DIR) -I$(TARGET)/src -I$(TARGET)/cfg \
+		$< $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
 
 # --- Clean ---
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf coverage
 	@echo "=== Cleaned build directory ==="
+
+# =============================================================================
+# Code Coverage — gcov + lcov
+#
+# Builds tests with --coverage instrumentation, runs them, and generates
+# coverage reports. Requires lcov and genhtml.
+#
+# Usage:
+#   make -f Makefile.posix TARGET=bcm coverage       HTML + summary
+#   make -f Makefile.posix coverage-all               All ECUs combined
+# =============================================================================
+
+# Per-ECU coverage: build with coverage flags, run tests, generate report
+coverage: COV_CFLAGS  = -fprofile-arcs -ftest-coverage
+coverage: COV_LDFLAGS = -lgcov --coverage
+coverage: clean $(OUTPUT) $(TEST_BINS)
+	@echo "=== Running $(TARGET) tests with coverage ==="
+	@passed=0; failed=0; total=0; \
+	for t in $(TEST_BINS); do \
+		total=$$((total + 1)); \
+		echo "--- Running $$t ---"; \
+		if ./$$t; then \
+			passed=$$((passed + 1)); \
+		else \
+			failed=$$((failed + 1)); \
+		fi; \
+	done; \
+	echo "=== Results: $$passed/$$total passed, $$failed failed ==="; \
+	if [ $$failed -ne 0 ]; then exit 1; fi
+	@echo "=== Collecting $(TARGET) coverage data ==="
+	mkdir -p coverage/$(TARGET)
+	lcov --capture --directory $(BUILD_DIR) --output-file coverage/$(TARGET)/raw.info \
+		--rc branch_coverage=1 --ignore-errors mismatch
+	lcov --remove coverage/$(TARGET)/raw.info '*/test/*' '*/unity/*' '/usr/*' \
+		--output-file coverage/$(TARGET)/filtered.info --rc branch_coverage=1
+	genhtml coverage/$(TARGET)/filtered.info \
+		--output-directory coverage/$(TARGET)/html \
+		--branch-coverage --title "$(TARGET) Test Coverage"
+	@echo "=== $(TARGET) Coverage Summary ==="
+	lcov --summary coverage/$(TARGET)/filtered.info --rc branch_coverage=1
+	@echo "=== HTML report: coverage/$(TARGET)/html/index.html ==="
+
+# All-ECU coverage: run BSW + all 7 ECUs, merge into single report
+coverage-all:
+	@echo "=== Building coverage for all ECUs ==="
+	$(MAKE) -C shared/bsw coverage
+	@for ecu in $(VALID_TARGETS); do \
+		echo ""; \
+		echo "=== Coverage: $$ecu ==="; \
+		$(MAKE) -f Makefile.posix TARGET=$$ecu coverage || true; \
+	done
+	@echo "=== Merging all coverage data ==="
+	mkdir -p coverage/combined
+	lcov_args=""; \
+	if [ -f shared/bsw/coverage/bsw-filtered.info ]; then \
+		lcov_args="$$lcov_args -a shared/bsw/coverage/bsw-filtered.info"; \
+	fi; \
+	for ecu in $(VALID_TARGETS); do \
+		if [ -f coverage/$$ecu/filtered.info ]; then \
+			lcov_args="$$lcov_args -a coverage/$$ecu/filtered.info"; \
+		fi; \
+	done; \
+	if [ -n "$$lcov_args" ]; then \
+		lcov $$lcov_args -o coverage/combined/total.info --rc branch_coverage=1; \
+		genhtml coverage/combined/total.info \
+			--output-directory coverage/combined/html \
+			--branch-coverage --title "Taktflow Embedded — Combined Coverage"; \
+		echo "=== Combined Coverage Summary ==="; \
+		lcov --summary coverage/combined/total.info --rc branch_coverage=1; \
+		echo "=== HTML report: coverage/combined/html/index.html ==="; \
+	else \
+		echo "ERROR: No coverage data collected"; \
+		exit 1; \
+	fi
 
 # =============================================================================
 # MISRA C:2012 Static Analysis (cppcheck + MISRA addon)

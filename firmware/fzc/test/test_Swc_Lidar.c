@@ -562,6 +562,207 @@ void test_MainFunction_uninit_noop(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — ISO 26262 ASIL C TUV-grade additions
+ * Boundary value analysis, NULL pointer, fault injection,
+ * equivalence class documentation
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * Equivalence classes for lidar distance:
+ *   Valid:   2 <= dist <= 1200 cm (TFMini-S operating range)
+ *   Invalid: dist < 2 cm          (below min range, replaced with 0)
+ *   Invalid: dist > 1200 cm       (above max range, replaced with 0)
+ *   Boundary: dist = 2 cm         (minimum valid)
+ *   Boundary: dist = 1200 cm      (maximum valid)
+ *   Boundary: dist = 1 cm         (just below minimum)
+ *   Boundary: dist = 1201 cm      (just above maximum)
+ *
+ * Equivalence classes for signal strength:
+ *   Valid:   strength >= 100
+ *   Invalid: strength < 100        (unreliable, replaced with 0)
+ *   Boundary: strength = 100       (minimum valid)
+ *   Boundary: strength = 99        (just below minimum)
+ *
+ * Equivalence classes for zone classification:
+ *   Clear:     dist > 100 cm
+ *   Warning:   21 <= dist <= 100 cm
+ *   Braking:   21 <= dist <= 50 cm
+ *   Emergency: dist <= 20 cm
+ *   Boundary:  dist = 101 cm (clear), dist = 51 cm (warning),
+ *              dist = 21 cm (braking)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-FZC-015
+ *  Equivalence class: boundary — distance exactly at minimum valid (2 cm) */
+void test_Boundary_dist_at_min_valid(void)
+{
+    run_lidar_cycles(2u, 500u, 1u);
+
+    uint32 dist = mock_rte_signals[FZC_SIG_LIDAR_DIST];
+    /* 2 cm is valid — should be accepted and is in emergency zone */
+    TEST_ASSERT_EQUAL_UINT32(2u, dist);
+}
+
+/** @verifies SWR-FZC-015
+ *  Equivalence class: boundary — distance exactly at maximum valid (1200 cm) */
+void test_Boundary_dist_at_max_valid(void)
+{
+    run_lidar_cycles(1200u, 500u, 1u);
+
+    uint32 dist = mock_rte_signals[FZC_SIG_LIDAR_DIST];
+    TEST_ASSERT_EQUAL_UINT32(1200u, dist);
+}
+
+/** @verifies SWR-FZC-015
+ *  Equivalence class: boundary — distance just above max (1201 cm) rejected */
+void test_Boundary_dist_just_above_max(void)
+{
+    run_lidar_cycles(1201u, 500u, 1u);
+
+    uint32 dist = mock_rte_signals[FZC_SIG_LIDAR_DIST];
+    TEST_ASSERT_EQUAL_UINT32(0u, dist); /* Fault safe: 0 cm */
+}
+
+/** @verifies SWR-FZC-015
+ *  Equivalence class: boundary — signal strength exactly at minimum valid (100) */
+void test_Boundary_signal_at_min_valid(void)
+{
+    run_lidar_cycles(200u, 100u, 1u);
+
+    uint32 dist = mock_rte_signals[FZC_SIG_LIDAR_DIST];
+    /* Signal strength 100 is valid */
+    TEST_ASSERT_EQUAL_UINT32(200u, dist);
+
+    uint32 fault = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(0u, fault);
+}
+
+/** @verifies SWR-FZC-015
+ *  Equivalence class: boundary — signal strength just below minimum (99) rejected */
+void test_Boundary_signal_just_below_min(void)
+{
+    run_lidar_cycles(200u, 99u, 1u);
+
+    uint32 fault = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_TRUE(fault != 0u);
+}
+
+/** @verifies SWR-FZC-014
+ *  Equivalence class: boundary — distance 101 cm = clear zone */
+void test_Boundary_zone_101_clear(void)
+{
+    run_lidar_cycles(101u, 500u, 1u);
+
+    uint32 zone = mock_rte_signals[FZC_SIG_LIDAR_ZONE];
+    TEST_ASSERT_EQUAL_UINT32(FZC_LIDAR_ZONE_CLEAR, zone);
+}
+
+/** @verifies SWR-FZC-014
+ *  Equivalence class: boundary — distance 51 cm = warning zone */
+void test_Boundary_zone_51_warning(void)
+{
+    run_lidar_cycles(51u, 500u, 1u);
+
+    uint32 zone = mock_rte_signals[FZC_SIG_LIDAR_ZONE];
+    TEST_ASSERT_EQUAL_UINT32(FZC_LIDAR_ZONE_WARNING, zone);
+}
+
+/** @verifies SWR-FZC-014
+ *  Equivalence class: boundary — distance 21 cm = braking zone */
+void test_Boundary_zone_21_braking(void)
+{
+    run_lidar_cycles(21u, 500u, 1u);
+
+    uint32 zone = mock_rte_signals[FZC_SIG_LIDAR_ZONE];
+    TEST_ASSERT_EQUAL_UINT32(FZC_LIDAR_ZONE_BRAKING, zone);
+}
+
+/** @verifies SWR-FZC-013
+ *  NULL pointer test: GetDistance with NULL output */
+void test_GetDistance_null_output(void)
+{
+    Std_ReturnType ret = Swc_Lidar_GetDistance(NULL_PTR);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-FZC-013
+ *  NULL pointer test: Uart_ReadRxData called with module properly initialized */
+void test_Uart_read_called_on_main(void)
+{
+    mock_uart_read_count = 0u;
+    build_tfmini_frame(100u, 500u);
+    Swc_Lidar_MainFunction();
+
+    TEST_ASSERT_TRUE(mock_uart_read_count >= 1u);
+}
+
+/** @verifies SWR-FZC-016
+ *  Fault injection: timeout at exact boundary (99 cycles ok, 100 triggers) */
+void test_FaultInj_timeout_exact_boundary(void)
+{
+    /* Run 99 empty cycles — should NOT timeout (threshold = 100 cycles) */
+    run_empty_cycles(99u);
+    uint32 fault99 = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(0u, fault99);
+
+    /* 100th empty cycle — timeout triggers */
+    run_empty_cycles(1u);
+    uint32 fault100 = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_TRUE(fault100 != 0u);
+}
+
+/** @verifies SWR-FZC-015
+ *  Fault injection: stuck sensor detection at exact boundary (49 ok, 50 triggers) */
+void test_FaultInj_stuck_exact_boundary(void)
+{
+    /* 49 cycles with same distance — no stuck fault */
+    run_lidar_cycles(300u, 500u, 49u);
+    uint32 fault49 = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(0u, fault49);
+
+    /* 50th cycle — stuck fault triggers */
+    run_lidar_cycles(300u, 500u, 1u);
+    uint32 fault50 = mock_rte_signals[FZC_SIG_LIDAR_FAULT];
+    TEST_ASSERT_TRUE(fault50 != 0u);
+
+    /* DTC reported */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_LIDAR_STUCK]);
+}
+
+/** @verifies SWR-FZC-016
+ *  Fault injection: fault safe default substitutes 0 cm on all fault types */
+void test_FaultInj_all_faults_produce_zero_distance(void)
+{
+    /* Test 1: Range fault (out of range) */
+    run_lidar_cycles(1u, 500u, 1u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_LIDAR_DIST]);
+
+    /* Re-init for next test */
+    Swc_Lidar_Init(&test_config);
+
+    /* Test 2: Signal strength fault */
+    run_lidar_cycles(200u, 10u, 1u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_LIDAR_DIST]);
+
+    /* Re-init for next test */
+    Swc_Lidar_Init(&test_config);
+
+    /* Test 3: Timeout fault */
+    run_empty_cycles(100u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_LIDAR_DIST]);
+}
+
+/** @verifies SWR-FZC-013
+ *  Fault injection: frame with distance = 0 (below min range) */
+void test_FaultInj_frame_distance_zero(void)
+{
+    run_lidar_cycles(0u, 500u, 1u);
+
+    uint32 dist = mock_rte_signals[FZC_SIG_LIDAR_DIST];
+    TEST_ASSERT_EQUAL_UINT32(0u, dist); /* 0 < 2cm min range, replaced with 0 */
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -601,6 +802,26 @@ int main(void)
     RUN_TEST(test_Timeout_recovers);
     RUN_TEST(test_Fault_safe_zero);
     RUN_TEST(test_MainFunction_uninit_noop);
+
+    /* HARDENED: Boundary value tests */
+    RUN_TEST(test_Boundary_dist_at_min_valid);
+    RUN_TEST(test_Boundary_dist_at_max_valid);
+    RUN_TEST(test_Boundary_dist_just_above_max);
+    RUN_TEST(test_Boundary_signal_at_min_valid);
+    RUN_TEST(test_Boundary_signal_just_below_min);
+    RUN_TEST(test_Boundary_zone_101_clear);
+    RUN_TEST(test_Boundary_zone_51_warning);
+    RUN_TEST(test_Boundary_zone_21_braking);
+
+    /* HARDENED: NULL pointer tests */
+    RUN_TEST(test_GetDistance_null_output);
+    RUN_TEST(test_Uart_read_called_on_main);
+
+    /* HARDENED: Fault injection tests */
+    RUN_TEST(test_FaultInj_timeout_exact_boundary);
+    RUN_TEST(test_FaultInj_stuck_exact_boundary);
+    RUN_TEST(test_FaultInj_all_faults_produce_zero_distance);
+    RUN_TEST(test_FaultInj_frame_distance_zero);
 
     return UNITY_END();
 }

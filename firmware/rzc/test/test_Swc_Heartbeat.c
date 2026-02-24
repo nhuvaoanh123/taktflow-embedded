@@ -352,6 +352,98 @@ void test_MainFunction_without_init_safe(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-RZC-022
+ *  Equivalence class: Boundary — alive counter at max value (15) */
+void test_HB_alive_at_max(void)
+{
+    uint16 i;
+    /* Send exactly 16 heartbeats to reach alive=15 (0..15) */
+    for (i = 0u; i <= RZC_HB_ALIVE_MAX; i++) {
+        run_cycles(5u);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(RZC_HB_ALIVE_MAX,
+                            mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-RZC-022
+ *  Equivalence class: Boundary — fault mask at maximum (0xFFFF) */
+void test_HB_fault_mask_max(void)
+{
+    mock_fault_mask = 0xFFFFu;
+
+    run_cycles(5u);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_LO]);
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_HI]);
+}
+
+/** @verifies SWR-RZC-022
+ *  Equivalence class: Boundary — all vehicle states produce valid heartbeats */
+void test_HB_all_states_valid(void)
+{
+    uint8 states[] = { RZC_STATE_INIT, RZC_STATE_RUN, RZC_STATE_DEGRADED,
+                       RZC_STATE_LIMP, RZC_STATE_SAFE_STOP, RZC_STATE_SHUTDOWN };
+    uint8 i;
+
+    for (i = 0u; i < 6u; i++) {
+        mock_vehicle_state = states[i];
+        mock_fault_mask    = 0u;
+        mock_com_send_count = 0u;
+        run_cycles(5u);
+
+        if ((states[i] == RZC_STATE_SAFE_STOP) &&
+            ((mock_fault_mask & RZC_FAULT_CAN) != 0u)) {
+            /* Bus-off suppresses send */
+            continue;
+        }
+        /* State byte in heartbeat should match */
+        if (mock_com_send_count > 0u) {
+            TEST_ASSERT_EQUAL_UINT8((uint8)states[i],
+                                    mock_com_last_data[HB_BYTE_STATE]);
+        }
+    }
+}
+
+/** @verifies SWR-RZC-022
+ *  Equivalence class: Boundary — exactly 4 cycles (just before first TX) */
+void test_HB_exactly_4_cycles_no_send(void)
+{
+    run_cycles(4u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+}
+
+/** @verifies SWR-RZC-022
+ *  Equivalence class: Fault injection — zero fault mask */
+void test_HB_zero_fault_mask(void)
+{
+    mock_fault_mask = 0u;
+    run_cycles(5u);
+
+    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
+    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_HI]);
+}
+
+/** @verifies SWR-RZC-021
+ *  Equivalence class: Fault injection — CAN bus-off during ongoing TX */
+void test_HB_bus_off_mid_sequence(void)
+{
+    /* Normal TX first */
+    run_cycles(5u);
+    TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
+
+    /* CAN bus-off — no more TX */
+    mock_fault_mask = RZC_FAULT_CAN;
+    mock_vehicle_state = RZC_STATE_SAFE_STOP;
+    mock_com_send_count = 0u;
+    run_cycles(5u * 3u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -372,6 +464,14 @@ int main(void)
     RUN_TEST(test_HB_suppressed_in_bus_off);
     RUN_TEST(test_No_send_before_period);
     RUN_TEST(test_MainFunction_without_init_safe);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_HB_alive_at_max);
+    RUN_TEST(test_HB_fault_mask_max);
+    RUN_TEST(test_HB_all_states_valid);
+    RUN_TEST(test_HB_exactly_4_cycles_no_send);
+    RUN_TEST(test_HB_zero_fault_mask);
+    RUN_TEST(test_HB_bus_off_mid_sequence);
 
     return UNITY_END();
 }

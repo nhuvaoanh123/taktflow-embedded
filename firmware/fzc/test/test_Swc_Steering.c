@@ -852,6 +852,233 @@ void test_SPI_fail_sets_fault(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — ISO 26262 ASIL D TUV-grade additions
+ * Boundary value analysis, NULL pointer, fault injection,
+ * equivalence class documentation
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * Equivalence classes for steering angle command:
+ *   Valid:   -45 <= angle <= +45 (degrees, mechanical range)
+ *   Invalid: angle > +45          (out of range fault)
+ *   Invalid: angle < -45          (out of range fault)
+ *   Boundary: exactly -45, 0, +45 (accepted)
+ *   Boundary: -46 and +46         (rejected)
+ *
+ * Equivalence classes for SPI sensor read:
+ *   Valid:   IoHwAb returns E_OK
+ *   Invalid: IoHwAb returns E_NOT_OK (SPI failure)
+ *
+ * Equivalence classes for plausibility:
+ *   Valid:   |cmd - feedback| < 5 deg
+ *   Invalid: |cmd - feedback| >= 5 deg for 5+ cycles
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-FZC-003
+ *  Equivalence class: boundary — angle exactly at +46 (just above max) */
+void test_Boundary_angle_just_above_max(void)
+{
+    /* setup: command +46 — one degree above max */
+    run_cycles(46, 0, 5u);
+
+    /* assert: out-of-range fault triggered */
+    uint32 fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_OUT_OF_RANGE, fault);
+}
+
+/** @verifies SWR-FZC-003
+ *  Equivalence class: boundary — angle exactly at -46 (just below min) */
+void test_Boundary_angle_just_below_min(void)
+{
+    /* setup: command -46 — one degree below min */
+    run_cycles(-46, 0, 5u);
+
+    /* assert: out-of-range fault triggered */
+    uint32 fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_OUT_OF_RANGE, fault);
+}
+
+/** @verifies SWR-FZC-008
+ *  Equivalence class: boundary — PWM at center (0 degrees) maps to 1500us */
+void test_Boundary_pwm_center_exact(void)
+{
+    run_cycles(0, 0, 5u);
+
+    /* assert: PWM exactly 1500us */
+    TEST_ASSERT_EQUAL_UINT16(FZC_STEER_PWM_CENTER_US, mock_pwm_last_duty);
+}
+
+/** @verifies SWR-FZC-001
+ *  NULL pointer test: GetAngle with NULL output pointer */
+void test_GetAngle_null_pointer(void)
+{
+    Std_ReturnType ret = Swc_Steering_GetAngle(NULL_PTR);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-FZC-001
+ *  NULL pointer test: GetAngle returns valid angle after init */
+void test_GetAngle_valid_after_init(void)
+{
+    sint16 angle = 99;
+    run_cycles(0, 0, 5u);
+
+    Std_ReturnType ret = Swc_Steering_GetAngle(&angle);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    TEST_ASSERT_INT16_WITHIN(1, 0, angle);
+}
+
+/** @verifies SWR-FZC-001
+ *  Fault injection: SPI sensor failure sets SPI_FAIL fault and DTC */
+void test_FaultInj_SPI_failure_sets_DTC(void)
+{
+    /* Establish normal operation */
+    run_cycles(10, 10, 50u);
+
+    /* Inject SPI failure */
+    mock_iohwab_result = E_NOT_OK;
+    Swc_Steering_MainFunction();
+
+    /* assert: fault code set */
+    uint32 fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_SPI_FAIL, fault);
+
+    /* assert: DTC reported */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_STEER_SPI_FAIL]);
+    TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
+                            mock_dem_event_status[FZC_DTC_STEER_SPI_FAIL]);
+
+    /* assert: PWM forced to neutral */
+    TEST_ASSERT_EQUAL_UINT16(FZC_STEER_PWM_CENTER_US, mock_pwm_last_duty);
+}
+
+/** @verifies SWR-FZC-002
+ *  Fault injection: plausibility debounce at exact threshold (4 cycles = no fault, 5 = fault) */
+void test_FaultInj_plausibility_debounce_exact(void)
+{
+    /* Establish stable angle */
+    run_cycles(20, 20, 100u);
+
+    /* 4 cycles with bad feedback — should NOT fault (debounce = 5) */
+    run_cycles(20, 30, 4u);
+    uint32 fault4 = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault4);
+
+    /* 5th cycle — fault triggers */
+    run_cycles(20, 30, 1u);
+    uint32 fault5 = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_PLAUSIBILITY, fault5);
+}
+
+/** @verifies SWR-FZC-028
+ *  Fault injection: command timeout at exact boundary (9 cycles ok, 10 triggers) */
+void test_FaultInj_cmd_timeout_exact_boundary(void)
+{
+    /* Establish angle at 10 degrees with changing commands */
+    uint16 i;
+    for (i = 0u; i < 70u; i++) {
+        mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)((sint16)(10 + (sint16)(i % 2u))));
+        mock_iohwab_angle = 10;
+        Swc_Steering_MainFunction();
+    }
+
+    /* Now hold same command for 9 cycles — should NOT timeout */
+    run_cycles(10, 10, 9u);
+    uint32 fault9 = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault9);
+
+    /* 10th cycle — timeout triggers */
+    run_cycles(10, 10, 1u);
+    uint32 fault10 = mock_rte_signals[FZC_SIG_STEER_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_CMD_TIMEOUT, fault10);
+}
+
+/** @verifies SWR-FZC-007
+ *  Equivalence class: rate limiter — large positive jump clamped per cycle */
+void test_RateLimit_large_positive_jump(void)
+{
+    /* Start at center */
+    run_cycles(0, 0, 10u);
+
+    /* Command jumps to +45 — rate limit: 3 tenths (0.3 deg) per cycle.
+     * After 1 cycle, internal angle should be at most 0.3 deg. */
+    run_cycles(45, 0, 1u);
+
+    sint16 angle = 0;
+    Swc_Steering_GetAngle(&angle);
+
+    /* After 1 cycle, angle should be very small (at most ~1 deg due to rounding) */
+    TEST_ASSERT_TRUE(angle <= 1);
+}
+
+/** @verifies SWR-FZC-004
+ *  Fault injection: return-to-center reaches center and stops */
+void test_FaultInj_RTC_reaches_zero_and_stops(void)
+{
+    /* Establish small angle at 1 deg */
+    run_cycles(1, 1, 40u);
+
+    /* Trigger timeout + enough cycles for RTC to reach center */
+    run_cycles(1, 0, 30u);
+
+    sint16 angle = 99;
+    Swc_Steering_GetAngle(&angle);
+
+    /* Should be at or very near 0 */
+    TEST_ASSERT_INT16_WITHIN(1, 0, angle);
+}
+
+/** @verifies SWR-FZC-001
+ *  Fault injection: double Init call resets state cleanly */
+void test_FaultInj_double_init_steering(void)
+{
+    /* Run some normal cycles */
+    run_cycles(20, 20, 100u);
+
+    sint16 angle_before = 0;
+    Swc_Steering_GetAngle(&angle_before);
+    TEST_ASSERT_INT16_WITHIN(2, 20, angle_before);
+
+    /* Second init should reset angle to 0 */
+    Swc_Steering_Init(&test_config);
+
+    sint16 angle_after = 0;
+    Swc_Steering_GetAngle(&angle_after);
+    TEST_ASSERT_EQUAL_INT16(0, angle_after);
+}
+
+/** @verifies SWR-FZC-006
+ *  Fault injection: 3-level PWM disable escalation across fault episodes */
+void test_FaultInj_pwm_disable_escalation(void)
+{
+    /* Episode 1: SPI fault -> level 1 */
+    mock_iohwab_result = E_NOT_OK;
+    Swc_Steering_MainFunction();
+    uint32 lvl1 = mock_rte_signals[FZC_SIG_STEER_PWM_DISABLE];
+    TEST_ASSERT_TRUE(lvl1 >= 1u);
+
+    /* Clear fault */
+    mock_iohwab_result = E_OK;
+    run_cycles(0, 0, 55u);
+
+    /* Episode 2: SPI fault -> level 2 */
+    mock_iohwab_result = E_NOT_OK;
+    Swc_Steering_MainFunction();
+    uint32 lvl2 = mock_rte_signals[FZC_SIG_STEER_PWM_DISABLE];
+    TEST_ASSERT_TRUE(lvl2 >= 2u);
+
+    /* Clear fault */
+    mock_iohwab_result = E_OK;
+    run_cycles(0, 0, 55u);
+
+    /* Episode 3: SPI fault -> level 3 */
+    mock_iohwab_result = E_NOT_OK;
+    Swc_Steering_MainFunction();
+    uint32 lvl3 = mock_rte_signals[FZC_SIG_STEER_PWM_DISABLE];
+    TEST_ASSERT_TRUE(lvl3 >= 3u);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -908,6 +1135,24 @@ int main(void)
 
     /* SPI failure */
     RUN_TEST(test_SPI_fail_sets_fault);
+
+    /* HARDENED: Boundary value tests */
+    RUN_TEST(test_Boundary_angle_just_above_max);
+    RUN_TEST(test_Boundary_angle_just_below_min);
+    RUN_TEST(test_Boundary_pwm_center_exact);
+
+    /* HARDENED: NULL pointer tests */
+    RUN_TEST(test_GetAngle_null_pointer);
+    RUN_TEST(test_GetAngle_valid_after_init);
+
+    /* HARDENED: Fault injection tests */
+    RUN_TEST(test_FaultInj_SPI_failure_sets_DTC);
+    RUN_TEST(test_FaultInj_plausibility_debounce_exact);
+    RUN_TEST(test_FaultInj_cmd_timeout_exact_boundary);
+    RUN_TEST(test_RateLimit_large_positive_jump);
+    RUN_TEST(test_FaultInj_RTC_reaches_zero_and_stops);
+    RUN_TEST(test_FaultInj_double_init_steering);
+    RUN_TEST(test_FaultInj_pwm_disable_escalation);
 
     return UNITY_END();
 }

@@ -363,6 +363,160 @@ void test_IoHwAb_ReadBatteryVoltage_adc_fail(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-014: Hardened Boundary Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-014 — read pedal angle sensor 1 (second redundant) */
+void test_IoHwAb_ReadPedalAngle_sensor1_valid(void)
+{
+    mock_spi_rx_buf[0] = 0x20u;
+    mock_spi_rx_buf[1] = 0x00u;
+
+    uint16 angle = 0u;
+    Std_ReturnType ret = IoHwAb_ReadPedalAngle(1u, &angle);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_spi_sync_count > 0u);
+}
+
+/** @verifies SWR-BSW-014 — read motor temp null pointer */
+void test_IoHwAb_ReadMotorTemp_null_ptr(void)
+{
+    Std_ReturnType ret = IoHwAb_ReadMotorTemp(NULL_PTR);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — read battery voltage null pointer */
+void test_IoHwAb_ReadBatteryVoltage_null_ptr(void)
+{
+    Std_ReturnType ret = IoHwAb_ReadBatteryVoltage(NULL_PTR);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — motor stop direction */
+void test_IoHwAb_SetMotorPWM_stop(void)
+{
+    Std_ReturnType ret = IoHwAb_SetMotorPWM(IOHWAB_MOTOR_STOP, 0u);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    /* Stop should de-energize both direction pins */
+    TEST_ASSERT_EQUAL_UINT8(STD_LOW, mock_dio_channel_states[3]);
+    TEST_ASSERT_EQUAL_UINT8(STD_LOW, mock_dio_channel_states[4]);
+}
+
+/** @verifies SWR-BSW-014 — motor direction value 3 is invalid */
+void test_IoHwAb_SetMotorPWM_direction_3_invalid(void)
+{
+    Std_ReturnType ret = IoHwAb_SetMotorPWM(3u, 5000u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — ADC conversion at raw=0 (minimum) */
+void test_IoHwAb_ReadMotorCurrent_adc_min(void)
+{
+    mock_adc_values[0] = 0u;
+
+    uint16 current_mA = 9999u;
+    Std_ReturnType ret = IoHwAb_ReadMotorCurrent(&current_mA);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    /* raw=0 should produce 0 or very low current */
+    TEST_ASSERT_TRUE(current_mA < 100u);
+}
+
+/** @verifies SWR-BSW-014 — ADC conversion at raw=4095 (12-bit max) */
+void test_IoHwAb_ReadMotorCurrent_adc_max(void)
+{
+    mock_adc_values[0] = 4095u;
+
+    uint16 current_mA = 0u;
+    Std_ReturnType ret = IoHwAb_ReadMotorCurrent(&current_mA);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(current_mA > 0u);
+}
+
+/** @verifies SWR-BSW-014 — SPI angle extraction uses 14-bit mask */
+void test_IoHwAb_ReadPedalAngle_14bit_mask(void)
+{
+    /* Set SPI response with upper bits set beyond 14-bit range */
+    mock_spi_rx_buf[0] = 0xFFu;   /* MSB: all bits high */
+    mock_spi_rx_buf[1] = 0xFFu;   /* LSB: all bits high */
+
+    uint16 angle = 0u;
+    Std_ReturnType ret = IoHwAb_ReadPedalAngle(0u, &angle);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    /* 14-bit max is 0x3FFF = 16383, angle should not exceed this */
+    TEST_ASSERT_TRUE(angle <= 0x3FFFu);
+}
+
+/** @verifies SWR-BSW-014 — before init all sensor reads should fail */
+void test_IoHwAb_ReadPedalAngle_before_init_fails(void)
+{
+    IoHwAb_Init(NULL_PTR);
+
+    uint16 angle = 0u;
+    Std_ReturnType ret = IoHwAb_ReadPedalAngle(0u, &angle);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — before init steering angle read fails */
+void test_IoHwAb_ReadSteeringAngle_before_init_fails(void)
+{
+    IoHwAb_Init(NULL_PTR);
+
+    uint16 angle = 0u;
+    Std_ReturnType ret = IoHwAb_ReadSteeringAngle(&angle);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — before init motor PWM fails */
+void test_IoHwAb_SetMotorPWM_before_init_fails(void)
+{
+    IoHwAb_Init(NULL_PTR);
+
+    Std_ReturnType ret = IoHwAb_SetMotorPWM(IOHWAB_MOTOR_FORWARD, 5000u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-014 — e-stop reads DIO pin state (released) */
+void test_IoHwAb_ReadEStop_released(void)
+{
+    mock_dio_channel_states[5] = STD_LOW;
+
+    uint8 state = STD_HIGH;
+    Std_ReturnType ret = IoHwAb_ReadEStop(&state);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(STD_LOW, state);
+}
+
+/** @verifies SWR-BSW-014 — ADC min boundary for battery voltage */
+void test_IoHwAb_ReadBatteryVoltage_adc_min(void)
+{
+    mock_adc_values[2] = 0u;
+
+    uint16 voltage_mV = 9999u;
+    Std_ReturnType ret = IoHwAb_ReadBatteryVoltage(&voltage_mV);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(voltage_mV < 100u);
+}
+
+/** @verifies SWR-BSW-014 — ADC max boundary for battery voltage */
+void test_IoHwAb_ReadBatteryVoltage_adc_max(void)
+{
+    mock_adc_values[2] = 4095u;
+
+    uint16 voltage_mV = 0u;
+    Std_ReturnType ret = IoHwAb_ReadBatteryVoltage(&voltage_mV);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(voltage_mV > 0u);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -394,6 +548,22 @@ int main(void)
     /* Init / defensive */
     RUN_TEST(test_IoHwAb_Init_null_config);
     RUN_TEST(test_IoHwAb_ReadBatteryVoltage_adc_fail);
+
+    /* Hardened boundary tests */
+    RUN_TEST(test_IoHwAb_ReadPedalAngle_sensor1_valid);
+    RUN_TEST(test_IoHwAb_ReadMotorTemp_null_ptr);
+    RUN_TEST(test_IoHwAb_ReadBatteryVoltage_null_ptr);
+    RUN_TEST(test_IoHwAb_SetMotorPWM_stop);
+    RUN_TEST(test_IoHwAb_SetMotorPWM_direction_3_invalid);
+    RUN_TEST(test_IoHwAb_ReadMotorCurrent_adc_min);
+    RUN_TEST(test_IoHwAb_ReadMotorCurrent_adc_max);
+    RUN_TEST(test_IoHwAb_ReadPedalAngle_14bit_mask);
+    RUN_TEST(test_IoHwAb_ReadPedalAngle_before_init_fails);
+    RUN_TEST(test_IoHwAb_ReadSteeringAngle_before_init_fails);
+    RUN_TEST(test_IoHwAb_SetMotorPWM_before_init_fails);
+    RUN_TEST(test_IoHwAb_ReadEStop_released);
+    RUN_TEST(test_IoHwAb_ReadBatteryVoltage_adc_min);
+    RUN_TEST(test_IoHwAb_ReadBatteryVoltage_adc_max);
 
     return UNITY_END();
 }

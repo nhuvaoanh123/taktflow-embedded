@@ -257,6 +257,173 @@ void test_Gpt_DeInit(void)
 }
 
 /* ==================================================================
+ * Hardened Tests: Init Edge Cases (SWR-BSW-010)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_Init_numChannels_exceeds_max_stays_uninit(void)
+{
+    /* numChannels > GPT_MAX_CHANNELS should be rejected */
+    test_config.numChannels = GPT_MAX_CHANNELS + 1u;
+    Gpt_Init(&test_config);
+
+    TEST_ASSERT_EQUAL(GPT_UNINIT, Gpt_GetStatus());
+}
+
+/* ==================================================================
+ * Hardened Tests: Timer Value Boundary (SWR-BSW-010)
+ * Equivalence classes: Value=0 (rejected), Value=1 (min valid),
+ *                      Value=0xFFFFFFFF (max valid)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_value_one_min_valid(void)
+{
+    /* Value=1 is the minimum valid timer target */
+    Gpt_Init(&test_config);
+
+    Std_ReturnType ret = Gpt_StartTimer(0u, 1u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_hw_start_value[0]);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_value_max_uint32(void)
+{
+    /* Value=0xFFFFFFFF is the maximum 32-bit value — should be accepted */
+    Gpt_Init(&test_config);
+
+    Std_ReturnType ret = Gpt_StartTimer(0u, 0xFFFFFFFFu);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, mock_hw_start_value[0]);
+}
+
+/* ==================================================================
+ * Hardened Tests: Channel Boundary (SWR-BSW-010)
+ * Boundary: Channel=0 (min valid), Channel=numChannels-1 (max valid),
+ *           Channel=numChannels (invalid), Channel=GPT_MAX_CHANNELS (invalid)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_channel_zero_valid(void)
+{
+    Gpt_Init(&test_config);
+
+    Std_ReturnType ret = Gpt_StartTimer(0u, 500u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_hw_start_called[0]);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_channel_max_minus_one_valid(void)
+{
+    /* numChannels=2, so channel 1 is the max valid */
+    Gpt_Init(&test_config);
+
+    Std_ReturnType ret = Gpt_StartTimer(1u, 500u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_hw_start_called[1]);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_channel_equals_num_channels_invalid(void)
+{
+    /* numChannels=2, channel 2 is out of range */
+    Gpt_Init(&test_config);
+
+    Std_ReturnType ret = Gpt_StartTimer(2u, 500u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/* ==================================================================
+ * Hardened Tests: Start Timer When Already Running (SWR-BSW-010)
+ * The current impl allows re-starting: it just calls Hw_StartTimer again
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StartTimer_when_already_running(void)
+{
+    Gpt_Init(&test_config);
+
+    Gpt_StartTimer(0u, 1000u);
+    TEST_ASSERT_TRUE(mock_hw_start_called[0]);
+
+    /* Reset mock to detect second call */
+    mock_hw_start_called[0] = FALSE;
+
+    /* Start same channel again — should succeed (restart) */
+    Std_ReturnType ret = Gpt_StartTimer(0u, 2000u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_hw_start_called[0]);
+    TEST_ASSERT_EQUAL_UINT32(2000u, mock_hw_start_value[0]);
+}
+
+/* ==================================================================
+ * Hardened Tests: StopTimer Idempotent (SWR-BSW-010)
+ * Stopping an already-stopped timer should succeed (idempotent)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StopTimer_when_already_stopped_idempotent(void)
+{
+    Gpt_Init(&test_config);
+
+    /* Channel 0 was never started. Stop should still succeed
+     * (the driver calls Hw_StopTimer regardless of running state) */
+    Std_ReturnType ret = Gpt_StopTimer(0u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_hw_stop_called[0]);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StopTimer_double_stop_idempotent(void)
+{
+    Gpt_Init(&test_config);
+    Gpt_StartTimer(0u, 1000u);
+
+    Gpt_StopTimer(0u);
+    TEST_ASSERT_TRUE(mock_hw_stop_called[0]);
+
+    /* Reset mock and stop again */
+    mock_hw_stop_called[0] = FALSE;
+    Std_ReturnType ret = Gpt_StopTimer(0u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_TRUE(mock_hw_stop_called[0]);
+}
+
+/* ==================================================================
+ * Hardened Tests: GetTimeElapsed Edge Cases (SWR-BSW-010)
+ * Boundary: 0 when uninitialized, 0 when channel not running
+ * ================================================================== */
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_GetTimeElapsed_uninitialized_returns_zero(void)
+{
+    /* Without Init, should return 0 */
+    uint32 elapsed = Gpt_GetTimeElapsed(0u);
+    TEST_ASSERT_EQUAL_UINT32(0u, elapsed);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_GetTimeElapsed_channel_not_started_returns_hw_counter(void)
+{
+    /* After Init but before StartTimer, counter reads whatever HW reports */
+    Gpt_Init(&test_config);
+    mock_hw_counter[0] = 0u;
+
+    uint32 elapsed = Gpt_GetTimeElapsed(0u);
+    TEST_ASSERT_EQUAL_UINT32(0u, elapsed);
+}
+
+/** @verifies SWR-BSW-010 */
+void test_Gpt_StopTimer_before_init_fails(void)
+{
+    /* StopTimer when driver is not initialized should fail */
+    Std_ReturnType ret = Gpt_StopTimer(0u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/* ==================================================================
  * Test Runner
  * ================================================================== */
 
@@ -287,6 +454,30 @@ int main(void)
 
     /* DeInit test */
     RUN_TEST(test_Gpt_DeInit);
+
+    /* Hardened: Init edge cases */
+    RUN_TEST(test_Gpt_Init_numChannels_exceeds_max_stays_uninit);
+
+    /* Hardened: Timer value boundary */
+    RUN_TEST(test_Gpt_StartTimer_value_one_min_valid);
+    RUN_TEST(test_Gpt_StartTimer_value_max_uint32);
+
+    /* Hardened: Channel boundary */
+    RUN_TEST(test_Gpt_StartTimer_channel_zero_valid);
+    RUN_TEST(test_Gpt_StartTimer_channel_max_minus_one_valid);
+    RUN_TEST(test_Gpt_StartTimer_channel_equals_num_channels_invalid);
+
+    /* Hardened: Start when already running */
+    RUN_TEST(test_Gpt_StartTimer_when_already_running);
+
+    /* Hardened: StopTimer idempotent */
+    RUN_TEST(test_Gpt_StopTimer_when_already_stopped_idempotent);
+    RUN_TEST(test_Gpt_StopTimer_double_stop_idempotent);
+
+    /* Hardened: GetTimeElapsed edge cases */
+    RUN_TEST(test_Gpt_GetTimeElapsed_uninitialized_returns_zero);
+    RUN_TEST(test_Gpt_GetTimeElapsed_channel_not_started_returns_hw_counter);
+    RUN_TEST(test_Gpt_StopTimer_before_init_fails);
 
     return UNITY_END();
 }

@@ -236,6 +236,12 @@ The platform shall provide a hardware emergency stop button that, when activated
 
 The platform shall provide body control functions including automatic headlight activation based on driving state, turn indicator control, and hazard light activation during fault or emergency conditions. Body control functions shall be QM-rated and shall not interfere with safety-critical functions.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-25 -->
+> **Why:** STK-011 captures expected body-domain behavior for demo realism (lights/indicators/hazard) while keeping these features clearly separated from core safety control functions.
+> **Tradeoff:** keeping body functions QM-rated reduces safety-case burden, but requires strong partitioning so body logic cannot degrade timing/resources of ASIL-relevant functions.
+> **Alternative:** classify parts of body control (for example hazard activation paths) as safety-related, which strengthens safety rigor but increases development and verification scope.
+<!-- HITL-LOCK END:COMMENT-BLOCK-25 -->
+
 ---
 
 ### STK-012: UDS Diagnostic Services
@@ -246,6 +252,12 @@ The platform shall provide body control functions including automatic headlight 
 
 The platform shall implement Unified Diagnostic Services (UDS) per ISO 14229, supporting at least the following services: Diagnostic Session Control (0x10), Clear Diagnostic Information (0x14), Read DTC Information (0x19), Read Data By Identifier (0x22), Write Data By Identifier (0x2E), and Security Access (0x27). The diagnostic function shall enable fault reading, clearing, and data inspection by a service technician using standard UDS tooling.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-26 -->
+> **Why:** STK-012 ensures serviceability using standard ISO 14229 tooling, with diagnostics centrally hosted by the TCU UDS server for consistent access to sessions, DIDs, and DTC operations.
+> **Tradeoff:** centralizing UDS in the TCU simplifies tester integration and governance, but creates dependency on gateway routing/availability for diagnostics of remote ECUs.
+> **Alternative:** expose full per-ECU UDS servers directly on physical addressing, which improves ECU-local independence but increases implementation, security, and consistency-management effort.
+<!-- HITL-LOCK END:COMMENT-BLOCK-26 -->
+
 ---
 
 ### STK-013: Diagnostic Trouble Code Management
@@ -255,6 +267,12 @@ The platform shall implement Unified Diagnostic Services (UDS) per ISO 14229, su
 - **Status**: draft
 
 The platform shall store diagnostic trouble codes (DTCs) with associated freeze-frame data for all detected faults. DTCs shall be persistent across power cycles (stored in non-volatile memory). The system shall support reading, clearing, and aging of DTCs per standard diagnostic conventions.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-27 -->
+> **Why:** STK-013 ensures fault records remain diagnostically useful after restart by combining DTC persistence with freeze-frame snapshots, so technicians can reconstruct fault context instead of only seeing a fault code.
+> **Tradeoff:** storing freeze-frame for all detected faults improves root-cause evidence quality, but increases non-volatile memory use and requires clear retention/aging strategy when storage is near capacity.
+> **Alternative:** store freeze-frame only for a prioritized subset of safety-relevant or high-severity DTCs, which reduces memory pressure but lowers diagnostic completeness for non-prioritized faults.
+<!-- HITL-LOCK END:COMMENT-BLOCK-27 -->
 
 ---
 

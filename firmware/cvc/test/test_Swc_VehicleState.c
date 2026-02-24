@@ -545,6 +545,215 @@ void test_Steering_fault_reports_DTC(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Value, Fault Injection, Defensive Checks
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-009: Event boundary — out-of-range event IDs
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: INVALID — event ID at boundary (CVC_EVT_COUNT)
+ *  Boundary: event = CVC_EVT_COUNT (first invalid) */
+void test_OnEvent_boundary_event_at_count(void)
+{
+    /* Get to RUN */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Fire event with ID = CVC_EVT_COUNT (11) — out of range */
+    Swc_VehicleState_OnEvent(CVC_EVT_COUNT);
+
+    /* State should remain RUN */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: INVALID — event ID = 0xFF (max uint8)
+ *  Boundary: maximum possible uint8 value */
+void test_OnEvent_boundary_event_max_uint8(void)
+{
+    Swc_VehicleState_OnEvent(0xFFu);
+
+    /* State should remain INIT (no transition) */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-009: E-stop override from every state
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: VALID — E-stop from INIT state (via signal in MainFunction)
+ *  Fault injection: E-stop while still in INIT */
+void test_Estop_from_INIT_via_signal(void)
+{
+    /* Set E-stop active signal, run MainFunction */
+    mock_rte_signals[CVC_SIG_ESTOP_ACTIVE] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    /* INIT does not have EVT_ESTOP as valid transition in the table,
+     * so the state should remain INIT (per transition table design) */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: VALID — E-stop from LIMP (direct OnEvent call)
+ *  Fault injection: critical E-stop from degraded operational mode */
+void test_Estop_from_LIMP_via_OnEvent(void)
+{
+    /* Get to LIMP */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
+
+    /* E-stop */
+    Swc_VehicleState_OnEvent(CVC_EVT_ESTOP);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-009: SC_KILL from every relevant state
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: VALID — SC_KILL from DEGRADED
+ *  Fault injection: safety controller kill from DEGRADED */
+void test_SC_KILL_from_DEGRADED(void)
+{
+    /* Get to DEGRADED */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+
+    Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: VALID — SC_KILL from LIMP
+ *  Fault injection: safety controller kill from LIMP mode */
+void test_SC_KILL_from_LIMP(void)
+{
+    /* Get to LIMP */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
+
+    Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-009: SHUTDOWN is a terminal state — all events rejected
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: INVALID — no transitions from SHUTDOWN
+ *  Boundary: terminal state, all events should be rejected */
+void test_SHUTDOWN_rejects_all_events(void)
+{
+    uint8 evt;
+
+    /* Get to SHUTDOWN: INIT -> SAFE_STOP -> SHUTDOWN */
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_FAIL);
+    Swc_VehicleState_OnEvent(CVC_EVT_VEHICLE_STOPPED);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SHUTDOWN, Swc_VehicleState_GetState());
+
+    /* Try every event — state should remain SHUTDOWN */
+    for (evt = 0u; evt < CVC_EVT_COUNT; evt++) {
+        Swc_VehicleState_OnEvent(evt);
+        TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SHUTDOWN, Swc_VehicleState_GetState());
+    }
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-009: INIT -> RUN blocked when heartbeats not OK
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: INVALID — self-test pass but FZC heartbeat missing
+ *  Fault injection: FZC timeout prevents transition to RUN */
+void test_INIT_to_RUN_blocked_when_fzc_timeout(void)
+{
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_TIMEOUT;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+
+    /* Should remain in INIT — FZC heartbeat not OK */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-009
+ *  Equivalence class: INVALID — self-test pass but RZC heartbeat missing
+ *  Fault injection: RZC timeout prevents transition to RUN */
+void test_INIT_to_RUN_blocked_when_rzc_timeout(void)
+{
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_TIMEOUT;
+
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+
+    /* Should remain in INIT — RZC heartbeat not OK */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-010: RTE read failure — MainFunction defensive behavior
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-010
+ *  Equivalence class: FAULT — RTE read returns failure
+ *  Fault injection: Rte_Read returns E_NOT_OK */
+void test_MainFunction_rte_read_failure_no_crash(void)
+{
+    mock_rte_read_return = E_NOT_OK;
+
+    /* Should not crash, state remains INIT */
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-010: Dual CAN timeout from RUN goes to SAFE_STOP
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-010
+ *  Equivalence class: VALID — dual CAN timeout from RUN = SAFE_STOP
+ *  Boundary: both comm channels fail simultaneously */
+void test_RUN_to_SAFE_STOP_on_dual_CAN_timeout(void)
+{
+    /* Get to RUN */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Dual CAN timeout */
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -589,6 +798,31 @@ int main(void)
     RUN_TEST(test_Motor_cutoff_reports_DTC);
     RUN_TEST(test_Brake_fault_reports_DTC);
     RUN_TEST(test_Steering_fault_reports_DTC);
+
+    /* --- HARDENED TESTS --- */
+
+    /* SWR-CVC-009: Event boundary — out-of-range */
+    RUN_TEST(test_OnEvent_boundary_event_at_count);
+    RUN_TEST(test_OnEvent_boundary_event_max_uint8);
+
+    /* SWR-CVC-009: E-stop override from various states */
+    RUN_TEST(test_Estop_from_INIT_via_signal);
+    RUN_TEST(test_Estop_from_LIMP_via_OnEvent);
+
+    /* SWR-CVC-009: SC_KILL from various states */
+    RUN_TEST(test_SC_KILL_from_DEGRADED);
+    RUN_TEST(test_SC_KILL_from_LIMP);
+
+    /* SWR-CVC-009: Terminal state — SHUTDOWN rejects all events */
+    RUN_TEST(test_SHUTDOWN_rejects_all_events);
+
+    /* SWR-CVC-009: Heartbeat guard on INIT->RUN transition */
+    RUN_TEST(test_INIT_to_RUN_blocked_when_fzc_timeout);
+    RUN_TEST(test_INIT_to_RUN_blocked_when_rzc_timeout);
+
+    /* SWR-CVC-010: RTE failure and dual CAN timeout */
+    RUN_TEST(test_MainFunction_rte_read_failure_no_crash);
+    RUN_TEST(test_RUN_to_SAFE_STOP_on_dual_CAN_timeout);
 
     return UNITY_END();
 }

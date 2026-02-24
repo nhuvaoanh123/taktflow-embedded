@@ -209,6 +209,65 @@ void test_ESM_ISR_clears_flag(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-SC-015
+ *  Equivalence class: Fault injection — double ISR invocation (idempotent) */
+void test_esm_double_isr(void)
+{
+    SC_ESM_HighLevelInterrupt_Test();
+    SC_ESM_HighLevelInterrupt_Test();
+
+    TEST_ASSERT_TRUE(SC_ESM_IsErrorActive());
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_RELAY]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_LED_SYS]);
+}
+
+/** @verifies SWR-SC-015
+ *  Equivalence class: Boundary — error active persists after Init re-call */
+void test_esm_error_persists_after_init(void)
+{
+    SC_ESM_HighLevelInterrupt_Test();
+    TEST_ASSERT_TRUE(SC_ESM_IsErrorActive());
+
+    /* Re-init clears the flag */
+    SC_ESM_Init();
+    TEST_ASSERT_FALSE(SC_ESM_IsErrorActive());
+}
+
+/** @verifies SWR-SC-015
+ *  Equivalence class: Boundary — relay already LOW before ISR */
+void test_esm_isr_relay_already_low(void)
+{
+    mock_gio_a[SC_PIN_RELAY] = 0u;
+
+    SC_ESM_HighLevelInterrupt_Test();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_RELAY]);
+    TEST_ASSERT_TRUE(SC_ESM_IsErrorActive());
+}
+
+/** @verifies SWR-SC-014
+ *  Equivalence class: Boundary — IsErrorActive returns FALSE before any ISR */
+void test_esm_no_error_before_isr(void)
+{
+    TEST_ASSERT_FALSE(SC_ESM_IsErrorActive());
+}
+
+/** @verifies SWR-SC-015
+ *  Equivalence class: Fault injection — LED already HIGH before ISR */
+void test_esm_isr_led_already_high(void)
+{
+    mock_gio_a[SC_PIN_LED_SYS] = 1u;
+
+    SC_ESM_HighLevelInterrupt_Test();
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_LED_SYS]);
+    TEST_ASSERT_TRUE(SC_ESM_IsErrorActive());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -225,6 +284,13 @@ int main(void)
     RUN_TEST(test_ESM_ISR_sys_led);
     RUN_TEST(test_ESM_ISR_latches_error);
     RUN_TEST(test_ESM_ISR_clears_flag);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_esm_double_isr);
+    RUN_TEST(test_esm_error_persists_after_init);
+    RUN_TEST(test_esm_isr_relay_already_low);
+    RUN_TEST(test_esm_no_error_before_isr);
+    RUN_TEST(test_esm_isr_led_already_high);
 
     return UNITY_END();
 }

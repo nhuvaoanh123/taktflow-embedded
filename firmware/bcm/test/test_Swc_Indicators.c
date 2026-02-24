@@ -315,6 +315,224 @@ void test_Indicators_not_init_does_nothing(void)
 }
 
 /* ====================================================================
+ * HARDENED: Boundary value tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-006
+ *  Equivalence class: turn_cmd — all 4 bit combinations (0,1,2,3)
+ *  Boundary value: turn_cmd value 3 is out-of-range (only 0,1,2 valid) */
+void test_Indicators_turn_cmd_all_values(void)
+{
+    /* turn_cmd = 0 (off) — no indicators */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (0u << 1u);
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+
+    /* turn_cmd = 1 (left) */
+    Swc_Indicators_Init();
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+
+    /* turn_cmd = 2 (right) */
+    Swc_Indicators_Init();
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (2u << 1u);
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+
+    /* turn_cmd = 3 (out-of-range) — should be treated as neither left nor right */
+    Swc_Indicators_Init();
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (3u << 1u);
+    Swc_Indicators_10ms();
+    /* Value 3 is not TURN_CMD_LEFT (1) or TURN_CMD_RIGHT (2) — but any_active
+       is TRUE because turn_cmd != OFF(0), so flash_counter runs. Since no
+       left/right match and no hazard, outputs stay 0. */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+}
+
+/** @verifies SWR-BCM-007
+ *  Equivalence class: flash timing — boundary at tick 33/34 transition
+ *  Boundary value: exact tick count where flash transitions ON->OFF */
+void test_Indicators_flash_boundary_tick_33_34(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+
+    /* Run exactly 33 ticks — should still be ON at tick 33 */
+    run_cycles(33u);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+
+    /* Tick 34 — should transition to OFF */
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+}
+
+/** @verifies SWR-BCM-007
+ *  Equivalence class: flash timing — second boundary OFF->ON at tick 66/67
+ *  Boundary value: verify full ON+OFF cycle boundary */
+void test_Indicators_flash_full_cycle_boundary(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (2u << 1u);  /* right */
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+
+    /* 33 ticks ON */
+    run_cycles(33u);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+
+    /* 33 ticks OFF (tick 34..66) */
+    run_cycles(33u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+
+    /* Tick 67 — back to ON */
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+}
+
+/* ====================================================================
+ * HARDENED: Hazard priority and interaction tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-008
+ *  Equivalence class: hazard priority — hazard overrides every turn_cmd value
+ *  Partition: hazard + left, hazard + right, hazard + off, hazard + invalid */
+void test_Indicators_hazard_overrides_all_turn_cmds(void)
+{
+    uint8 turn;
+    for (turn = 0u; turn <= 3u; turn++) {
+        Swc_Indicators_Init();
+        mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = ((uint32)turn << 1u) | (1u << 3u);
+        mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+        Swc_Indicators_10ms();
+
+        /* Hazard always wins — both sides flash regardless of turn_cmd */
+        TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+        TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+        TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_HAZARD_ACTIVE]);
+    }
+}
+
+/** @verifies SWR-BCM-008
+ *  Equivalence class: estop combined with hazard bit — both paths active
+ *  Fault injection: double-triggered hazard (both bit 3 and estop) */
+void test_Indicators_hazard_estop_and_bit3_combined(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 3u);  /* hazard bit */
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 1u;          /* AND estop */
+    Swc_Indicators_10ms();
+
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_HAZARD_ACTIVE]);
+}
+
+/* ====================================================================
+ * HARDENED: Flash counter reset and state interaction tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-007
+ *  Equivalence class: flash counter reset — off command resets flash phase
+ *  Verify flash counter resets to ON phase after deactivation */
+void test_Indicators_flash_counter_resets_on_off(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+
+    /* Run 40 ticks — into the OFF phase (33 ON + 7 OFF) */
+    run_cycles(40u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+
+    /* Deactivate */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0u;
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+
+    /* Reactivate — should start from ON phase (flash_on reset to TRUE) */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+}
+
+/** @verifies SWR-BCM-006
+ *  Equivalence class: command change — switching left to right mid-flash
+ *  Verify that changing direction does NOT reset flash counter */
+void test_Indicators_switch_direction_mid_flash(void)
+{
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE] = 0u;
+
+    /* Start with left turn, run 10 ticks (still in ON phase) */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    run_cycles(10u);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+
+    /* Switch to right — flash counter continues, still in ON phase */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (2u << 1u);
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+}
+
+/* ====================================================================
+ * HARDENED: Fault injection tests
+ * ==================================================================== */
+
+/** @verifies SWR-BCM-006
+ *  Fault injection: body_cmd with non-indicator bits set — only bits 1-3 matter
+ *  Verify high bits in body_cmd don't affect indicator logic */
+void test_Indicators_body_cmd_high_bits_ignored(void)
+{
+    /* Set all high bits but indicator bits to 0 */
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = 0xFFFFFFF0u;
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+    Swc_Indicators_10ms();
+
+    /* Bits 1-2 = 0 (turn off), bit 3 = 0 (no hazard) — all off */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_RIGHT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_HAZARD_ACTIVE]);
+}
+
+/** @verifies SWR-BCM-006
+ *  Fault injection: repeated calls without init — no crash, no writes */
+void test_Indicators_repeated_calls_without_init(void)
+{
+    initialized = FALSE;
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    mock_rte_write_count = 0u;
+
+    Swc_Indicators_10ms();
+    Swc_Indicators_10ms();
+    Swc_Indicators_10ms();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_rte_write_count);
+}
+
+/** @verifies SWR-BCM-006
+ *  Fault injection: re-initialization mid-operation resets flash state */
+void test_Indicators_reinit_resets_flash_state(void)
+{
+    mock_rte_signals[BCM_SIG_BODY_CONTROL_CMD] = (1u << 1u);
+    mock_rte_signals[BCM_SIG_ESTOP_ACTIVE]     = 0u;
+
+    /* Run into OFF phase */
+    run_cycles(40u);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+
+    /* Re-init — flash_counter and flash_on should reset */
+    Swc_Indicators_Init();
+    TEST_ASSERT_EQUAL_UINT8(0u, flash_counter);
+    TEST_ASSERT_EQUAL_UINT8(TRUE, flash_on);
+
+    /* Next cycle should be ON phase again */
+    Swc_Indicators_10ms();
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[BCM_SIG_INDICATOR_LEFT]);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -335,6 +553,24 @@ int main(void)
     /* SWR-BCM-008: Hazard logic */
     RUN_TEST(test_Indicators_hazard_overrides_turn);
     RUN_TEST(test_Indicators_hazard_from_estop);
+
+    /* HARDENED: Boundary value */
+    RUN_TEST(test_Indicators_turn_cmd_all_values);
+    RUN_TEST(test_Indicators_flash_boundary_tick_33_34);
+    RUN_TEST(test_Indicators_flash_full_cycle_boundary);
+
+    /* HARDENED: Hazard priority */
+    RUN_TEST(test_Indicators_hazard_overrides_all_turn_cmds);
+    RUN_TEST(test_Indicators_hazard_estop_and_bit3_combined);
+
+    /* HARDENED: Flash counter reset */
+    RUN_TEST(test_Indicators_flash_counter_resets_on_off);
+    RUN_TEST(test_Indicators_switch_direction_mid_flash);
+
+    /* HARDENED: Fault injection */
+    RUN_TEST(test_Indicators_body_cmd_high_bits_ignored);
+    RUN_TEST(test_Indicators_repeated_calls_without_init);
+    RUN_TEST(test_Indicators_reinit_resets_flash_state);
 
     return UNITY_END();
 }

@@ -643,6 +643,245 @@ void test_RTE_write_pedal_fault_each_cycle(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Value, NULL Pointer, Fault Injection
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-001: Initialization — NULL pointer and defensive checks
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-001
+ *  Equivalence class: INVALID — NULL config pointer
+ *  Boundary: NULL_PTR (invalid partition) */
+void test_Init_null_config_rejects(void)
+{
+    /* Re-init with NULL — module should enter failed state */
+    Swc_Pedal_Init(NULL_PTR);
+
+    /* MainFunction should be a no-op (no RTE writes) */
+    mock_rte_write_count = 0u;
+    mock_iohwab_angle_s0 = 8192u;
+    mock_iohwab_angle_s1 = 8192u;
+    Swc_Pedal_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_rte_write_count);
+}
+
+/** @verifies SWR-CVC-001
+ *  Equivalence class: INVALID — GetPosition before init
+ *  Boundary: uninitialized module */
+void test_GetPosition_null_pointer_rejects(void)
+{
+    Std_ReturnType ret;
+
+    ret = Swc_Pedal_GetPosition(NULL_PTR);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-CVC-001
+ *  Equivalence class: VALID — GetPosition returns scaled percentage */
+void test_GetPosition_returns_scaled_percentage(void)
+{
+    uint8 pos = 0xFFu;
+    Std_ReturnType ret;
+
+    /* Run at mid-range to build up position */
+    run_cycles(8192u, 8192u, 200u);
+
+    ret = Swc_Pedal_GetPosition(&pos);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    /* 8192/16383 * 1000 / 10 ~ 49-50 percent */
+    TEST_ASSERT_TRUE(pos >= 45u);
+    TEST_ASSERT_TRUE(pos <= 55u);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-003: Plausibility — boundary value analysis
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-003
+ *  Equivalence class: VALID — delta exactly at threshold (819), boundary
+ *  Boundary: plausThreshold = 819, test with delta = 819 (at boundary) */
+void test_Plausibility_boundary_exact_threshold(void)
+{
+    /* delta = 819 exactly — should trigger debounce increment */
+    mock_iohwab_angle_s0 = 0u;
+    mock_iohwab_angle_s1 = 819u;
+    Swc_Pedal_MainFunction();
+
+    /* First cycle: debounce = 1, no fault yet */
+    uint32 fault1 = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_NO_FAULT, fault1);
+
+    /* Second cycle: debounce = 2, fault triggers */
+    Swc_Pedal_MainFunction();
+    uint32 fault2 = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_PLAUSIBILITY, fault2);
+}
+
+/** @verifies SWR-CVC-003
+ *  Equivalence class: VALID — delta one below threshold (818), no fault
+ *  Boundary: plausThreshold - 1 = 818 */
+void test_Plausibility_boundary_one_below_threshold(void)
+{
+    /* delta = 818 — just under threshold, should NOT fault */
+    run_cycles(0u, 818u, 10u);
+
+    uint32 fault = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_NO_FAULT, fault);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-005: Fault injection — ADC stuck at 0x0000 / 0xFFFF
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-005
+ *  Equivalence class: FAULT — sensor 1 returns saturated 0xFFFF (invalid for 14-bit)
+ *  Fault injection: ADC returns max 16-bit value */
+void test_Fault_injection_sensor1_adc_0xFFFF(void)
+{
+    /* 0xFFFF exceeds 14-bit max but IoHwAb returns E_OK — module should
+     * still detect via plausibility if S2 differs significantly,
+     * or clamp position correctly.
+     * With S2 at 0, delta = 0xFFFF >> 819, fault after debounce. */
+    mock_iohwab_angle_s0 = 0xFFFFu;
+    mock_iohwab_angle_s1 = 0u;
+    Swc_Pedal_MainFunction();
+    Swc_Pedal_MainFunction();
+
+    uint32 fault = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_PLAUSIBILITY, fault);
+}
+
+/** @verifies SWR-CVC-005
+ *  Equivalence class: FAULT — both sensors return 0x0000
+ *  Fault injection: ADC returns stuck-at 0x0000 */
+void test_Fault_injection_both_sensors_adc_0x0000(void)
+{
+    /* Both at 0x0000 — stuck detection should fire after 100 cycles */
+    run_cycles(0u, 0u, 101u);
+
+    uint32 fault = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_STUCK, fault);
+}
+
+/** @verifies SWR-CVC-005
+ *  Equivalence class: FAULT — both sensors fail simultaneously
+ *  Fault injection: dual SPI failure */
+void test_Fault_injection_both_sensors_spi_fail(void)
+{
+    mock_iohwab_result_s0 = E_NOT_OK;
+    mock_iohwab_result_s1 = E_NOT_OK;
+    Swc_Pedal_MainFunction();
+
+    /* Sensor 1 checked first — should report SENSOR1_FAIL */
+    uint32 fault = mock_rte_signals[CVC_SIG_PEDAL_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(CVC_PEDAL_SENSOR1_FAIL, fault);
+
+    /* Torque must be zero */
+    uint32 torque = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-006: Latch — fault re-trigger during latch clear window
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-006
+ *  Equivalence class: INVALID — fault during latch clear resets counter
+ *  Fault injection: intermittent fault resets latch counter */
+void test_Latch_reset_on_fault_during_clear_window(void)
+{
+    /* Trigger initial fault */
+    mock_iohwab_result_s0 = E_NOT_OK;
+    Swc_Pedal_MainFunction();
+
+    /* Restore sensor, run 40 fault-free cycles (< 50 threshold) */
+    mock_iohwab_result_s0 = E_OK;
+    mock_iohwab_angle_s0  = 5000u;
+    mock_iohwab_angle_s1  = 5000u;
+    run_cycles(5000u, 5000u, 40u);
+
+    /* Torque should still be 0 (latch active) */
+    uint32 torque_40 = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque_40);
+
+    /* Re-trigger fault — latch counter resets */
+    mock_iohwab_result_s0 = E_NOT_OK;
+    Swc_Pedal_MainFunction();
+
+    /* Restore and run another 49 cycles — should still be latched */
+    mock_iohwab_result_s0 = E_OK;
+    run_cycles(5000u, 5000u, 49u);
+
+    uint32 torque_after = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque_after);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-007: Torque ramp — boundary: ramp allows immediate decrease
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-007
+ *  Equivalence class: VALID — torque decrease is immediate (no ramp limit)
+ *  Boundary: safety rule — decreasing torque shall not be limited */
+void test_Ramp_immediate_decrease_allowed(void)
+{
+    /* Build up torque */
+    mock_vehicle_state = CVC_STATE_RUN;
+    run_cycles(16383u, 16383u, 250u);
+
+    uint32 torque_high = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_TRUE(torque_high >= 950u);
+
+    /* Suddenly release pedal to 0 — torque should drop immediately */
+    run_cycles(0u, 0u, 1u);
+
+    uint32 torque_low = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque_low);
+}
+
+/* ------------------------------------------------------------------
+ * SWR-CVC-008: Mode limit — SHUTDOWN and INIT force zero torque
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-CVC-008
+ *  Equivalence class: VALID — SHUTDOWN state forces zero torque
+ *  Boundary: mode_limit = 0 for SHUTDOWN */
+void test_Torque_zero_in_shutdown(void)
+{
+    mock_vehicle_state = CVC_STATE_SHUTDOWN;
+    run_cycles(16383u, 16383u, 100u);
+
+    uint32 torque = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque);
+}
+
+/** @verifies SWR-CVC-008
+ *  Equivalence class: VALID — INIT state forces zero torque
+ *  Boundary: mode_limit = 0 for INIT */
+void test_Torque_zero_in_init(void)
+{
+    mock_vehicle_state = CVC_STATE_INIT;
+    run_cycles(16383u, 16383u, 100u);
+
+    uint32 torque = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque);
+}
+
+/** @verifies SWR-CVC-008
+ *  Equivalence class: INVALID — unknown vehicle state defaults to zero torque
+ *  Boundary: state value outside enum range */
+void test_Mode_limit_unknown_state_defaults_zero(void)
+{
+    mock_vehicle_state = 0xFFu; /* Invalid state */
+    run_cycles(16383u, 16383u, 100u);
+
+    uint32 torque = mock_rte_signals[CVC_SIG_TORQUE_REQUEST];
+    TEST_ASSERT_EQUAL_UINT32(0u, torque);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -690,6 +929,33 @@ int main(void)
     RUN_TEST(test_Mode_limit_degraded_max_750);
     RUN_TEST(test_Mode_limit_limp_max_300);
     RUN_TEST(test_Torque_zero_in_safe_stop);
+
+    /* --- HARDENED TESTS --- */
+
+    /* SWR-CVC-001: NULL pointer and defensive checks */
+    RUN_TEST(test_Init_null_config_rejects);
+    RUN_TEST(test_GetPosition_null_pointer_rejects);
+    RUN_TEST(test_GetPosition_returns_scaled_percentage);
+
+    /* SWR-CVC-003: Plausibility boundary values */
+    RUN_TEST(test_Plausibility_boundary_exact_threshold);
+    RUN_TEST(test_Plausibility_boundary_one_below_threshold);
+
+    /* SWR-CVC-005: Fault injection — ADC stuck-at and dual failure */
+    RUN_TEST(test_Fault_injection_sensor1_adc_0xFFFF);
+    RUN_TEST(test_Fault_injection_both_sensors_adc_0x0000);
+    RUN_TEST(test_Fault_injection_both_sensors_spi_fail);
+
+    /* SWR-CVC-006: Latch — intermittent fault resets counter */
+    RUN_TEST(test_Latch_reset_on_fault_during_clear_window);
+
+    /* SWR-CVC-007: Ramp — immediate decrease */
+    RUN_TEST(test_Ramp_immediate_decrease_allowed);
+
+    /* SWR-CVC-008: Mode limits — SHUTDOWN, INIT, unknown state */
+    RUN_TEST(test_Torque_zero_in_shutdown);
+    RUN_TEST(test_Torque_zero_in_init);
+    RUN_TEST(test_Mode_limit_unknown_state_defaults_zero);
 
     return UNITY_END();
 }

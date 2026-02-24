@@ -280,6 +280,115 @@ void test_E2E_valid_resets_failures(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — CRC-8 of single byte */
+void test_crc8_single_byte(void)
+{
+    uint8 data[1] = { 0x00u };
+    uint8 crc = sc_crc8(data, 1u);
+    uint8 expected = helper_crc8(data, 1u);
+    TEST_ASSERT_EQUAL_UINT8(expected, crc);
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — CRC-8 of 0xFF bytes (all ones) */
+void test_crc8_all_ones(void)
+{
+    uint8 data[8] = { 0xFFu, 0xFFu, 0xFFu, 0xFFu,
+                      0xFFu, 0xFFu, 0xFFu, 0xFFu };
+    uint8 crc = sc_crc8(data, 8u);
+    uint8 expected = helper_crc8(data, 8u);
+    TEST_ASSERT_EQUAL_UINT8(expected, crc);
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — alive counter skip by 2 (non-sequential) fails */
+void test_e2e_alive_skip_by_2(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+
+    build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, 1u, payload);
+    SC_E2E_Check(data, SC_CAN_DLC, SC_E2E_ESTOP_DATA_ID, SC_MB_IDX_ESTOP);
+
+    /* Skip alive=2, send alive=3 */
+    build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, 3u, payload);
+    boolean result = SC_E2E_Check(data, SC_CAN_DLC,
+                                  SC_E2E_ESTOP_DATA_ID,
+                                  SC_MB_IDX_ESTOP);
+    TEST_ASSERT_FALSE(result);
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — 2 consecutive failures (under threshold) */
+void test_e2e_2_failures_not_persistent(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+    uint8 i;
+
+    for (i = 0u; i < (SC_E2E_MAX_CONSEC_FAIL - 1u); i++) {
+        build_valid_msg(data, SC_E2E_CVC_HB_DATA_ID, (uint8)(i + 1u), payload);
+        data[1] ^= 0xFFu;
+        SC_E2E_Check(data, SC_CAN_DLC, SC_E2E_CVC_HB_DATA_ID, SC_MB_IDX_CVC_HB);
+    }
+
+    TEST_ASSERT_FALSE(SC_E2E_IsMsgFailed(SC_MB_IDX_CVC_HB));
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — wrong DLC (too short) */
+void test_e2e_short_dlc(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+
+    build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, 1u, payload);
+
+    boolean result = SC_E2E_Check(data, 4u,  /* DLC=4 instead of 8 */
+                                  SC_E2E_ESTOP_DATA_ID,
+                                  SC_MB_IDX_ESTOP);
+    TEST_ASSERT_FALSE(result);
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Fault injection — corrupt single payload byte */
+void test_e2e_corrupt_single_payload_byte(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+
+    build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, 1u, payload);
+
+    /* Corrupt one payload byte */
+    data[4] ^= 0x01u;
+
+    boolean result = SC_E2E_Check(data, SC_CAN_DLC,
+                                  SC_E2E_ESTOP_DATA_ID,
+                                  SC_MB_IDX_ESTOP);
+    TEST_ASSERT_FALSE(result);
+}
+
+/** @verifies SWR-SC-003
+ *  Equivalence class: Boundary — alive counter at 0 (first message after init) */
+void test_e2e_alive_zero_first_message(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu };
+
+    build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, 0u, payload);
+
+    boolean result = SC_E2E_Check(data, SC_CAN_DLC,
+                                  SC_E2E_ESTOP_DATA_ID,
+                                  SC_MB_IDX_ESTOP);
+    /* First message with alive=0 should pass (no prior reference) */
+    TEST_ASSERT_TRUE(result);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -305,6 +414,15 @@ int main(void)
     /* Consecutive failures */
     RUN_TEST(test_E2E_3_consecutive_failures);
     RUN_TEST(test_E2E_valid_resets_failures);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_crc8_single_byte);
+    RUN_TEST(test_crc8_all_ones);
+    RUN_TEST(test_e2e_alive_skip_by_2);
+    RUN_TEST(test_e2e_2_failures_not_persistent);
+    RUN_TEST(test_e2e_short_dlc);
+    RUN_TEST(test_e2e_corrupt_single_payload_byte);
+    RUN_TEST(test_e2e_alive_zero_first_message);
 
     return UNITY_END();
 }

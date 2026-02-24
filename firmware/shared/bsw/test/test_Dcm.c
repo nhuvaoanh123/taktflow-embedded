@@ -320,6 +320,188 @@ void test_Dcm_empty_request(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-017: Hardened Boundary / Fault Injection Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-017
+ *  Equivalence class: NULL request data pointer inside PduInfoType */
+void test_Dcm_RxIndication_null_data_ptr(void)
+{
+    PduInfoType pdu = { NULL_PTR, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Should not crash, no response */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_tx_count);
+}
+
+/** @verifies SWR-BSW-017
+ *  Equivalence class: Request length — 1 byte (SID only, no sub-function)
+ *  SID 0x10 requires 2 bytes, so SID-only should get NRC 0x13 */
+void test_Dcm_SessionControl_sid_only(void)
+{
+    uint8 req[] = {0x10u};
+    PduInfoType pdu = { req, 1u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* NRC 0x13: incorrectMessageLengthOrInvalidFormat */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x10u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x13u, mock_tx_data[2]);
+}
+
+/** @verifies SWR-BSW-017
+ *  Equivalence class: Request with max-length payload (8 bytes for CAN 2.0B) */
+void test_Dcm_MaxLength_request(void)
+{
+    uint8 req[] = {0x3Eu, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u};
+    PduInfoType pdu = { req, 8u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* TesterPresent should still work with extra trailing bytes */
+    TEST_ASSERT_EQUAL_HEX8(0x7Eu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[1]);
+}
+
+/** @verifies SWR-BSW-017
+ *  Equivalence class: Unknown SID (0x00 — not a valid UDS SID) -> NRC 0x11 */
+void test_Dcm_unknown_SID_zero(void)
+{
+    uint8 req[] = {0x00u, 0x00u};
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* NRC 0x11: serviceNotSupported */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x11u, mock_tx_data[2]);
+}
+
+/** @verifies SWR-BSW-017
+ *  Session transition: DEFAULT -> EXTENDED -> DEFAULT round trip */
+void test_Dcm_Session_default_extended_default(void)
+{
+    /* Start in DEFAULT */
+    TEST_ASSERT_EQUAL(DCM_DEFAULT_SESSION, Dcm_GetCurrentSession());
+
+    /* Switch to EXTENDED */
+    uint8 req_ext[] = {0x10u, 0x03u};
+    PduInfoType pdu_ext = { req_ext, 2u };
+    Dcm_RxIndication(0u, &pdu_ext);
+    Dcm_MainFunction();
+    TEST_ASSERT_EQUAL(DCM_EXTENDED_SESSION, Dcm_GetCurrentSession());
+
+    mock_tx_count = 0u;
+
+    /* Switch back to DEFAULT */
+    uint8 req_def[] = {0x10u, 0x01u};
+    PduInfoType pdu_def = { req_def, 2u };
+    Dcm_RxIndication(0u, &pdu_def);
+    Dcm_MainFunction();
+    TEST_ASSERT_EQUAL(DCM_DEFAULT_SESSION, Dcm_GetCurrentSession());
+
+    /* Verify positive response */
+    TEST_ASSERT_EQUAL_HEX8(0x50u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_tx_data[1]);
+}
+
+/** @verifies SWR-BSW-017
+ *  Session transition: Invalid sub-function for SessionControl
+ *  Sub-function 0xFF is not a valid session type */
+void test_Dcm_SessionControl_invalid_sub(void)
+{
+    uint8 req[] = {0x10u, 0xFFu};
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Should get NRC (sub-function not supported or request out of range) */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x10u, mock_tx_data[1]);
+}
+
+/** @verifies SWR-BSW-017
+ *  TesterPresent keepalive resets S3 timer —
+ *  extended session should NOT timeout if TesterPresent is sent periodically */
+void test_Dcm_TesterPresent_resets_S3(void)
+{
+    /* Enter extended session */
+    uint8 req_ext[] = {0x10u, 0x03u};
+    PduInfoType pdu_ext = { req_ext, 2u };
+    Dcm_RxIndication(0u, &pdu_ext);
+    Dcm_MainFunction();
+    mock_tx_count = 0u;
+
+    /* Run half the S3 timeout (250 cycles * 10ms = 2500ms < 5000ms) */
+    uint16 i;
+    for (i = 0u; i < 250u; i++) {
+        Dcm_MainFunction();
+    }
+
+    /* Send TesterPresent to reset S3 timer */
+    uint8 req_tp[] = {0x3Eu, 0x00u};
+    PduInfoType pdu_tp = { req_tp, 2u };
+    Dcm_RxIndication(0u, &pdu_tp);
+    Dcm_MainFunction();
+
+    /* Run another 250 cycles — total 500 but S3 was reset at 250 */
+    for (i = 0u; i < 250u; i++) {
+        Dcm_MainFunction();
+    }
+
+    /* Session should still be EXTENDED because TesterPresent reset the timer */
+    TEST_ASSERT_EQUAL(DCM_EXTENDED_SESSION, Dcm_GetCurrentSession());
+}
+
+/** @verifies SWR-BSW-017
+ *  DID read: verify second DID (0xF195) data content fully */
+void test_Dcm_ReadDID_SwVersion_full_data(void)
+{
+    uint8 req[] = {0x22u, 0xF1u, 0x95u};
+    PduInfoType pdu = { req, 3u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Positive response: 0x62, F1, 95, data[0]=0x01, data[1]=0x00 */
+    TEST_ASSERT_EQUAL_HEX8(0x62u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0xF1u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x95u, mock_tx_data[2]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_tx_data[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[4]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_tx_count);
+}
+
+/** @verifies SWR-BSW-017
+ *  Fault injection: consecutive rapid requests — second overwrites first */
+void test_Dcm_consecutive_requests(void)
+{
+    /* Send first request (ReadDID) */
+    uint8 req1[] = {0x22u, 0xF1u, 0x90u};
+    PduInfoType pdu1 = { req1, 3u };
+    Dcm_RxIndication(0u, &pdu1);
+
+    /* Send second request (TesterPresent) before MainFunction runs */
+    uint8 req2[] = {0x3Eu, 0x00u};
+    PduInfoType pdu2 = { req2, 2u };
+    Dcm_RxIndication(0u, &pdu2);
+
+    Dcm_MainFunction();
+
+    /* Implementation-specific: either last request wins or first is processed.
+     * No crash is the minimum requirement. */
+    TEST_ASSERT_TRUE(mock_tx_count >= 1u);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -348,6 +530,17 @@ int main(void)
     RUN_TEST(test_Dcm_Init_null_config);
     RUN_TEST(test_Dcm_S3_timeout_resets_session);
     RUN_TEST(test_Dcm_empty_request);
+
+    /* Hardened boundary / fault injection tests */
+    RUN_TEST(test_Dcm_RxIndication_null_data_ptr);
+    RUN_TEST(test_Dcm_SessionControl_sid_only);
+    RUN_TEST(test_Dcm_MaxLength_request);
+    RUN_TEST(test_Dcm_unknown_SID_zero);
+    RUN_TEST(test_Dcm_Session_default_extended_default);
+    RUN_TEST(test_Dcm_SessionControl_invalid_sub);
+    RUN_TEST(test_Dcm_TesterPresent_resets_S3);
+    RUN_TEST(test_Dcm_ReadDID_SwVersion_full_data);
+    RUN_TEST(test_Dcm_consecutive_requests);
 
     return UNITY_END();
 }

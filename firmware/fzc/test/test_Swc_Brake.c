@@ -698,6 +698,217 @@ void test_DTC_clears_after_latch(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — ISO 26262 ASIL D TUV-grade additions
+ * Boundary value analysis, NULL pointer, fault injection,
+ * equivalence class documentation
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * Equivalence classes for brake command input:
+ *   Valid:   0 <= cmd <= 100  (normal brake percentage)
+ *   Invalid: cmd > 100        (saturated to 100 by SWC)
+ *   Invalid: cmd = 0xFFFFFFFF (max uint32, saturated to 100)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-FZC-009
+ *  Equivalence class: boundary — command exactly at maximum (100) */
+void test_Boundary_brake_cmd_at_max(void)
+{
+    /* setup: command exactly 100 */
+    run_cycles(100u, 5u);
+
+    /* assert: PWM duty matches max, position = 100 */
+    TEST_ASSERT_EQUAL_UINT16(100u, mock_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-009
+ *  Equivalence class: boundary — command at minimum (0) */
+void test_Boundary_brake_cmd_at_min(void)
+{
+    /* setup: command exactly 0 */
+    run_cycles(0u, 5u);
+
+    /* assert: PWM duty = 0, position = 0 */
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-009
+ *  Equivalence class: invalid — command above maximum (101) clamped to 100 */
+void test_Boundary_brake_cmd_above_max(void)
+{
+    /* setup: command 101 (above valid range) */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 101u;
+    Swc_Brake_MainFunction();
+
+    /* Change command so timeout does not trigger */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 102u;
+    Swc_Brake_MainFunction();
+
+    /* assert: clamped to 100 */
+    TEST_ASSERT_EQUAL_UINT16(100u, mock_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-009
+ *  Equivalence class: invalid — command saturated at uint32 max */
+void test_Boundary_brake_cmd_uint32_max(void)
+{
+    /* setup: command = 0xFFFFFFFF (max uint32) */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0xFFFFFFFFu;
+    Swc_Brake_MainFunction();
+
+    /* Change to avoid timeout */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0xFFFFFFFEu;
+    Swc_Brake_MainFunction();
+
+    /* assert: clamped to 100% */
+    TEST_ASSERT_EQUAL_UINT16(100u, mock_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-009
+ *  Equivalence class: boundary — command just below max (99) */
+void test_Boundary_brake_cmd_just_below_max(void)
+{
+    /* setup: command = 99 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 99u;
+    Swc_Brake_MainFunction();
+
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 98u;
+    Swc_Brake_MainFunction();
+
+    /* assert: position tracks command */
+    TEST_ASSERT_EQUAL_UINT32(98u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-009
+ *  NULL pointer test: GetPosition with NULL output pointer */
+void test_GetPosition_null_pointer(void)
+{
+    Std_ReturnType ret = Swc_Brake_GetPosition(NULL_PTR);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-FZC-009
+ *  NULL pointer test: GetPosition returns valid position after init */
+void test_GetPosition_valid_after_init(void)
+{
+    uint8 pos = 0xFFu;
+    run_cycles(42u, 3u);
+
+    /* Change command to prevent timeout */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 43u;
+    Swc_Brake_MainFunction();
+
+    Std_ReturnType ret = Swc_Brake_GetPosition(&pos);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    TEST_ASSERT_TRUE(pos <= 100u);
+}
+
+/** @verifies SWR-FZC-011
+ *  Fault injection: command timeout at exact boundary (10 cycles) */
+void test_FaultInj_timeout_exact_boundary(void)
+{
+    /* Run 9 cycles with same command — should NOT timeout */
+    run_cycles(50u, 9u);
+    uint32 fault9 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault9);
+
+    /* 10th cycle with same command — should trigger timeout */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 50u;
+    Swc_Brake_MainFunction();
+
+    uint32 fault10 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_TIMEOUT, fault10);
+
+    /* Position forced to 100% */
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-012
+ *  Fault injection: E-stop during active motor cutoff sequence */
+void test_FaultInj_estop_during_cutoff(void)
+{
+    /* Force a brake fault first via alternating commands */
+    uint16 i;
+    for (i = 0u; i < 5u; i++) {
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+        Swc_Brake_MainFunction();
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+        Swc_Brake_MainFunction();
+    }
+
+    /* Now activate e-stop during cutoff sequence */
+    mock_rte_signals[FZC_SIG_ESTOP_ACTIVE] = 1u;
+    mock_rte_signals[FZC_SIG_BRAKE_CMD]    = 10u;
+    Swc_Brake_MainFunction();
+
+    /* assert: brake still at 100%, fault latched */
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+    TEST_ASSERT_EQUAL_UINT16(100u, mock_pwm_last_duty);
+}
+
+/** @verifies SWR-FZC-010
+ *  Fault injection: PWM feedback deviation at exact threshold (2%) */
+void test_FaultInj_feedback_at_exact_threshold(void)
+{
+    /* The threshold is 2%. A deviation of exactly 2 should NOT trigger
+     * because the check is deviation > threshold (strict greater).
+     * Establish position at 50, then command 52 — delta = 2 = threshold. */
+    run_cycles(50u, 5u);
+
+    /* Command 52: deviation from prev position (50) = 2 = threshold.
+     * This should NOT trigger fault (need > 2). */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 52u;
+    Swc_Brake_MainFunction();
+
+    uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
+}
+
+/** @verifies SWR-FZC-011
+ *  Equivalence class: e-stop overrides normal command to maximum brake */
+void test_Estop_overrides_low_command(void)
+{
+    /* Normal operation at 10% */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 10u;
+    Swc_Brake_MainFunction();
+
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 11u;
+    Swc_Brake_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT32(11u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+
+    /* Activate e-stop: should force 100% regardless of command */
+    mock_rte_signals[FZC_SIG_ESTOP_ACTIVE] = 1u;
+    mock_rte_signals[FZC_SIG_BRAKE_CMD]    = 5u;
+    Swc_Brake_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+    TEST_ASSERT_EQUAL_UINT16(100u, mock_pwm_last_duty);
+}
+
+/** @verifies SWR-FZC-009
+ *  Fault injection: double Init call does not corrupt state */
+void test_FaultInj_double_init(void)
+{
+    /* First init already done in setUp. Run some cycles. */
+    run_cycles(50u, 3u);
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 51u;
+    Swc_Brake_MainFunction();
+
+    /* Second init should reset state cleanly */
+    Swc_Brake_Init(&test_config);
+
+    uint8 pos = 0xFFu;
+    Std_ReturnType ret = Swc_Brake_GetPosition(&pos);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, pos);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -736,6 +947,24 @@ int main(void)
     RUN_TEST(test_Fault_forces_full_brake);
     RUN_TEST(test_Latch_clear_50_cycles);
     RUN_TEST(test_DTC_clears_after_latch);
+
+    /* HARDENED: Boundary value tests */
+    RUN_TEST(test_Boundary_brake_cmd_at_max);
+    RUN_TEST(test_Boundary_brake_cmd_at_min);
+    RUN_TEST(test_Boundary_brake_cmd_above_max);
+    RUN_TEST(test_Boundary_brake_cmd_uint32_max);
+    RUN_TEST(test_Boundary_brake_cmd_just_below_max);
+
+    /* HARDENED: NULL pointer tests */
+    RUN_TEST(test_GetPosition_null_pointer);
+    RUN_TEST(test_GetPosition_valid_after_init);
+
+    /* HARDENED: Fault injection tests */
+    RUN_TEST(test_FaultInj_timeout_exact_boundary);
+    RUN_TEST(test_FaultInj_estop_during_cutoff);
+    RUN_TEST(test_FaultInj_feedback_at_exact_threshold);
+    RUN_TEST(test_Estop_overrides_low_command);
+    RUN_TEST(test_FaultInj_double_init);
 
     return UNITY_END();
 }

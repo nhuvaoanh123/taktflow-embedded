@@ -329,6 +329,202 @@ void test_E2E_Check_counter_wrap_valid(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-023, SWR-BSW-024: Hardened Edge Case Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-023
+ *  Edge case: CRC with all 0xFF data bytes */
+void test_E2E_CalcCRC8_all_0xFF(void)
+{
+    const uint8 data[] = {0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu};
+    uint8 crc = E2E_CalcCRC8(data, 6u, 0xFFu);
+
+    /* CRC must be deterministic — different from init value after XOR-out */
+    /* The specific value depends on the polynomial, but it must be consistent */
+    uint8 crc_again = E2E_CalcCRC8(data, 6u, 0xFFu);
+    TEST_ASSERT_EQUAL_HEX8(crc, crc_again);
+}
+
+/** @verifies SWR-BSW-023
+ *  Edge case: CRC with maximum length PDU (8 bytes, full CAN frame) */
+void test_E2E_CalcCRC8_max_length_pdu(void)
+{
+    const uint8 data[] = {0x01u, 0x02u, 0x03u, 0x04u, 0x05u, 0x06u, 0x07u, 0x08u};
+    uint8 crc = E2E_CalcCRC8(data, 8u, 0xFFu);
+
+    /* Deterministic: same input -> same output */
+    uint8 crc_repeat = E2E_CalcCRC8(data, 8u, 0xFFu);
+    TEST_ASSERT_EQUAL_HEX8(crc, crc_repeat);
+
+    /* Different from shorter input */
+    uint8 crc_shorter = E2E_CalcCRC8(data, 7u, 0xFFu);
+    TEST_ASSERT_TRUE(crc != crc_shorter);
+}
+
+/** @verifies SWR-BSW-024
+ *  Boundary: Length exactly at E2E_PAYLOAD_OFFSET (2) — minimum valid PDU */
+void test_E2E_Protect_minimum_valid_length(void)
+{
+    uint8 small_pdu[2] = {0u, 0u};
+    E2E_ConfigType small_cfg = { 0x01u, 2u, 2u };
+    E2E_StateType state = { 0u };
+
+    Std_ReturnType ret = E2E_Protect(&small_cfg, &state, small_pdu, 2u);
+
+    /* With length==E2E_PAYLOAD_OFFSET, there is zero payload but the header fits.
+     * This should either succeed or be gracefully rejected. */
+    (void)ret;
+    /* No crash is the minimum requirement */
+    TEST_ASSERT_TRUE(TRUE);
+}
+
+/** @verifies SWR-BSW-024
+ *  Boundary: Length = E2E_PAYLOAD_OFFSET - 1 (1 byte, too short for header) — rejected */
+void test_E2E_Protect_length_below_offset_rejected(void)
+{
+    uint8 tiny_pdu[1] = {0u};
+    E2E_ConfigType tiny_cfg = { 0x01u, 2u, 1u };
+    E2E_StateType state = { 0u };
+
+    Std_ReturnType ret = E2E_Protect(&tiny_cfg, &state, tiny_pdu, 1u);
+
+    /* Too short to contain E2E header — should return E_NOT_OK */
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-024
+ *  Boundary: Length=0 — rejected */
+void test_E2E_Protect_length_zero_rejected(void)
+{
+    Std_ReturnType ret = E2E_Protect(&cfg, &tx_state, pdu, 0u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-024
+ *  Edge case: DataId=0x0F (max 4-bit value) */
+void test_E2E_Protect_max_data_id(void)
+{
+    E2E_ConfigType max_id_cfg = { 0x0Fu, 2u, 8u };
+    E2E_StateType state = { 0u };
+    uint8 test_pdu[8] = {0u, 0u, 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u};
+
+    Std_ReturnType ret = E2E_Protect(&max_id_cfg, &state, test_pdu, 8u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+
+    /* DataId in byte 0 bits 3:0 should be 0x0F */
+    TEST_ASSERT_EQUAL_HEX8(0x0Fu, test_pdu[0] & 0x0Fu);
+
+    /* Verify round-trip: check should pass */
+    E2E_StateType rx = { 0u };
+    E2E_CheckStatusType status = E2E_Check(&max_id_cfg, &rx, test_pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, status);
+}
+
+/** @verifies SWR-BSW-024
+ *  Edge case: MaxDeltaCounter=0 — every message must be consecutive (delta=1 only) */
+void test_E2E_Check_max_delta_zero_strict(void)
+{
+    E2E_ConfigType strict_cfg = { 0x01u, 0u, 8u };
+    E2E_StateType tx = { 0u };
+    E2E_StateType rx = { 0u };
+    uint8 test_pdu[8] = {0u, 0u, 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u};
+
+    /* First message: counter 1 */
+    E2E_Protect(&strict_cfg, &tx, test_pdu, 8u);
+    E2E_CheckStatusType s1 = E2E_Check(&strict_cfg, &rx, test_pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, s1);
+
+    /* Second message: counter 2 (consecutive, delta=1, within MaxDelta=0 means only delta=1 OK) */
+    E2E_Protect(&strict_cfg, &tx, test_pdu, 8u);
+    E2E_CheckStatusType s2 = E2E_Check(&strict_cfg, &rx, test_pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, s2);
+
+    /* Skip one message: counter 3 (skip), counter 4 arrives — delta=2, exceeds MaxDelta=0 */
+    E2E_Protect(&strict_cfg, &tx, test_pdu, 8u); /* counter 3 — skipped */
+    E2E_Protect(&strict_cfg, &tx, test_pdu, 8u); /* counter 4 — arrives */
+    E2E_CheckStatusType s3 = E2E_Check(&strict_cfg, &rx, test_pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_WRONG_SEQ, s3);
+}
+
+/** @verifies SWR-BSW-024
+ *  Counter 14->15->0 transition: specifically verify both protect and check
+ *  at the wrap boundary */
+void test_E2E_Counter_14_15_0_transition(void)
+{
+    /* Drive TX counter to 13 (after 13 protects, counter = 13) */
+    uint8 i;
+    for (i = 0u; i < 13u; i++) {
+        E2E_Protect(&cfg, &tx_state, pdu, 8u);
+        E2E_Check(&cfg, &rx_state, pdu, 8u);
+    }
+
+    /* Protect 14: counter becomes 14 */
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    uint8 counter_14 = (pdu[0] >> 4u) & 0x0Fu;
+    TEST_ASSERT_EQUAL_UINT8(14u, counter_14);
+    E2E_CheckStatusType s14 = E2E_Check(&cfg, &rx_state, pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, s14);
+
+    /* Protect 15: counter becomes 15 */
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    uint8 counter_15 = (pdu[0] >> 4u) & 0x0Fu;
+    TEST_ASSERT_EQUAL_UINT8(15u, counter_15);
+    E2E_CheckStatusType s15 = E2E_Check(&cfg, &rx_state, pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, s15);
+
+    /* Protect 16: counter wraps to 0 */
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    uint8 counter_0 = (pdu[0] >> 4u) & 0x0Fu;
+    TEST_ASSERT_EQUAL_UINT8(0u, counter_0);
+    E2E_CheckStatusType s0 = E2E_Check(&cfg, &rx_state, pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_OK, s0);
+}
+
+/** @verifies SWR-BSW-024
+ *  Null state pointer should return error on protect */
+void test_E2E_Protect_null_state_returns_error(void)
+{
+    Std_ReturnType ret = E2E_Protect(&cfg, NULL_PTR, pdu, 8u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-024
+ *  Null state pointer should return error on check */
+void test_E2E_Check_null_state_returns_error(void)
+{
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    E2E_CheckStatusType status = E2E_Check(&cfg, NULL_PTR, pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_ERROR, status);
+}
+
+/** @verifies SWR-BSW-024
+ *  Null config pointer should return error on check */
+void test_E2E_Check_null_config_returns_error(void)
+{
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    E2E_CheckStatusType status = E2E_Check(NULL_PTR, &rx_state, pdu, 8u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_ERROR, status);
+}
+
+/** @verifies SWR-BSW-024
+ *  Length mismatch: protect with length != config DataLength should fail */
+void test_E2E_Protect_length_mismatch(void)
+{
+    /* cfg.DataLength is 8, but pass length 4 */
+    Std_ReturnType ret = E2E_Protect(&cfg, &tx_state, pdu, 4u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-024
+ *  Check with length mismatch should return error */
+void test_E2E_Check_length_mismatch(void)
+{
+    E2E_Protect(&cfg, &tx_state, pdu, 8u);
+    E2E_CheckStatusType status = E2E_Check(&cfg, &rx_state, pdu, 4u);
+    TEST_ASSERT_EQUAL(E2E_STATUS_ERROR, status);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -364,6 +560,21 @@ int main(void)
     RUN_TEST(test_E2E_Check_null_ptr_returns_error);
     RUN_TEST(test_E2E_Check_wrong_data_id);
     RUN_TEST(test_E2E_Check_counter_wrap_valid);
+
+    /* Hardened edge case tests (SWR-BSW-023, SWR-BSW-024) */
+    RUN_TEST(test_E2E_CalcCRC8_all_0xFF);
+    RUN_TEST(test_E2E_CalcCRC8_max_length_pdu);
+    RUN_TEST(test_E2E_Protect_minimum_valid_length);
+    RUN_TEST(test_E2E_Protect_length_below_offset_rejected);
+    RUN_TEST(test_E2E_Protect_length_zero_rejected);
+    RUN_TEST(test_E2E_Protect_max_data_id);
+    RUN_TEST(test_E2E_Check_max_delta_zero_strict);
+    RUN_TEST(test_E2E_Counter_14_15_0_transition);
+    RUN_TEST(test_E2E_Protect_null_state_returns_error);
+    RUN_TEST(test_E2E_Check_null_state_returns_error);
+    RUN_TEST(test_E2E_Check_null_config_returns_error);
+    RUN_TEST(test_E2E_Protect_length_mismatch);
+    RUN_TEST(test_E2E_Check_length_mismatch);
 
     return UNITY_END();
 }

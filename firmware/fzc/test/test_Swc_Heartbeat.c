@@ -363,6 +363,151 @@ void test_MainFunction_safe_on_init(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — ISO 26262 ASIL C TUV-grade additions
+ * Boundary value analysis, NULL pointer, fault injection,
+ * equivalence class documentation
+ * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * Equivalence classes for heartbeat transmission:
+ *   Valid:   cycle count reaches 50ms period -> TX
+ *   Invalid: cycle count < 50ms -> no TX
+ *   Invalid: CAN bus-off active -> TX suppressed
+ *
+ * Equivalence classes for alive counter:
+ *   Valid:   0 <= alive <= 15, wraps to 0 after 15
+ *   Boundary: alive = 0 (initial), alive = 15 (max before wrap)
+ *
+ * Equivalence classes for fault mask:
+ *   Valid:   0x00 (no faults), individual bits set
+ *   Boundary: 0xFF (all faults set)
+ * ------------------------------------------------------------------ */
+
+/** @verifies SWR-FZC-021
+ *  Equivalence class: boundary — exactly 1 cycle before period (49 cycles = no TX) */
+void test_Boundary_one_before_period(void)
+{
+    run_cycles(FZC_HB_TX_PERIOD_MS - 1u);
+
+    /* No heartbeat should have been sent */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+}
+
+/** @verifies SWR-FZC-021
+ *  Equivalence class: boundary — exactly at period (50 cycles = 1 TX) */
+void test_Boundary_exactly_at_period(void)
+{
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+
+    /* Exactly 1 heartbeat should have been sent */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
+}
+
+/** @verifies SWR-FZC-022
+ *  Boundary: alive counter starts at 0 on first TX */
+void test_Boundary_alive_counter_starts_zero(void)
+{
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+
+    /* First heartbeat alive counter should be 0 */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Boundary: alive counter at max (15) before wrap */
+void test_Boundary_alive_counter_at_max(void)
+{
+    /* Send 16 heartbeats (counters 0..15) */
+    uint16 i;
+    for (i = 0u; i < 16u; i++) {
+        run_cycles(FZC_HB_TX_PERIOD_MS);
+    }
+
+    /* The 16th heartbeat should have alive counter = 15 */
+    TEST_ASSERT_EQUAL_UINT8(15u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Fault injection: all fault bits set (0xFF) in mask */
+void test_FaultInj_all_fault_bits_set(void)
+{
+    mock_fault_mask = 0x00FFu;
+
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_LO]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Fault injection: CAN bus-off suppresses heartbeat then resumes when cleared */
+void test_FaultInj_busoff_suppress_and_resume(void)
+{
+    /* Set CAN bus-off */
+    mock_fault_mask = FZC_FAULT_CAN_BUS_OFF;
+
+    run_cycles(FZC_HB_TX_PERIOD_MS * 2u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+
+    /* Clear bus-off */
+    mock_fault_mask = 0u;
+
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+    TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
+}
+
+/** @verifies SWR-FZC-022
+ *  Equivalence class: vehicle state SAFE_STOP included in heartbeat data */
+void test_Vehicle_state_safe_stop_in_heartbeat(void)
+{
+    mock_vehicle_state = FZC_STATE_SAFE_STOP;
+
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+
+    TEST_ASSERT_EQUAL_UINT8((uint8)FZC_STATE_SAFE_STOP,
+                            mock_com_last_data[HB_BYTE_STATE]);
+}
+
+/** @verifies SWR-FZC-021
+ *  Fault injection: double Init call resets alive counter */
+void test_FaultInj_double_init_resets_alive(void)
+{
+    /* Send a few heartbeats to advance alive counter */
+    run_cycles(FZC_HB_TX_PERIOD_MS * 5u);
+    TEST_ASSERT_EQUAL_UINT8(5u, mock_com_send_count);
+
+    /* Re-init */
+    Swc_Heartbeat_Init();
+
+    mock_com_send_count = 0u;
+    run_cycles(FZC_HB_TX_PERIOD_MS);
+
+    /* Alive counter should restart at 0 */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Equivalence class: all vehicle states produce valid heartbeat data */
+void test_All_vehicle_states_heartbeat(void)
+{
+    uint8 states[] = {FZC_STATE_INIT, FZC_STATE_RUN, FZC_STATE_DEGRADED,
+                      FZC_STATE_LIMP, FZC_STATE_SAFE_STOP, FZC_STATE_SHUTDOWN};
+    uint8 i;
+
+    for (i = 0u; i < 6u; i++) {
+        Swc_Heartbeat_Init();
+        mock_com_send_count = 0u;
+        mock_vehicle_state  = (uint32)states[i];
+        mock_fault_mask     = 0u;
+
+        run_cycles(FZC_HB_TX_PERIOD_MS);
+
+        TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
+        TEST_ASSERT_EQUAL_UINT8(states[i], mock_com_last_data[HB_BYTE_STATE]);
+        TEST_ASSERT_EQUAL_UINT8(FZC_ECU_ID, mock_com_last_data[HB_BYTE_ECU_ID]);
+    }
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -385,6 +530,19 @@ int main(void)
     RUN_TEST(test_Multiple_periods);
     RUN_TEST(test_Fault_mask_zero);
     RUN_TEST(test_MainFunction_safe_on_init);
+
+    /* HARDENED: Boundary value tests */
+    RUN_TEST(test_Boundary_one_before_period);
+    RUN_TEST(test_Boundary_exactly_at_period);
+    RUN_TEST(test_Boundary_alive_counter_starts_zero);
+    RUN_TEST(test_Boundary_alive_counter_at_max);
+
+    /* HARDENED: Fault injection tests */
+    RUN_TEST(test_FaultInj_all_fault_bits_set);
+    RUN_TEST(test_FaultInj_busoff_suppress_and_resume);
+    RUN_TEST(test_Vehicle_state_safe_stop_in_heartbeat);
+    RUN_TEST(test_FaultInj_double_init_resets_alive);
+    RUN_TEST(test_All_vehicle_states_heartbeat);
 
     return UNITY_END();
 }

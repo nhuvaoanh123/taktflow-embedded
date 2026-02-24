@@ -267,6 +267,136 @@ void test_Spi_SyncTransmit_invalid_sequence(void)
 }
 
 /* ==================================================================
+ * Hardened Tests: Init with numChannels Overflow (SWR-BSW-006)
+ * Boundary: numChannels > SPI_MAX_CHANNELS should stay UNINIT
+ * ================================================================== */
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_Init_numChannels_exceeds_max_stays_uninit(void)
+{
+    test_config.numChannels = SPI_MAX_CHANNELS + 1u;
+    Spi_Init(&test_config);
+
+    TEST_ASSERT_EQUAL(SPI_UNINIT, Spi_GetStatus());
+}
+
+/* ==================================================================
+ * Hardened Tests: Channel Boundary Values (SWR-BSW-006)
+ * Boundary: Channel=0 (min valid), Channel=SPI_MAX_CHANNELS-1 (max valid),
+ *           Channel=SPI_MAX_CHANNELS (invalid)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_WriteIB_channel_zero(void)
+{
+    Spi_Init(&test_config);
+
+    uint16 data[] = {0xABCDu};
+    Std_ReturnType ret = Spi_WriteIB(0u, data);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+}
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_WriteIB_channel_max_minus_one(void)
+{
+    /* SPI_MAX_CHANNELS-1 is the last valid channel index */
+    Spi_Init(&test_config);
+
+    uint16 data[] = {0x1234u};
+    Std_ReturnType ret = Spi_WriteIB(SPI_MAX_CHANNELS - 1u, data);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+}
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_WriteIB_channel_max_invalid(void)
+{
+    /* Channel=SPI_MAX_CHANNELS is out of range */
+    Spi_Init(&test_config);
+
+    uint16 data[] = {0x1234u};
+    Std_ReturnType ret = Spi_WriteIB(SPI_MAX_CHANNELS, data);
+
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_ReadIB_channel_max_minus_one(void)
+{
+    Spi_Init(&test_config);
+
+    uint16 rx_buf[SPI_IB_SIZE] = {0u};
+    Std_ReturnType ret = Spi_ReadIB(SPI_MAX_CHANNELS - 1u, rx_buf);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+}
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_ReadIB_channel_max_invalid(void)
+{
+    Spi_Init(&test_config);
+
+    uint16 rx_buf[SPI_IB_SIZE] = {0u};
+    Std_ReturnType ret = Spi_ReadIB(SPI_MAX_CHANNELS, rx_buf);
+
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/* ==================================================================
+ * Hardened Tests: NULL Buffer Pointers (SWR-BSW-006)
+ * WriteIB null already tested above, adding ReadIB before init
+ * ================================================================== */
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_ReadIB_before_init(void)
+{
+    uint16 rx_buf[SPI_IB_SIZE] = {0u};
+    Std_ReturnType ret = Spi_ReadIB(0u, rx_buf);
+
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/* ==================================================================
+ * Hardened Tests: SyncTransmit State Transitions (SWR-BSW-006)
+ * Verify IDLE -> BUSY -> IDLE during transmit
+ * ================================================================== */
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_SyncTransmit_status_returns_to_idle(void)
+{
+    /* After a successful SyncTransmit, status should be IDLE */
+    Spi_Init(&test_config);
+    TEST_ASSERT_EQUAL(SPI_IDLE, Spi_GetStatus());
+
+    uint16 tx[] = {0x5678u};
+    Spi_WriteIB(0u, tx);
+
+    Std_ReturnType ret = Spi_SyncTransmit(0u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+
+    /* After transmit completes, status returns to IDLE */
+    TEST_ASSERT_EQUAL(SPI_IDLE, Spi_GetStatus());
+}
+
+/** @verifies SWR-BSW-006 */
+void test_Spi_SyncTransmit_hw_failure_status_returns_to_idle(void)
+{
+    /* Even on HW failure, status should revert to IDLE */
+    Spi_Init(&test_config);
+
+    uint16 tx[] = {0x1234u};
+    Spi_WriteIB(0u, tx);
+    mock_hw_transmit_fail = TRUE;
+
+    Std_ReturnType ret = Spi_SyncTransmit(0u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+
+    /* Status should still be IDLE after failed transmit */
+    TEST_ASSERT_EQUAL(SPI_IDLE, Spi_GetStatus());
+}
+
+/* ==================================================================
  * Test Runner
  * ================================================================== */
 
@@ -295,6 +425,23 @@ int main(void)
     RUN_TEST(test_Spi_SyncTransmit_hw_failure);
     RUN_TEST(test_Spi_SyncTransmit_before_init);
     RUN_TEST(test_Spi_SyncTransmit_invalid_sequence);
+
+    /* Hardened: numChannels overflow */
+    RUN_TEST(test_Spi_Init_numChannels_exceeds_max_stays_uninit);
+
+    /* Hardened: Channel boundary values */
+    RUN_TEST(test_Spi_WriteIB_channel_zero);
+    RUN_TEST(test_Spi_WriteIB_channel_max_minus_one);
+    RUN_TEST(test_Spi_WriteIB_channel_max_invalid);
+    RUN_TEST(test_Spi_ReadIB_channel_max_minus_one);
+    RUN_TEST(test_Spi_ReadIB_channel_max_invalid);
+
+    /* Hardened: ReadIB before init */
+    RUN_TEST(test_Spi_ReadIB_before_init);
+
+    /* Hardened: SyncTransmit state transitions */
+    RUN_TEST(test_Spi_SyncTransmit_status_returns_to_idle);
+    RUN_TEST(test_Spi_SyncTransmit_hw_failure_status_returns_to_idle);
 
     return UNITY_END();
 }

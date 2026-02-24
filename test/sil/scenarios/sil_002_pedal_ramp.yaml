@@ -1,0 +1,81 @@
+# =============================================================================
+# @file    sil_002_pedal_ramp.yaml
+# @brief   SIL scenario: Pedal ramp 0% -> 100% -> 0% with motor tracking
+# @aspice  SWE.5 — Software Component Verification & Integration
+# @iso     ISO 26262 Part 6, Section 10 — Software Integration & Testing
+# @date    2026-02-24
+#
+# Validates the primary drive chain: torque request from CVC is processed
+# by RZC, motor responds proportionally, and CAN feedback (RPM, current)
+# follows the commanded torque within the specified tracking window.
+# =============================================================================
+
+name: "Pedal Ramp 0-100-0%"
+id: "SIL-002"
+description: >
+  Inject a normal_drive scenario and verify motor output tracks the torque
+  command within 50ms latency.  Confirm RPM increases proportionally to
+  torque request, motor current is non-zero when torque is commanded, and
+  the complete drive chain (CVC torque request -> RZC motor control ->
+  plant sim feedback) functions end-to-end.
+verifies:
+  - "SWR-CVC-001"   # CVC torque command generation from pedal input
+  - "SWR-RZC-001"   # RZC motor control loop — torque tracking
+aspice: "SWE.5"
+iso_reference: "ISO 26262 Part 6, Section 10"
+timeout_sec: 30
+
+setup:
+  - action: reset
+    description: "Clear residual state and ensure clean start"
+  - action: wait_state
+    state: RUN
+    timeout: 10
+    description: "Wait for system to reach RUN before applying torque"
+
+steps:
+  - action: inject_scenario
+    name: normal_drive
+    description: "Apply 50% torque forward, steer 0 deg, brake 0%"
+  - action: wait
+    seconds: 3
+    description: "Allow motor to ramp up and reach steady-state RPM"
+  - action: inject_scenario
+    name: reset
+    description: "Ramp torque back to 0% (deceleration phase)"
+  - action: wait
+    seconds: 3
+    description: "Allow motor to decelerate and return to idle"
+
+verdicts:
+  - type: vehicle_state
+    expected: RUN
+    within_ms: 500
+    description: "Vehicle must remain in RUN throughout the pedal ramp"
+
+  - type: can_message
+    can_id: 0x101
+    description: "Torque_Request frame (0x101) present with TorqueRequest > 0"
+
+  - type: can_message
+    can_id: 0x300
+    description: "MotorStatus frame shows RPM > 0 after torque application"
+
+  - type: can_message
+    can_id: 0x301
+    description: "MotorCurrent frame shows current > 0 A when torque is commanded"
+
+  - type: motor_tracking
+    within_ms: 50
+    description: "Motor RPM tracks torque command within 50ms latency budget"
+
+  - type: can_message
+    can_id: 0x300
+    field: rpm
+    expected_range: [0, 0]
+    after_reset: true
+    description: "Motor RPM returns to 0 after torque removed"
+
+teardown:
+  - action: reset
+    description: "Ensure motor is stopped and system is at idle"

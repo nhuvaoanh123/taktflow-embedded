@@ -250,6 +250,132 @@ void test_Pwm_DeInit(void)
 }
 
 /* ==================================================================
+ * Hardened Tests: Init Edge Cases (SWR-BSW-008)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_Init_numChannels_exceeds_max_stays_uninit(void)
+{
+    /* numChannels > PWM_MAX_CHANNELS should be rejected, stay UNINIT */
+    test_config.numChannels = PWM_MAX_CHANNELS + 1u;
+    Pwm_Init(&test_config);
+
+    TEST_ASSERT_EQUAL(PWM_UNINIT, Pwm_GetStatus());
+}
+
+/* ==================================================================
+ * Hardened Tests: Duty Cycle Boundary Values (SWR-BSW-008)
+ * Equivalence classes: 0x0000 (0%), 0x8000 (100%), 0xFFFF (overflow, clamped)
+ * Already have zero, full, clamp tests. Adding explicit 0x8001 boundary.
+ * ================================================================== */
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetDutyCycle_just_above_max_clamped(void)
+{
+    /* 0x8001 is one past 100% — should be clamped to 0x8000 */
+    Pwm_Init(&test_config);
+
+    Pwm_SetDutyCycle(0u, 0x8001u);
+
+    TEST_ASSERT_TRUE(mock_duty_set[0]);
+    TEST_ASSERT_EQUAL_HEX16(0x8000u, mock_duty[0]);
+}
+
+/* ==================================================================
+ * Hardened Tests: Channel Boundary Values (SWR-BSW-008)
+ * Boundary: Channel=0 (valid), Channel=numChannels-1 (max valid),
+ *           Channel=numChannels (no-op), Channel=PWM_MAX_CHANNELS (no-op)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetDutyCycle_channel_zero_valid(void)
+{
+    Pwm_Init(&test_config);
+
+    Pwm_SetDutyCycle(0u, 0x2000u);
+
+    TEST_ASSERT_TRUE(mock_duty_set[0]);
+    TEST_ASSERT_EQUAL_HEX16(0x2000u, mock_duty[0]);
+}
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetDutyCycle_channel_max_minus_one_valid(void)
+{
+    /* numChannels=2, so channel 1 is the max valid index */
+    Pwm_Init(&test_config);
+
+    Pwm_SetDutyCycle(1u, 0x6000u);
+
+    TEST_ASSERT_TRUE(mock_duty_set[1]);
+    TEST_ASSERT_EQUAL_HEX16(0x6000u, mock_duty[1]);
+}
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetDutyCycle_channel_equals_num_channels_noop(void)
+{
+    /* numChannels=2, channel 2 is out of range — no-op */
+    Pwm_Init(&test_config);
+
+    Pwm_SetDutyCycle(2u, 0x4000u);
+
+    /* No channel should have been written */
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        TEST_ASSERT_FALSE(mock_duty_set[i]);
+    }
+}
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetOutputToIdle_channel_equals_num_channels_noop(void)
+{
+    /* Channel=numChannels is out of range — no-op */
+    Pwm_Init(&test_config);
+
+    Pwm_SetOutputToIdle(2u);
+
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        TEST_ASSERT_FALSE(mock_idle_set[i]);
+    }
+}
+
+/* ==================================================================
+ * Hardened Tests: Operations Before Init (SWR-BSW-008)
+ * SetDutyCycle and SetOutputToIdle before init should be no-op
+ * Already have test_Pwm_SetDutyCycle_before_init and
+ * test_Pwm_SetOutputToIdle_before_init above. Adding DeInit-then-ops.
+ * ================================================================== */
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetDutyCycle_after_deinit_noop(void)
+{
+    Pwm_Init(&test_config);
+    Pwm_DeInit();
+
+    /* Reset mock flags after DeInit (DeInit calls SetIdle on channels) */
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        mock_duty_set[i] = FALSE;
+        mock_idle_set[i] = FALSE;
+    }
+
+    Pwm_SetDutyCycle(0u, 0x4000u);
+    TEST_ASSERT_FALSE(mock_duty_set[0]);
+}
+
+/** @verifies SWR-BSW-008 */
+void test_Pwm_SetOutputToIdle_after_deinit_noop(void)
+{
+    Pwm_Init(&test_config);
+    Pwm_DeInit();
+
+    /* Reset mock flags */
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        mock_idle_set[i] = FALSE;
+    }
+
+    Pwm_SetOutputToIdle(0u);
+    TEST_ASSERT_FALSE(mock_idle_set[0]);
+}
+
+/* ==================================================================
  * Test Runner
  * ================================================================== */
 
@@ -278,6 +404,22 @@ int main(void)
 
     /* DeInit test */
     RUN_TEST(test_Pwm_DeInit);
+
+    /* Hardened: Init edge cases */
+    RUN_TEST(test_Pwm_Init_numChannels_exceeds_max_stays_uninit);
+
+    /* Hardened: Duty cycle boundary */
+    RUN_TEST(test_Pwm_SetDutyCycle_just_above_max_clamped);
+
+    /* Hardened: Channel boundary values */
+    RUN_TEST(test_Pwm_SetDutyCycle_channel_zero_valid);
+    RUN_TEST(test_Pwm_SetDutyCycle_channel_max_minus_one_valid);
+    RUN_TEST(test_Pwm_SetDutyCycle_channel_equals_num_channels_noop);
+    RUN_TEST(test_Pwm_SetOutputToIdle_channel_equals_num_channels_noop);
+
+    /* Hardened: Operations after DeInit */
+    RUN_TEST(test_Pwm_SetDutyCycle_after_deinit_noop);
+    RUN_TEST(test_Pwm_SetOutputToIdle_after_deinit_noop);
 
     return UNITY_END();
 }

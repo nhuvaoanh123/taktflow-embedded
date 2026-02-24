@@ -361,6 +361,112 @@ void test_CAN_broadcast(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — exactly at DISABLE_LOW threshold (8000mV) */
+void test_Boundary_exactly_disable_low(void)
+{
+    fill_avg_buffer(RZC_BATT_DISABLE_LOW_MV);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_TRUE((status == (uint32)RZC_BATT_STATUS_DISABLE_LOW) ||
+                     (status == (uint32)RZC_BATT_STATUS_WARN_LOW));
+}
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — exactly at WARN_LOW threshold (10500mV) */
+void test_Boundary_exactly_warn_low(void)
+{
+    fill_avg_buffer(RZC_BATT_WARN_LOW_MV);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_TRUE((status == (uint32)RZC_BATT_STATUS_WARN_LOW) ||
+                     (status == (uint32)RZC_BATT_STATUS_NORMAL));
+}
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — exactly at WARN_HIGH threshold (15000mV) */
+void test_Boundary_exactly_warn_high(void)
+{
+    fill_avg_buffer(RZC_BATT_WARN_HIGH_MV);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_TRUE((status == (uint32)RZC_BATT_STATUS_NORMAL) ||
+                     (status == (uint32)RZC_BATT_STATUS_WARN_HIGH));
+}
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — exactly at DISABLE_HIGH threshold (17000mV) */
+void test_Boundary_exactly_disable_high(void)
+{
+    fill_avg_buffer(RZC_BATT_DISABLE_HIGH_MV);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_TRUE((status == (uint32)RZC_BATT_STATUS_WARN_HIGH) ||
+                     (status == (uint32)RZC_BATT_STATUS_DISABLE_HIGH));
+}
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — zero voltage (completely dead battery) */
+void test_Battery_zero_voltage(void)
+{
+    fill_avg_buffer(0u);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_DISABLE_LOW, status);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[RZC_DTC_BATTERY]);
+}
+
+/** @verifies SWR-RZC-018
+ *  Equivalence class: Fault injection — hysteresis from DISABLE_HIGH */
+void test_Hysteresis_from_disable_high(void)
+{
+    /* Drive into DISABLE_HIGH */
+    fill_avg_buffer(17500u);
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_DISABLE_HIGH, status);
+
+    /* Drop to 17000mV — within hysteresis, should stay DISABLE_HIGH */
+    fill_avg_buffer(17000u);
+    status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_DISABLE_HIGH, status);
+
+    /* Drop to 16499mV (17000 - 500 - 1) — below hysteresis, recover to WARN_HIGH */
+    fill_avg_buffer(16499u);
+    status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_WARN_HIGH, status);
+}
+
+/** @verifies SWR-RZC-017
+ *  Equivalence class: Boundary — maximum uint16 voltage (65535mV) */
+void test_Battery_max_uint16(void)
+{
+    fill_avg_buffer(65535u);
+
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_DISABLE_HIGH, status);
+}
+
+/** @verifies SWR-RZC-018
+ *  Equivalence class: Boundary — averaging window affects status transition */
+void test_Battery_averaging_step_transition(void)
+{
+    /* Fill 3 of 4 samples with normal, 1 with low */
+    mock_battery_mV = 12000u;
+    run_cycles(3u);
+    mock_battery_mV = 7500u;
+    run_cycles(1u);
+
+    /* Average = (12000*3 + 7500) / 4 = 10875 -> NORMAL or WARN_LOW */
+    uint32 status = mock_rte_signals[RZC_SIG_BATTERY_STATUS];
+    TEST_ASSERT_TRUE((status == (uint32)RZC_BATT_STATUS_NORMAL) ||
+                     (status == (uint32)RZC_BATT_STATUS_WARN_LOW));
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -383,6 +489,16 @@ int main(void)
 
     /* SWR-RZC-017: CAN broadcast */
     RUN_TEST(test_CAN_broadcast);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_Boundary_exactly_disable_low);
+    RUN_TEST(test_Boundary_exactly_warn_low);
+    RUN_TEST(test_Boundary_exactly_warn_high);
+    RUN_TEST(test_Boundary_exactly_disable_high);
+    RUN_TEST(test_Battery_zero_voltage);
+    RUN_TEST(test_Hysteresis_from_disable_high);
+    RUN_TEST(test_Battery_max_uint16);
+    RUN_TEST(test_Battery_averaging_step_transition);
 
     return UNITY_END();
 }

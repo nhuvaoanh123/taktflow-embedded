@@ -199,6 +199,119 @@ void test_CanIf_Init_null_config(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-011 / SWR-BSW-012: Hardened Boundary Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_Transmit_first_pdu_id_valid(void)
+{
+    uint8 data[] = {0xAA};
+    PduInfoType pdu = { data, 1u };
+
+    Std_ReturnType ret = CanIf_Transmit(0u, &pdu);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_HEX32(0x100u, mock_can_last_id);
+}
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_Transmit_last_pdu_id_valid(void)
+{
+    uint8 data[] = {0xBB};
+    PduInfoType pdu = { data, 1u };
+
+    /* txPduCount = 3, last valid index = 2 */
+    Std_ReturnType ret = CanIf_Transmit(2u, &pdu);
+
+    TEST_ASSERT_EQUAL(E_OK, ret);
+    TEST_ASSERT_EQUAL_HEX32(0x001u, mock_can_last_id);
+}
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_Transmit_pdu_id_equals_count_invalid(void)
+{
+    uint8 data[] = {0xCC};
+    PduInfoType pdu = { data, 1u };
+
+    /* txPduCount = 3, so index 3 is out of bounds */
+    Std_ReturnType ret = CanIf_Transmit(3u, &pdu);
+
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_can_write_count);
+}
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_RxIndication_null_sdu_ptr_no_crash(void)
+{
+    /* NULL SduPtr should be treated as a no-op */
+    CanIf_RxIndication(0x200u, NULL_PTR, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_pdur_rx_count);
+}
+
+/** @verifies SWR-BSW-012 */
+void test_CanIf_Transmit_before_init_fails(void)
+{
+    /* Re-init with NULL to enter uninitialized state */
+    CanIf_Init(NULL_PTR);
+
+    uint8 data[] = {0x01};
+    PduInfoType pdu = { data, 1u };
+
+    Std_ReturnType ret = CanIf_Transmit(0u, &pdu);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_can_write_count);
+}
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_RxIndication_third_mapping(void)
+{
+    uint8 data[] = {0xCA, 0xFE, 0xBA, 0xBE, 0x00, 0x00, 0x00, 0x00};
+
+    CanIf_RxIndication(0x012u, data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_rx_count);
+    TEST_ASSERT_EQUAL(2u, mock_pdur_rx_pdu_id);
+    TEST_ASSERT_EQUAL_HEX8(0xCA, mock_pdur_rx_data[0]);
+}
+
+/** @verifies SWR-BSW-011 */
+void test_CanIf_RxIndication_multiple_messages_routed_correctly(void)
+{
+    uint8 data1[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    uint8 data2[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11};
+    uint8 data3[] = {0xDE, 0xAD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    /* Send three RX messages for all three configured CAN IDs */
+    CanIf_RxIndication(0x200u, data1, 8u);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_rx_count);
+    TEST_ASSERT_EQUAL(0u, mock_pdur_rx_pdu_id);
+    TEST_ASSERT_EQUAL_HEX8(0x01, mock_pdur_rx_data[0]);
+
+    CanIf_RxIndication(0x011u, data2, 8u);
+    TEST_ASSERT_EQUAL_UINT8(2u, mock_pdur_rx_count);
+    TEST_ASSERT_EQUAL(1u, mock_pdur_rx_pdu_id);
+    TEST_ASSERT_EQUAL_HEX8(0xAA, mock_pdur_rx_data[0]);
+
+    CanIf_RxIndication(0x012u, data3, 8u);
+    TEST_ASSERT_EQUAL_UINT8(3u, mock_pdur_rx_count);
+    TEST_ASSERT_EQUAL(2u, mock_pdur_rx_pdu_id);
+    TEST_ASSERT_EQUAL_HEX8(0xDE, mock_pdur_rx_data[0]);
+}
+
+/** @verifies SWR-BSW-012 */
+void test_CanIf_RxIndication_before_init_discarded(void)
+{
+    /* Enter uninitialized state */
+    CanIf_Init(NULL_PTR);
+
+    uint8 data[] = {0xFF};
+    CanIf_RxIndication(0x200u, data, 1u);
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_pdur_rx_count);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -215,6 +328,16 @@ int main(void)
     RUN_TEST(test_CanIf_RxIndication_second_mapping);
     RUN_TEST(test_CanIf_RxIndication_unknown_id_discarded);
     RUN_TEST(test_CanIf_Init_null_config);
+
+    /* Hardened boundary tests */
+    RUN_TEST(test_CanIf_Transmit_first_pdu_id_valid);
+    RUN_TEST(test_CanIf_Transmit_last_pdu_id_valid);
+    RUN_TEST(test_CanIf_Transmit_pdu_id_equals_count_invalid);
+    RUN_TEST(test_CanIf_RxIndication_null_sdu_ptr_no_crash);
+    RUN_TEST(test_CanIf_Transmit_before_init_fails);
+    RUN_TEST(test_CanIf_RxIndication_third_mapping);
+    RUN_TEST(test_CanIf_RxIndication_multiple_messages_routed_correctly);
+    RUN_TEST(test_CanIf_RxIndication_before_init_discarded);
 
     return UNITY_END();
 }

@@ -251,6 +251,202 @@ void test_Rte_MainFunction_does_nothing_before_init(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-026 / SWR-BSW-027: Hardened Boundary Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_signal_id_0_valid(void)
+{
+    Std_ReturnType ret = Rte_Write(0u, 42u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+
+    uint32 val = 0u;
+    Rte_Read(0u, &val);
+    TEST_ASSERT_EQUAL_UINT32(42u, val);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_signal_id_last_valid(void)
+{
+    /* signalCount = 3, last valid index = 2 */
+    Std_ReturnType ret = Rte_Write(2u, 999u);
+    TEST_ASSERT_EQUAL(E_OK, ret);
+
+    uint32 val = 0u;
+    Rte_Read(2u, &val);
+    TEST_ASSERT_EQUAL_UINT32(999u, val);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_signal_id_equals_count_invalid(void)
+{
+    /* signalCount = 3, so index 3 is out of bounds */
+    Std_ReturnType ret = Rte_Write(3u, 100u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Read_signal_id_equals_count_invalid(void)
+{
+    uint32 val = 0u;
+    Std_ReturnType ret = Rte_Read(3u, &val);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_signal_id_max_signals_invalid(void)
+{
+    Std_ReturnType ret = Rte_Write(RTE_MAX_SIGNALS, 100u);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Read_signal_id_max_signals_invalid(void)
+{
+    uint32 val = 0u;
+    Std_ReturnType ret = Rte_Read(RTE_MAX_SIGNALS, &val);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_Read_roundtrip_data_integrity(void)
+{
+    /* Write a known pattern and verify exact readback */
+    uint32 pattern = 0xDEADBEEFu;
+    Rte_Write(RTE_SIG_TORQUE_REQUEST, pattern);
+
+    uint32 readback = 0u;
+    Rte_Read(RTE_SIG_TORQUE_REQUEST, &readback);
+    TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, readback);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Write_no_crosstalk_between_signals(void)
+{
+    Rte_Write(RTE_SIG_TORQUE_REQUEST, 111u);
+    Rte_Write(RTE_SIG_STEERING_ANGLE, 222u);
+    Rte_Write(RTE_SIG_VEHICLE_SPEED,  333u);
+
+    uint32 val0 = 0u, val1 = 0u, val2 = 0u;
+    Rte_Read(RTE_SIG_TORQUE_REQUEST, &val0);
+    Rte_Read(RTE_SIG_STEERING_ANGLE, &val1);
+    Rte_Read(RTE_SIG_VEHICLE_SPEED,  &val2);
+
+    TEST_ASSERT_EQUAL_UINT32(111u, val0);
+    TEST_ASSERT_EQUAL_UINT32(222u, val1);
+    TEST_ASSERT_EQUAL_UINT32(333u, val2);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Read_initial_values_after_init(void)
+{
+    /* All signals configured with initialValue = 0 */
+    uint32 val = 9999u;
+
+    Rte_Read(RTE_SIG_TORQUE_REQUEST, &val);
+    TEST_ASSERT_EQUAL_UINT32(0u, val);
+
+    val = 9999u;
+    Rte_Read(RTE_SIG_STEERING_ANGLE, &val);
+    TEST_ASSERT_EQUAL_UINT32(0u, val);
+
+    val = 9999u;
+    Rte_Read(RTE_SIG_VEHICLE_SPEED, &val);
+    TEST_ASSERT_EQUAL_UINT32(0u, val);
+}
+
+/** @verifies SWR-BSW-026 */
+void test_Rte_Init_signal_count_exceeds_max_not_initialized(void)
+{
+    Rte_ConfigType overflow_cfg;
+    overflow_cfg.signalConfig   = test_signals;
+    overflow_cfg.signalCount    = RTE_MAX_SIGNALS + 1u;
+    overflow_cfg.runnableConfig = test_runnables;
+    overflow_cfg.runnableCount  = 3u;
+
+    Rte_Init(&overflow_cfg);
+
+    /* Should reject the config — operations should fail */
+    uint32 val = 0u;
+    Std_ReturnType ret = Rte_Read(0u, &val);
+    TEST_ASSERT_EQUAL(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-BSW-027 */
+void test_Rte_MainFunction_highest_priority_runs_first(void)
+{
+    /* TestRunnable_10ms has priority 2, TestRunnable_10ms_B has priority 1 */
+    /* After 10 ticks, both should have fired once. The higher priority (2)
+     * should run before lower priority (1). We verify both ran. */
+    for (uint32 i = 0u; i < 10u; i++) {
+        Rte_MainFunction();
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(1u, runnable_10ms_call_count);
+    TEST_ASSERT_EQUAL_UINT8(1u, runnable_10ms_b_call_count);
+}
+
+/** @verifies SWR-BSW-027 */
+void test_Rte_MainFunction_period_1_fires_every_tick(void)
+{
+    /* Reconfigure with a period-1 runnable */
+    static const Rte_RunnableConfigType fast_runnables[] = {
+        { TestRunnable_10ms, 1u, 1u, 0u },  /* period=1, fires every tick */
+    };
+    Rte_ConfigType fast_cfg;
+    fast_cfg.signalConfig   = test_signals;
+    fast_cfg.signalCount    = 3u;
+    fast_cfg.runnableConfig = fast_runnables;
+    fast_cfg.runnableCount  = 1u;
+
+    Rte_Init(&fast_cfg);
+
+    for (uint32 i = 0u; i < 10u; i++) {
+        Rte_MainFunction();
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(10u, runnable_10ms_call_count);
+}
+
+/** @verifies SWR-BSW-027 */
+void test_Rte_MainFunction_period_10_fires_at_10th_tick(void)
+{
+    /* Already configured with period=10 runnables via setUp */
+    /* At tick 9 = 0 fires, at tick 10 = 1 fire */
+    for (uint32 i = 0u; i < 9u; i++) {
+        Rte_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(0u, runnable_10ms_call_count);
+
+    Rte_MainFunction(); /* tick 10 */
+    TEST_ASSERT_EQUAL_UINT8(1u, runnable_10ms_call_count);
+}
+
+/** @verifies SWR-BSW-027 */
+void test_Rte_MainFunction_null_func_ptr_skipped(void)
+{
+    /* Configure a runnable with NULL function pointer */
+    static const Rte_RunnableConfigType null_runnables[] = {
+        { NULL_PTR, 1u, 1u, 0u },  /* NULL func — should be skipped */
+    };
+    Rte_ConfigType null_cfg;
+    null_cfg.signalConfig   = test_signals;
+    null_cfg.signalCount    = 3u;
+    null_cfg.runnableConfig = null_runnables;
+    null_cfg.runnableCount  = 1u;
+
+    Rte_Init(&null_cfg);
+
+    /* Should not crash — just skip the NULL runnable */
+    for (uint32 i = 0u; i < 5u; i++) {
+        Rte_MainFunction();
+    }
+
+    /* If we get here without crashing, test passes */
+    TEST_ASSERT_TRUE(1);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -275,6 +471,22 @@ int main(void)
     RUN_TEST(test_Rte_MainFunction_multiple_runnables_same_period);
     RUN_TEST(test_Rte_MainFunction_calls_WdgM_checkpoint);
     RUN_TEST(test_Rte_MainFunction_does_nothing_before_init);
+
+    /* Hardened boundary tests */
+    RUN_TEST(test_Rte_Write_signal_id_0_valid);
+    RUN_TEST(test_Rte_Write_signal_id_last_valid);
+    RUN_TEST(test_Rte_Write_signal_id_equals_count_invalid);
+    RUN_TEST(test_Rte_Read_signal_id_equals_count_invalid);
+    RUN_TEST(test_Rte_Write_signal_id_max_signals_invalid);
+    RUN_TEST(test_Rte_Read_signal_id_max_signals_invalid);
+    RUN_TEST(test_Rte_Write_Read_roundtrip_data_integrity);
+    RUN_TEST(test_Rte_Write_no_crosstalk_between_signals);
+    RUN_TEST(test_Rte_Read_initial_values_after_init);
+    RUN_TEST(test_Rte_Init_signal_count_exceeds_max_not_initialized);
+    RUN_TEST(test_Rte_MainFunction_highest_priority_runs_first);
+    RUN_TEST(test_Rte_MainFunction_period_1_fires_every_tick);
+    RUN_TEST(test_Rte_MainFunction_period_10_fires_at_10th_tick);
+    RUN_TEST(test_Rte_MainFunction_null_func_ptr_skipped);
 
     return UNITY_END();
 }

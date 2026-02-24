@@ -423,6 +423,203 @@ void test_Obd2_mode09_vin(void)
 }
 
 /* ====================================================================
+ * HARDENED: NULL pointer tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: NULL pointer — NULL response buffer returns E_NOT_OK
+ *  NULL pointer: safe handling of all NULL combinations */
+void test_Obd2_null_response_ptr(void)
+{
+    uint16 len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA,
+                                                      OBD_PID_ENGINE_LOAD,
+                                                      NULL_PTR, &len);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: NULL pointer — NULL len pointer returns E_NOT_OK */
+void test_Obd2_null_len_ptr(void)
+{
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA,
+                                                      OBD_PID_ENGINE_LOAD,
+                                                      obd_rsp, NULL_PTR);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/* ====================================================================
+ * HARDENED: Unsupported mode
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: unsupported mode — mode 0xFF returns E_NOT_OK
+ *  Error guessing: mode not in dispatch table */
+void test_Obd2_unsupported_mode(void)
+{
+    obd_rsp_len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(0xFFu, 0x00u,
+                                                      obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: unsupported mode — mode 0x02 (freeze frame, not implemented)
+ *  Error guessing: valid OBD mode but not supported */
+void test_Obd2_unsupported_mode_02(void)
+{
+    obd_rsp_len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(0x02u, 0x00u,
+                                                      obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/* ====================================================================
+ * HARDENED: Mode 01 boundary value tests
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: engine load — boundary at 0% and 100% torque
+ *  Boundary value: torque 0 -> load 0, torque 100 -> load 255 */
+void test_Obd2_mode01_engine_load_boundaries(void)
+{
+    /* 0% torque */
+    mock_rte_signals[TCU_SIG_TORQUE_PCT] = 0u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_ENGINE_LOAD,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(0u, obd_rsp[0]);
+
+    /* 100% torque */
+    mock_rte_signals[TCU_SIG_TORQUE_PCT] = 100u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_ENGINE_LOAD,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(255u, obd_rsp[0]);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: coolant temp — boundary at 0 and high temp
+ *  Boundary value: temp 0 -> 40, temp 215 -> 255 (max uint8) */
+void test_Obd2_mode01_coolant_temp_boundaries(void)
+{
+    /* 0 degrees C -> SAE value = 40 */
+    mock_rte_signals[TCU_SIG_MOTOR_TEMP] = 0u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_COOLANT_TEMP,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(40u, obd_rsp[0]);
+
+    /* 215 degrees C -> SAE value = 255 (max uint8) */
+    mock_rte_signals[TCU_SIG_MOTOR_TEMP] = 215u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_COOLANT_TEMP,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(255u, obd_rsp[0]);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: engine RPM — boundary at 0 RPM
+ *  Boundary value: 0 RPM -> 0 encoded */
+void test_Obd2_mode01_rpm_zero(void)
+{
+    mock_rte_signals[TCU_SIG_MOTOR_RPM] = 0u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_ENGINE_RPM,
+                                obd_rsp, &obd_rsp_len);
+    uint16 rpm_val = ((uint16)obd_rsp[0] << 8u) | (uint16)obd_rsp[1];
+    TEST_ASSERT_EQUAL_UINT16(0u, rpm_val);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: vehicle speed — clamping at 255 km/h
+ *  Boundary value: RPM high enough to exceed 255 km/h */
+void test_Obd2_mode01_speed_clamped_at_255(void)
+{
+    /* RPM = 5000 -> speed = 5000*60/1000 = 300, clamped to 255 */
+    mock_rte_signals[TCU_SIG_MOTOR_RPM] = 5000u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_VEHICLE_SPEED,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(255u, obd_rsp[0]);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: vehicle speed — boundary at 255 exactly
+ *  Boundary value: RPM = 4250 -> speed = 4250*60/1000 = 255 (not clamped) */
+void test_Obd2_mode01_speed_exactly_255(void)
+{
+    mock_rte_signals[TCU_SIG_MOTOR_RPM] = 4250u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_VEHICLE_SPEED,
+                                obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(255u, obd_rsp[0]);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: voltage — zero voltage
+ *  Boundary value: 0 mV */
+void test_Obd2_mode01_voltage_zero(void)
+{
+    mock_rte_signals[TCU_SIG_BATTERY_VOLTAGE] = 0u;
+    obd_rsp_len = 0u;
+    Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA, OBD_PID_CONTROL_VOLTAGE,
+                                obd_rsp, &obd_rsp_len);
+    uint16 voltage = ((uint16)obd_rsp[0] << 8u) | (uint16)obd_rsp[1];
+    TEST_ASSERT_EQUAL_UINT16(0u, voltage);
+}
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: ambient temp — fixed response value
+ *  Verify always returns 65 (25C + 40 offset) */
+void test_Obd2_mode01_ambient_temp_fixed(void)
+{
+    obd_rsp_len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(OBD_MODE_CURRENT_DATA,
+                                                      OBD_PID_AMBIENT_TEMP,
+                                                      obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT16(1u, obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(65u, obd_rsp[0]);
+}
+
+/* ====================================================================
+ * HARDENED: Mode 03 with empty store
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: Mode 03 — empty DTC store returns count 0
+ *  Boundary value: no confirmed DTCs */
+void test_Obd2_mode03_empty_store(void)
+{
+    mock_dtc_count = 0u;
+
+    obd_rsp_len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(OBD_MODE_CONFIRMED_DTC,
+                                                      0x00u,
+                                                      obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8(0u, obd_rsp[0]);  /* Count = 0 */
+    TEST_ASSERT_EQUAL_UINT16(1u, obd_rsp_len); /* Just the count byte */
+}
+
+/* ====================================================================
+ * HARDENED: Mode 09 unsupported PID
+ * ==================================================================== */
+
+/** @verifies SWR-TCU-010
+ *  Equivalence class: Mode 09 — unsupported PID returns E_NOT_OK
+ *  Error guessing: PID 0x00 (supported PIDs for mode 09, not implemented) */
+void test_Obd2_mode09_unsupported_pid(void)
+{
+    obd_rsp_len = 0u;
+    Std_ReturnType ret = Swc_Obd2Pids_HandleRequest(OBD_MODE_VEHICLE_INFO,
+                                                      0x00u,
+                                                      obd_rsp, &obd_rsp_len);
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, ret);
+}
+
+/* ====================================================================
  * Test runner
  * ==================================================================== */
 
@@ -441,6 +638,29 @@ int main(void)
     RUN_TEST(test_Obd2_mode03_confirmed_dtcs);
     RUN_TEST(test_Obd2_mode04_clear_dtcs);
     RUN_TEST(test_Obd2_mode09_vin);
+
+    /* HARDENED: NULL pointer */
+    RUN_TEST(test_Obd2_null_response_ptr);
+    RUN_TEST(test_Obd2_null_len_ptr);
+
+    /* HARDENED: Unsupported modes */
+    RUN_TEST(test_Obd2_unsupported_mode);
+    RUN_TEST(test_Obd2_unsupported_mode_02);
+
+    /* HARDENED: Mode 01 boundary values */
+    RUN_TEST(test_Obd2_mode01_engine_load_boundaries);
+    RUN_TEST(test_Obd2_mode01_coolant_temp_boundaries);
+    RUN_TEST(test_Obd2_mode01_rpm_zero);
+    RUN_TEST(test_Obd2_mode01_speed_clamped_at_255);
+    RUN_TEST(test_Obd2_mode01_speed_exactly_255);
+    RUN_TEST(test_Obd2_mode01_voltage_zero);
+    RUN_TEST(test_Obd2_mode01_ambient_temp_fixed);
+
+    /* HARDENED: Mode 03 edge cases */
+    RUN_TEST(test_Obd2_mode03_empty_store);
+
+    /* HARDENED: Mode 09 edge cases */
+    RUN_TEST(test_Obd2_mode09_unsupported_pid);
 
     return UNITY_END();
 }

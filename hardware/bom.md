@@ -46,7 +46,7 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 1 | STM32G474RE Nucleo-64 | 3 | $16.00 | $48.00 | Mouser / ST Direct | NUCLEO-G474RE | Not ordered | Phase 1 (first) |
-| 2 | TMS570LC43x LaunchPad | 1 | $40.00 | $40.00 | Mouser / TI Direct | LAUNCHXL2-TMS57012 | Not ordered | Phase 1 (first) |
+| 2 | TMS570LC43x LaunchPad | 1 | $40.00 | $40.00 | Mouser / TI Direct | LAUNCHXL2-570LC43 | Not ordered | Phase 1 (first) |
 | 3 | Raspberry Pi 4 Model B (4GB) | 1 | $55.00 | $55.00 | Adafruit / PiShop | SC0194 | Not ordered | Phase 2 |
 | 4 | 32GB MicroSD Card (Class 10) | 1 | $9.00 | $9.00 | Amazon | SanDisk Ultra | Not ordered | Phase 2 |
 | 5 | RPi 4 USB-C Power Supply (5V/3A) | 1 | $8.00 | $8.00 | Adafruit / Amazon | CanaKit 3.5A | Not ordered | Phase 2 |

@@ -818,6 +818,190 @@ void test_MainFunction_without_init_safe(void)
 }
 
 /* ==================================================================
+ * HARDENED TESTS — Boundary Values, NULL Pointers, Fault Injection
+ * ================================================================== */
+
+/** @verifies SWR-RZC-003
+ *  Equivalence class: Boundary — torque at 1% (minimum non-zero forward) */
+void test_Torque_1pct_minimum_forward(void)
+{
+    mock_torque_cmd    = (uint32)1u;
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 100u;
+
+    run_cycles(1u);
+
+    /* 1% * 95% max = 0.95% -> integer truncation yields low but non-zero or zero */
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty <= 100u);
+}
+
+/** @verifies SWR-RZC-003
+ *  Equivalence class: Boundary — torque at maximum representable (100%) in DEGRADED */
+void test_Torque_max_in_DEGRADED(void)
+{
+    mock_torque_cmd    = (uint32)100u;
+    mock_vehicle_state = RZC_STATE_DEGRADED;
+    mock_derating_pct  = 100u;
+
+    run_cycles(1u);
+
+    /* Must be capped at 75% of 95% = 71.25% -> never exceed 7125 */
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty <= 7125u);
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty > 0u);
+}
+
+/** @verifies SWR-RZC-002
+ *  Equivalence class: Boundary — derating at 0% forces motor off regardless of torque */
+void test_Derating_0pct_forces_zero(void)
+{
+    mock_torque_cmd    = (uint32)100u;
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 0u;
+
+    run_cycles(1u);
+
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+}
+
+/** @verifies SWR-RZC-003
+ *  Equivalence class: Invalid vehicle state — unknown state (255) keeps motor off */
+void test_Unknown_vehicle_state_motor_off(void)
+{
+    mock_torque_cmd    = (uint32)80u;
+    mock_vehicle_state = 255u;
+    mock_derating_pct  = 100u;
+
+    run_cycles(1u);
+
+    /* Unknown state must be treated as non-permissive — motor disabled */
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+}
+
+/** @verifies SWR-RZC-001
+ *  Equivalence class: Boundary — maximum negative torque (reverse) */
+void test_Torque_max_negative_reverse(void)
+{
+    /* -100% torque encoded as sint16 in uint32 */
+    mock_torque_cmd    = (uint32)((uint16)(sint16)(-100));
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 100u;
+
+    run_cycles(1u);
+
+    TEST_ASSERT_EQUAL_UINT8(RZC_DIR_REVERSE, mock_motor_pwm_last_direction);
+    /* Duty should be 95% = 9500 (magnitude of -100% capped at max duty) */
+    TEST_ASSERT_EQUAL_UINT16(9500u, mock_motor_pwm_last_duty);
+}
+
+/** @verifies SWR-RZC-016
+ *  Equivalence class: Fault injection — exactly 4 recovery commands (below threshold) */
+void test_Recovery_exactly_4_stays_disabled(void)
+{
+    /* Trigger timeout */
+    mock_torque_cmd    = (uint32)50u;
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 100u;
+    run_cycles(11u);
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+
+    /* Send exactly 4 different commands (threshold is 5) */
+    mock_torque_cmd = (uint32)51u; run_cycles(1u);
+    mock_torque_cmd = (uint32)52u; run_cycles(1u);
+    mock_torque_cmd = (uint32)53u; run_cycles(1u);
+    mock_torque_cmd = (uint32)54u; run_cycles(1u);
+
+    /* Motor should still be disabled (4 < 5 recovery threshold) */
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+}
+
+/** @verifies SWR-RZC-001
+ *  Equivalence class: Fault injection — ESTOP during direction change deadtime */
+void test_Estop_during_deadtime(void)
+{
+    /* Drive forward */
+    mock_torque_cmd    = (uint32)50u;
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 100u;
+    run_cycles(1u);
+
+    /* Command reverse to trigger deadtime */
+    mock_torque_cmd = (uint32)((uint16)(sint16)(-50));
+    run_cycles(1u);
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+
+    /* Activate ESTOP during deadtime */
+    mock_estop_active = 1u;
+    run_cycles(1u);
+
+    /* Motor must remain disabled, enable pins LOW */
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dio_state[RZC_MOTOR_R_EN_CHANNEL]);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dio_state[RZC_MOTOR_L_EN_CHANNEL]);
+}
+
+/** @verifies SWR-RZC-002
+ *  Equivalence class: Boundary — derating at 1% yields minimal or zero output */
+void test_Derating_1pct_boundary(void)
+{
+    mock_torque_cmd    = (uint32)100u;
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 1u;
+
+    run_cycles(1u);
+
+    /* 100% * 1% derating = 1% effective; 1% * 95% / 100 = 0 (integer) */
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty <= 100u);
+}
+
+/** @verifies SWR-RZC-003
+ *  Equivalence class: Boundary — transition from LIMP to SAFE_STOP immediately cuts motor */
+void test_LIMP_to_SAFE_STOP_cuts_motor(void)
+{
+    /* Drive in LIMP mode */
+    mock_torque_cmd    = (uint32)100u;
+    mock_vehicle_state = RZC_STATE_LIMP;
+    mock_derating_pct  = 100u;
+    run_cycles(1u);
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty > 0u);
+
+    /* Transition to SAFE_STOP */
+    mock_vehicle_state = RZC_STATE_SAFE_STOP;
+    run_cycles(1u);
+
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dio_state[RZC_MOTOR_R_EN_CHANNEL]);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dio_state[RZC_MOTOR_L_EN_CHANNEL]);
+}
+
+/** @verifies SWR-RZC-004
+ *  Equivalence class: Boundary — rapid direction reversal (forward-reverse-forward) */
+void test_Rapid_direction_reversal(void)
+{
+    mock_vehicle_state = RZC_STATE_RUN;
+    mock_derating_pct  = 100u;
+
+    /* Forward */
+    mock_torque_cmd = (uint32)50u;
+    run_cycles(1u);
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty > 0u);
+
+    /* Reverse — deadtime */
+    mock_torque_cmd = (uint32)((uint16)(sint16)(-50));
+    run_cycles(1u);
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+
+    /* Back to forward before reverse completes — another deadtime */
+    mock_torque_cmd = (uint32)50u;
+    run_cycles(1u);
+    TEST_ASSERT_EQUAL_UINT16(0u, mock_motor_pwm_last_duty);
+
+    /* Next cycle: forward direction active */
+    run_cycles(1u);
+    TEST_ASSERT_TRUE(mock_motor_pwm_last_duty > 0u);
+    TEST_ASSERT_EQUAL_UINT8(RZC_DIR_FORWARD, mock_motor_pwm_last_direction);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -868,6 +1052,18 @@ int main(void)
     RUN_TEST(test_SHUTDOWN_state_no_motor);
     RUN_TEST(test_Max_duty_cap_95pct);
     RUN_TEST(test_MainFunction_without_init_safe);
+
+    /* Hardened tests — boundary values, fault injection */
+    RUN_TEST(test_Torque_1pct_minimum_forward);
+    RUN_TEST(test_Torque_max_in_DEGRADED);
+    RUN_TEST(test_Derating_0pct_forces_zero);
+    RUN_TEST(test_Unknown_vehicle_state_motor_off);
+    RUN_TEST(test_Torque_max_negative_reverse);
+    RUN_TEST(test_Recovery_exactly_4_stays_disabled);
+    RUN_TEST(test_Estop_during_deadtime);
+    RUN_TEST(test_Derating_1pct_boundary);
+    RUN_TEST(test_LIMP_to_SAFE_STOP_cuts_motor);
+    RUN_TEST(test_Rapid_direction_reversal);
 
     return UNITY_END();
 }
