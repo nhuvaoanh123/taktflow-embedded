@@ -26,3 +26,4 @@ misra-c2012-11.8:*/CanIf.c
 misra-c2012-11.8:*/Dcm.c
 misra-c2012-17.3:*/Dcm.c
 misra-c2012-17.3:*/sc_hw_posix.c
+misra-config:*/sc_hw_posix.c
