@@ -220,6 +220,12 @@ The platform shall include an independent safety monitoring function, implemente
 
 The platform shall provide a hardware emergency stop button that, when activated, immediately commands all actuators to their safe state (motor off, brakes applied, steering centered) and latches the system in a safe stop condition until a manual restart is performed.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-24 -->
+> **Why:** STK-010 guarantees immediate human override authority through a hardware E-stop path, independent of normal control software and communication health.
+> **Tradeoff:** hard latching of safe stop improves safety assurance, but reduces availability because operation cannot resume automatically after transient faults.
+> **Alternative:** allow automatic recovery after fault clear, which improves uptime but weakens the safety argument for deliberate human-confirmed restart.
+<!-- HITL-LOCK END:COMMENT-BLOCK-24 -->
+
 ---
 
 ### STK-011: Body Control Function
