@@ -30,6 +30,7 @@ class MotorModel:
         self.overcurrent = False
         self.overtemp = False
         self.stall_fault = False
+        self._hw_disabled = False    # firmware overcurrent/overtemp disable
         self._last_time = time.monotonic()
 
     def update(self, duty_pct: float, direction: int, dt: float = None,
@@ -54,6 +55,9 @@ class MotorModel:
             self.enabled = False
         else:
             self.enabled = True
+
+        if self._hw_disabled:
+            self.enabled = False
 
         # RPM dynamics — brake opposes motor, reducing achievable speed
         if self.enabled and not self.stall_fault:
@@ -87,6 +91,9 @@ class MotorModel:
         self.overcurrent = self.current_ma > 20000.0
         self.overtemp = self.temp_c > 100.0
 
+        if self.overcurrent or self.overtemp:
+            self._hw_disabled = True
+
     def inject_overcurrent(self, current_ma: float = 28000.0):
         """Inject an overcurrent fault for demo."""
         self.current_ma = current_ma
@@ -102,6 +109,7 @@ class MotorModel:
         self.stall_fault = False
         self.overcurrent = False
         self.overtemp = False
+        self._hw_disabled = False
 
     @property
     def temp_c_int(self) -> int:
