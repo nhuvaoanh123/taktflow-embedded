@@ -45,8 +45,8 @@ typedef uint8               Std_ReturnType;
 #define SC_PIN_LED_CVC              1u
 #define SC_PIN_LED_FZC              2u
 #define SC_PIN_LED_RZC              3u
-#define SC_PIN_WDI                  4u
-#define SC_PIN_LED_SYS              1u
+#define SC_PIN_WDI                  5u
+#define SC_PIN_LED_SYS              4u
 
 /* ==================================================================
  * Mock: Simulated RAM and canary locations

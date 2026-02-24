@@ -30,7 +30,7 @@ extern void gioSetBit(uint8 port, uint8 pin, uint8 value);
 
 /** LED port lookup */
 static const uint8 led_port[SC_LED_COUNT] = {
-    SC_GIO_PORT_A, SC_GIO_PORT_A, SC_GIO_PORT_A, SC_GIO_PORT_B
+    SC_GIO_PORT_A, SC_GIO_PORT_A, SC_GIO_PORT_A, SC_GIO_PORT_A
 };
 
 /** LED pin lookup */

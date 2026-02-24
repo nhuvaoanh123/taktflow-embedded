@@ -35,7 +35,7 @@ typedef uint8               boolean;
 #define SC_GIO_PORT_A               0u
 #define SC_GIO_PORT_B               1u
 #define SC_PIN_RELAY                0u
-#define SC_PIN_LED_SYS              1u
+#define SC_PIN_LED_SYS              4u
 
 /* ==================================================================
  * Mock: GIO Register Access
@@ -120,7 +120,7 @@ void SC_ESM_Init(void)
 void SC_ESM_HighLevelInterrupt_Test(void)
 {
     gioSetBit(SC_GIO_PORT_A, SC_PIN_RELAY, 0u);
-    gioSetBit(SC_GIO_PORT_B, SC_PIN_LED_SYS, 1u);
+    gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_SYS, 1u);
     esm_error_active = TRUE;
     esm_clear_flag(ESM_GROUP1, ESM_CHANNEL_LOCKSTEP);
     /* No infinite loop in test version */
@@ -189,7 +189,7 @@ void test_ESM_ISR_sys_led(void)
 {
     SC_ESM_HighLevelInterrupt_Test();
 
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_b[SC_PIN_LED_SYS]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a[SC_PIN_LED_SYS]);
 }
 
 /** @verifies SWR-SC-015 -- ISR latches error flag */

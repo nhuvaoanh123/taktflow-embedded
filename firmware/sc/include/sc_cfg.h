@@ -107,8 +107,9 @@
 #define SC_PIN_LED_CVC              1u     /* GIO_A1: CVC fault LED */
 #define SC_PIN_LED_FZC              2u     /* GIO_A2: FZC fault LED */
 #define SC_PIN_LED_RZC              3u     /* GIO_A3: RZC fault LED */
-#define SC_PIN_WDI                  4u     /* GIO_A4: TPS3823 watchdog input */
-#define SC_PIN_LED_SYS              1u     /* GIO_B1: System fault LED */
+#define SC_PIN_LED_SYS              4u     /* GIO_A4: System fault LED (amber) */
+#define SC_PIN_WDI                  5u     /* GIO_A5: TPS3823 watchdog input */
+#define SC_PIN_LED_HB               1u     /* GIO_B1: Heartbeat LED (onboard) */
 
 /* ==================================================================
  * LED Blink Timing (in 10ms ticks)

@@ -51,7 +51,7 @@ typedef uint8               Std_ReturnType;
 
 #define SC_GIO_PORT_A               0u
 #define SC_GIO_PORT_B               1u
-#define SC_PIN_LED_SYS              1u
+#define SC_PIN_LED_SYS              4u
 
 #define SC_ECU_FZC                  1u
 
@@ -59,19 +59,19 @@ typedef uint8               Std_ReturnType;
  * Mock: GIO Register Access
  * ================================================================== */
 
-static uint8 mock_gio_b_state[8];
+static uint8 mock_gio_a_state[8];
 
 void gioSetBit(uint8 port, uint8 pin, uint8 value)
 {
-    if ((port == SC_GIO_PORT_B) && (pin < 8u)) {
-        mock_gio_b_state[pin] = value;
+    if ((port == SC_GIO_PORT_A) && (pin < 8u)) {
+        mock_gio_a_state[pin] = value;
     }
 }
 
 uint8 gioGetBit(uint8 port, uint8 pin)
 {
-    if ((port == SC_GIO_PORT_B) && (pin < 8u)) {
-        return mock_gio_b_state[pin];
+    if ((port == SC_GIO_PORT_A) && (pin < 8u)) {
+        return mock_gio_a_state[pin];
     }
     return 0u;
 }
@@ -126,7 +126,7 @@ void setUp(void)
     uint8 j;
 
     for (i = 0u; i < 8u; i++) {
-        mock_gio_b_state[i] = 0u;
+        mock_gio_a_state[i] = 0u;
     }
     for (i = 0u; i < SC_MB_COUNT; i++) {
         mock_can_valid[i] = FALSE;
@@ -277,7 +277,7 @@ void test_Plaus_sys_led_on_fault(void)
         SC_Plausibility_Check();
     }
 
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_b_state[SC_PIN_LED_SYS]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a_state[SC_PIN_LED_SYS]);
 }
 
 /* ==================================================================

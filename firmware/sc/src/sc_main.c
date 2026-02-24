@@ -61,23 +61,25 @@ extern void gioSetBit(uint8 port, uint8 pin, uint8 value);
 
 static void sc_configure_gpio(void)
 {
-    /* Port A outputs: A0=relay, A1=LED_CVC, A2=LED_FZC, A3=LED_RZC, A4=WDI */
+    /* Port A outputs: A0=relay, A1=LED_CVC, A2=LED_FZC, A3=LED_RZC, A4=LED_SYS, A5=WDI */
     gioSetDirection(SC_GIO_PORT_A, SC_PIN_RELAY,   1u);
     gioSetDirection(SC_GIO_PORT_A, SC_PIN_LED_CVC, 1u);
     gioSetDirection(SC_GIO_PORT_A, SC_PIN_LED_FZC, 1u);
     gioSetDirection(SC_GIO_PORT_A, SC_PIN_LED_RZC, 1u);
+    gioSetDirection(SC_GIO_PORT_A, SC_PIN_LED_SYS, 1u);
     gioSetDirection(SC_GIO_PORT_A, SC_PIN_WDI,     1u);
 
-    /* Port B output: B1=LED_SYS */
-    gioSetDirection(SC_GIO_PORT_B, SC_PIN_LED_SYS, 1u);
+    /* Port B output: B1=Heartbeat LED */
+    gioSetDirection(SC_GIO_PORT_B, SC_PIN_LED_HB, 1u);
 
     /* All pins LOW initially */
     gioSetBit(SC_GIO_PORT_A, SC_PIN_RELAY,   0u);
     gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_CVC, 0u);
     gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_FZC, 0u);
     gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_RZC, 0u);
+    gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_SYS, 0u);
     gioSetBit(SC_GIO_PORT_A, SC_PIN_WDI,     0u);
-    gioSetBit(SC_GIO_PORT_B, SC_PIN_LED_SYS, 0u);
+    gioSetBit(SC_GIO_PORT_B, SC_PIN_LED_HB,  0u);
 }
 
 /* ==================================================================
@@ -99,9 +101,9 @@ static void sc_startup_fail_blink(uint8 failStep)
     for (;;) {
         /* Blink failStep times */
         for (blink = 0u; blink < failStep; blink++) {
-            gioSetBit(SC_GIO_PORT_B, SC_PIN_LED_SYS, 1u);
+            gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_SYS, 1u);
             for (delay = 0u; delay < 500000u; delay++) { /* ~100ms */ }
-            gioSetBit(SC_GIO_PORT_B, SC_PIN_LED_SYS, 0u);
+            gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_SYS, 0u);
             for (delay = 0u; delay < 500000u; delay++) { /* ~100ms */ }
         }
         /* Pause between blink groups */

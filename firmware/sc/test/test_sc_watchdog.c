@@ -29,7 +29,7 @@ typedef uint8               boolean;
  * ================================================================== */
 
 #define SC_GIO_PORT_A               0u
-#define SC_PIN_WDI                  4u
+#define SC_PIN_WDI                  5u
 
 /* ==================================================================
  * Mock: GIO Register Access

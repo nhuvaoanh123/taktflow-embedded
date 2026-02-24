@@ -32,7 +32,7 @@ typedef uint8               boolean;
 #define SC_PIN_LED_CVC              1u
 #define SC_PIN_LED_FZC              2u
 #define SC_PIN_LED_RZC              3u
-#define SC_PIN_LED_SYS              1u
+#define SC_PIN_LED_SYS              4u
 #define SC_LED_BLINK_ON_TICKS       25u
 #define SC_LED_BLINK_OFF_TICKS      25u
 #define SC_LED_BLINK_PERIOD         50u
@@ -89,7 +89,7 @@ void test_LED_Init_all_off(void)
     TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_LED_CVC]);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_LED_FZC]);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_LED_RZC]);
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_b[SC_PIN_LED_SYS]);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a[SC_PIN_LED_SYS]);
 }
 
 /** @verifies SWR-SC-013 -- Steady ON drives LED HIGH */
