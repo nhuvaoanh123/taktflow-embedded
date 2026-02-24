@@ -14,6 +14,8 @@
 #   make -f Makefile.posix TARGET=sc           Build SC binary
 #   make -f Makefile.posix TARGET=bcm test     Build and run BCM tests
 #   make -f Makefile.posix TARGET=bcm clean    Remove build artifacts
+#   make -f Makefile.posix misra               Run MISRA C check (all ECUs)
+#   make -f Makefile.posix misra-report        MISRA check → build/misra-report.txt
 #
 # Output:  build/<TARGET>_posix
 # =============================================================================
@@ -26,14 +28,22 @@ LDFLAGS =
 # --- Debug flags (always on for simulated ECUs) ---
 CFLAGS += -Og -g3 -DDEBUG
 
-# --- Validate TARGET ---
-ifndef TARGET
-  $(error TARGET is required. Usage: make -f Makefile.posix TARGET=bcm|icu|tcu|cvc|fzc|rzc|sc)
+# --- MISRA targets do not require TARGET ---
+MISRA_GOALS = misra misra-report
+ifneq ($(filter $(MISRA_GOALS),$(MAKECMDGOALS)),)
+  _SKIP_TARGET_CHECK = 1
 endif
 
-VALID_TARGETS = bcm icu tcu cvc fzc rzc sc
-ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
-  $(error Invalid TARGET='$(TARGET)'. Must be one of: $(VALID_TARGETS))
+# --- Validate TARGET (skipped for MISRA targets) ---
+ifndef _SKIP_TARGET_CHECK
+  ifndef TARGET
+    $(error TARGET is required. Usage: make -f Makefile.posix TARGET=bcm|icu|tcu|cvc|fzc|rzc|sc)
+  endif
+
+  VALID_TARGETS = bcm icu tcu cvc fzc rzc sc
+  ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
+    $(error Invalid TARGET='$(TARGET)'. Must be one of: $(VALID_TARGETS))
+  endif
 endif
 
 # --- Directories ---
@@ -174,3 +184,100 @@ $(BUILD_DIR)/test/$(TARGET)/%: $(TARGET)/test/%.c $(UNITY_SRC) | $(BUILD_DIR)
 clean:
 	rm -rf $(BUILD_DIR)
 	@echo "=== Cleaned build directory ==="
+
+# =============================================================================
+# MISRA C:2012 Static Analysis (cppcheck + MISRA addon)
+#
+# Checks all firmware sources (BSW + 7 ECUs). SC checked separately since
+# it has no AUTOSAR BSW includes.
+#
+# Requires: cppcheck >= 2.13 with MISRA addon
+# Setup:    bash scripts/setup-misra-rules.sh  (downloads rule texts)
+# =============================================================================
+
+.PHONY: misra misra-report
+
+# --- Directories (redefined here since TARGET may be unset) ---
+_BSW_DIR       = shared/bsw
+_MCAL_DIR      = $(_BSW_DIR)/mcal
+_MCAL_POSIX    = $(_BSW_DIR)/mcal/posix
+_ECUAL_DIR     = $(_BSW_DIR)/ecual
+_SERVICES_DIR  = $(_BSW_DIR)/services
+_RTE_DIR       = $(_BSW_DIR)/rte
+_BUILD_DIR     = build
+
+# --- MISRA addon config (relative to project root, run from firmware/) ---
+MISRA_ADDON    = ../tools/misra/misra.json
+MISRA_SUPPR    = ../tools/misra/suppressions.txt
+
+# --- All BSW include paths ---
+MISRA_BSW_INCLUDES = \
+    -I$(_BSW_DIR)/include \
+    -I$(_MCAL_DIR) \
+    -I$(_MCAL_POSIX) \
+    -I$(_ECUAL_DIR) \
+    -I$(_SERVICES_DIR) \
+    -I$(_RTE_DIR)
+
+# --- All BSW sources (excluding POSIX backends and tests) ---
+MISRA_BSW_SRCS = \
+    $(_MCAL_DIR)/Can.c $(_MCAL_DIR)/Spi.c $(_MCAL_DIR)/Adc.c \
+    $(_MCAL_DIR)/Dio.c $(_MCAL_DIR)/Pwm.c $(_MCAL_DIR)/Gpt.c \
+    $(_MCAL_DIR)/Uart.c \
+    $(_ECUAL_DIR)/CanIf.c $(_ECUAL_DIR)/PduR.c $(_ECUAL_DIR)/IoHwAb.c \
+    $(_SERVICES_DIR)/Com.c $(_SERVICES_DIR)/Dcm.c $(_SERVICES_DIR)/Dem.c \
+    $(_SERVICES_DIR)/E2E.c $(_SERVICES_DIR)/WdgM.c $(_SERVICES_DIR)/BswM.c \
+    $(_RTE_DIR)/Rte.c
+
+# --- ECU application sources (src/ + cfg/, no test/) ---
+MISRA_ECU_TARGETS = bcm icu tcu cvc fzc rzc
+
+# --- Common cppcheck flags ---
+CPPCHECK_FLAGS = \
+    --addon=$(MISRA_ADDON) \
+    --enable=style,warning \
+    --std=c99 \
+    --platform=unix32 \
+    --suppress=missingIncludeSystem \
+    --suppressions-list=$(MISRA_SUPPR) \
+    --inline-suppr \
+    --error-exitcode=0
+
+# --- misra: Run MISRA check on all sources, output to terminal ---
+misra: $(_BUILD_DIR)
+	@echo "=== MISRA C:2012 Analysis — BSW ==="
+	cppcheck $(CPPCHECK_FLAGS) $(MISRA_BSW_INCLUDES) $(MISRA_BSW_SRCS) 2>&1
+	@for ecu in $(MISRA_ECU_TARGETS); do \
+		echo ""; \
+		echo "=== MISRA C:2012 Analysis — $$ecu ==="; \
+		cppcheck $(CPPCHECK_FLAGS) $(MISRA_BSW_INCLUDES) -I$$ecu/include \
+			$$(find $$ecu/src $$ecu/cfg -name '*.c' 2>/dev/null) 2>&1; \
+	done
+	@echo ""
+	@echo "=== MISRA C:2012 Analysis — sc (no BSW) ==="
+	cppcheck $(CPPCHECK_FLAGS) -Isc/include \
+		$$(find sc/src -name '*.c' 2>/dev/null) 2>&1
+	@echo ""
+	@echo "=== MISRA analysis complete ==="
+
+# --- misra-report: Same check, output to file ---
+misra-report: $(_BUILD_DIR)
+	@echo "=== MISRA C:2012 Analysis → $(_BUILD_DIR)/misra-report.txt ==="
+	@echo "MISRA C:2012 Compliance Report — $$(date -u '+%Y-%m-%d %H:%M UTC')" > $(_BUILD_DIR)/misra-report.txt
+	@echo "Tool: cppcheck $$(cppcheck --version 2>&1)" >> $(_BUILD_DIR)/misra-report.txt
+	@echo "========================================" >> $(_BUILD_DIR)/misra-report.txt
+	@echo "" >> $(_BUILD_DIR)/misra-report.txt
+	@echo "--- BSW ---" >> $(_BUILD_DIR)/misra-report.txt
+	cppcheck $(CPPCHECK_FLAGS) $(MISRA_BSW_INCLUDES) $(MISRA_BSW_SRCS) >> $(_BUILD_DIR)/misra-report.txt 2>&1
+	@for ecu in $(MISRA_ECU_TARGETS); do \
+		echo "" >> $(_BUILD_DIR)/misra-report.txt; \
+		echo "--- $$ecu ---" >> $(_BUILD_DIR)/misra-report.txt; \
+		cppcheck $(CPPCHECK_FLAGS) $(MISRA_BSW_INCLUDES) -I$$ecu/include \
+			$$(find $$ecu/src $$ecu/cfg -name '*.c' 2>/dev/null) >> $(_BUILD_DIR)/misra-report.txt 2>&1; \
+	done
+	@echo "" >> $(_BUILD_DIR)/misra-report.txt
+	@echo "--- sc (no BSW) ---" >> $(_BUILD_DIR)/misra-report.txt
+	cppcheck $(CPPCHECK_FLAGS) -Isc/include \
+		$$(find sc/src -name '*.c' 2>/dev/null) >> $(_BUILD_DIR)/misra-report.txt 2>&1
+	@echo ""
+	@echo "=== Report written to $(_BUILD_DIR)/misra-report.txt ==="
