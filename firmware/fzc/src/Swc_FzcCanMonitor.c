@@ -31,7 +31,7 @@
  * ================================================================== */
 
 #include "Rte.h"
-#include "CanIf.h"
+#include "Can.h"
 #include "Dem.h"
 
 /* ==================================================================
@@ -93,7 +93,9 @@ static void CanMon_ApplySafeState(void)
 
 void Swc_FzcCanMonitor_Check(void)
 {
-    uint8 canStatus;
+    Can_StateType canMode;
+    uint8 tec;
+    uint8 rec;
 
     if (CanMon_Initialized != TRUE) {
         return;
@@ -105,9 +107,9 @@ void Swc_FzcCanMonitor_Check(void)
         return;
     }
 
-    /* ---- Check 1: Bus-off via CanIf ---- */
-    canStatus = CanIf_GetControllerMode(0u);
-    if (canStatus == CANIF_CS_STOPPED) {
+    /* ---- Check 1: Bus-off via CAN controller mode ---- */
+    canMode = Can_GetControllerMode(0u);
+    if (canMode == CAN_CS_STOPPED) {
         CanMon_Status = FZC_CAN_BUS_OFF;
         CanMon_SafeLatched = TRUE;
         CanMon_ApplySafeState();
@@ -123,8 +125,11 @@ void Swc_FzcCanMonitor_Check(void)
         return;
     }
 
-    /* ---- Check 3: Error warning sustained ---- */
-    if (canStatus == CANIF_CS_ERROR_WARNING) {
+    /* ---- Check 3: Error warning sustained via error counters ---- */
+    tec = 0u;
+    rec = 0u;
+    (void)Can_GetErrorCounters(0u, &tec, &rec);
+    if ((tec >= 96u) || (rec >= 96u)) {
         CanMon_ErrWarnCount++;
         if (CanMon_ErrWarnCount >= FZC_CAN_ERR_WARN_CYCLES) {
             CanMon_Status = FZC_CAN_ERROR_WARNING;

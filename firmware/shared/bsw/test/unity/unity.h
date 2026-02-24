@@ -72,6 +72,7 @@ void tearDown(void);
 
 /* Integers (of all sizes) */
 #define TEST_ASSERT_EQUAL_INT(expected, actual)     UNITY_TEST_ASSERT_EQUAL_INT((expected), (actual), __LINE__, NULL)
+#define TEST_ASSERT_EQUAL(expected, actual)         TEST_ASSERT_EQUAL_INT((expected), (actual))
 #define TEST_ASSERT_EQUAL_INT8(expected, actual)    UNITY_TEST_ASSERT_EQUAL_INT8((expected), (actual), __LINE__, NULL)
 #define TEST_ASSERT_EQUAL_INT16(expected, actual)   UNITY_TEST_ASSERT_EQUAL_INT16((expected), (actual), __LINE__, NULL)
 #define TEST_ASSERT_EQUAL_INT32(expected, actual)   UNITY_TEST_ASSERT_EQUAL_INT32((expected), (actual), __LINE__, NULL)

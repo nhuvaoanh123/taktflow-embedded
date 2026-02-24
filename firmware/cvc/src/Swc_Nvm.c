@@ -168,7 +168,7 @@ Std_ReturnType Swc_Nvm_StoreDtc(uint8 dtcId, uint8 status,
 
     slot->dtcId           = dtcId;
     slot->status          = status;
-    slot->occurrenceCount = (Nvm_DtcCount < 0xFFFFFFFFu) ? (Nvm_DtcCount + 1u) : 0xFFFFFFFFu;
+    slot->occurrenceCount = (uint32)Nvm_DtcCount + 1u;
 
     /* Copy freeze-frame (or zero if NULL) */
     for (i = 0u; i < NVM_FREEZE_FRAME_SIZE; i++)

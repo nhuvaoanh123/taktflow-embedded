@@ -130,30 +130,30 @@ static uint8 RzcCom_Crc8(const uint8 *data, uint8 length, uint8 dataId)
  * @param  pduId  PDU index
  * @return Data ID byte, or 0x00 if unknown
  */
-static uint8 RzcCom_GetDataId(uint8 pduId)
+static uint8 RzcCom_GetTxDataId(uint8 pduId)
 {
-    uint8 dataId;
-
     switch (pduId)
     {
         case RZC_COM_TX_HEARTBEAT:
-            dataId = RZC_E2E_HEARTBEAT_DATA_ID;
-            break;
+            return RZC_E2E_HEARTBEAT_DATA_ID;
         case RZC_COM_TX_MOTOR_CURRENT:
-            dataId = RZC_E2E_MOTOR_CURRENT_DATA_ID;
-            break;
+            return RZC_E2E_MOTOR_CURRENT_DATA_ID;
         case RZC_COM_TX_MOTOR_STATUS:
-            dataId = RZC_E2E_MOTOR_STATUS_DATA_ID;
-            break;
-        case RZC_COM_RX_ESTOP:
-            dataId = RZC_E2E_ESTOP_DATA_ID;
-            break;
+            return RZC_E2E_MOTOR_STATUS_DATA_ID;
         default:
-            dataId = 0x00u;
-            break;
+            return 0x00u;
     }
+}
 
-    return dataId;
+static uint8 RzcCom_GetRxDataId(uint8 pduId)
+{
+    switch (pduId)
+    {
+        case RZC_COM_RX_ESTOP:
+            return RZC_E2E_ESTOP_DATA_ID;
+        default:
+            return 0x00u;
+    }
 }
 
 /* ==================================================================
@@ -196,7 +196,7 @@ Std_ReturnType Swc_RzcCom_E2eProtect(uint8 pduId, uint8 *data, uint8 length)
         return E_NOT_OK;
     }
 
-    dataId = RzcCom_GetDataId(pduId);
+    dataId = RzcCom_GetTxDataId(pduId);
     alive  = RzcCom_TxAlive[pduId];
 
     /* Write alive counter into byte 1 low nibble */
@@ -241,7 +241,7 @@ Std_ReturnType Swc_RzcCom_E2eCheck(uint8 pduId, const uint8 *data, uint8 length)
         return E_NOT_OK;
     }
 
-    dataId = RzcCom_GetDataId(pduId);
+    dataId = RzcCom_GetRxDataId(pduId);
 
     /* Extract received CRC from byte 0 */
     rx_crc = data[0];

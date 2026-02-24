@@ -134,8 +134,6 @@ sint32 mock_posix_read(sint32 fd, void* buf, uint32 count)
  * ==================================================================== */
 
 static uint8  mock_tx_data[8];
-static uint32 mock_tx_can_id;
-static uint8  mock_tx_dlc;
 static sint32 mock_write_return;
 static uint8  mock_tx_call_count;
 
@@ -259,10 +257,6 @@ void test_BcmCan_init_creates_socket(void)
 /** @verifies SWR-BCM-001 */
 void test_BcmCan_init_retry_on_failure(void)
 {
-    /* Socket fails first 3 calls, succeeds on 4th */
-    static uint8 retry_attempt;
-    retry_attempt = 0u;
-
     mock_socket_return = -1;
 
     /* Will fail after BCM_CAN_INIT_MAX_RETRIES attempts */

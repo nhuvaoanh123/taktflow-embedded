@@ -90,9 +90,6 @@ boolean esm_is_flag_set(uint8 group, uint8 channel)
  * We redefine the ISR to break out after setting state.
  * ================================================================== */
 
-static jmp_buf test_escape;
-static boolean test_in_isr;
-
 /* Redefined ESM ISR that breaks out of infinite loop for testing */
 #define SC_ESM_TEST_MODE
 
