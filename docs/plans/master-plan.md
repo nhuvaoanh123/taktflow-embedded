@@ -14,9 +14,9 @@
 
 # Master Plan: Zonal Vehicle Platform — ASIL D Portfolio
 
-**Status**: IN PROGRESS (Phases 0-16 DONE)
+**Status**: IN PROGRESS (Phases 0-17 DONE)
 **Created**: 2026-02-20
-**Updated**: 2026-02-23
+**Updated**: 2026-02-24
 **Target**: 24.5 working days
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
@@ -408,7 +408,7 @@ SC  ──┘                                 TCU ──┘
 | 14 | Live Telemetry Dashboard (/embedded) | 2 | DONE |
 | 15 | SAP QM Mock API (OData endpoints) | 1.5 | DONE |
 | 16 | Edge ML Anomaly Detection + Fault Injection | 1 | DONE |
-| 17 | VPS Deployment + Live Demo | 1.5 | PENDING |
+| 17 | VPS Deployment + Live Demo | 1.5 | DONE |
 | 18 | Physical Hardware Build + HIL Testing | 3 | PENDING |
 
 ---

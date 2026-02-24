@@ -127,12 +127,12 @@ def raw_score_to_anomaly(raw_score: float) -> float:
 
     IsolationForest.decision_function returns negative values for anomalies
     and positive for inliers.  We map roughly:
-        +0.15 (clearly normal)  →  0.0
-        -0.15 (clearly anomalous) →  1.0
+        +0.05 (clearly normal)  →  0.0
+        -0.17 (clearly anomalous) →  0.7  (DTC threshold)
+        -0.26 (extreme)          →  1.0
     and clamp to [0, 1].
     """
-    # Linear mapping: score = 0.5 - (raw / 0.30)
-    normalized = 0.5 - (raw_score / 0.30)
+    normalized = 0.15 - (raw_score / 0.30)
     return float(np.clip(normalized, 0.0, 1.0))
 
 
