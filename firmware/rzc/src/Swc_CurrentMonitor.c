@@ -156,7 +156,7 @@ static void CM_SendCanFrame(uint16 current_mA)
     tx_data[CM_CAN_BYTE_CRC] = 0u;
 
     /* Send via Com */
-    (void)Com_SendSignal(RZC_COM_TX_MOTOR_CURRENT, tx_data, CM_CAN_PAYLOAD_LEN);
+    (void)Com_SendSignal(RZC_COM_TX_MOTOR_CURRENT, tx_data);
 
     /* Increment alive counter with wrap at 4-bit max */
     CM_AliveCounter++;

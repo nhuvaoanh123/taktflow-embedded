@@ -111,7 +111,7 @@ void Swc_Heartbeat_MainFunction(void)
     tx_data[HB_BYTE_FAULT_HI] = (uint8)((fault_mask >> 8u) & 0xFFu);
 
     /* Send via Com */
-    (void)Com_SendSignal(RZC_COM_TX_HEARTBEAT, tx_data, 8u);
+    (void)Com_SendSignal(RZC_COM_TX_HEARTBEAT, tx_data);
 
     /* Write alive counter to RTE for diagnostics */
     (void)Rte_Write(RZC_SIG_HEARTBEAT_ALIVE, (uint32)Hb_AliveCounter);

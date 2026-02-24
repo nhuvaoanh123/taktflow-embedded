@@ -206,7 +206,7 @@ void Swc_Battery_MainFunction(void)
     tx_data[2] = Batt_Status;
     tx_data[3] = Batt_AliveCounter;
 
-    (void)Com_SendSignal(RZC_COM_TX_BATTERY_STATUS, tx_data, 8u);
+    (void)Com_SendSignal(RZC_COM_TX_BATTERY_STATUS, tx_data);
 
     /* Increment alive counter with wrap at 255 */
     Batt_AliveCounter++;
