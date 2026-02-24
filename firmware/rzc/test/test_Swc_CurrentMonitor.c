@@ -59,7 +59,7 @@ typedef uint8           Std_ReturnType;
 #define RZC_CURRENT_ZEROCAL_SAMPLES  64u
 #define RZC_CURRENT_ZEROCAL_CENTER 2048u
 #define RZC_CURRENT_ZEROCAL_RANGE   200u
-#define RZC_CURRENT_SENSITIVITY_UV  400u
+#define RZC_CURRENT_SENSITIVITY_UV  100u
 #define RZC_CURRENT_AVG_WINDOW        4u
 
 /* BTS7960 enable pins */
