@@ -222,7 +222,7 @@ coverage: clean $(OUTPUT) $(TEST_BINS)
 	mkdir -p coverage/$(TARGET)
 	lcov --capture --directory $(BUILD_DIR) --output-file coverage/$(TARGET)/raw.info \
 		--rc branch_coverage=1 --ignore-errors mismatch
-	lcov --remove coverage/$(TARGET)/raw.info '*/test/*' '*/unity/*' '/usr/*' \
+	lcov --remove coverage/$(TARGET)/raw.info '*/test/*' '/usr/*' \
 		--output-file coverage/$(TARGET)/filtered.info --rc branch_coverage=1
 	genhtml coverage/$(TARGET)/filtered.info \
 		--output-directory coverage/$(TARGET)/html \

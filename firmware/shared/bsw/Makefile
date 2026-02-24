@@ -109,7 +109,7 @@ coverage: clean $(TEST_BINS)
 	mkdir -p coverage
 	lcov --capture --directory $(TEST_DIR)/build --output-file coverage/bsw.info \
 		--rc branch_coverage=1 --ignore-errors mismatch
-	lcov --remove coverage/bsw.info '*/test/*' '*/unity/*' '/usr/*' \
+	lcov --remove coverage/bsw.info '*/test/*' '/usr/*' \
 		--output-file coverage/bsw-filtered.info --rc branch_coverage=1
 	@echo "=== Generating HTML report ==="
 	genhtml coverage/bsw-filtered.info --output-directory coverage/html \
@@ -126,6 +126,6 @@ coverage-report: clean $(TEST_BINS)
 	mkdir -p coverage
 	lcov --capture --directory $(TEST_DIR)/build --output-file coverage/bsw.info \
 		--rc branch_coverage=1 --ignore-errors mismatch
-	lcov --remove coverage/bsw.info '*/test/*' '*/unity/*' '/usr/*' \
+	lcov --remove coverage/bsw.info '*/test/*' '/usr/*' \
 		--output-file coverage/bsw-filtered.info --rc branch_coverage=1
 	lcov --summary coverage/bsw-filtered.info --rc branch_coverage=1
