@@ -81,7 +81,7 @@
 
     var STATE_NAMES = ["INIT", "RUN", "DEGRADED", "LIMP", "SAFE_STOP", "SHUTDOWN"];
     var STATE_CLASSES = ["state-init", "state-run", "state-degraded", "state-limp", "state-safe-stop", "state-shutdown"];
-    var BATT_STATUS = { 0: "UNKNOWN", 1: "CHARGING", 2: "NOMINAL", 3: "LOW", 4: "CRITICAL" };
+    var BATT_STATUS = { 0: "CRITICAL", 1: "LOW", 2: "NOMINAL", 3: "OV_WARN", 4: "OV_CRITICAL" };
 
     // ── State ────────────────────────────────────────────────
     var ws = null;
@@ -89,6 +89,8 @@
     var reconnectTimer = null;
     var canLogCount = 0;
     var eventLogCount = 0;
+    var lastCanLogTs = 0;
+    var lastEventTs = 0;
     var sapPollTimer = null;
 
     // ── Helpers ──────────────────────────────────────────────
@@ -311,8 +313,10 @@
 
     function appendCanLog(entries) {
         var frag = document.createDocumentFragment();
+        var newCount = 0;
         for (var i = 0; i < entries.length; i++) {
             var e = entries[i];
+            if (e.ts <= lastCanLogTs) continue;
             var div = document.createElement("div");
             div.className = "log-entry";
             var signals = e.signals ? " " + JSON.stringify(e.signals) : "";
@@ -320,11 +324,17 @@
                 '<span class="log-msg-name">' + esc(e.msg_name || e.msg_id || "") + "</span>" +
                 " [" + esc(e.sender || "") + "]" + esc(signals);
             frag.appendChild(div);
+            newCount++;
         }
-        dom.canLog.appendChild(frag);
-        canLogCount += entries.length;
-        trimLog(dom.canLog, canLogCount);
-        dom.canLog.scrollTop = dom.canLog.scrollHeight;
+        if (newCount > 0) {
+            dom.canLog.appendChild(frag);
+            canLogCount += newCount;
+            trimLog(dom.canLog, canLogCount);
+            dom.canLog.scrollTop = dom.canLog.scrollHeight;
+        }
+        if (entries.length > 0) {
+            lastCanLogTs = entries[entries.length - 1].ts;
+        }
     }
 
     // ── Event Log ────────────────────────────────────────────
@@ -340,19 +350,27 @@
 
     function appendEvents(entries) {
         var frag = document.createDocumentFragment();
+        var newCount = 0;
         for (var i = 0; i < entries.length; i++) {
             var e = entries[i];
+            if (e.ts <= lastEventTs) continue;
             var div = document.createElement("div");
             div.className = "log-entry";
             var cls = EVENT_CLASS_MAP[e.type] || "log-event-info";
             div.innerHTML = '<span class="log-ts">' + tsToTime(e.ts) + "</span>" +
                 '<span class="' + cls + '">' + esc(e.msg || "") + "</span>";
             frag.appendChild(div);
+            newCount++;
         }
-        dom.eventLog.appendChild(frag);
-        eventLogCount += entries.length;
-        trimLog(dom.eventLog, eventLogCount);
-        dom.eventLog.scrollTop = dom.eventLog.scrollHeight;
+        if (newCount > 0) {
+            dom.eventLog.appendChild(frag);
+            eventLogCount += newCount;
+            trimLog(dom.eventLog, eventLogCount);
+            dom.eventLog.scrollTop = dom.eventLog.scrollHeight;
+        }
+        if (entries.length > 0) {
+            lastEventTs = entries[entries.length - 1].ts;
+        }
     }
 
     function trimLog(container, count) {

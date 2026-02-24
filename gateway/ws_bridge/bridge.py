@@ -121,6 +121,9 @@ class TelemetryState:
         self._hb_fzc_ts = 0.0
         self._hb_rzc_ts = 0.0
 
+        # DTC deduplication — track last event time per DTC code
+        self._dtc_last_seen: dict[int, float] = {}
+
     def to_snapshot(self) -> dict:
         """Build the JSON snapshot for WebSocket broadcast."""
         now = time.time()
@@ -260,6 +263,7 @@ def on_mqtt_message(client, userdata, msg):
         state.brake_commanded_pct = 0
         state._estop_active = False
         state.vehicle_state = 0  # INIT — plant sim will transition to RUN after 3s
+        state._dtc_last_seen.clear()
         state.sap_notifications.clear()
         state.events.clear()
         state.can_log.clear()
@@ -291,13 +295,25 @@ def on_mqtt_message(client, userdata, msg):
             if state.anomaly_alert and not was_alert:
                 state.add_event("anomaly", f"ML anomaly detected — score {state.anomaly_score:.3f}")
 
-    # DTC alerts
+    # DTC alerts (structured JSON from CAN gateway)
     elif topic.startswith("taktflow/alerts/dtc/"):
         try:
             alert = json.loads(payload)
-            dtc = alert.get("dtc", "?")
+            dtc_str = alert.get("dtc", "?")
             ecu = alert.get("ecu_source", 0)
-            state.add_event("dtc", f"DTC {dtc} from ECU {ecu}")
+            # Parse DTC number for deduplication with CAN signal path
+            try:
+                dtc_num = int(dtc_str, 16) if isinstance(dtc_str, str) and dtc_str.startswith("0x") else int(dtc_str)
+            except (ValueError, TypeError):
+                dtc_num = 0
+            now = time.time()
+            last = state._dtc_last_seen.get(dtc_num, 0) if dtc_num else 0
+            if not dtc_num or now - last > 5.0:
+                ecu_names = {1: "CVC", 2: "FZC", 3: "RZC", 4: "SC"}
+                ecu_name = ecu_names.get(ecu, f"ECU {ecu}")
+                state.add_event("dtc", f"DTC {dtc_str} from {ecu_name}")
+            if dtc_num:
+                state._dtc_last_seen[dtc_num] = now
         except json.JSONDecodeError:
             pass
 
@@ -456,6 +472,17 @@ def _update_signal(msg_name: str, sig_name: str, payload: str):
         elif not val and getattr(state, "_estop_active", False):
             state._estop_active = False
             state.add_event("info", "E-STOP cleared")
+
+    # DTC_Broadcast (0x500) — belt-and-suspenders with taktflow/alerts/dtc/
+    elif msg_name == "DTC_Broadcast":
+        if sig_name == "DTC_Number":
+            dtc_num = _parse_int(payload)
+            if dtc_num:
+                now = time.time()
+                last = state._dtc_last_seen.get(dtc_num, 0)
+                if now - last > 5.0:
+                    state.add_event("dtc", f"DTC 0x{dtc_num:04X} detected")
+                state._dtc_last_seen[dtc_num] = now
 
     # Heartbeats
     elif msg_name == "CVC_Heartbeat":

@@ -31,6 +31,12 @@ CAN_ESTOP = 0x001           # EStop_Broadcast  — 4 bytes
 CAN_TORQUE_REQUEST = 0x101  # Torque_Request   — 8 bytes
 CAN_STEER_COMMAND = 0x102   # Steer_Command    — 8 bytes
 CAN_BRAKE_COMMAND = 0x103   # Brake_Command    — 8 bytes
+CAN_BATTERY_STATUS = 0x303  # Battery_Status   — 4 bytes, no E2E
+CAN_DTC_BROADCAST = 0x500   # DTC_Broadcast    — 8 bytes, no E2E
+
+# DTC codes (must match plant_sim/simulator.py and SAP QM mock)
+DTC_BATTERY_UV = 0xE401
+ECU_RZC = 3
 
 # E2E Data IDs (lower 4 bits of byte 0, matches DBC DataID field values)
 # These are fixed per message type by convention in the DBC/plant sim.
@@ -143,6 +149,42 @@ def _brake_frame(brake_pct: int, brake_mode: int = 1,
     return _build_e2e_frame(CAN_BRAKE_COMMAND, DATA_ID_BRAKE, payload)
 
 
+def _battery_frame(voltage_mv: int, soc_pct: int, status: int) -> bytes:
+    """Build a Battery_Status frame (0x303, 4 bytes, no E2E).
+
+    Byte layout (from DBC):
+      [0..1] BatteryVoltage_mV  (16-bit LE, 0-20000)
+      [2]    BatterySOC          (0-100 %)
+      [3]    BatteryStatus[3:0]  (0=critical_UV, 1=UV_warn, 2=normal)
+    """
+    payload = bytearray(4)
+    voltage_mv = max(0, min(20000, voltage_mv))
+    payload[0] = voltage_mv & 0xFF
+    payload[1] = (voltage_mv >> 8) & 0xFF
+    payload[2] = max(0, min(100, soc_pct))
+    payload[3] = status & 0x0F
+    return bytes(payload)
+
+
+def _dtc_frame(dtc_code: int, ecu_source: int, occurrence: int = 1) -> bytes:
+    """Build a DTC_Broadcast frame (0x500, 8 bytes, no E2E).
+
+    Byte layout (from DBC):
+      [0..1] DTC_Number     (16-bit LE)
+      [2]    DTC_Status      (0x01 = active)
+      [3]    ECU_Source       (1=CVC, 2=FZC, 3=RZC, 4=SC)
+      [4]    OccurrenceCount
+      [5..7] FreezeFrame0-2
+    """
+    payload = bytearray(8)
+    payload[0] = dtc_code & 0xFF
+    payload[1] = (dtc_code >> 8) & 0xFF
+    payload[2] = 0x01  # active
+    payload[3] = ecu_source & 0xFF
+    payload[4] = min(255, occurrence)
+    return bytes(payload)
+
+
 def _estop_frame(active: bool, source: int = 1) -> bytes:
     """Build an EStop_Broadcast frame (0x001, 4 bytes).
 
@@ -241,23 +283,43 @@ def brake_fault() -> str:
 
 
 def battery_low() -> str:
-    """Drain battery by running motor at sustained high load.
+    """Simulate battery undervoltage by injecting low-voltage CAN frames.
 
-    Battery voltage is modeled by the plant simulator based on current
-    draw over time.  This scenario cannot be directly injected via a
-    single CAN frame -- it requires sustained high-torque operation.
-    We send 90% torque for 2 seconds (200 frames at 10 ms).
+    Sends Battery_Status frames (0x303) at 100 ms intervals with
+    progressively lower voltage and SOC, overriding the plant sim's
+    1000 ms Battery_Status cycle.  After the drain sequence, sends a
+    DTC_BATTERY_UV broadcast to trigger the SAP QM notification path.
+
+    Phase 1 (2 s): 12.6 V -> 10.2 V (UV_warn zone)
+    Phase 2 (3 s): 10.2 V ->  8.5 V (critical_UV zone) + DTC
     """
     bus = _get_bus()
     try:
-        for _ in range(200):
-            _send(bus, CAN_TORQUE_REQUEST, _torque_frame(90, 1))
-            time.sleep(0.01)
+        # Phase 1: voltage drops from 12.6 V to 10.2 V (UV_warn) over 2 s
+        for i in range(20):
+            frac = i / 19.0
+            v = int(12600 - (12600 - 10200) * frac)
+            soc = int(100 - (100 - 18) * frac)
+            status = 1 if v < 10500 else 2  # UV_warn below 10.5 V
+            _send(bus, CAN_BATTERY_STATUS, _battery_frame(v, soc, status))
+            time.sleep(0.1)
+
+        # Phase 2: voltage drops from 10.2 V to 8.5 V (critical_UV) over 3 s
+        for i in range(30):
+            frac = i / 29.0
+            v = int(10200 - (10200 - 8500) * frac)
+            soc = int(18 - (18 - 3) * frac)
+            status = 0 if v < 9000 else 1  # critical_UV below 9.0 V
+            _send(bus, CAN_BATTERY_STATUS, _battery_frame(v, soc, status))
+            time.sleep(0.1)
+
+        # Fire DTC_BATTERY_UV
+        _send(bus, CAN_DTC_BROADCAST,
+              _dtc_frame(DTC_BATTERY_UV, ECU_RZC))
     finally:
         bus.shutdown()
-    return ("Battery drain: 90% torque sustained for 2 s.  "
-            "Plant sim models voltage drop; RZC publishes Battery_Status "
-            "with BatteryStatus=critical_UV when voltage drops below threshold.")
+    return ("Battery drain: 12.6 V -> 8.5 V over 5 s + DTC 0xE401.  "
+            "Plant sim restores normal values within ~1 s after scenario ends.")
 
 
 def heartbeat_loss() -> str:
@@ -380,8 +442,8 @@ SCENARIOS: dict[str, dict] = {
     "battery_low": {
         "fn": battery_low,
         "description": (
-            "Battery drain: sustained 90% torque for 2 s.  Plant sim "
-            "models voltage drop to critical_UV threshold."
+            "Battery drain: injects Battery_Status frames with voltage "
+            "dropping from 12.6 V to 8.5 V over 5 s, then fires DTC 0xE401."
         ),
     },
     "heartbeat_loss": {
