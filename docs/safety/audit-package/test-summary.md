@@ -4,7 +4,7 @@ title: "Test Evidence Summary — Taktflow Embedded Platform"
 version: "1.0"
 status: interim
 standard: "ISO 26262-6 Tables 7-9, ASPICE SWE.4/SWE.5"
-date: 2026-02-24
+date: 2026-02-25
 ---
 
 ## Human-in-the-Loop (HITL) Comment Lock
@@ -28,7 +28,8 @@ date: 2026-02-24
 |-------|-------|
 | **Document ID** | AEP-002 |
 | **Standard References** | ISO 26262-6 Tables 7-9, ASPICE SWE.4/SWE.5 |
-| **Date** | 2026-02-24 |
+| **Date** | 2026-02-25 |
+| **CI Run** | 22393954056 (2026-02-25) |
 
 ---
 
@@ -47,6 +48,54 @@ date: 2026-02-24
 | MISRA Violations | 0 (CI blocking) |
 | MISRA Deviations | 2 (DEV-001 Rule 11.5, DEV-002 Rule 11.8) |
 | Qualified Tools | 4 (GCC, Unity, cppcheck, gcov) |
+
+---
+
+## Unit Test Results (CI Run 22393954056 — 2026-02-25)
+
+| Module | Tests Pass | Tests Total | Pass Rate |
+|--------|-----------|-------------|-----------|
+| BSW | 9 | 18 | 50% |
+| BCM | 5 | 5 | 100% |
+| ICU | 4 | 4 | 100% |
+| TCU | 6 | 6 | 100% |
+| SC | 10 | 10 | 100% |
+| CVC | 10 | 13 | 77% |
+| FZC | 4 | 11 | 36% |
+| RZC | 4 | 12 | 33% |
+| **Total** | **52** | **79** | **66%** |
+
+> **Note:** BSW, CVC, FZC, and RZC have known failing tests tracked as open items. BCM, ICU, TCU, and SC are at 100%. Coverage measurement (lcov) only runs for modules that reach test completion (BCM/ICU/TCU/SC).
+
+---
+
+## Integration Test Results (CI Run 22393954056 — 2026-02-25)
+
+| Metric | Result |
+|--------|--------|
+| Suites passing | 11 / 11 |
+| Test cases passing | 60 / 60 |
+| Pass rate | 100% |
+
+---
+
+## Coverage Results (CI Run 22393954056 — 2026-02-25)
+
+### Unit Test Coverage (BCM / ICU / TCU / SC — modules reaching lcov)
+
+| Metric | Covered | Total | Percentage |
+|--------|---------|-------|------------|
+| Lines | 1603 | 1851 | 86.6% |
+| Functions | 143 | 153 | 93.5% |
+| Branches | 703 | 917 | 76.7% |
+
+### Integration Test Coverage
+
+| Metric | Covered | Total | Percentage |
+|--------|---------|-------|------------|
+| Lines | 392 | 523 | 75.0% |
+| Functions | 49 | 50 | 98.0% |
+| Branches | 204 | 342 | 59.6% |
 
 ---
 
@@ -150,7 +199,7 @@ Generator script: `scripts/gen-traceability.sh`
 2. **Independent assessment (I3)** — ISO 26262 requires I3-level independence for ASIL D functional safety assessments. No external assessment has been performed for this portfolio project.
 3. **MC/DC measurement** — gcov provides statement and branch coverage. MC/DC coverage is addressed through documented analysis of safety-critical decision points and GCC 14 `-fcondition-coverage` flag support.
 4. **Safety validation** — Vehicle-level safety validation (ISO 26262 Part 4) requires a physical system operating in its intended environment. The validation strategy is documented but execution requires hardware.
-5. **Coverage numbers** — Coverage infrastructure is configured and operational. Actual coverage metrics are generated per build via `make coverage` and are not hardcoded in this document.
+5. **Coverage numbers** — Actual coverage metrics from CI run 22393954056 (2026-02-25) are recorded above. Unit coverage applies to BCM/ICU/TCU/SC only; BSW, CVC, FZC, and RZC do not reach lcov due to failing tests. Full-system coverage (all modules) requires those test failures to be resolved.
 
 ---
 

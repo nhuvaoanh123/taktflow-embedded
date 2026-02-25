@@ -5,7 +5,7 @@ version: "1.0"
 status: approved
 aspice_process: "SWE.4"
 iso_reference: "ISO 26262 Part 6, Section 9"
-date: 2026-02-24
+date: 2026-02-25
 ---
 
 ## Human-in-the-Loop (HITL) Comment Lock
@@ -31,14 +31,15 @@ date: 2026-02-24
 |--------|-------|
 | Total test files | 54 |
 | Total test functions | ~1050+ (after hardening) |
-| Passed | All (run `make test` to verify) |
-| Failed | 0 |
-| Coverage (statement) | Pending first `make coverage-all` run |
-| Coverage (branch) | Pending first `make coverage-all` run |
+| Passed | 52/79 (CI run 22393954056, 2026-02-25) |
+| Failed | 27 (assertion mismatches — BSW: 9, CVC: 3, FZC: 7, RZC: 8) |
+| Coverage — Lines | 86.6% (1603/1851, passing modules only: BCM/ICU/TCU/SC) |
+| Coverage — Functions | 93.5% (143/153, passing modules only: BCM/ICU/TCU/SC) |
+| Coverage — Branches | 76.7% (703/917, passing modules only: BCM/ICU/TCU/SC) |
 | Coverage (MC/DC) | Pending GCC 14+ or manual analysis |
 | MISRA violations | 0 (2 approved deviations: DEV-001, DEV-002) |
 
-> **Note**: Coverage metrics will be populated after the first CI run of `.github/workflows/test.yml`. Coverage infrastructure was added in Phase 1 of the TÜV-grade test suite upgrade.
+> **Note**: Coverage for BSW, CVC, FZC, and RZC could not be collected because those CI jobs fail before reaching the lcov step. Coverage figures reflect passing modules only (BCM, ICU, TCU, SC). CI run reference: `22393954056` (2026-02-25).
 
 ## 2. Test Environment
 
@@ -88,7 +89,35 @@ date: 2026-02-24
 | TCU | 3 | 33 | +38 | 71 |
 | **ECU Total** | **36** | **~298** | **+347** | **~645** |
 
-## 5. Test Categories Added (Phase 2 Hardening)
+## 5. CI Execution Results (Run 22393954056, 2026-02-25)
+
+### 5.1 Test Pass/Fail by Module
+
+| Module | Tests Pass/Total | Status |
+|--------|-----------------|--------|
+| BSW | 9/18 | 9 assertion failures |
+| BCM | 5/5 | ALL PASS |
+| ICU | 4/4 | ALL PASS |
+| TCU | 6/6 | ALL PASS |
+| SC | 10/10 | ALL PASS |
+| CVC | 10/13 | 3 assertion failures |
+| FZC | 4/11 | 7 assertion failures |
+| RZC | 4/12 | 8 assertion failures |
+| **Total** | **52/79** | **27 failing (assertion mismatches)** |
+
+### 5.2 Code Coverage (Passing Modules Only — lcov)
+
+| Module | Lines | Functions | Branches |
+|--------|-------|-----------|----------|
+| BCM | 97.7% (210/215) | 100.0% (13/13) | 92.0% (81/88) |
+| ICU | 98.9% (176/178) | 100.0% (13/13) | 98.6% (69/70) |
+| TCU | 81.5% (464/569) | 80.5% (33/41) | 75.4% (156/207) |
+| SC | 98.6% (361/366) | 97.2% (35/36) | 91.9% (193/210) |
+| **Combined** | **86.6% (1603/1851)** | **93.5% (143/153)** | **76.7% (703/917)** |
+
+> BSW, CVC, FZC, RZC: coverage not collected — CI jobs fail before lcov step due to assertion failures.
+
+## 6. Test Categories Added (Phase 2 Hardening)
 
 | Category | Description | ISO 26262 Reference |
 |----------|-------------|-------------------|
@@ -99,7 +128,7 @@ date: 2026-02-24
 | State machine tests | All valid transitions + invalid transition rejection | Part 6, Table 7 |
 | Counter/overflow tests | Wraparound, saturation at limits | Part 6, Table 8 (Boundary) |
 
-## 6. MISRA Compliance
+## 7. MISRA Compliance
 
 | Metric | Value |
 |--------|-------|
@@ -111,7 +140,7 @@ date: 2026-02-24
 - **DEV-001**: Rule 11.5 — AUTOSAR void* pattern for generic API (`misra-deviation-register.md`)
 - **DEV-002**: Rule 11.8 — AUTOSAR const-correctness pattern (`misra-deviation-register.md`)
 
-## 7. Defects Found and Resolved
+## 8. Defects Found and Resolved
 
 | # | Module | Issue | Resolution | Phase |
 |---|--------|-------|------------|-------|
@@ -119,14 +148,15 @@ date: 2026-02-24
 
 > Test hardening verified existing code correctness. All new tests passed against existing implementations.
 
-## 8. Known Limitations
+## 9. Known Limitations
 
-1. **Coverage metrics not yet measured** — gcov/lcov infrastructure added (Phase 1) but first measurement pending CI run
-2. **MC/DC not yet automated** — requires GCC 14+ or manual analysis of complex boolean expressions
-3. **Resource usage tests not yet implemented** — stack, memory, WCET measurement planned for future phase
-4. **Target hardware tests not included** — all tests run on host (x86-64); PIL/HIL tests require physical boards
+1. **27 tests failing (assertion mismatches)** — BSW (9), CVC (3), FZC (7), RZC (8) have failing assertions as of CI run 22393954056 (2026-02-25); coverage cannot be collected for these modules until they pass
+2. **Coverage partial** — lcov results available for BCM, ICU, TCU, SC only; BSW/CVC/FZC/RZC coverage blocked by test failures
+3. **MC/DC not yet automated** — requires GCC 14+ or manual analysis of complex boolean expressions
+4. **Resource usage tests not yet implemented** — stack, memory, WCET measurement planned for future phase
+5. **Target hardware tests not included** — all tests run on host (x86-64); PIL/HIL tests require physical boards
 
-## 9. Traceability Summary
+## 10. Traceability Summary
 
 | Requirement Set | Total SWRs | SWRs with Tests | Coverage |
 |----------------|-----------|-----------------|----------|
@@ -141,9 +171,11 @@ date: 2026-02-24
 
 > Full traceability matrix: run `bash scripts/gen-traceability.sh`
 
-## 10. Conclusion
+## 11. Conclusion
 
-Unit test suite has been hardened from ~518 original tests to ~1067 total tests (+549 hardened tests). Every BSW and ECU SWC module now has comprehensive boundary value, fault injection, and equivalence class testing per ISO 26262 Part 6, Tables 7-8. All tests include `@verifies SWR-*` traceability tags achieving 100% requirement coverage across all 8 requirement sets (101 SWRs). Coverage measurement infrastructure is in place for continuous monitoring.
+Unit test suite has been hardened from ~518 original tests to ~1067 total tests (+549 hardened tests). Every BSW and ECU SWC module now has comprehensive boundary value, fault injection, and equivalence class testing per ISO 26262 Part 6, Tables 7-8. All tests include `@verifies SWR-*` traceability tags achieving 100% requirement coverage across all 8 requirement sets (101 SWRs).
 
-*Report generated: 2026-02-24*
+First CI execution (run 22393954056, 2026-02-25) recorded 52/79 tests passing. BCM, ICU, TCU, and SC modules are fully green with measured coverage of 86.6% lines / 93.5% functions / 76.7% branches (combined). BSW, CVC, FZC, and RZC have assertion failures requiring investigation; coverage for those modules is pending resolution of the 27 failing tests.
+
+*Report generated: 2026-02-25 | CI run: 22393954056*
 
