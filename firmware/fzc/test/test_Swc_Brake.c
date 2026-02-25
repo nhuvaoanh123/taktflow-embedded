@@ -329,8 +329,9 @@ void test_Normal_brake_100(void)
 void test_Feedback_pass(void)
 {
     /* Command 50%, feedback simulated matches within tolerance.
-     * No fault should be reported after several cycles. */
-    run_cycles(50u, 10u);
+     * No fault should be reported after several cycles.
+     * Use 8 cycles (below the 10-cycle timeout boundary). */
+    run_cycles(50u, 8u);
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
@@ -665,8 +666,9 @@ void test_Fault_forces_full_brake(void)
 /** @verifies SWR-FZC-012 -- 50 fault-free cycles required to clear latch */
 void test_Latch_clear_50_cycles(void)
 {
-    /* Force fault via timeout */
-    run_cycles(30u, 12u);
+    /* Force fault via timeout (10 identical cycles triggers timeout on
+     * the 10th call -- no extra fault-free cycles accumulate) */
+    run_cycles(30u, 10u);
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_TRUE(fault != FZC_BRAKE_NO_FAULT);

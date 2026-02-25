@@ -54,7 +54,7 @@ typedef uint8           Std_ReturnType;
 #define FZC_STATE_SHUTDOWN           5u
 
 /* Fault mask bits */
-#define FZC_FAULT_CAN_BUS_OFF       (1u << 0u)
+#define FZC_FAULT_CAN_BUS_OFF       0x0100u
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_PASSED      0u
