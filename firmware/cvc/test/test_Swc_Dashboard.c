@@ -45,6 +45,7 @@ typedef unsigned char   boolean;
 #define CVC_STATE_LIMP             3u
 #define CVC_STATE_SAFE_STOP        4u
 #define CVC_STATE_SHUTDOWN         5u
+#define CVC_STATE_COUNT            6u
 
 /* DTC event IDs */
 #define CVC_DTC_DISPLAY_COMM      17u

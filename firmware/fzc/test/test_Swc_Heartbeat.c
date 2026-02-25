@@ -60,12 +60,16 @@ typedef uint8           Std_ReturnType;
 #define DEM_EVENT_STATUS_PASSED      0u
 #define DEM_EVENT_STATUS_FAILED      1u
 
-/* Heartbeat payload layout (byte offsets) */
-#define HB_BYTE_ECU_ID               0u
-#define HB_BYTE_ALIVE                1u
+/* Heartbeat payload layout (byte offsets) — must match Swc_Heartbeat.c */
+#define HB_BYTE_ALIVE                0u
+#define HB_BYTE_ECU_ID               1u
 #define HB_BYTE_STATE                2u
 #define HB_BYTE_FAULT_LO             3u
 #define HB_BYTE_FAULT_HI             4u
+
+/* FZC_FAULT_CAN is defined in Fzc_Cfg.h (blocked by FZC_CFG_H guard below).
+ * Replicate only what Swc_Heartbeat.c actually uses from that header. */
+#define FZC_FAULT_CAN               0x08u
 
 /* Swc_Heartbeat API declarations */
 extern void Swc_Heartbeat_Init(void);
@@ -124,18 +128,19 @@ Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
 #define MOCK_COM_MAX_DATA  8u
 
 static uint8   mock_com_send_count;
-static uint16  mock_com_last_signal_id;
+static uint8   mock_com_last_signal_id;
 static uint8   mock_com_last_data[MOCK_COM_MAX_DATA];
-static uint8   mock_com_last_data_len;
 
-Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr, uint8 Length)
+/* Real Com_SendSignal signature: Com_SignalIdType (uint8) + const void* (no length).
+ * For CAN 2.0B the PDU is always 8 bytes — copy the full 8-byte buffer. */
+Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr)
 {
+    const uint8* DataPtr = (const uint8*)SignalDataPtr;
     uint8 i;
     mock_com_send_count++;
     mock_com_last_signal_id = SignalId;
-    mock_com_last_data_len  = Length;
-    for (i = 0u; i < Length; i++) {
-        if (i < MOCK_COM_MAX_DATA) {
+    if (DataPtr != NULL_PTR) {
+        for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
             mock_com_last_data[i] = DataPtr[i];
         }
     }
@@ -184,7 +189,6 @@ void setUp(void)
     /* Reset COM mock */
     mock_com_send_count     = 0u;
     mock_com_last_signal_id = 0xFFu;
-    mock_com_last_data_len  = 0u;
     for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
         mock_com_last_data[i] = 0u;
     }
@@ -240,7 +244,7 @@ void test_HB_sends_at_50ms(void)
     run_cycles(FZC_HB_TX_PERIOD_MS);
 
     TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
-    TEST_ASSERT_EQUAL_UINT16(FZC_COM_TX_HEARTBEAT, mock_com_last_signal_id);
+    TEST_ASSERT_EQUAL_UINT8(FZC_COM_TX_HEARTBEAT, mock_com_last_signal_id);
 }
 
 /** @verifies SWR-FZC-022 — Alive counter increments each TX */
