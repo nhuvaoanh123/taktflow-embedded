@@ -1049,17 +1049,20 @@ Plant models simulating physical dynamics. No firmware, no CAN — pure algorith
 
 ### 12b: Unit Tests — Coverage & Gap Analysis
 
-**Note**: 691 unit tests already exist across all ECUs (Phases 5-10). Phase 12b focuses on measuring and improving coverage, NOT writing tests from scratch.
+**Note**: 1,459 unit tests pass across all ECUs (updated 2026-02-25, CI run green). Phase 12b focuses on measuring and improving coverage.
 
 - [x] Test framework: Unity (all C modules), run on host (x86)
-- [x] Existing test counts:
-  - BSW: 241 tests (18 modules, including Uart.c and Can_Posix.c)
-  - CVC: 88 tests (6 SWCs)
-  - FZC: 105 tests (6 SWCs)
-  - RZC: 101 tests (7 SWCs)
-  - SC: 76 tests (9 modules)
-  - BCM/ICU/TCU: 80 tests (across 3 simulated ECUs)
-  - **Total: 691 tests**
+- [x] Current test counts (2026-02-25, 0 failures):
+  - BSW: 443 tests (18 modules, including hardened boundary/fault tests)
+  - CVC: 215 tests (6 SWCs)
+  - FZC: 200 tests (6 SWCs)
+  - RZC: 181 tests (7 SWCs)
+  - SC: 145 tests (9 modules)
+  - BCM: 67 tests (3 modules)
+  - ICU: 58 tests (2 modules)
+  - TCU: 90 tests (3 modules)
+  - Integration: 60 tests (cross-ECU)
+  - **Total: 1,459 tests — all passing**
 - [ ] Coverage measurement:
   - [ ] Statement coverage (target: 100% for safety-critical paths)
   - [ ] Branch coverage (target: 100% for ASIL D modules)
