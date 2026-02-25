@@ -173,7 +173,7 @@ coverage: clean $(TEST_BINS)
 	mkdir -p coverage
 	lcov --capture --directory $(BUILD_DIR) --output-file coverage/int.info \
 		--rc branch_coverage=1 --ignore-errors mismatch
-	lcov --remove coverage/int.info '*/test/*' '*/unity/*' '/usr/*' \
+	lcov --remove coverage/int.info '*/test/*' '/usr/*' \
 		--output-file coverage/int-filtered.info --rc branch_coverage=1
 	genhtml coverage/int-filtered.info --output-directory coverage/html \
 		--branch-coverage --title "Integration Test Coverage"

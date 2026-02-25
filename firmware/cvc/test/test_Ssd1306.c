@@ -18,7 +18,7 @@
 
 typedef unsigned char   uint8;
 typedef unsigned short  uint16;
-typedef unsigned long   uint32;
+typedef unsigned int   uint32;
 typedef uint8           Std_ReturnType;
 typedef unsigned char   boolean;
 
@@ -28,24 +28,20 @@ typedef unsigned char   boolean;
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
 
+/* Prevent BSW headers from redefining types when Ssd1306.c is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SSD1306_H
+
 /* ==================================================================
- * SSD1306 Constants (mirrors header)
+ * SSD1306 Constants (mirrors header — defined here because SSD1306_H
+ * guard above prevents Ssd1306.h from being included)
  * ================================================================== */
 
 #define SSD1306_I2C_ADDR    0x3Cu
 #define SSD1306_WIDTH       128u
 #define SSD1306_HEIGHT      64u
 #define SSD1306_PAGES       8u
-
-/* ==================================================================
- * Ssd1306 API declarations
- * ================================================================== */
-
-extern Std_ReturnType Ssd1306_Init(void);
-extern void           Ssd1306_Clear(void);
-extern void           Ssd1306_SetCursor(uint8 page, uint8 col);
-extern Std_ReturnType Ssd1306_WriteString(const char* str);
-extern Std_ReturnType Ssd1306_WriteChar(char c);
 
 /* ==================================================================
  * Mock: Ssd1306_Hw_I2cWrite
@@ -87,6 +83,12 @@ Std_ReturnType Ssd1306_Hw_I2cWrite(uint8 addr, const uint8* data, uint8 len)
     mock_i2c_call_count++;
     return mock_i2c_result;
 }
+
+/* ==================================================================
+ * Include SWC under test (source inclusion for test build)
+ * ================================================================== */
+
+#include "../src/Ssd1306.c"
 
 /* ==================================================================
  * Test setup / teardown

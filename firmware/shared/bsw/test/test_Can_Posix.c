@@ -180,6 +180,9 @@ static int mock_ioctl(int fd, unsigned long request, void* arg)
 
 static int mock_setsockopt(int sockfd, int level, int optname,
                             const void* optval, uint32 optlen)
+    __attribute__((unused));
+static int mock_setsockopt(int sockfd, int level, int optname,
+                            const void* optval, uint32 optlen)
 {
     (void)sockfd; (void)level; (void)optname; (void)optval; (void)optlen;
     return mock_setsockopt_retval;

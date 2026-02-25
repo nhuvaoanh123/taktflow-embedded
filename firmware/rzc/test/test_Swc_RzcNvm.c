@@ -20,10 +20,10 @@
 
 typedef unsigned char   uint8;
 typedef unsigned short  uint16;
-typedef unsigned long   uint32;
+typedef unsigned int   uint32;
 typedef signed char     sint8;
 typedef signed short    sint16;
-typedef signed long     sint32;
+typedef signed int     sint32;
 typedef uint8           Std_ReturnType;
 typedef uint8           boolean;
 
@@ -143,7 +143,6 @@ void test_RzcNvm_dtc_crc_corruption(void)
     Swc_RzcNvm_FreezeFrameType ff;
     Swc_RzcNvm_DtcEntryType entry;
     Std_ReturnType result;
-    uint8 *raw;
 
     ff = make_freeze(10000u, 500, 900u, 11000u, 50, 1u);
 

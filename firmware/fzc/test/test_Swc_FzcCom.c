@@ -20,9 +20,9 @@
 
 typedef unsigned char   uint8;
 typedef unsigned short  uint16;
-typedef unsigned long   uint32;
+typedef unsigned int   uint32;
 typedef signed short    sint16;
-typedef signed long     sint32;
+typedef signed int     sint32;
 typedef uint8           Std_ReturnType;
 
 #define E_OK        0u

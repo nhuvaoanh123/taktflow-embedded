@@ -20,7 +20,7 @@
 
 typedef unsigned char   uint8;
 typedef unsigned short  uint16;
-typedef unsigned long   uint32;
+typedef unsigned int   uint32;
 typedef signed short    sint16;
 typedef uint8           Std_ReturnType;
 
@@ -29,6 +29,15 @@ typedef uint8           Std_ReturnType;
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+/* Prevent BSW headers from redefining types */
+#define STD_TYPES_H
+#define SWC_BRAKE_H
+#define FZC_CFG_H
+#define IOHWAB_H
+#define RTE_H
+#define COM_H
+#define DEM_H
 
 /* ==================================================================
  * FZC Signal IDs (from Fzc_Cfg.h)
@@ -187,6 +196,12 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
         mock_dem_event_status[EventId]   = EventStatus;
     }
 }
+
+/* ==================================================================
+ * Include SWC under test (source inclusion for test build)
+ * ================================================================== */
+
+#include "../src/Swc_Brake.c"
 
 /* ==================================================================
  * Test Configuration
