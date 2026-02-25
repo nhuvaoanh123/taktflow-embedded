@@ -334,6 +334,12 @@ The drive-by-wire (acceleration control), steering, and braking functions shall 
 
 The platform shall define and implement at least one safe state for each identified safety goal. Safe states shall include, at minimum: motor off with brakes applied, steering return to center, controlled stop with gradual deceleration, and full system shutdown via hardware kill relay. Each safe state shall be achievable within the defined Fault Tolerant Time Interval.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-31 -->
+> **Why:** ISO 26262 Part 3 (Clause 8–9) requires safe states to be defined during HARA — before any implementation begins. Every safety goal must map to at least one precisely defined safe state with a reachable transition path within FTTI. This is not a design decision; it's a standard requirement.
+> **Tradeoff:** defining multiple safe states (motor off, steering center, controlled stop, full shutdown) increases verification scope — each must be tested via fault injection — but ensures every hazard has a clear resolution path.
+> **Alternative:** define a single universal safe state (full shutdown via kill relay) for all safety goals. Simpler to verify, but overly aggressive — a steering fault doesn't necessarily require motor shutdown, and a controlled stop is less disruptive than a hard kill.
+<!-- HITL-LOCK END:COMMENT-BLOCK-31 -->
+
 ---
 
 ### STK-018: Fault Tolerant Time Interval Compliance
@@ -343,6 +349,12 @@ The platform shall define and implement at least one safe state for each identif
 - **Status**: draft
 
 The platform shall detect safety-relevant faults and achieve the corresponding safe state within the Fault Tolerant Time Interval defined for each safety goal. The FTTI budget shall account for detection time, reaction time, actuation time, and a safety margin. FTTI values shall be justified by physical analysis of the hazard progression.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-32 -->
+> **Why:** FTTI is the core timing contract of ISO 26262 — it defines the maximum time from fault occurrence to safe state. The budget breakdown (FDTI + FRTI = detection + reaction + actuation + margin) forces every layer of the system to have a concrete time allocation, not just "as fast as possible."
+> **Tradeoff:** strict FTTI budgets constrain design choices (e.g., 10ms cycle time, 100ms heartbeat timeout) and require WCET analysis to prove compliance — but without them, there's no way to guarantee hazard containment.
+> **Alternative:** use fixed conservative timing without per-safety-goal FTTI analysis. Simpler, but either over-constrains the system (everything at tightest deadline) or under-constrains it (one loose deadline applied everywhere).
+<!-- HITL-LOCK END:COMMENT-BLOCK-32 -->
 
 ---
 
@@ -354,6 +366,12 @@ The platform shall detect safety-relevant faults and achieve the corresponding s
 
 The platform shall include a hardware-enforced safety boundary (kill relay) controlled by the independent Safety Controller. The relay shall use an energize-to-run configuration such that any failure of the Safety Controller inherently results in power removal from all safety-critical actuators. The kill relay shall be the ultimate safety enforcement mechanism, independent of the zone controller software.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-33 -->
+> **Why:** STK-019 establishes a two-level watchdog chain: zone ECUs have internal WdgM (AUTOSAR BSW, software monitoring software), while the SC (TMS570) monitors the entire system externally via CAN heartbeats, and the TPS3823 hardware watchdog monitors the SC itself. Listen-only CAN + energize-to-run relay means every failure mode (SC crash, power loss, watchdog timeout, CAN failure) leads to the same safe state — relay opens, motor stops.
+> **Tradeoff:** diverse redundancy (STM32 + TMS570 + TPS3823) increases hardware cost, wiring complexity, and integration effort — but provides the independence argument required for ASIL D: no single silicon family, no single software path, no single failure can defeat the safety chain.
+> **Alternative:** run safety monitoring as a software task on one of the zone ECUs (same MCU). Cheaper and simpler, but destroys the independence claim — a common cause failure in the STM32 takes out both the control and the monitor simultaneously.
+<!-- HITL-LOCK END:COMMENT-BLOCK-33 -->
+
 ---
 
 ### STK-020: E2E Protection on Safety-Critical CAN Messages
@@ -363,6 +381,12 @@ The platform shall include a hardware-enforced safety boundary (kill relay) cont
 - **Status**: draft
 
 All safety-critical CAN messages shall be protected with end-to-end (E2E) data protection including CRC, alive counter, and data identification. The E2E mechanism shall detect message corruption, repetition, loss, delay, insertion, and masquerading. On E2E verification failure, the receiver shall substitute safe default values.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-34 -->
+> **Why:** safe default substitution (not last-known-good) is chosen because if the message is untrustworthy, the last received value is also untrustworthy — the fault may have started before the last "good" value was sent. Safe defaults (torque=0, brake=full, steering=center) are the same values defined in STK-017's safe states, ensuring E2E failure leads directly to a known-safe condition.
+> **Tradeoff:** substituting safe defaults means any transient CAN glitch (single corrupted frame) triggers an immediate safety response, which could cause nuisance interventions — but guarantees no unsafe command persists on communication failure.
+> **Alternative:** use last-known-good value with a staleness timeout. Smoother behavior on transient faults, but creates a window where an outdated command (e.g., full torque from 10 seconds ago) keeps executing while the system waits for the timeout.
+<!-- HITL-LOCK END:COMMENT-BLOCK-34 -->
 
 ---
 
@@ -376,6 +400,12 @@ All safety-critical CAN messages shall be protected with end-to-end (E2E) data p
 
 The platform shall execute the main safety-critical control loop (pedal reading, torque calculation, CAN transmission) at a fixed period of 10 ms or faster. The control loop execution time shall not exceed 80% of the cycle period to provide scheduling margin.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-35 -->
+> **Why:** 10ms cycle time is derived from the FTTI budget (STK-018) — fault detection requires at least one control cycle, so the cycle time sets the floor for detection time. 80% execution margin (8ms max in a 10ms cycle) is the industry-standard safety buffer for worst-case interrupt nesting, cache misses, WCET vs average variation, and clock jitter.
+> **Tradeoff:** 10ms is fast enough for the FTTI budget but requires WCET analysis to prove the 80% margin holds on target hardware under worst-case conditions. A slower cycle (20ms, 50ms) would be easier to meet but may violate the FTTI budget.
+> **Alternative:** run at 1ms for maximum responsiveness. Gives huge FTTI margin but wastes CPU budget, increases CAN bus load, and is unnecessary if 10ms already satisfies the safety timing chain.
+<!-- HITL-LOCK END:COMMENT-BLOCK-35 -->
+
 ---
 
 ### STK-022: CAN Bus Timing and Throughput
@@ -385,6 +415,12 @@ The platform shall execute the main safety-critical control loop (pedal reading,
 - **Status**: draft
 
 The CAN bus shall operate at 500 kbps and shall support the transmission of all defined messages within their specified cycle times. The bus utilization shall not exceed 60% under normal operation to provide margin for burst traffic and retransmissions. All safety-critical messages shall have CAN IDs assigned by priority (lower ID = higher priority = safety-critical).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-36 -->
+> **Why:** CAN priority is enforced by hardware — bitwise arbitration on the wire means lower ID always wins the bus. Assigning 0x0xx to safety, 0x1xx–0x3xx to control, 0x4xx+ to body/telematics guarantees safety messages are never delayed by lower-priority traffic. 60% utilization cap is an industry-standard design margin for retransmissions, burst events, and error recovery.
+> **Tradeoff:** 500kbps at 60% cap limits total throughput to ~300kbps effective — sufficient for 32 messages at defined cycle times, but leaves no room for adding many more high-frequency messages without moving to CAN FD.
+> **Alternative:** use CAN FD (flexible data rate) at 2-5 Mbps for higher throughput and larger payloads. More future-proof, but STM32G4 CAN FD support adds configuration complexity and the current message set fits comfortably within classic CAN bandwidth.
+<!-- HITL-LOCK END:COMMENT-BLOCK-36 -->
 
 ---
 
@@ -396,6 +432,12 @@ The CAN bus shall operate at 500 kbps and shall support the transmission of all 
 
 The platform shall read all safety-critical sensors at their specified update rates: pedal position sensors at 100 Hz or faster, steering angle sensor at 100 Hz or faster, lidar sensor at 100 Hz (sensor native rate), motor current at 1 kHz or faster, and motor temperature at 10 Hz or faster. Sensor data shall be available to the application within one control cycle of acquisition.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-37 -->
+> **Why:** sensor rates are driven by the physics of what they measure. Motor current changes in microseconds (electrical) so 1kHz minimum. Pedal and steering change with human reaction time (~100ms) so 100Hz captures every input. Temperature is thermally slow so 10Hz is sufficient. "Available within one control cycle" ensures no stale data enters the safety-critical computation.
+> **Tradeoff:** higher sample rates improve fault detection speed (e.g., faster overcurrent detection at 1kHz vs 100Hz) but increase ADC/DMA load, CAN bus traffic, and CPU processing budget.
+> **Alternative:** sample everything at the control loop rate (100Hz). Simpler scheduling, but 100Hz motor current sampling misses fast transients that could indicate a winding fault or short circuit before thermal damage occurs.
+<!-- HITL-LOCK END:COMMENT-BLOCK-37 -->
+
 ---
 
 ### STK-024: Safe State Transition Times
@@ -405,6 +447,12 @@ The platform shall read all safety-critical sensors at their specified update ra
 - **Status**: draft
 
 The platform shall achieve safe state transitions within the following maximum times from fault detection: motor off within 15 ms (for ASIL D pedal and brake faults), steering return to center within 100 ms (for ASIL D steering faults), controlled stop initiation within 100 ms (for ASIL B/C faults), and system shutdown (kill relay open) within 10 ms of Safety Controller decision.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-38 -->
+> **Why:** these concrete timing values are derived from the FTTI budget (STK-018) and physics estimates — 10ms kill relay accounts for SC decision + TPS3823 timeout + relay coil demagnetization, 15ms motor off accounts for PWM ramp-down + back-EMF, 100ms steering center accounts for servo travel time under load.
+> **Tradeoff:** committing to specific numbers before hardware measurement creates a validation obligation — every value must be proven on real hardware with oscilloscope/timing measurements during Phase 18. If measured values exceed budgets, either components must be upgraded or FTTI analysis revisited.
+> **Alternative:** specify only relative timing ("within FTTI") without concrete values. Avoids premature commitment, but weakens the requirement — assessors and reviewers expect measurable, testable numbers, not open-ended references.
+<!-- HITL-LOCK END:COMMENT-BLOCK-38 -->
 
 ---
 
@@ -418,6 +466,12 @@ The platform shall achieve safe state transitions within the following maximum t
 
 The platform shall support at least 12 distinct demonstration scenarios covering normal operation, sensor faults (pedal disagreement, pedal failure, steering fault, lidar detection), actuator faults (motor overcurrent, motor overtemperature), communication faults (CAN bus loss), safety monitoring (ECU hang detection, SC intervention), and operator interaction (E-stop, ML anomaly alert, CVC vs SC disagreement). Each scenario shall be triggerable and observable without requiring code changes.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-39 -->
+> **Why:** 12 scenarios are chosen to cover every fault category in the HARA (sensor, actuator, communication, monitoring, operator) with at least one example each. "Triggerable without code changes" is critical for live demos — a CTO or interviewer can interact with the system in real time without needing a development environment.
+> **Tradeoff:** 12 distinct scenarios require 12 tested trigger paths and observable outcomes, increasing verification scope — but each scenario directly demonstrates a safety mechanism from the architecture, making the portfolio tangible rather than theoretical.
+> **Alternative:** fewer scenarios (3-5 core faults) for reduced test effort. Simpler, but misses the breadth signal — showing only overcurrent and E-stop doesn't demonstrate that the full safety concept covers sensor, communication, and monitoring faults too.
+<!-- HITL-LOCK END:COMMENT-BLOCK-39 -->
+
 ---
 
 ### STK-026: Visual and Audible Operator Feedback
@@ -428,6 +482,12 @@ The platform shall support at least 12 distinct demonstration scenarios covering
 
 The platform shall provide operator feedback through at least three independent channels: a display showing current operating state and fault information, an audible warning device with distinct patterns for different severity levels, and fault indicator LEDs that are independent of the CAN bus. At least one feedback channel shall remain operational even during total CAN bus failure.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-40 -->
+> **Why:** three channels (display, buzzer, LEDs) provide diverse feedback paths — display depends on CAN data, buzzer can be locally triggered, LEDs are hardwired GPIO. If CAN dies, the display goes blank but LEDs still indicate fault state. The diversity ensures at least one channel survives any single communication failure.
+> **Tradeoff:** three channels increase hardware wiring and software integration effort (ICU display logic + buzzer patterns + LED GPIO mapping) — but defense-in-depth for operator awareness is expected in any safety-critical system.
+> **Alternative:** two channels (display + LEDs only). Saves the buzzer hardware, but loses the audible alert — an operator looking away from the bench misses a fault condition entirely.
+<!-- HITL-LOCK END:COMMENT-BLOCK-40 -->
+
 ---
 
 ### STK-027: Reproducible Build and Demo Process
@@ -437,6 +497,12 @@ The platform shall provide operator feedback through at least three independent 
 - **Status**: draft
 
 The platform shall be buildable from source using a documented, reproducible build process (Makefile or equivalent). The simulated ECUs shall be deployable via Docker containers. The demo setup shall be documented with step-by-step instructions covering hardware connections, firmware flashing, Docker startup, and scenario execution.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-41 -->
+> **Why:** reproducibility is both an ASPICE SUP.8 (configuration management) concern and a practical portfolio requirement — anyone cloning the repo should be able to build and run the SIL demo without guesswork. This is largely satisfied today: `make build`, `make test`, `docker-compose up` all work. Hardware flashing and wiring instructions are pending Phase 18.
+> **Tradeoff:** documenting step-by-step hardware setup adds documentation overhead that only becomes relevant after physical boards are built — but it's the difference between a portfolio that's "look at my code" and one that's "clone it, build it, run it yourself."
+> **Alternative:** skip hardware documentation entirely and rely on the live SIL demo for all demonstrations. Reduces effort, but any interviewer who wants to reproduce locally is blocked.
+<!-- HITL-LOCK END:COMMENT-BLOCK-41 -->
 
 ---
 
@@ -450,6 +516,12 @@ The platform shall be buildable from source using a documented, reproducible bui
 
 The platform development shall comply with ISO 26262:2018 across all applicable parts (Parts 2 through 9). All safety work products shall be structured per the standard's requirements for ASIL D. While formal third-party certification is not pursued (portfolio project), all deliverables shall be assessor-ready.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-42 -->
+> **Why:** "assessor-ready without certification" is the honest framing — a solo portfolio project cannot pursue third-party assessment (TUV/SGS requires I3 independence), but every work product is structured so an assessor could review it. This shows the discipline is real, not just claimed.
+> **Tradeoff:** targeting full ASIL D process across Parts 2-9 maximizes portfolio credibility but multiplies documentation effort (safety plan, safety case, FMEA, DFA, validation report, etc.) — every part demands specific work products.
+> **Alternative:** target ASIL B or C to reduce process overhead. Significantly less documentation, but weakens the portfolio signal — ASIL D is the industry's highest bar and the strongest hiring keyword.
+<!-- HITL-LOCK END:COMMENT-BLOCK-42 -->
+
 ---
 
 ### STK-029: ASPICE Level 2 Minimum Process Maturity
@@ -460,6 +532,12 @@ The platform development shall comply with ISO 26262:2018 across all applicable 
 
 The platform development process shall meet Automotive SPICE 4.0 Capability Level 2 (Managed) as a minimum for all assessed process areas. Safety-critical processes (SYS, SWE) shall target Level 3 (Established). Each process area shall produce its defined information items (work products) with evidence of planning, monitoring, and control.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-43 -->
+> **Why:** CL2 (Managed) is the minimum OEMs accept from suppliers — it proves the process was planned, monitored, and controlled, not just executed ad-hoc. CL3 (Established) is targeted for SYS/SWE because safety-critical processes should demonstrate organizational-level standardization. Realistic claim for a solo project: CL2 demonstrated (plans, Git baselines, review records, status tracking), CL3 patterns followed (process playbook, documented tailoring) but formal organizational deployment not applicable.
+> **Tradeoff:** claiming CL2+ requires evidence of planning and monitoring for every process area — adds process overhead beyond just producing the technical work products. But without it, the portfolio looks like "I wrote some docs" rather than "I followed a managed process."
+> **Alternative:** claim CL1 only (work products exist, no process governance). Honest and low-effort, but CL1 is below the industry minimum — no OEM or Tier-1 would accept it. The process discipline IS the differentiator.
+<!-- HITL-LOCK END:COMMENT-BLOCK-43 -->
+
 ---
 
 ### STK-030: MISRA C:2012/2023 Coding Compliance
@@ -469,6 +547,10 @@ The platform development process shall meet Automotive SPICE 4.0 Capability Leve
 - **Status**: draft
 
 All firmware source code shall comply with MISRA C:2012 (with Amendment 2 / 2023 updates) as required by ISO 26262-6 for ASIL D software. Deviations from mandatory MISRA rules shall follow a formal deviation process including justification, risk assessment, and approval. Static analysis shall enforce MISRA compliance as part of the build process.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-44 -->
+**HITL Review (An Dao):** MISRA compliance is achieved — 0 violations, CI blocking. But ISO 26262-6 Table 1 says "static analysis" at ASIL D means more than just MISRA: control flow analysis, data flow analysis, cyclomatic complexity metrics, and stack usage analysis are all ++. We ran lizard (CC metrics) — 2,570 functions, avg CCN 1.9, 14 above CCN 15 threshold. Worst: Swc_Steering_MainFunction (CCN 40), Swc_Motor_MainFunction (CCN 34). These are the SWC main loops with fault handling chains — high CC is expected there, but they could be refactored. MISRA is the gate, CC metrics + stack analysis are the remaining gaps. **Why:** MISRA catches coding defects; CC catches design complexity that hides bugs. Both are required for a complete static analysis story at ASIL D. **Tradeoff:** MISRA alone is table stakes — adding CC, data flow, stack analysis strengthens the portfolio claim from "MISRA clean" to "full static analysis pipeline." **Alternative:** Commercial tools (Polyspace, Axivion) cover all five in one pass but cost >10k EUR/year — overkill for a portfolio project. lizard (free, open source) covers CC; stack analysis can be done with GCC `-fstack-usage`.
+<!-- HITL-LOCK END:COMMENT-BLOCK-44 -->
 
 ---
 
