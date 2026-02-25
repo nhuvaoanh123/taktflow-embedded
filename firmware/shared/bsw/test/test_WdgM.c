@@ -32,7 +32,7 @@ static uint8 mock_dem_event_id;
 static uint8 mock_dem_status;
 static uint8 mock_dem_report_count;
 
-void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
+void Dem_ReportErrorStatus(Dem_EventIdType EventId, Dem_EventStatusType EventStatus)
 {
     mock_dem_event_id = EventId;
     mock_dem_status = EventStatus;

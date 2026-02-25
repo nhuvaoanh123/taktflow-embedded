@@ -29,6 +29,8 @@ typedef uint8           Std_ReturnType;
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+#define STD_HIGH    0x01U
+#define STD_LOW     0x00U
 
 /* Prevent BSW headers from redefining types */
 #define STD_TYPES_H

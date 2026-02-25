@@ -44,6 +44,16 @@ typedef uint8           Std_ReturnType;
 #define CANMON_STATUS_SHUTDOWN          5u
 
 /* ==================================================================
+ * Forward declarations (source included at bottom of file)
+ * ================================================================== */
+
+extern void            Swc_CanMonitor_Init(void);
+extern uint8           Swc_CanMonitor_Check(uint8 isBusOff, uint32 rxMsgCount,
+                                             uint8 errorWarning, uint32 currentTimeMs);
+extern Std_ReturnType  Swc_CanMonitor_Recovery(uint32 currentTimeMs);
+extern uint8           Swc_CanMonitor_GetStatus(void);
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 

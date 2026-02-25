@@ -89,12 +89,12 @@ extern void Swc_TempMonitor_MainFunction(void);
 static sint16  mock_temp_dC;
 static uint8   mock_iohwab_return;
 
-Std_ReturnType IoHwAb_ReadMotorTemp(sint16* Temp_dC)
+Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC)
 {
     if (Temp_dC == NULL_PTR) {
         return E_NOT_OK;
     }
-    *Temp_dC = mock_temp_dC;
+    *Temp_dC = (uint16)mock_temp_dC;
     return mock_iohwab_return;
 }
 
