@@ -86,6 +86,59 @@ body {
 .status-badge.reconnecting { background: rgba(245,158,11,0.15); color: var(--warn); }
 .status-badge.reconnecting::before { background: var(--warn); }
 
+/* ---------- Stats Banner ---------- */
+
+.stats-banner {
+    background: linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(109,66,217,0.05) 100%);
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.stat-num {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-sec);
+}
+
+.stat-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--card-border);
+}
+
+.stats-sub {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: var(--text-sec);
+}
+
 /* ---------- Telemetry Grid ---------- */
 
 .grid {
@@ -383,6 +436,39 @@ body {
     padding: 16px 0 0;
     border-top: 1px solid var(--card-border);
     margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.footer-author {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.footer-author strong {
+    color: var(--accent);
+}
+
+.footer-links {
+    margin-left: 8px;
+}
+
+.footer-links a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s;
+}
+
+.footer-links a:hover {
+    color: var(--text);
+    text-decoration: underline;
+}
+
+.footer-sep {
+    margin: 0 6px;
+    color: var(--card-border);
 }
 
 /* ---------- Scrollbar (WebKit) ---------- */
