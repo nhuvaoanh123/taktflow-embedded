@@ -71,7 +71,7 @@ All SYS requirements use "shall" unless otherwise noted.
 ### SYS-001: Dual Pedal Position Sensing
 
 - **Traces up**: STK-005, STK-016
-- **Traces down**: TSR-001, TSR-002 (placeholder)
+- **Traces down**: TSR-001, TSR-002, SWR-CVC-001, SWR-CVC-002
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: Both pedal sensors independently report angle values within 1% linearity across the 0-100% pedal travel range. Both sensors are readable within a single 10 ms control cycle.
@@ -84,7 +84,7 @@ The system shall sense the operator pedal position using two independent AS5048A
 ### SYS-002: Pedal Sensor Plausibility Monitoring
 
 - **Traces up**: STK-005, STK-016, STK-018
-- **Traces down**: TSR-003, TSR-004 (placeholder)
+- **Traces down**: TSR-003, TSR-004, SWR-CVC-003, SWR-CVC-004, SWR-CVC-005, SWR-CVC-006
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A simulated sensor disagreement of 6% of full scale (above the 5% threshold) persisting for 2 control cycles triggers a plausibility fault within 20 ms. A disagreement of 4% (below threshold) does not trigger a fault.
@@ -97,7 +97,7 @@ The system shall compare the two pedal sensor readings every control cycle and d
 ### SYS-003: Pedal-to-Torque Mapping
 
 - **Traces up**: STK-005
-- **Traces down**: SWR-CVC-001 (placeholder)
+- **Traces down**: SWR-CVC-001, SWR-CVC-007
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: For a validated pedal input of 0%, the torque request is 0%. For a validated pedal input of 100%, the torque request equals the maximum permitted by the current operating mode. The mapping is monotonically increasing.
@@ -110,7 +110,7 @@ The system shall convert a validated pedal position (average of both sensor read
 ### SYS-004: Motor Torque Control via CAN
 
 - **Traces up**: STK-005, STK-022
-- **Traces down**: TSR-005, SWR-RZC-001 (placeholder)
+- **Traces down**: TSR-005, SWR-CVC-008, SWR-CVC-016, SWR-CVC-017, SWR-RZC-001, SWR-RZC-002, SWR-RZC-003, SWR-RZC-016, SWR-RZC-026
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A torque request CAN message transmitted by CVC at 10 ms intervals results in a corresponding PWM duty cycle change at the RZC BTS7960 motor driver within 20 ms of transmission. The duty cycle is proportional to the requested torque within 2% accuracy.
@@ -123,7 +123,7 @@ The system shall transmit the torque request from the CVC to the RZC via CAN at 
 ### SYS-005: Motor Current Monitoring
 
 - **Traces up**: STK-005, STK-016
-- **Traces down**: TSR-006, TSR-007 (placeholder)
+- **Traces down**: TSR-006, TSR-007, SWR-RZC-005, SWR-RZC-006, SWR-RZC-007, SWR-RZC-008, SWR-RZC-027
 - **Safety relevance**: ASIL A
 - **Verification method**: Test
 - **Verification criteria**: An applied motor current of 26A (above the 25A threshold) sustained for 10 ms results in motor driver disable within 20 ms. The ACS723 current reading accuracy is within 2A of the actual current over the 0-30A range.
@@ -136,7 +136,7 @@ The system shall continuously monitor motor current via the ACS723 current senso
 ### SYS-006: Motor Temperature Monitoring and Derating
 
 - **Traces up**: STK-005, STK-016
-- **Traces down**: TSR-008, TSR-009 (placeholder)
+- **Traces down**: TSR-008, TSR-009, SWR-ICU-004, SWR-RZC-009, SWR-RZC-010, SWR-RZC-011
 - **Safety relevance**: ASIL A
 - **Verification method**: Test
 - **Verification criteria**: Simulated NTC readings corresponding to 60C, 80C, and 100C thresholds trigger derating to 75%, 50%, and 0% (motor off) respectively within 200 ms. Recovery occurs at 50C, 70C, and 90C respectively (10C hysteresis verified).
@@ -149,7 +149,7 @@ The system shall continuously monitor motor temperature via NTC thermistors (ADC
 ### SYS-007: Motor Direction Control and Plausibility
 
 - **Traces up**: STK-005, STK-016
-- **Traces down**: TSR-040, SWR-RZC-002 (placeholder)
+- **Traces down**: TSR-040, SWR-RZC-002, SWR-RZC-012, SWR-RZC-013, SWR-RZC-014, SWR-RZC-015
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: A commanded forward direction results in forward encoder count within 50 ms. Simultaneous RPWM and LPWM activation is physically prevented with at least 10 us dead-time verified by oscilloscope capture.
@@ -162,7 +162,7 @@ The system shall verify that the motor rotation direction matches the commanded 
 ### SYS-008: Battery Voltage Monitoring
 
 - **Traces up**: STK-005
-- **Traces down**: SWR-RZC-003 (placeholder)
+- **Traces down**: SWR-ICU-005, SWR-RZC-003, SWR-RZC-017, SWR-RZC-018
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: Applied voltages of 9V and 16V on the battery input trigger undervoltage and overvoltage warnings respectively. A voltage below 8V or above 17V triggers motor disable.
@@ -175,7 +175,7 @@ The system shall continuously monitor battery voltage via a resistor divider on 
 ### SYS-009: Encoder Feedback for Speed Measurement
 
 - **Traces up**: STK-005, STK-014
-- **Traces down**: SWR-RZC-004 (placeholder)
+- **Traces down**: SWR-ICU-002, SWR-RZC-004, SWR-RZC-012
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: Encoder pulses at a known motor speed produce a speed calculation within 5% of the actual motor speed.
@@ -190,7 +190,7 @@ The system shall read motor encoder feedback on the RZC via GPIO interrupt to me
 ### SYS-010: Steering Command Reception and Servo Control
 
 - **Traces up**: STK-006
-- **Traces down**: TSR-012, SWR-FZC-001 (placeholder)
+- **Traces down**: TSR-012, SWR-FZC-001, SWR-FZC-008, SWR-FZC-026, SWR-FZC-028, SWR-FZC-032
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A steering command CAN message specifying +20 degrees results in the steering servo reaching 20 +/- 1 degrees within 200 ms as measured by the AS5048A feedback sensor.
@@ -203,7 +203,7 @@ The system shall receive steering angle commands from the CVC via CAN (10 ms cyc
 ### SYS-011: Steering Angle Feedback Monitoring
 
 - **Traces up**: STK-006, STK-016, STK-018
-- **Traces down**: TSR-010, TSR-011 (placeholder)
+- **Traces down**: TSR-010, TSR-011, SWR-FZC-001, SWR-FZC-002, SWR-FZC-003
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A simulated command-vs-feedback deviation of 6 degrees (above 5 degree threshold) persisting for 50 ms triggers a steering fault. A deviation of 4 degrees does not trigger a fault.
@@ -216,7 +216,7 @@ The system shall continuously monitor the steering angle sensor (AS5048A on SPI2
 ### SYS-012: Steering Return-to-Center on Fault
 
 - **Traces up**: STK-006, STK-017
-- **Traces down**: TSR-012, TSR-013 (placeholder)
+- **Traces down**: TSR-012, TSR-013, SWR-FZC-004, SWR-FZC-005, SWR-FZC-006
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: On steering fault injection, the steering servo reaches 0 degrees (center) within 100 ms at a controlled rate. If center is not reached within 200 ms, PWM output is disabled (verified by oscilloscope).
@@ -229,7 +229,7 @@ The system shall command the steering servo to the center position (0 degrees) a
 ### SYS-013: Steering Rate and Angle Limiting
 
 - **Traces up**: STK-006, STK-016
-- **Traces down**: TSR-014 (placeholder)
+- **Traces down**: TSR-014, SWR-FZC-007
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: A step command from 0 to 45 degrees is rate-limited to arrive in no less than 1.5 seconds (30 deg/s). A command of 50 degrees is clamped to 43 degrees (45 minus 2 degree margin).
@@ -244,7 +244,7 @@ The system shall limit the steering angle command rate of change to a maximum of
 ### SYS-014: Brake Command Reception and Servo Control
 
 - **Traces up**: STK-007
-- **Traces down**: TSR-015, SWR-FZC-002 (placeholder)
+- **Traces down**: TSR-015, SWR-FZC-002, SWR-FZC-009, SWR-FZC-026, SWR-FZC-032
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A brake command of 80% force received via CAN results in the brake servo applying proportional PWM within 20 ms.
@@ -257,7 +257,7 @@ The system shall receive brake commands from the CVC via CAN (10 ms cycle, E2E p
 ### SYS-015: Brake System Monitoring
 
 - **Traces up**: STK-007, STK-016, STK-018
-- **Traces down**: TSR-015, TSR-016 (placeholder)
+- **Traces down**: TSR-015, TSR-016, SWR-FZC-010, SWR-FZC-012, SWR-FZC-027
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A simulated brake servo disconnection (no current draw when brake force commanded) triggers a brake fault within 20 ms. The CVC is notified via CAN and motor torque cutoff is commanded within 30 ms total.
@@ -270,7 +270,7 @@ The system shall monitor the brake command path and detect a brake system fault 
 ### SYS-016: Auto-Brake on CAN Communication Loss
 
 - **Traces up**: STK-007, STK-017
-- **Traces down**: TSR-017 (placeholder)
+- **Traces down**: TSR-017, SWR-FZC-011
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: When CAN brake command messages are blocked for 100 ms, the FZC autonomously applies maximum braking force within 110 ms (100 ms timeout + 10 ms actuation). Brake remains applied until valid CAN communication is restored.
@@ -283,7 +283,7 @@ The system shall autonomously apply maximum braking force if no valid brake comm
 ### SYS-017: Emergency Braking from Obstacle Detection
 
 - **Traces up**: STK-007, STK-008
-- **Traces down**: TSR-018, SWR-FZC-003 (placeholder)
+- **Traces down**: TSR-018, SWR-FZC-014
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: An obstacle placed at 19 cm (inside 20 cm emergency zone) triggers maximum braking within 30 ms of sensor reading. Motor cutoff is requested via CAN simultaneously.
@@ -298,7 +298,7 @@ The system shall trigger emergency braking when the lidar sensor reports an obst
 ### SYS-018: Lidar Distance Sensing
 
 - **Traces up**: STK-008
-- **Traces down**: TSR-018, TSR-019 (placeholder)
+- **Traces down**: TSR-018, TSR-019, SWR-FZC-013
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: The TFMini-S reports distance to a target at 1 m within +/- 3 cm accuracy. Update rate is 100 Hz (+/- 5 Hz). Data is available to the application within 10 ms of sensor output.
@@ -311,7 +311,7 @@ The system shall continuously read forward distance from the TFMini-S lidar sens
 ### SYS-019: Graduated Obstacle Response
 
 - **Traces up**: STK-008
-- **Traces down**: TSR-018, TSR-019, SWR-FZC-004 (placeholder)
+- **Traces down**: TSR-018, TSR-019, SWR-FZC-004, SWR-FZC-014
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: Obstacles at 100 cm, 50 cm, and 20 cm trigger warning (buzzer + CAN alert), partial braking (speed reduction request), and emergency braking (full brake + motor cutoff) respectively. All thresholds are configurable at compile time.
@@ -324,7 +324,7 @@ The system shall implement a graduated response based on three configurable dist
 ### SYS-020: Lidar Sensor Plausibility Checking
 
 - **Traces up**: STK-008, STK-016
-- **Traces down**: TSR-020, TSR-021 (placeholder)
+- **Traces down**: TSR-020, TSR-021, SWR-FZC-015, SWR-FZC-016
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: A stuck sensor (no change > 1 cm over 500 ms) triggers a fault. A UART timeout of 100 ms triggers a communication fault. On any fault, the system substitutes 0 cm (obstacle present) and logs a DTC.
@@ -339,7 +339,7 @@ The system shall perform plausibility checks on every lidar reading: range check
 ### SYS-021: Heartbeat Transmission by Zone ECUs
 
 - **Traces up**: STK-009, STK-019
-- **Traces down**: TSR-025, TSR-026 (placeholder)
+- **Traces down**: TSR-025, TSR-026, SWR-CVC-020, SWR-CVC-021, SWR-FZC-021, SWR-FZC-022, SWR-ICU-009, SWR-RZC-021, SWR-RZC-022
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: Each zone ECU (CVC, FZC, RZC) transmits a heartbeat CAN message at 50 ms +/- 5 ms intervals. The message contains ECU ID, alive counter (incrementing by 1 per transmission), operating mode, and CRC-8.
@@ -352,7 +352,7 @@ Each zone ECU (CVC, FZC, RZC) shall transmit a heartbeat CAN message at a fixed 
 ### SYS-022: Heartbeat Timeout Detection by Safety Controller
 
 - **Traces up**: STK-009, STK-019
-- **Traces down**: TSR-027, TSR-028 (placeholder)
+- **Traces down**: TSR-027, TSR-028, SWR-CVC-022, SWR-SC-004, SWR-SC-006
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: When a zone ECU stops transmitting heartbeats, the SC detects the timeout within 150 ms (3 missed heartbeats). After a 50 ms confirmation period, the SC de-energizes the kill relay (total: 200 ms from last heartbeat to relay open).
@@ -365,7 +365,7 @@ The Safety Controller shall monitor heartbeat messages from each zone ECU and de
 ### SYS-023: Cross-Plausibility Check — Torque vs. Current
 
 - **Traces up**: STK-009, STK-016
-- **Traces down**: TSR-041, TSR-042 (placeholder)
+- **Traces down**: TSR-041, TSR-042, SWR-SC-007, SWR-SC-008, SWR-SC-009
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: A simulated 25% deviation between expected current (from torque request) and actual current, sustained for 50 ms, triggers SC kill relay de-energization within 60 ms.
@@ -378,7 +378,7 @@ The Safety Controller shall continuously compare the torque request CAN message 
 ### SYS-024: Kill Relay Control — Energize-to-Run
 
 - **Traces up**: STK-009, STK-019
-- **Traces down**: TSR-029, TSR-030 (placeholder)
+- **Traces down**: TSR-029, TSR-030, SWR-SC-006, SWR-SC-010, SWR-SC-011, SWR-SC-012, SWR-SC-019, SWR-SC-026
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: De-asserting GIO_A0 on the SC results in relay opening (12V power removed from actuators) within 10 ms. The relay is not re-energized without a full power cycle and startup self-test pass.
@@ -391,7 +391,7 @@ The Safety Controller shall control the kill relay via GIO_A0 GPIO driving a MOS
 ### SYS-025: Safety Controller CAN Listen-Only Mode
 
 - **Traces up**: STK-009, STK-004
-- **Traces down**: SWR-SC-001 (placeholder)
+- **Traces down**: SWR-SC-001, SWR-SC-002, SWR-SC-026
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: With the SC connected to the CAN bus, no frames are transmitted by the SC. Bus traffic analysis confirms zero TX frames from the SC CAN ID range.
@@ -404,7 +404,7 @@ The Safety Controller shall operate in CAN listen-only mode (DCAN TEST register 
 ### SYS-026: Safety Controller Lockstep CPU Monitoring
 
 - **Traces up**: STK-004, STK-009
-- **Traces down**: SWR-SC-002 (placeholder)
+- **Traces down**: SWR-SC-002, SWR-SC-014, SWR-SC-015, SWR-SC-016, SWR-SC-019, SWR-SC-026
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A fault injected into one CPU core via the SC debug interface triggers a lockstep comparison error and ESM reset within 1 clock cycle. The SC does not re-energize the kill relay after a lockstep fault.
@@ -417,7 +417,7 @@ The Safety Controller shall rely on the TMS570LC43x hardware lockstep CPU cores 
 ### SYS-027: External Watchdog Monitoring (All Physical ECUs)
 
 - **Traces up**: STK-009, STK-019
-- **Traces down**: TSR-031, TSR-032 (placeholder)
+- **Traces down**: TSR-031, TSR-032, SWR-BSW-021, SWR-CVC-023, SWR-CVC-029, SWR-FZC-023, SWR-FZC-025, SWR-RZC-023, SWR-RZC-025, SWR-SC-019, SWR-SC-022, SWR-SC-026
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: When ECU firmware is halted (debugger pause), the TPS3823 asserts RESET within 1.6 seconds (+/- 10%). The MCU restarts and performs a self-test sequence.
@@ -432,7 +432,7 @@ Each physical ECU (CVC, FZC, RZC, SC) shall be monitored by an external TPS3823 
 ### SYS-028: E-Stop Detection and Broadcast
 
 - **Traces up**: STK-010, STK-016
-- **Traces down**: TSR-033, TSR-034 (placeholder)
+- **Traces down**: TSR-033, TSR-034, SWR-CVC-018, SWR-CVC-019
 - **Safety relevance**: ASIL B
 - **Verification method**: Test
 - **Verification criteria**: E-stop button press is detected within 1 ms (GPIO interrupt latency). E-stop CAN message (ID 0x001) is transmitted within 2 ms of detection. All ECUs reach safe state within 12 ms of E-stop press.
@@ -447,7 +447,7 @@ The system shall detect E-stop button activation within 1 ms via hardware interr
 ### SYS-029: Vehicle State Machine
 
 - **Traces up**: STK-005, STK-006, STK-007, STK-016, STK-017
-- **Traces down**: TSR-035, TSR-036, TSR-037 (placeholder)
+- **Traces down**: TSR-035, TSR-036, TSR-037, SWR-BCM-002, SWR-BSW-022, SWR-BSW-026, SWR-CVC-009, SWR-CVC-010, SWR-CVC-011, SWR-CVC-012, SWR-CVC-013, SWR-CVC-029, SWR-FZC-025, SWR-ICU-007, SWR-RZC-025
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: Only valid transitions as defined in the transition table are accepted. An invalid transition attempt (e.g., LIMP to RUN) is rejected and logged. E-stop forces transition from any state to SAFE_STOP. State is persisted in flash and restored on power-up.
@@ -460,7 +460,7 @@ The CVC shall maintain a deterministic vehicle state machine with states: INIT, 
 ### SYS-030: Coordinated Mode Management via BswM
 
 - **Traces up**: STK-005, STK-006, STK-007, STK-003
-- **Traces down**: SWR-BSW-001 (placeholder)
+- **Traces down**: SWR-BCM-002, SWR-BSW-001, SWR-BSW-022, SWR-BSW-026, SWR-CVC-010
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A CVC state transition to DEGRADED results in all ECUs (FZC, RZC) acknowledging the new mode via heartbeat within 100 ms. Failure to acknowledge causes escalation to LIMP.
@@ -475,7 +475,7 @@ The BSW Mode Manager (BswM) on each ECU shall synchronize operating modes across
 ### SYS-031: CAN Bus Configuration
 
 - **Traces up**: STK-022
-- **Traces down**: SWR-BSW-002 (placeholder)
+- **Traces down**: SWR-BCM-001, SWR-BSW-001, SWR-BSW-002, SWR-BSW-003, SWR-BSW-011, SWR-BSW-013, SWR-CVC-016, SWR-CVC-017, SWR-FZC-026, SWR-FZC-027, SWR-ICU-001, SWR-RZC-026, SWR-RZC-027, SWR-TCU-001
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: CAN bus operates at 500 kbps with all 7+ nodes connected. Bit error rate is below 10^-6. Bus utilization under normal operation is below 60%.
@@ -488,7 +488,7 @@ The system shall operate a CAN 2.0B bus at 500 kbps with 11-bit standard CAN IDs
 ### SYS-032: E2E Protection on Safety-Critical Messages
 
 - **Traces up**: STK-020
-- **Traces down**: TSR-022, TSR-023, TSR-024 (placeholder)
+- **Traces down**: TSR-022, TSR-023, TSR-024, SWR-BSW-002, SWR-BSW-003, SWR-BSW-011, SWR-BSW-013, SWR-BSW-015, SWR-BSW-016, SWR-BSW-023, SWR-BSW-024, SWR-BSW-025, SWR-CVC-014, SWR-CVC-015, SWR-FZC-019, SWR-FZC-020, SWR-RZC-019, SWR-RZC-020, SWR-SC-003
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: A message with a corrupted CRC is discarded by the receiver. A message with a repeated alive counter is discarded. Three consecutive E2E failures result in safe default substitution within 30 ms.
@@ -501,7 +501,7 @@ All safety-critical CAN messages shall include E2E protection: CRC-8 (polynomial
 ### SYS-033: CAN Message Priority Assignment
 
 - **Traces up**: STK-022
-- **Traces down**: SWR-BSW-003 (placeholder)
+- **Traces down**: SWR-BSW-003, SWR-CVC-016, SWR-CVC-017
 - **Safety relevance**: ASIL D
 - **Verification method**: Analysis
 - **Verification criteria**: CAN arbitration analysis confirms that the E-stop message (ID 0x001) wins arbitration against all other messages. ASIL D messages have lower CAN IDs (higher priority) than ASIL C, B, A, and QM messages.
@@ -514,7 +514,7 @@ CAN message IDs shall be assigned by safety priority: E-stop (0x001, highest pri
 ### SYS-034: CAN Bus Loss Detection per ECU
 
 - **Traces up**: STK-009, STK-017
-- **Traces down**: TSR-038, TSR-039 (placeholder)
+- **Traces down**: TSR-038, TSR-039, SWR-BSW-004, SWR-BSW-005, SWR-BSW-012, SWR-CVC-022, SWR-CVC-024, SWR-CVC-025, SWR-FZC-024, SWR-FZC-028, SWR-RZC-016, SWR-RZC-024, SWR-SC-023
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: When the CAN bus is disconnected from an ECU, the ECU detects bus loss within 200 ms and autonomously transitions to its safe state (CVC: SAFE_STOP, FZC: auto-brake + steer center, RZC: motor disable, SC: kill relay open).
@@ -529,7 +529,7 @@ Each ECU shall independently detect CAN bus loss (bus-off condition, no messages
 ### SYS-035: Automatic Headlight Control
 
 - **Traces up**: STK-011
-- **Traces down**: SWR-BCM-001 (placeholder)
+- **Traces down**: SWR-BCM-001, SWR-BCM-002, SWR-BCM-003, SWR-BCM-004, SWR-BCM-005, SWR-BCM-009, SWR-BCM-010, SWR-BCM-011, SWR-BCM-012
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: BCM activates headlight output when vehicle state is RUN and speed is above 0. Headlights deactivate when vehicle state is OFF or SHUTDOWN.
@@ -542,7 +542,7 @@ The BCM shall automatically activate headlight output when the vehicle is in RUN
 ### SYS-036: Turn Indicator and Hazard Light Control
 
 - **Traces up**: STK-011, STK-026
-- **Traces down**: SWR-BCM-002 (placeholder)
+- **Traces down**: SWR-BCM-002, SWR-BCM-006, SWR-BCM-007, SWR-BCM-008, SWR-BCM-010, SWR-BCM-011
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: Hazard lights activate within 100 ms of vehicle state transition to DEGRADED or higher. Turn indicators follow steering angle polarity.
@@ -557,7 +557,7 @@ The BCM shall control turn indicators based on steering angle polarity (CAN mess
 ### SYS-037: UDS Diagnostic Session Control
 
 - **Traces up**: STK-012
-- **Traces down**: SWR-TCU-001 (placeholder)
+- **Traces down**: SWR-BSW-013, SWR-BSW-017, SWR-CVC-033, SWR-FZC-030, SWR-RZC-029, SWR-TCU-001, SWR-TCU-002, SWR-TCU-011, SWR-TCU-012, SWR-TCU-013, SWR-TCU-014, SWR-TCU-015
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: A UDS 0x10 request with sub-function 0x01 (default session) returns a positive response (0x50 0x01). Sub-function 0x02 (programming session) requires Security Access first.
@@ -570,7 +570,7 @@ The system shall implement UDS Diagnostic Session Control (service 0x10) per ISO
 ### SYS-038: UDS Read and Clear DTC Services
 
 - **Traces up**: STK-012, STK-013
-- **Traces down**: SWR-TCU-002, SWR-TCU-003 (placeholder)
+- **Traces down**: SWR-BSW-017, SWR-CVC-033, SWR-CVC-034, SWR-FZC-030, SWR-ICU-008, SWR-RZC-029, SWR-TCU-002, SWR-TCU-003, SWR-TCU-004, SWR-TCU-010, SWR-TCU-011
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: After a pedal sensor fault, a UDS 0x19 request returns the associated DTC with freeze-frame data. A subsequent 0x14 request clears the DTC. A re-read confirms the DTC is cleared.
@@ -583,7 +583,7 @@ The system shall implement UDS Read DTC Information (service 0x19) and Clear Dia
 ### SYS-039: UDS Read/Write Data by Identifier
 
 - **Traces up**: STK-012
-- **Traces down**: SWR-TCU-004 (placeholder)
+- **Traces down**: SWR-BSW-017, SWR-CVC-031, SWR-CVC-033, SWR-CVC-035, SWR-FZC-030, SWR-RZC-029, SWR-TCU-004, SWR-TCU-005, SWR-TCU-006, SWR-TCU-014
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: A UDS 0x22 request for DID 0xF190 (VIN) returns the programmed VIN. A 0x2E write to a writable DID updates the value persistently.
@@ -596,7 +596,7 @@ The system shall implement UDS Read Data By Identifier (service 0x22) and Write 
 ### SYS-040: UDS Security Access
 
 - **Traces up**: STK-012
-- **Traces down**: SWR-TCU-005 (placeholder)
+- **Traces down**: SWR-BSW-017, SWR-CVC-033, SWR-TCU-005, SWR-TCU-007
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: A Security Access sequence with correct seed-key pair grants access. An incorrect key is rejected with NRC 0x35. After 3 failed attempts, access is locked for 10 seconds.
@@ -609,7 +609,7 @@ The system shall implement UDS Security Access (service 0x27) per ISO 14229 with
 ### SYS-041: DTC Storage and Persistence
 
 - **Traces up**: STK-013
-- **Traces down**: SWR-BSW-004 (placeholder)
+- **Traces down**: SWR-BSW-004, SWR-BSW-018, SWR-BSW-019, SWR-BSW-020, SWR-CVC-030, SWR-CVC-034, SWR-FZC-031, SWR-ICU-008, SWR-RZC-030, SWR-TCU-008, SWR-TCU-009
 - **Safety relevance**: QM
 - **Verification method**: Test
 - **Verification criteria**: A DTC stored during operation is present after power cycle. Freeze-frame data includes timestamp, vehicle state, and relevant sensor values. At least 50 DTCs can be stored simultaneously.
@@ -624,7 +624,7 @@ The system shall store diagnostic trouble codes in non-volatile memory (flash) w
 ### SYS-042: MQTT Telemetry to AWS IoT Core
 
 - **Traces up**: STK-014
-- **Traces down**: SWR-GW-001 (placeholder)
+- **Traces down**: SWR-GW-001, SWR-GW-002
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: The Pi gateway publishes a telemetry JSON message to `vehicle/telemetry` topic at 1 message per 5 seconds. Messages arrive at AWS IoT Core and are visible in Timestream/Grafana.
@@ -637,7 +637,7 @@ The Raspberry Pi gateway shall publish vehicle telemetry to AWS IoT Core via MQT
 ### SYS-043: Edge ML Anomaly Detection
 
 - **Traces up**: STK-015
-- **Traces down**: SWR-GW-002 (placeholder)
+- **Traces down**: SWR-GW-003, SWR-GW-004
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: A simulated anomalous motor current pattern (e.g., sinusoidal oscillation not matching normal profile) triggers an anomaly alert published to `vehicle/alerts` within 5 seconds.
@@ -652,7 +652,7 @@ The Raspberry Pi gateway shall run machine learning inference (scikit-learn) on 
 ### SYS-044: OLED Status Display
 
 - **Traces up**: STK-026
-- **Traces down**: SWR-CVC-002 (placeholder)
+- **Traces down**: SWR-CVC-002, SWR-CVC-026, SWR-CVC-027, SWR-CVC-028, SWR-ICU-002, SWR-ICU-003, SWR-ICU-004, SWR-ICU-005, SWR-ICU-006, SWR-ICU-007, SWR-ICU-008, SWR-ICU-009, SWR-ICU-010
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: The OLED displays the current vehicle state (RUN, DEGRADED, LIMP, SAFE_STOP) and active fault code within 100 ms of state change.
@@ -665,7 +665,7 @@ The CVC shall drive the SSD1306 OLED display (128x64 pixels, I2C at 0x3C, 400 kH
 ### SYS-045: Audible Warning via Buzzer
 
 - **Traces up**: STK-026
-- **Traces down**: SWR-FZC-005 (placeholder)
+- **Traces down**: SWR-FZC-005, SWR-FZC-017, SWR-FZC-018
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: Distinct buzzer patterns are produced for DEGRADED (single beep), LIMP (slow repeating), SAFE_STOP (fast repeating), and emergency (continuous) within 200 ms of state change.
@@ -678,7 +678,7 @@ The FZC shall drive a piezo buzzer (GPIO) with distinct warning patterns: single
 ### SYS-046: Fault LED Panel on Safety Controller
 
 - **Traces up**: STK-026, STK-019
-- **Traces down**: SWR-SC-003 (placeholder)
+- **Traces down**: SWR-ICU-006, SWR-ICU-009, SWR-SC-003, SWR-SC-005, SWR-SC-013
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: When a zone ECU heartbeat times out, the corresponding LED on the SC panel illuminates within 200 ms. The LED is driven directly by SC GPIO, independent of CAN communication to other ECUs.
@@ -693,7 +693,7 @@ The Safety Controller shall drive a fault LED panel (4 LEDs on GIO_A1-A4) with o
 ### SYS-047: SPI Interface — Pedal and Steering Sensors
 
 - **Traces up**: STK-005, STK-006, STK-023
-- **Traces down**: SWR-BSW-005 (placeholder)
+- **Traces down**: SWR-BSW-005, SWR-BSW-006, SWR-BSW-014, SWR-CVC-001, SWR-FZC-001
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: Both pedal sensors on SPI1 are read within 500 us total. SPI clock is 10 MHz. CRC validation of AS5048A data frame passes for all valid readings.
@@ -706,7 +706,7 @@ The system shall interface with AS5048A sensors via SPI: CVC SPI1 for dual pedal
 ### SYS-048: UART Interface — Lidar Sensor
 
 - **Traces up**: STK-008, STK-023
-- **Traces down**: SWR-BSW-006 (placeholder)
+- **Traces down**: SWR-BSW-006, SWR-FZC-013
 - **Safety relevance**: ASIL C
 - **Verification method**: Test
 - **Verification criteria**: TFMini-S UART frames are received at 100 Hz on USART1. Frame parsing extracts distance and signal strength. Frame checksum validation rejects corrupted frames.
@@ -719,7 +719,7 @@ The system shall interface with the TFMini-S lidar sensor via USART1 on the FZC 
 ### SYS-049: ADC Interface — Current, Temperature, Voltage
 
 - **Traces up**: STK-005, STK-023
-- **Traces down**: SWR-BSW-007 (placeholder)
+- **Traces down**: SWR-BSW-007, SWR-BSW-014, SWR-RZC-005, SWR-RZC-008, SWR-RZC-009, SWR-RZC-017
 - **Safety relevance**: ASIL A
 - **Verification method**: Test
 - **Verification criteria**: ADC channels on RZC (CH1-CH4) convert at 12-bit resolution with sample rate of at least 1 kHz for current (CH1) and 10 Hz for temperature (CH2, CH3) and voltage (CH4).
@@ -732,7 +732,7 @@ The system shall read analog signals on the RZC via ADC1: CH1 for motor current 
 ### SYS-050: PWM Interface — Motor and Servos
 
 - **Traces up**: STK-005, STK-006, STK-007
-- **Traces down**: SWR-BSW-008 (placeholder)
+- **Traces down**: SWR-BSW-008, SWR-BSW-009, SWR-BSW-014, SWR-FZC-008, SWR-FZC-009, SWR-RZC-003, SWR-RZC-004
 - **Safety relevance**: ASIL D
 - **Verification method**: Test
 - **Verification criteria**: Motor PWM (TIM3) operates at 20 kHz with 0-100% duty cycle control. Servo PWM (TIM2) operates at 50 Hz with 1-2 ms pulse width. All PWM channels are independently controllable.
@@ -747,7 +747,7 @@ The system shall generate PWM outputs: RZC TIM3_CH1 and TIM3_CH2 for BTS7960 RPW
 ### SYS-051: MISRA C Compliance
 
 - **Traces up**: STK-030
-- **Traces down**: SWR-ALL-001 (placeholder)
+- **Traces down**: SWR-ALL-001
 - **Safety relevance**: ASIL D
 - **Verification method**: Analysis
 - **Verification criteria**: Static analysis (cppcheck or equivalent) reports zero mandatory MISRA C:2012 rule violations. All deviations are documented with formal deviation records.
@@ -760,7 +760,7 @@ All firmware source code shall comply with MISRA C:2012 (with 2023 amendments). 
 ### SYS-052: Static RAM Only — No Dynamic Allocation
 
 - **Traces up**: STK-016, STK-030
-- **Traces down**: SWR-ALL-002 (placeholder)
+- **Traces down**: SWR-ALL-002
 - **Safety relevance**: ASIL D
 - **Verification method**: Analysis
 - **Verification criteria**: No calls to malloc, calloc, realloc, or free exist in any firmware source file. Linker map confirms all data segments are statically sized. Heap size is configured to zero.
@@ -773,7 +773,7 @@ All firmware shall use static memory allocation only. Dynamic memory allocation 
 ### SYS-053: WCET Within Deadline Margin
 
 - **Traces up**: STK-021, STK-018
-- **Traces down**: SWR-ALL-003 (placeholder)
+- **Traces down**: SWR-ALL-003, SWR-BSW-010, SWR-BSW-027, SWR-CVC-032, SWR-FZC-029, SWR-RZC-028, SWR-SC-025
 - **Safety relevance**: ASIL D
 - **Verification method**: Analysis
 - **Verification criteria**: Measured WCET of the main control loop task on each ECU is below 80% of its scheduling deadline (8 ms for a 10 ms cycle). Measurement is performed on target hardware with all interrupts enabled.
@@ -786,7 +786,7 @@ The worst-case execution time (WCET) of each safety-critical task shall not exce
 ### SYS-054: Flash Memory Utilization
 
 - **Traces up**: STK-021
-- **Traces down**: SWR-ALL-004 (placeholder)
+- **Traces down**: SWR-ALL-004
 - **Safety relevance**: QM
 - **Verification method**: Analysis
 - **Verification criteria**: Linker map output shows total flash usage below 80% of available flash on each MCU (STM32G474RE: 512 KB, TMS570LC43x: 4 MB).
@@ -812,7 +812,7 @@ Bidirectional traceability shall be maintained from stakeholder requirements (ST
 ### SYS-056: SAP QM Mock Integration
 
 - **Traces up**: STK-032
-- **Traces down**: SWR-GW-003 (placeholder)
+- **Traces down**: SWR-GW-005, SWR-GW-006
 - **Safety relevance**: QM
 - **Verification method**: Demonstration
 - **Verification criteria**: A DTC event triggers an HTTP POST to the SAP QM mock API. The mock returns a Q-Meldung number. An 8D report template is auto-generated.
@@ -1006,4 +1006,3 @@ The following matrix provides complete bidirectional traceability from stakehold
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete system requirements: 56 requirements (SYS-001 to SYS-056), bidirectional traceability matrix (STK to SYS and SYS to STK), completeness check, verification criteria for all requirements |
-

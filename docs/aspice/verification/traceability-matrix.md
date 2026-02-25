@@ -37,18 +37,18 @@ iso_reference: "ISO 26262 Part 6"
 
 | Metric | Count |
 |--------|-------|
-| Total requirements | 187 |
-| Covered (has test) | 143 |
-| Partial (code only) | 13 |
-| Uncovered | 31 |
-| **Coverage** | **76%** |
+| Total requirements | 193 |
+| Covered (has test) | 187 |
+| Partial (code only) | 0 |
+| Uncovered | 6 |
+| **Coverage** | **96%** |
 
 ## Traceability Matrix
 
 | Requirement ID | Requirement Source | Source Files | Unit Tests | Integration Tests | SIL Scenarios | Status |
 |---|---|---|---|---|---|---|
-| SWR-BCM-001 | SWR-BCM.md | bcm/src/bcm_main.c | — | — | — | **PARTIAL** |
-| SWR-BCM-002 | SWR-BCM.md | — | — | — | — | **UNCOVERED** |
+| SWR-BCM-001 | SWR-BCM.md | bcm/src/bcm_main.c,bcm/src/Swc_BcmCan.c | bcm/test/test_Swc_BcmCan.c | — | — | COVERED |
+| SWR-BCM-002 | SWR-BCM.md | bcm/src/Swc_BcmCan.c | bcm/test/test_Swc_BcmCan.c | — | — | COVERED |
 | SWR-BCM-003 | SWR-BCM.md | bcm/src/Swc_Lights.c | bcm/test/test_Swc_Lights.c | — | — | COVERED |
 | SWR-BCM-004 | SWR-BCM.md | bcm/src/Swc_Lights.c | bcm/test/test_Swc_Lights.c | — | — | COVERED |
 | SWR-BCM-005 | SWR-BCM.md | bcm/src/Swc_Lights.c | bcm/test/test_Swc_Lights.c | — | — | COVERED |
@@ -56,9 +56,9 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-BCM-007 | SWR-BCM.md | bcm/src/Swc_Indicators.c | bcm/test/test_Swc_Indicators.c | — | — | COVERED |
 | SWR-BCM-008 | SWR-BCM.md | bcm/src/Swc_Indicators.c | bcm/test/test_Swc_Indicators.c | — | — | COVERED |
 | SWR-BCM-009 | SWR-BCM.md | bcm/src/Swc_DoorLock.c | bcm/test/test_Swc_DoorLock.c | — | — | COVERED |
-| SWR-BCM-010 | SWR-BCM.md | — | — | — | — | **UNCOVERED** |
-| SWR-BCM-011 | SWR-BCM.md | — | — | — | — | **UNCOVERED** |
-| SWR-BCM-012 | SWR-BCM.md | bcm/src/bcm_main.c | — | — | — | **PARTIAL** |
+| SWR-BCM-010 | SWR-BCM.md | bcm/src/Swc_BcmCan.c | bcm/test/test_Swc_BcmCan.c | — | — | COVERED |
+| SWR-BCM-011 | SWR-BCM.md | bcm/src/Swc_BcmCan.c | bcm/test/test_Swc_BcmCan.c | — | — | COVERED |
+| SWR-BCM-012 | SWR-BCM.md | bcm/src/bcm_main.c,bcm/src/Swc_BcmMain.c | bcm/test/test_Swc_BcmMain.c | — | — | COVERED |
 | SWR-BSW-001 | SWR-BSW.md | mcal/Can.c,mcal/Can.h,mcal/posix/Can_Posix.c,mcal/posix... | test/test_Can.c,test/test_Can_Posix.c | — | sil_001_normal_startup.yaml,sil_014_long_duration.yaml,... | COVERED |
 | SWR-BSW-002 | SWR-BSW.md | mcal/Can.c,mcal/Can.h,mcal/posix/Can_Posix.c,mcal/posix... | test/test_Can.c,test/test_Can_Posix.c | — | — | COVERED |
 | SWR-BSW-003 | SWR-BSW.md | mcal/Can.c,mcal/Can.h,mcal/posix/Can_Posix.c,mcal/posix... | test/test_Can.c,test/test_Can_Posix.c | — | — | COVERED |
@@ -79,7 +79,7 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-BSW-018 | SWR-BSW.md | services/Dem.c,services/Dem.h | test/test_Dem.c | test_int_dem_to_dcm.c,test_int_heartbeat_loss.c,test_in... | — | COVERED |
 | SWR-BSW-019 | SWR-BSW.md | services/WdgM.c,services/WdgM.h | test/test_WdgM.c | test_int_heartbeat_loss.c,test_int_safe_state.c,test_in... | sil_003_emergency_stop.yaml | COVERED |
 | SWR-BSW-020 | SWR-BSW.md | services/WdgM.c,services/WdgM.h | test/test_WdgM.c | test_int_heartbeat_loss.c,test_int_safe_state.c,test_in... | sil_001_normal_startup.yaml,sil_013_recovery_from_safe.... | COVERED |
-| SWR-BSW-021 | SWR-BSW.md | — | — | — | — | **UNCOVERED** |
+| SWR-BSW-021 | SWR-BSW.md | — | test/test_WdgM.c | — | — | COVERED |
 | SWR-BSW-022 | SWR-BSW.md | services/BswM.c,services/BswM.h | test/test_BswM.c | test_int_bswm_mode.c,test_int_heartbeat_loss.c,test_int... | — | COVERED |
 | SWR-BSW-023 | SWR-BSW.md | services/E2E.c,services/E2E.h | test/test_E2E.c | test_int_can_matrix.c,test_int_e2e_chain.c,test_int_e2e... | — | COVERED |
 | SWR-BSW-024 | SWR-BSW.md | services/E2E.c,services/E2E.h | test/test_E2E.c | test_int_e2e_chain.c,test_int_e2e_faults.c | — | COVERED |
@@ -99,28 +99,28 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-CVC-011 | SWR-CVC.md | — | cvc/test/test_Swc_VehicleState.c | — | — | COVERED |
 | SWR-CVC-012 | SWR-CVC.md | — | cvc/test/test_Swc_VehicleState.c | — | — | COVERED |
 | SWR-CVC-013 | SWR-CVC.md | cvc/src/Swc_VehicleState.c | cvc/test/test_Swc_VehicleState.c | — | — | COVERED |
-| SWR-CVC-014 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-015 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-016 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-017 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
+| SWR-CVC-014 | SWR-CVC.md | cvc/src/Swc_CvcCom.c | cvc/test/test_Swc_CvcCom.c | — | — | COVERED |
+| SWR-CVC-015 | SWR-CVC.md | cvc/src/Swc_CvcCom.c | cvc/test/test_Swc_CvcCom.c | — | — | COVERED |
+| SWR-CVC-016 | SWR-CVC.md | cvc/src/Swc_CvcCom.c | cvc/test/test_Swc_CvcCom.c | — | — | COVERED |
+| SWR-CVC-017 | SWR-CVC.md | cvc/src/Swc_CvcCom.c | cvc/test/test_Swc_CvcCom.c | — | — | COVERED |
 | SWR-CVC-018 | SWR-CVC.md | cvc/src/Swc_EStop.c | cvc/test/test_Swc_EStop.c | — | — | COVERED |
 | SWR-CVC-019 | SWR-CVC.md | — | cvc/test/test_Swc_EStop.c | — | — | COVERED |
 | SWR-CVC-020 | SWR-CVC.md | cvc/src/Swc_EStop.c | cvc/test/test_Swc_EStop.c | — | — | COVERED |
 | SWR-CVC-021 | SWR-CVC.md | cvc/src/Swc_Heartbeat.c | cvc/test/test_Swc_Heartbeat.c | — | — | COVERED |
 | SWR-CVC-022 | SWR-CVC.md | cvc/src/Swc_Heartbeat.c | cvc/test/test_Swc_Heartbeat.c | — | — | COVERED |
-| SWR-CVC-023 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-024 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-025 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
+| SWR-CVC-023 | SWR-CVC.md | cvc/src/Swc_Watchdog.c | cvc/test/test_Swc_Watchdog.c | — | — | COVERED |
+| SWR-CVC-024 | SWR-CVC.md | cvc/src/Swc_CanMonitor.c | cvc/test/test_Swc_CanMonitor.c | — | — | COVERED |
+| SWR-CVC-025 | SWR-CVC.md | cvc/src/Swc_CanMonitor.c | cvc/test/test_Swc_CanMonitor.c | — | — | COVERED |
 | SWR-CVC-026 | SWR-CVC.md | cvc/src/Ssd1306.c | cvc/test/test_Ssd1306.c | — | — | COVERED |
 | SWR-CVC-027 | SWR-CVC.md | cvc/src/Swc_Dashboard.c | cvc/test/test_Swc_Dashboard.c | — | — | COVERED |
 | SWR-CVC-028 | SWR-CVC.md | cvc/src/Swc_Dashboard.c | cvc/test/test_Swc_Dashboard.c | — | — | COVERED |
-| SWR-CVC-029 | SWR-CVC.md | cvc/src/main.c | — | — | — | **PARTIAL** |
-| SWR-CVC-030 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-031 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-032 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-033 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-034 | SWR-CVC.md | — | — | — | — | **UNCOVERED** |
-| SWR-CVC-035 | SWR-CVC.md | cvc/src/main.c | — | — | — | **PARTIAL** |
+| SWR-CVC-029 | SWR-CVC.md | cvc/src/main.c,cvc/src/Swc_SelfTest.c | cvc/test/test_Swc_SelfTest.c | — | — | COVERED |
+| SWR-CVC-030 | SWR-CVC.md | cvc/src/Swc_Nvm.c | cvc/test/test_Swc_Nvm.c | — | — | COVERED |
+| SWR-CVC-031 | SWR-CVC.md | cvc/src/Swc_Nvm.c | cvc/test/test_Swc_Nvm.c | — | — | COVERED |
+| SWR-CVC-032 | SWR-CVC.md | cvc/src/Swc_Scheduler.c | cvc/test/test_Swc_Scheduler.c | — | — | COVERED |
+| SWR-CVC-033 | SWR-CVC.md | cvc/src/Swc_CvcDcm.c | cvc/test/test_Swc_CvcDcm.c | — | — | COVERED |
+| SWR-CVC-034 | SWR-CVC.md | cvc/src/Swc_CvcDcm.c | cvc/test/test_Swc_CvcDcm.c | — | — | COVERED |
+| SWR-CVC-035 | SWR-CVC.md | cvc/src/main.c,cvc/src/Swc_CvcDcm.c | cvc/test/test_Swc_CvcDcm.c | — | — | COVERED |
 | SWR-FZC-001 | SWR-FZC.md | fzc/src/Swc_Steering.c | fzc/test/test_Swc_Steering.c | — | — | COVERED |
 | SWR-FZC-002 | SWR-FZC.md | — | fzc/test/test_Swc_Steering.c | — | sil_008_sensor_disagreement.yaml | COVERED |
 | SWR-FZC-003 | SWR-FZC.md | — | fzc/test/test_Swc_Steering.c | — | sil_011_steering_sensor_failure.yaml | COVERED |
@@ -139,21 +139,27 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-FZC-016 | SWR-FZC.md | fzc/src/Swc_Lidar.c | fzc/test/test_Swc_Lidar.c | — | — | COVERED |
 | SWR-FZC-017 | SWR-FZC.md | fzc/src/Swc_Buzzer.c | fzc/test/test_Swc_Buzzer.c | — | — | COVERED |
 | SWR-FZC-018 | SWR-FZC.md | fzc/src/Swc_Buzzer.c | fzc/test/test_Swc_Buzzer.c | — | — | COVERED |
-| SWR-FZC-019 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-FZC-020 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
+| SWR-FZC-019 | SWR-FZC.md | fzc/src/Swc_FzcCom.c | fzc/test/test_Swc_FzcCom.c | — | — | COVERED |
+| SWR-FZC-020 | SWR-FZC.md | fzc/src/Swc_FzcCom.c | fzc/test/test_Swc_FzcCom.c | — | — | COVERED |
 | SWR-FZC-021 | SWR-FZC.md | fzc/src/Swc_Heartbeat.c | fzc/test/test_Swc_Heartbeat.c | — | — | COVERED |
 | SWR-FZC-022 | SWR-FZC.md | fzc/src/Swc_Heartbeat.c | fzc/test/test_Swc_Heartbeat.c | — | — | COVERED |
 | SWR-FZC-023 | SWR-FZC.md | fzc/src/Swc_FzcSafety.c | fzc/test/test_Swc_FzcSafety.c | — | — | COVERED |
-| SWR-FZC-024 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
+| SWR-FZC-024 | SWR-FZC.md | fzc/src/Swc_FzcCanMonitor.c | fzc/test/test_Swc_FzcCanMonitor.c | — | — | COVERED |
 | SWR-FZC-025 | SWR-FZC.md | fzc/src/main.c,fzc/src/Swc_FzcSafety.c | fzc/test/test_Swc_FzcSafety.c | — | — | COVERED |
-| SWR-FZC-026 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-FZC-027 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
+| SWR-FZC-026 | SWR-FZC.md | fzc/src/Swc_FzcCom.c | fzc/test/test_Swc_FzcCom.c | — | — | COVERED |
+| SWR-FZC-027 | SWR-FZC.md | fzc/src/Swc_FzcCom.c | fzc/test/test_Swc_FzcCom.c | — | — | COVERED |
 | SWR-FZC-028 | SWR-FZC.md | fzc/src/Swc_Steering.c | fzc/test/test_Swc_Steering.c | — | — | COVERED |
-| SWR-FZC-029 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-FZC-030 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-FZC-031 | SWR-FZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-FZC-032 | SWR-FZC.md | fzc/src/main.c | — | — | — | **PARTIAL** |
-| SWR-ICU-001 | SWR-ICU.md | icu/src/icu_main.c | — | — | — | **PARTIAL** |
+| SWR-FZC-029 | SWR-FZC.md | fzc/src/Swc_FzcScheduler.c | fzc/test/test_Swc_FzcScheduler.c | — | — | COVERED |
+| SWR-FZC-030 | SWR-FZC.md | fzc/src/Swc_FzcDcm.c | fzc/test/test_Swc_FzcDcm.c | — | — | COVERED |
+| SWR-FZC-031 | SWR-FZC.md | fzc/src/Swc_FzcNvm.c | fzc/test/test_Swc_FzcNvm.c | — | — | COVERED |
+| SWR-FZC-032 | SWR-FZC.md | fzc/src/main.c,fzc/src/Swc_FzcNvm.c | fzc/test/test_Swc_FzcNvm.c | — | — | COVERED |
+| SWR-GW-001 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-GW-002 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-GW-003 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-GW-004 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-GW-005 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-GW-006 | SWR-GW.md | — | — | — | — | **UNCOVERED** |
+| SWR-ICU-001 | SWR-ICU.md | icu/src/icu_main.c | icu/test/test_Swc_IcuCan.c | — | — | COVERED |
 | SWR-ICU-002 | SWR-ICU.md | icu/src/Swc_Dashboard.c | icu/test/test_Swc_Dashboard.c | — | — | COVERED |
 | SWR-ICU-003 | SWR-ICU.md | icu/src/Swc_Dashboard.c | icu/test/test_Swc_Dashboard.c | — | — | COVERED |
 | SWR-ICU-004 | SWR-ICU.md | icu/src/Swc_Dashboard.c | icu/test/test_Swc_Dashboard.c | — | — | COVERED |
@@ -162,7 +168,7 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-ICU-007 | SWR-ICU.md | icu/src/Swc_Dashboard.c | icu/test/test_Swc_Dashboard.c | — | — | COVERED |
 | SWR-ICU-008 | SWR-ICU.md | icu/src/Swc_DtcDisplay.c | icu/test/test_Swc_DtcDisplay.c | — | — | COVERED |
 | SWR-ICU-009 | SWR-ICU.md | icu/src/Swc_Dashboard.c | icu/test/test_Swc_Dashboard.c | — | — | COVERED |
-| SWR-ICU-010 | SWR-ICU.md | icu/src/icu_main.c | — | — | — | **PARTIAL** |
+| SWR-ICU-010 | SWR-ICU.md | icu/src/icu_main.c | icu/test/test_Swc_IcuMain.c | — | — | COVERED |
 | SWR-RZC-001 | SWR-RZC.md | rzc/src/Swc_Motor.c | rzc/test/test_Swc_Motor.c | — | sil_002_pedal_ramp.yaml | COVERED |
 | SWR-RZC-002 | SWR-RZC.md | — | rzc/test/test_Swc_Motor.c | — | sil_007_overcurrent_motor.yaml | COVERED |
 | SWR-RZC-003 | SWR-RZC.md | — | rzc/test/test_Swc_Motor.c | — | sil_010_overtemp_motor.yaml | COVERED |
@@ -181,18 +187,18 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-RZC-016 | SWR-RZC.md | rzc/src/Swc_Motor.c | rzc/test/test_Swc_Motor.c | — | — | COVERED |
 | SWR-RZC-017 | SWR-RZC.md | rzc/src/Swc_Battery.c | rzc/test/test_Swc_Battery.c | — | — | COVERED |
 | SWR-RZC-018 | SWR-RZC.md | rzc/src/Swc_Battery.c | rzc/test/test_Swc_Battery.c | — | — | COVERED |
-| SWR-RZC-019 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-RZC-020 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
+| SWR-RZC-019 | SWR-RZC.md | rzc/src/Swc_RzcCom.c | rzc/test/test_Swc_RzcCom.c | — | — | COVERED |
+| SWR-RZC-020 | SWR-RZC.md | rzc/src/Swc_RzcCom.c | rzc/test/test_Swc_RzcCom.c | — | — | COVERED |
 | SWR-RZC-021 | SWR-RZC.md | rzc/src/Swc_Heartbeat.c | rzc/test/test_Swc_Heartbeat.c | — | — | COVERED |
 | SWR-RZC-022 | SWR-RZC.md | rzc/src/Swc_Heartbeat.c | rzc/test/test_Swc_Heartbeat.c | — | — | COVERED |
 | SWR-RZC-023 | SWR-RZC.md | rzc/src/Swc_RzcSafety.c | rzc/test/test_Swc_RzcSafety.c | — | — | COVERED |
 | SWR-RZC-024 | SWR-RZC.md | rzc/src/Swc_RzcSafety.c | rzc/test/test_Swc_RzcSafety.c | — | — | COVERED |
-| SWR-RZC-025 | SWR-RZC.md | rzc/src/main.c | — | — | — | **PARTIAL** |
-| SWR-RZC-026 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-RZC-027 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-RZC-028 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-RZC-029 | SWR-RZC.md | — | — | — | — | **UNCOVERED** |
-| SWR-RZC-030 | SWR-RZC.md | rzc/src/main.c | — | — | — | **PARTIAL** |
+| SWR-RZC-025 | SWR-RZC.md | rzc/src/main.c,rzc/src/Swc_RzcSelfTest.c | rzc/test/test_Swc_RzcSelfTest.c | — | — | COVERED |
+| SWR-RZC-026 | SWR-RZC.md | rzc/src/Swc_RzcCom.c | rzc/test/test_Swc_RzcCom.c | — | — | COVERED |
+| SWR-RZC-027 | SWR-RZC.md | rzc/src/Swc_RzcCom.c | rzc/test/test_Swc_RzcCom.c | — | — | COVERED |
+| SWR-RZC-028 | SWR-RZC.md | rzc/src/Swc_RzcScheduler.c | rzc/test/test_Swc_RzcScheduler.c | — | — | COVERED |
+| SWR-RZC-029 | SWR-RZC.md | rzc/src/Swc_RzcDcm.c | rzc/test/test_Swc_RzcDcm.c | — | — | COVERED |
+| SWR-RZC-030 | SWR-RZC.md | rzc/src/main.c,rzc/src/Swc_RzcNvm.c | rzc/test/test_Swc_RzcNvm.c | — | — | COVERED |
 | SWR-SC-001 | SWR-SC.md | sc/src/sc_can.c | sc/test/test_sc_can.c | — | sil_004_can_busoff_fzc.yaml,sil_005_watchdog_timeout_cv... | COVERED |
 | SWR-SC-002 | SWR-SC.md | sc/src/sc_can.c | sc/test/test_sc_can.c | — | sil_012_multiple_faults.yaml | COVERED |
 | SWR-SC-003 | SWR-SC.md | sc/src/sc_e2e.c | sc/test/test_sc_e2e.c | — | — | COVERED |
@@ -217,9 +223,9 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-SC-022 | SWR-SC.md | sc/src/sc_watchdog.c | sc/test/test_sc_watchdog.c | — | — | COVERED |
 | SWR-SC-023 | SWR-SC.md | sc/src/sc_can.c | sc/test/test_sc_can.c | — | — | COVERED |
 | SWR-SC-024 | SWR-SC.md | sc/src/sc_plausibility.c | sc/test/test_sc_plausibility.c | — | — | COVERED |
-| SWR-SC-025 | SWR-SC.md | sc/src/sc_main.c | — | — | — | **PARTIAL** |
-| SWR-SC-026 | SWR-SC.md | sc/src/sc_main.c | — | — | — | **PARTIAL** |
-| SWR-TCU-001 | SWR-TCU.md | tcu/src/tcu_main.c | — | — | — | **PARTIAL** |
+| SWR-SC-025 | SWR-SC.md | sc/src/sc_main.c | sc/test/test_sc_main.c | — | — | COVERED |
+| SWR-SC-026 | SWR-SC.md | sc/src/sc_main.c | sc/test/test_sc_main.c | — | — | COVERED |
+| SWR-TCU-001 | SWR-TCU.md | tcu/src/tcu_main.c | tcu/test/test_Swc_TcuCan.c | — | — | COVERED |
 | SWR-TCU-002 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
 | SWR-TCU-003 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
 | SWR-TCU-004 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
@@ -232,66 +238,25 @@ iso_reference: "ISO 26262 Part 6"
 | SWR-TCU-011 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
 | SWR-TCU-012 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
 | SWR-TCU-013 | SWR-TCU.md | tcu/src/Swc_UdsServer.c | tcu/test/test_Swc_UdsServer.c | — | — | COVERED |
-| SWR-TCU-014 | SWR-TCU.md | — | — | — | — | **UNCOVERED** |
-| SWR-TCU-015 | SWR-TCU.md | tcu/src/tcu_main.c | — | — | — | **PARTIAL** |
+| SWR-TCU-014 | SWR-TCU.md | tcu/src/Swc_DataAggregator.c | tcu/test/test_Swc_DataAggregator.c | — | — | COVERED |
+| SWR-TCU-015 | SWR-TCU.md | tcu/src/tcu_main.c | tcu/test/test_Swc_TcuMain.c | — | — | COVERED |
 
 ## Summary
 
-- **Covered**: 143 / 187 requirements have test coverage
-- **Partial**: 13 requirements have source code but no test
-- **Uncovered**: 31 requirements have no test and no source reference
-- **Coverage**: 76%
-
-### Partial Requirements (code but no test)
-
-- `SWR-BCM-001`
-- `SWR-BCM-012`
-- `SWR-CVC-029`
-- `SWR-CVC-035`
-- `SWR-FZC-032`
-- `SWR-ICU-001`
-- `SWR-ICU-010`
-- `SWR-RZC-025`
-- `SWR-RZC-030`
-- `SWR-SC-025`
-- `SWR-SC-026`
-- `SWR-TCU-001`
-- `SWR-TCU-015`
+- **Covered**: 187 / 193 requirements have test coverage
+- **Partial**: 0 requirements have source code but no test
+- **Uncovered**: 6 requirements have no test and no source reference
+- **Coverage**: 96%
 
 ### Uncovered Requirements
 
-- `SWR-BCM-002`
-- `SWR-BCM-010`
-- `SWR-BCM-011`
-- `SWR-BSW-021`
-- `SWR-CVC-014`
-- `SWR-CVC-015`
-- `SWR-CVC-016`
-- `SWR-CVC-017`
-- `SWR-CVC-023`
-- `SWR-CVC-024`
-- `SWR-CVC-025`
-- `SWR-CVC-030`
-- `SWR-CVC-031`
-- `SWR-CVC-032`
-- `SWR-CVC-033`
-- `SWR-CVC-034`
-- `SWR-FZC-019`
-- `SWR-FZC-020`
-- `SWR-FZC-024`
-- `SWR-FZC-026`
-- `SWR-FZC-027`
-- `SWR-FZC-029`
-- `SWR-FZC-030`
-- `SWR-FZC-031`
-- `SWR-RZC-019`
-- `SWR-RZC-020`
-- `SWR-RZC-026`
-- `SWR-RZC-027`
-- `SWR-RZC-028`
-- `SWR-RZC-029`
-- `SWR-TCU-014`
+- `SWR-GW-001`
+- `SWR-GW-002`
+- `SWR-GW-003`
+- `SWR-GW-004`
+- `SWR-GW-005`
+- `SWR-GW-006`
 
 ---
 
-*Generated: 2026-02-24 20:37 UTC*
+*Generated: 2026-02-25 08:08 UTC*

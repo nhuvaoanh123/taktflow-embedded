@@ -227,7 +227,7 @@ The FZC software shall receive TFMini-S data via UART2 configured at 115200 baud
 ### SWR-FZC-014: Lidar Graduated Response Logic
 
 - **ASIL**: C
-- **Traces up**: SYS-019, TSR-019, SSR-FZC-012
+- **Traces up**: SYS-017, SYS-019, TSR-019, SSR-FZC-012
 - **Traces down**: firmware/fzc/src/swc/swc_lidar.c:Swc_Lidar_EvaluateDistance()
 - **Verified by**: TC-FZC-024, TC-FZC-025, TC-FZC-026
 - **Verification method**: Unit test + SIL

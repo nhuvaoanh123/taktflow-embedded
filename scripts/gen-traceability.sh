@@ -99,7 +99,8 @@ UNIT_MAP_FILE=$(mktemp)
 INT_MAP_FILE=$(mktemp)
 SIL_MAP_FILE=$(mktemp)
 SRC_MAP_FILE=$(mktemp)
-trap 'rm -f "$REQ_FILE" "$REQ_SOURCE_FILE" "$UNIT_MAP_FILE" "$INT_MAP_FILE" "$SIL_MAP_FILE" "$SRC_MAP_FILE"' EXIT
+BODY_FILE=$(mktemp)
+trap 'rm -f "$REQ_FILE" "$REQ_SOURCE_FILE" "$UNIT_MAP_FILE" "$INT_MAP_FILE" "$SIL_MAP_FILE" "$SRC_MAP_FILE" "$BODY_FILE"' EXIT
 
 echo "=== Traceability Matrix Generator ==="
 echo "Root:         $ROOT_DIR"
@@ -119,7 +120,7 @@ echo "--- [1/5] Extracting requirements from docs ---"
     for doc in "$DOCS_DIR"/SWR-*.md; do
         [ -f "$doc" ] || continue
         basename_doc=$(basename "$doc")
-        grep -oP 'SWR-[A-Z]+-\d+' "$doc" 2>/dev/null | sort -u | while IFS= read -r req_id; do
+        grep -oE 'SWR-[A-Z]+-[0-9]+' "$doc" 2>/dev/null | sort -u | while IFS= read -r req_id; do
             printf '%s\t%s\n' "$req_id" "$basename_doc"
         done || true
     done
@@ -139,7 +140,9 @@ echo "--- [2/5] Extracting unit test verifications ---"
 # Unit tests: firmware/*/test/test_*.c and firmware/shared/bsw/test/test_*.c
 while IFS= read -r tfile; do
     relpath="${tfile#"$ROOT_DIR/"}"
-    grep -oP '@verifies\s+\K(SWR-[A-Z]+-\d+(\s*,\s*SWR-[A-Z]+-\d+)*)' "$tfile" 2>/dev/null \
+    # Extract @verifies lines, strip the tag prefix, split on commas
+    grep -oE '@verifies[[:space:]]+(SWR-[A-Z]+-[0-9]+([[:space:]]*,[[:space:]]*SWR-[A-Z]+-[0-9]+)*)' "$tfile" 2>/dev/null \
+        | sed 's/@verifies[[:space:]]*//' \
         | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | while IFS= read -r req_id; do
             [ -n "$req_id" ] && printf '%s\t%s\n' "$req_id" "$relpath"
         done || true
@@ -157,7 +160,8 @@ echo "--- [3/5] Extracting integration test verifications ---"
 if [ -d "$INT_DIR" ]; then
     while IFS= read -r tfile; do
         relpath="${tfile#"$ROOT_DIR/"}"
-        grep -oP '@verifies\s+\K(SWR-[A-Z]+-\d+(\s*,\s*SWR-[A-Z]+-\d+)*)' "$tfile" 2>/dev/null \
+        grep -oE '@verifies[[:space:]]+(SWR-[A-Z]+-[0-9]+([[:space:]]*,[[:space:]]*SWR-[A-Z]+-[0-9]+)*)' "$tfile" 2>/dev/null \
+            | sed 's/@verifies[[:space:]]*//' \
             | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | while IFS= read -r req_id; do
                 [ -n "$req_id" ] && printf '%s\t%s\n' "$req_id" "$relpath"
             done || true
@@ -179,8 +183,8 @@ if [ -d "$SIL_DIR" ]; then
     for yfile in "$SIL_DIR"/*.yaml; do
         [ -f "$yfile" ] || continue
         relpath="${yfile#"$ROOT_DIR/"}"
-        # Parse YAML verifies: list — lines like:  - "SWR-XXX-NNN"
-        grep -oP '^\s*-\s*"?\K(SWR-[A-Z]+-\d+)' "$yfile" 2>/dev/null | while IFS= read -r req_id; do
+        # Parse YAML verifies: list — extract SWR IDs from lines like:  - "SWR-XXX-NNN"
+        grep -oE 'SWR-[A-Z]+-[0-9]+' "$yfile" 2>/dev/null | while IFS= read -r req_id; do
             [ -n "$req_id" ] && printf '%s\t%s\n' "$req_id" "$relpath"
         done || true
     done | sort -t$'\t' -k1,1 > "$SIL_MAP_FILE"
@@ -199,7 +203,7 @@ echo "--- [5/5] Extracting source code references ---"
 # Source files: firmware/*/src/*.c, firmware/shared/bsw/**/*.c and .h (excluding test dirs)
 while IFS= read -r sfile; do
     relpath="${sfile#"$ROOT_DIR/"}"
-    grep -oP 'SWR-[A-Z]+-\d+' "$sfile" 2>/dev/null | sort -u | while IFS= read -r req_id; do
+    grep -oE 'SWR-[A-Z]+-[0-9]+' "$sfile" 2>/dev/null | sort -u | while IFS= read -r req_id; do
         printf '%s\t%s\n' "$req_id" "$relpath"
     done || true
 done < <(find "$FW_DIR" \( -path '*/src/*.c' -o -path '*/bsw/*/*.c' -o -path '*/bsw/*/*.h' \) \
@@ -210,7 +214,16 @@ SRC_REQ_COUNT=$(cut -f1 "$SRC_MAP_FILE" | sort -u | wc -l)
 echo "  Found $SRC_REQ_COUNT unique requirements referenced in source code"
 
 # -----------------------------------------------------------------------
-# 6. Build traceability matrix
+# Helper: lookup tab-separated map file by req_id
+# -----------------------------------------------------------------------
+lookup() {
+    # Usage: lookup "$req_id" "$MAP_FILE"
+    # Returns tab-separated values from column 2 for matching column 1
+    awk -F'\t' -v id="$1" '$1==id{print $2}' "$2"
+}
+
+# -----------------------------------------------------------------------
+# 6. Build traceability matrix — first pass: generate rows and count
 # -----------------------------------------------------------------------
 echo ""
 echo "--- Building traceability matrix ---"
@@ -220,6 +233,85 @@ PARTIAL=0
 UNCOVERED=0
 UNCOVERED_LIST=""
 PARTIAL_LIST=""
+
+# Generate table rows to BODY_FILE while accumulating counts
+{
+    echo "| Requirement ID | Requirement Source | Source Files | Unit Tests | Integration Tests | SIL Scenarios | Status |"
+    echo "|---|---|---|---|---|---|---|"
+
+    while IFS= read -r req_id; do
+        # Requirement source document
+        req_src=$(lookup "$req_id" "$REQ_SOURCE_FILE" | head -1 || true)
+        req_src="${req_src:-—}"
+
+        # Source files referencing this requirement
+        src_files=$(lookup "$req_id" "$SRC_MAP_FILE" | sort -u \
+            | sed "s|firmware/shared/bsw/||g; s|firmware/||g" | tr '\n' ', ' | sed 's/,$//' || true)
+        src_files="${src_files:-—}"
+
+        # Unit test files
+        unit_files=$(lookup "$req_id" "$UNIT_MAP_FILE" | sort -u \
+            | sed "s|firmware/shared/bsw/||g; s|firmware/||g" | tr '\n' ', ' | sed 's/,$//' || true)
+        unit_files="${unit_files:-—}"
+
+        # Integration test files
+        int_files=$(lookup "$req_id" "$INT_MAP_FILE" | sort -u \
+            | sed "s|test/integration/||g" | tr '\n' ', ' | sed 's/,$//' || true)
+        int_files="${int_files:-—}"
+
+        # SIL scenario files
+        sil_files=$(lookup "$req_id" "$SIL_MAP_FILE" | sort -u \
+            | sed "s|test/sil/scenarios/||g" | tr '\n' ', ' | sed 's/,$//' || true)
+        sil_files="${sil_files:-—}"
+
+        # Determine status
+        has_test=false
+        has_source=false
+        [ "$unit_files" != "—" ] && has_test=true
+        [ "$int_files" != "—" ] && has_test=true
+        [ "$sil_files" != "—" ] && has_test=true
+        [ "$src_files" != "—" ] && has_source=true
+
+        if $has_test; then
+            status="COVERED"
+            COVERED=$((COVERED + 1))
+        elif $has_source; then
+            status="**PARTIAL**"
+            PARTIAL=$((PARTIAL + 1))
+            PARTIAL_LIST="$PARTIAL_LIST $req_id"
+        else
+            status="**UNCOVERED**"
+            UNCOVERED=$((UNCOVERED + 1))
+            UNCOVERED_LIST="$UNCOVERED_LIST $req_id"
+        fi
+
+        # Truncate long file lists for table readability
+        src_short=$(echo "$src_files" | cut -c1-55)
+        [ ${#src_files} -gt 55 ] && src_short="${src_short}..."
+        unit_short=$(echo "$unit_files" | cut -c1-55)
+        [ ${#unit_files} -gt 55 ] && unit_short="${unit_short}..."
+        int_short=$(echo "$int_files" | cut -c1-55)
+        [ ${#int_files} -gt 55 ] && int_short="${int_short}..."
+        sil_short=$(echo "$sil_files" | cut -c1-55)
+        [ ${#sil_files} -gt 55 ] && sil_short="${sil_short}..."
+
+        echo "| $req_id | $req_src | $src_short | $unit_short | $int_short | $sil_short | $status |"
+    done < "$REQ_FILE"
+} > "$BODY_FILE"
+
+# -----------------------------------------------------------------------
+# 7. Compute summary values
+# -----------------------------------------------------------------------
+TOTAL=$((COVERED + PARTIAL + UNCOVERED))
+if [ "$TOTAL" -gt 0 ]; then
+    PCT=$((COVERED * 100 / TOTAL))
+else
+    PCT=0
+fi
+
+# -----------------------------------------------------------------------
+# 8. Assemble final output file (no sed -i needed)
+# -----------------------------------------------------------------------
 
 # Ensure output directory exists
 mkdir -p "$(dirname "$OUTPUT")"
@@ -266,92 +358,25 @@ iso_reference: "ISO 26262 Part 6"
 
 HEADER
 
-    # Count per status (computed during table generation below — placeholder first pass)
-    # We will write placeholders and fill them via sed after the main loop.
+    # Summary table with actual computed values
     echo "| Metric | Count |"
     echo "|--------|-------|"
-    echo "| Total requirements | PLACEHOLDER_TOTAL |"
-    echo "| Covered (has test) | PLACEHOLDER_COVERED |"
-    echo "| Partial (code only) | PLACEHOLDER_PARTIAL |"
-    echo "| Uncovered | PLACEHOLDER_UNCOVERED |"
-    echo "| **Coverage** | **PLACEHOLDER_PCT%** |"
+    echo "| Total requirements | $TOTAL |"
+    echo "| Covered (has test) | $COVERED |"
+    echo "| Partial (code only) | $PARTIAL |"
+    echo "| Uncovered | $UNCOVERED |"
+    echo "| **Coverage** | **${PCT}%** |"
     echo ""
     echo "## Traceability Matrix"
     echo ""
-    echo "| Requirement ID | Requirement Source | Source Files | Unit Tests | Integration Tests | SIL Scenarios | Status |"
-    echo "|---|---|---|---|---|---|---|"
 
-    # --- Per-requirement row ---
-    while IFS= read -r req_id; do
-        # Requirement source document
-        req_src=$(grep -P "^${req_id}\t" "$REQ_SOURCE_FILE" 2>/dev/null | cut -f2 | head -1 || true)
-        req_src="${req_src:-—}"
-
-        # Source files referencing this requirement
-        src_files=$(grep -P "^${req_id}\t" "$SRC_MAP_FILE" 2>/dev/null | cut -f2 | sort -u \
-            | sed "s|firmware/shared/bsw/||g; s|firmware/||g" | tr '\n' ', ' | sed 's/,$//' || true)
-        src_files="${src_files:-—}"
-
-        # Unit test files
-        unit_files=$(grep -P "^${req_id}\t" "$UNIT_MAP_FILE" 2>/dev/null | cut -f2 | sort -u \
-            | sed "s|firmware/shared/bsw/||g; s|firmware/||g" | tr '\n' ', ' | sed 's/,$//' || true)
-        unit_files="${unit_files:-—}"
-
-        # Integration test files
-        int_files=$(grep -P "^${req_id}\t" "$INT_MAP_FILE" 2>/dev/null | cut -f2 | sort -u \
-            | sed "s|test/integration/||g" | tr '\n' ', ' | sed 's/,$//' || true)
-        int_files="${int_files:-—}"
-
-        # SIL scenario files
-        sil_files=$(grep -P "^${req_id}\t" "$SIL_MAP_FILE" 2>/dev/null | cut -f2 | sort -u \
-            | sed "s|test/sil/scenarios/||g" | tr '\n' ', ' | sed 's/,$//' || true)
-        sil_files="${sil_files:-—}"
-
-        # Determine status
-        has_test=false
-        has_source=false
-        [ "$unit_files" != "—" ] && has_test=true
-        [ "$int_files" != "—" ] && has_test=true
-        [ "$sil_files" != "—" ] && has_test=true
-        [ "$src_files" != "—" ] && has_source=true
-
-        if $has_test; then
-            status="COVERED"
-            COVERED=$((COVERED + 1))
-        elif $has_source; then
-            status="**PARTIAL**"
-            PARTIAL=$((PARTIAL + 1))
-            PARTIAL_LIST="$PARTIAL_LIST $req_id"
-        else
-            status="**UNCOVERED**"
-            UNCOVERED=$((UNCOVERED + 1))
-            UNCOVERED_LIST="$UNCOVERED_LIST $req_id"
-        fi
-
-        # Truncate long file lists for table readability
-        src_short=$(echo "$src_files" | cut -c1-55)
-        [ ${#src_files} -gt 55 ] && src_short="${src_short}..."
-        unit_short=$(echo "$unit_files" | cut -c1-55)
-        [ ${#unit_files} -gt 55 ] && unit_short="${unit_short}..."
-        int_short=$(echo "$int_files" | cut -c1-55)
-        [ ${#int_files} -gt 55 ] && int_short="${int_short}..."
-        sil_short=$(echo "$sil_files" | cut -c1-55)
-        [ ${#sil_files} -gt 55 ] && sil_short="${sil_short}..."
-
-        echo "| $req_id | $req_src | $src_short | $unit_short | $int_short | $sil_short | $status |"
-    done < "$REQ_FILE"
+    # Append pre-generated table body
+    cat "$BODY_FILE"
 
     # --- Summary section ---
     echo ""
     echo "## Summary"
     echo ""
-
-    TOTAL=$((COVERED + PARTIAL + UNCOVERED))
-    if [ "$TOTAL" -gt 0 ]; then
-        PCT=$((COVERED * 100 / TOTAL))
-    else
-        PCT=0
-    fi
 
     echo "- **Covered**: $COVERED / $TOTAL requirements have test coverage"
     echo "- **Partial**: $PARTIAL requirements have source code but no test"
@@ -385,23 +410,7 @@ HEADER
 } > "$OUTPUT"
 
 # -----------------------------------------------------------------------
-# 7. Fill in summary placeholders
-# -----------------------------------------------------------------------
-TOTAL=$((COVERED + PARTIAL + UNCOVERED))
-if [ "$TOTAL" -gt 0 ]; then
-    PCT=$((COVERED * 100 / TOTAL))
-else
-    PCT=0
-fi
-
-sed -i "s/PLACEHOLDER_TOTAL/$TOTAL/" "$OUTPUT"
-sed -i "s/PLACEHOLDER_COVERED/$COVERED/" "$OUTPUT"
-sed -i "s/PLACEHOLDER_PARTIAL/$PARTIAL/" "$OUTPUT"
-sed -i "s/PLACEHOLDER_UNCOVERED/$UNCOVERED/" "$OUTPUT"
-sed -i "s/PLACEHOLDER_PCT/$PCT/" "$OUTPUT"
-
-# -----------------------------------------------------------------------
-# 8. Print summary to stdout
+# 9. Print summary to stdout
 # -----------------------------------------------------------------------
 echo ""
 echo "=== Traceability Matrix Generated ==="
@@ -430,7 +439,7 @@ if [ $UNCOVERED -gt 0 ]; then
 fi
 
 # -----------------------------------------------------------------------
-# 9. Exit code
+# 10. Exit code
 # -----------------------------------------------------------------------
 GAPS=$((PARTIAL + UNCOVERED))
 

@@ -17,11 +17,13 @@ on:
   push:
     paths:
       - 'firmware/**'
+      - 'test/**'
       - 'tools/**'
       - '.github/workflows/test.yml'
   pull_request:
     paths:
       - 'firmware/**'
+      - 'test/**'
       - 'tools/**'
       - '.github/workflows/test.yml'
 
@@ -100,12 +102,49 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------------
-  # Combined coverage report (merges BSW + all ECUs)
+  # Integration tests + coverage (ASPICE SWE.5)
+  # -------------------------------------------------------------------
+  integration-tests:
+    name: Integration Tests + Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install coverage tools
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Run integration tests with coverage
+        working-directory: test/integration
+        run: make coverage
+
+      - name: Upload integration coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-coverage
+          path: test/integration/coverage/
+          retention-days: 30
+
+      - name: Integration coverage summary
+        if: always()
+        working-directory: test/integration
+        run: |
+          echo "=== Integration Coverage Summary ==="
+          if [ -f coverage/int-filtered.info ]; then
+            lcov --summary coverage/int-filtered.info --rc branch_coverage=1
+          else
+            echo "No coverage data generated."
+          fi
+
+  # -------------------------------------------------------------------
+  # Combined coverage report (merges BSW + all ECUs + integration)
   # -------------------------------------------------------------------
   combined-coverage:
     name: Combined Coverage Report
     runs-on: ubuntu-latest
-    needs: [bsw-tests, ecu-tests]
+    needs: [bsw-tests, ecu-tests, integration-tests]
     if: always()
 
     steps:
@@ -136,6 +175,11 @@ jobs:
               lcov_args="$lcov_args -a artifacts/${ecu}-coverage/filtered.info"
             fi
           done
+
+          # Integration test coverage
+          if [ -f artifacts/integration-coverage/int-filtered.info ]; then
+            lcov_args="$lcov_args -a artifacts/integration-coverage/int-filtered.info"
+          fi
 
           if [ -n "$lcov_args" ]; then
             lcov $lcov_args -o coverage/combined/total.info --rc branch_coverage=1
@@ -185,7 +229,33 @@ jobs:
           echo "  Branch:    100%"
           echo ""
 
-          # Report current baseline — gate enforcement will be enabled
-          # once Phase 2 (test hardening) achieves target coverage
-          echo "NOTE: Coverage gate enforcement pending Phase 2 completion."
-          echo "Current metrics logged for baseline tracking."
+          # Coverage gate enforcement
+          GATE_PASS=true
+
+          if [ -n "$FUNC_COV" ]; then
+            if [ "$(echo "$FUNC_COV < 90" | bc -l)" -eq 1 ]; then
+              echo "FAIL: Function coverage ${FUNC_COV}% < 90% threshold"
+              GATE_PASS=false
+            fi
+          fi
+
+          if [ -n "$LINE_COV" ]; then
+            if [ "$(echo "$LINE_COV < 85" | bc -l)" -eq 1 ]; then
+              echo "FAIL: Line coverage ${LINE_COV}% < 85% threshold"
+              GATE_PASS=false
+            fi
+          fi
+
+          if [ -n "$BRANCH_COV" ]; then
+            if [ "$(echo "$BRANCH_COV < 75" | bc -l)" -eq 1 ]; then
+              echo "FAIL: Branch coverage ${BRANCH_COV}% < 75% threshold"
+              GATE_PASS=false
+            fi
+          fi
+
+          if [ "$GATE_PASS" = "true" ]; then
+            echo "Coverage gate PASSED"
+          else
+            echo "Coverage gate FAILED — see thresholds above"
+            exit 1
+          fi

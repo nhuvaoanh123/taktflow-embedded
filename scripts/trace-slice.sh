@@ -9,6 +9,7 @@ set -euo pipefail
 #   bash scripts/trace-slice.sh --layer stk-sys --from STK-011 --to STK-020
 #   bash scripts/trace-slice.sh --layer sys-swr --from SYS-037 --to SYS-045
 #   bash scripts/trace-slice.sh --layer stk-sys --out docs/tmp/stk_sys.csv
+#   bash scripts/trace-slice.sh --layer sys-swr --direction reverse
 #
 # Output CSV columns:
 #   layer=stk-sys -> STK_ID,SYS_ID
@@ -16,21 +17,24 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SYSREQ="$ROOT_DIR/docs/aspice/system/system-requirements.md"
+SWR_DIR="$ROOT_DIR/docs/aspice/software/sw-requirements"
 OUT=""
 LAYER=""
 FROM_ID=""
 TO_ID=""
+DIRECTION="both"
 
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/trace-slice.sh --layer <stk-sys|sys-swr> [--from ID] [--to ID] [--out PATH]
+  bash scripts/trace-slice.sh --layer <stk-sys|sys-swr> [--from ID] [--to ID] [--out PATH] [--direction forward|reverse|both]
 
 Examples:
   bash scripts/trace-slice.sh --layer stk-sys
   bash scripts/trace-slice.sh --layer stk-sys --from STK-011 --to STK-020
   bash scripts/trace-slice.sh --layer sys-swr --from SYS-037 --to SYS-045
   bash scripts/trace-slice.sh --layer stk-sys --out docs/tmp/stk_sys.csv
+  bash scripts/trace-slice.sh --layer sys-swr --direction reverse
 EOF
 }
 
@@ -50,6 +54,10 @@ while [ $# -gt 0 ]; do
       ;;
     --out)
       OUT="${2:-}"
+      shift 2
+      ;;
+    --direction)
+      DIRECTION="${2:-both}"
       shift 2
       ;;
     --help|-h)
@@ -101,7 +109,11 @@ in_range() {
   return 0
 }
 
-extract_stk_sys() {
+# -----------------------------------------------------------------------
+# STK-SYS extraction: reverse (SYS "Traces up") + forward (Section 18 matrix)
+# -----------------------------------------------------------------------
+extract_stk_sys_reverse() {
+  # Parse SYS sections for "Traces up: STK-NNN"
   awk '
     /^### SYS-[0-9]+:/ {
       match($0, /SYS-[0-9]+/, m)
@@ -116,10 +128,45 @@ extract_stk_sys() {
         line = substr(line, RSTART + RLENGTH)
       }
     }
-  ' "$SYSREQ" | sort -u
+  ' "$SYSREQ"
 }
 
-extract_sys_swr() {
+extract_stk_sys_forward() {
+  # Parse Section 18 forward matrix table: | STK-NNN | SYS-NNN, ... |
+  awk '
+    /^## 18\. Traceability Matrix/ { in_matrix = 1; next }
+    /^### 18\.[1-9]/ { in_matrix = 0; next }
+    /^## [^1]/ { in_matrix = 0; next }
+    /^## 1[^8]/ { in_matrix = 0; next }
+    in_matrix && /^\| STK-[0-9]+/ {
+      match($0, /STK-[0-9]+/, stk)
+      # Extract everything after first |...|
+      line = $0
+      sub(/^\|[^|]+\|/, "", line)
+      while (match(line, /SYS-[0-9]+/, m)) {
+        print stk[0] "," m[0]
+        line = substr(line, RSTART + RLENGTH)
+      }
+    }
+  ' "$SYSREQ"
+}
+
+extract_stk_sys() {
+  {
+    if [ "$DIRECTION" = "reverse" ] || [ "$DIRECTION" = "both" ]; then
+      extract_stk_sys_reverse
+    fi
+    if [ "$DIRECTION" = "forward" ] || [ "$DIRECTION" = "both" ]; then
+      extract_stk_sys_forward
+    fi
+  } | sort -u
+}
+
+# -----------------------------------------------------------------------
+# SYS-SWR extraction: forward (SYS "Traces down") + reverse (SWR "Traces up")
+# -----------------------------------------------------------------------
+extract_sys_swr_forward() {
+  # Parse system-requirements.md "Traces down: SWR-NNN"
   awk '
     /^### SYS-[0-9]+:/ {
       match($0, /SYS-[0-9]+/, m)
@@ -134,9 +181,48 @@ extract_sys_swr() {
         line = substr(line, RSTART + RLENGTH)
       }
     }
-  ' "$SYSREQ" | sort -u
+  ' "$SYSREQ"
 }
 
+extract_sys_swr_reverse() {
+  # Parse SWR-*.md files for "Traces up: SYS-NNN"
+  if [ ! -d "$SWR_DIR" ]; then
+    return
+  fi
+  for swr_file in "$SWR_DIR"/SWR-*.md; do
+    [ -f "$swr_file" ] || continue
+    awk '
+      /^### SWR-[A-Z]+-[0-9]+:/ {
+        match($0, /SWR-[A-Z]+-[0-9]+/, m)
+        cur_swr = m[0]
+        next
+      }
+      /- \*\*Traces up\*\*:/ {
+        if (cur_swr == "") next
+        line = $0
+        while (match(line, /SYS-[0-9]+/, m)) {
+          print m[0] "," cur_swr
+          line = substr(line, RSTART + RLENGTH)
+        }
+      }
+    ' "$swr_file"
+  done
+}
+
+extract_sys_swr() {
+  {
+    if [ "$DIRECTION" = "forward" ] || [ "$DIRECTION" = "both" ]; then
+      extract_sys_swr_forward
+    fi
+    if [ "$DIRECTION" = "reverse" ] || [ "$DIRECTION" = "both" ]; then
+      extract_sys_swr_reverse
+    fi
+  } | sort -u
+}
+
+# -----------------------------------------------------------------------
+# Main dispatch
+# -----------------------------------------------------------------------
 case "$LAYER" in
   stk-sys)
     {
@@ -172,4 +258,3 @@ if [ -n "$OUT" ]; then
 else
   cat "$tmp"
 fi
-
