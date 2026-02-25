@@ -1,795 +1,3029 @@
-﻿---
-document_id: TRACE
-title: "Traceability Matrix"
-version: "1.0"
-status: draft
+---
+document_id: TRACE-FULL
+title: "Full V-Model Traceability Matrix"
 aspice_processes: "SYS.1-5, SWE.1-6"
 iso_26262_part: "3, 4, 5, 6"
-date: 2026-02-21
+generated: "2026-02-25 22:40 UTC"
 ---
 
-## Human-in-the-Loop (HITL) Comment Lock
+# Full V-Model Traceability Matrix
 
-`HITL` means human-reviewer-owned comment content.
+> **Auto-generated** by `scripts/trace-gen.py`
+> Do not edit manually — regenerate after requirement or test changes.
 
-**Marker standard (code-friendly):**
-- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
-- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
-- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
+**Standard references:**
+- ISO 26262:2018 Parts 3-6 — Functional safety lifecycle
+- Automotive SPICE 4.0 SYS.1-5, SWE.1-6 — V-model traceability
 
-**Rules:**
-- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
-- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
-- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
+## Coverage Summary
 
+**Total requirements**: 471
 
-# Traceability Matrix
+| Level | Total | Traced Up | Traced Down | Tested | Coverage |
+|-------|-------|-----------|-------------|--------|----------|
+| STK | 32 | — | 25 | 21 | 78% |
+| SYS | 56 | 56 | 55 | 49 | 98% |
+| SG | 8 | — | 8 | 8 | 100% |
+| FSR | 25 | 25 | 25 | 25 | 100% |
+| TSR | 51 | 51 | 51 | 51 | 100% |
+| SSR | 81 | 81 | 81 | 81 | 100% |
+| HSR | 25 | 25 | 0 | — | 0% |
+| SWR | 193 | 193 | 0 | 187 | 96% |
 
-## 1. Purpose
+## Full Traceability Chains
 
-This document provides the complete bidirectional traceability matrix for the Taktflow Zonal Vehicle Platform, linking every requirement from the top-level safety goals through functional safety requirements, technical safety requirements, software/hardware safety requirements, software requirements, source code modules, and test cases. This matrix satisfies the traceability requirements of Automotive SPICE 4.0 (SWE.1-6, SYS.1-5) and ISO 26262:2018 (Parts 3, 4, 5, 6, 8).
+| SG | FSR | TSR | SSR/HSR | SWR | Source | Test | SIL | Status |
+|---|---|---|---|---|---|---|---|---|
+| SG-001 | FSR-001 | TSR-001 | HSR-CVC-001 | SWR-BSW-006 | firmware/shared/bsw/mcal/Spi.c, firmw... | firmware/shared/bsw/test/test_Spi.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | HSR-CVC-001 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | HSR-CVC-001 | SWR-CVC-001 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-001 | TSR-001 | HSR-CVC-001 | SWR-CVC-002 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-001 | SWR-BSW-006 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/shared/bsw/test/test_Spi.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-001 | SWR-BSW-014 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-001 | SWR-CVC-001 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-001 | SWR-CVC-002 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-002 | SWR-BSW-006 | firmware/shared/bsw/mcal/Spi.c, firmw... | firmware/shared/bsw/test/test_Spi.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-002 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-002 | SWR-CVC-001 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-001 | TSR-001 | SSR-CVC-002 | SWR-CVC-002 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-002 | HSR-CVC-001 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | HSR-CVC-001 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | HSR-CVC-001 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-003 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-003 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-003 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-004 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-004 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-001 | TSR-002 | SSR-CVC-004 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-002 | TSR-002 | HSR-CVC-001 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | HSR-CVC-001 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | HSR-CVC-001 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-003 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-003 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-003 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-004 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-004 | SWR-CVC-003 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_003_... | COVERED |
+| SG-001 | FSR-002 | TSR-002 | SSR-CVC-004 | SWR-CVC-004 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-002 | TSR-003 | SSR-CVC-005 | SWR-CVC-005 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-006 | SWR-BSW-018 | firmware/shared/bsw/services/Dem.c, f... | firmware/shared/bsw/test/test_Dem.c, ... | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-006 | SWR-CVC-006 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_015_... | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-006 | SWR-CVC-007 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-006 | SWR-CVC-008 | firmware/cvc/include/Swc_Pedal.h, fir... | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-007 | SWR-BSW-018 | firmware/shared/bsw/services/Dem.c, f... | firmware/shared/bsw/test/test_Dem.c, ... | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-007 | SWR-CVC-006 | — | firmware/cvc/test/test_Swc_Pedal.c | test/sil/scenarios/sil_015_... | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-007 | SWR-CVC-007 | — | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-004 | SSR-CVC-007 | SWR-CVC-008 | firmware/cvc/include/Swc_Pedal.h, fir... | firmware/cvc/test/test_Swc_Pedal.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | HSR-RZC-004 | SWR-BSW-008 | firmware/shared/bsw/mcal/Pwm.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | HSR-RZC-004 | SWR-BSW-009 | firmware/shared/bsw/mcal/Dio.c, firmw... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | HSR-RZC-004 | SWR-RZC-001 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-003 | TSR-005 | HSR-RZC-004 | SWR-RZC-002 | — | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-001 | SWR-BSW-008 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-001 | SWR-BSW-009 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-001 | SWR-RZC-001 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-001 | SWR-RZC-002 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-002 | SWR-BSW-008 | firmware/shared/bsw/mcal/Pwm.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-002 | SWR-BSW-009 | firmware/shared/bsw/mcal/Dio.c, firmw... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-002 | SWR-RZC-001 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_002_... | COVERED |
+| SG-001 | FSR-003 | TSR-005 | SSR-RZC-002 | SWR-RZC-002 | — | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-001 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-028 | SSR-SC-005 | SWR-SC-006 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-001 | FSR-018 | TSR-033 | HSR-CVC-003 | SWR-BSW-009 | firmware/shared/bsw/mcal/Dio.c, firmw... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-001 | FSR-018 | TSR-033 | HSR-CVC-003 | SWR-CVC-018 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-001 | FSR-018 | TSR-033 | SSR-CVC-014 | SWR-BSW-009 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-001 | FSR-018 | TSR-033 | SSR-CVC-014 | SWR-CVC-018 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-001 | FSR-018 | TSR-034 | SSR-CVC-015 | SWR-CVC-019 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-001 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-001 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | HSR-RZC-004 | SWR-RZC-014 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | HSR-RZC-004 | SWR-RZC-015 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | HSR-RZC-006 | SWR-RZC-014 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | HSR-RZC-006 | SWR-RZC-015 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | SSR-RZC-015 | SWR-RZC-014 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | SSR-RZC-015 | SWR-RZC-015 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | SSR-RZC-016 | SWR-RZC-014 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| SG-001 | FSR-021 | TSR-040 | SSR-RZC-016 | SWR-RZC-015 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | — | COVERED |
+| SG-001 | FSR-022 | TSR-007 | SSR-RZC-005 | SWR-RZC-007 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-001 | FSR-022 | TSR-041 | SSR-SC-010 | SWR-SC-007 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-001 | FSR-022 | TSR-041 | SSR-SC-010 | SWR-SC-008 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-001 | FSR-022 | TSR-041 | SSR-SC-011 | SWR-SC-007 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-001 | FSR-022 | TSR-041 | SSR-SC-011 | SWR-SC-008 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-001 | FSR-022 | TSR-042 | SSR-SC-012 | SWR-SC-009 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-001 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-001 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-002 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-002 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-002 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-002 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-002 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-002 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-002 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-002 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-002 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-002 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | HSR-FZC-001 | SWR-BSW-006 | firmware/shared/bsw/mcal/Spi.c, firmw... | firmware/shared/bsw/test/test_Spi.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | HSR-FZC-001 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | HSR-FZC-001 | SWR-FZC-001 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | SSR-FZC-001 | SWR-BSW-006 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/shared/bsw/test/test_Spi.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | SSR-FZC-001 | SWR-BSW-014 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-010 | SSR-FZC-001 | SWR-FZC-001 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-002 | SWR-BSW-018 | firmware/shared/bsw/services/Dem.c, f... | firmware/shared/bsw/test/test_Dem.c, ... | — | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-002 | SWR-FZC-002 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_008_... | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-002 | SWR-FZC-003 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_011_... | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-003 | SWR-BSW-018 | firmware/shared/bsw/services/Dem.c, f... | firmware/shared/bsw/test/test_Dem.c, ... | — | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-003 | SWR-FZC-002 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_008_... | COVERED |
+| SG-003 | FSR-006 | TSR-011 | SSR-FZC-003 | SWR-FZC-003 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_011_... | COVERED |
+| SG-003 | FSR-007 | TSR-012 | HSR-FZC-006 | SWR-BSW-008 | firmware/shared/bsw/mcal/Pwm.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | HSR-FZC-006 | SWR-FZC-004 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | HSR-FZC-006 | SWR-FZC-005 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-004 | SWR-BSW-008 | firmware/shared/bsw/mcal/Pwm.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-004 | SWR-FZC-004 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-004 | SWR-FZC-005 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-005 | SWR-BSW-008 | firmware/shared/bsw/mcal/Pwm.c, firmw... | firmware/shared/bsw/test/test_Pwm.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-005 | SWR-FZC-004 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-012 | SSR-FZC-005 | SWR-FZC-005 | — | firmware/fzc/test/test_Swc_Steering.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-007 | TSR-013 | HSR-FZC-006 | SWR-FZC-006 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-007 | TSR-013 | SSR-FZC-006 | SWR-FZC-006 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-008 | TSR-014 | SSR-FZC-007 | SWR-FZC-007 | — | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-003 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-028 | SSR-SC-005 | SWR-SC-006 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-003 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-003 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-003 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-003 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-003 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-003 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-003 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-003 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-003 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-009 | TSR-015 | HSR-FZC-002 | SWR-FZC-009 | firmware/fzc/include/Swc_Brake.h, fir... | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-009 | TSR-015 | SSR-FZC-008 | SWR-FZC-009 | firmware/fzc/include/Swc_Brake.h, fir... | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-009 | TSR-016 | SSR-FZC-009 | SWR-FZC-010 | firmware/fzc/src/Swc_Brake.c | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-010 | TSR-017 | SSR-FZC-010 | SWR-FZC-011 | — | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-004 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-028 | SSR-SC-005 | SWR-SC-006 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-004 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-004 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-004 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-004 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-004 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-004 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-004 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-004 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-004 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-004 | FSR-025 | TSR-016 | SSR-FZC-009 | SWR-FZC-010 | firmware/fzc/src/Swc_Brake.c | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-025 | TSR-048 | SSR-FZC-024 | SWR-FZC-012 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-004 | FSR-025 | TSR-049 | SSR-SC-015 | SWR-SC-024 | firmware/sc/include/sc_plausibility.h... | firmware/sc/test/test_sc_plausibility.c | — | COVERED |
+| SG-005 | FSR-009 | TSR-015 | HSR-FZC-002 | SWR-FZC-009 | firmware/fzc/include/Swc_Brake.h, fir... | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-005 | FSR-009 | TSR-015 | SSR-FZC-008 | SWR-FZC-009 | firmware/fzc/include/Swc_Brake.h, fir... | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-005 | FSR-009 | TSR-016 | SSR-FZC-009 | SWR-FZC-010 | firmware/fzc/src/Swc_Brake.c | firmware/fzc/test/test_Swc_Brake.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-005 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-005 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-005 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-005 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-005 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-005 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-005 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-005 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-005 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-005 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | HSR-RZC-001 | SWR-BSW-007 | firmware/shared/bsw/mcal/Adc.c, firmw... | firmware/shared/bsw/test/test_Adc.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | HSR-RZC-001 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | HSR-RZC-001 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-006 | FSR-004 | TSR-006 | HSR-RZC-001 | SWR-RZC-005 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | HSR-RZC-001 | SWR-RZC-006 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003 | SWR-BSW-007 | firmware/shared/bsw/mcal/Adc.c, firmw... | firmware/shared/bsw/test/test_Adc.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003 | SWR-RZC-005 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003 | SWR-RZC-006 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-004 | SWR-BSW-007 | firmware/shared/bsw/mcal/Adc.c, firmw... | firmware/shared/bsw/test/test_Adc.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-004 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-004 | SWR-BSW-019 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_003_... | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-004 | SWR-RZC-005 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-006 | SSR-RZC-004 | SWR-RZC-006 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-004 | TSR-007 | SSR-RZC-005 | SWR-RZC-007 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | HSR-RZC-002 | SWR-BSW-007 | firmware/shared/bsw/mcal/Adc.c, firmw... | firmware/shared/bsw/test/test_Adc.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | HSR-RZC-002 | SWR-BSW-014 | firmware/shared/bsw/ecual/IoHwAb.c, f... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | HSR-RZC-002 | SWR-RZC-009 | firmware/rzc/include/Swc_TempMonitor.... | firmware/rzc/test/test_Swc_TempMonitor.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | SSR-RZC-006 | SWR-BSW-007 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Adc.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | SSR-RZC-006 | SWR-BSW-014 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_IoHwAb.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-008 | SSR-RZC-006 | SWR-RZC-009 | firmware/rzc/include/Swc_TempMonitor.... | firmware/rzc/test/test_Swc_TempMonitor.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-009 | HSR-RZC-007 | SWR-RZC-010 | firmware/rzc/include/Swc_TempMonitor.... | firmware/rzc/test/test_Swc_TempMonitor.c | — | COVERED |
+| SG-006 | FSR-005 | TSR-009 | SSR-RZC-007 | SWR-RZC-010 | firmware/rzc/include/Swc_TempMonitor.... | firmware/rzc/test/test_Swc_TempMonitor.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-006 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-006 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-006 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-006 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-006 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-006 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-006 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-006 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-006 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-006 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-011 | TSR-018 | HSR-FZC-003 | SWR-FZC-013 | firmware/fzc/include/Swc_Lidar.h, fir... | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-011 | TSR-018 | SSR-FZC-011 | SWR-FZC-013 | firmware/fzc/include/Swc_Lidar.h, fir... | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-011 | TSR-019 | SSR-FZC-012 | SWR-FZC-014 | firmware/fzc/src/Swc_Brake.c | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-012 | TSR-018 | HSR-FZC-003 | SWR-FZC-013 | firmware/fzc/include/Swc_Lidar.h, fir... | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-012 | TSR-018 | SSR-FZC-011 | SWR-FZC-013 | firmware/fzc/include/Swc_Lidar.h, fir... | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-012 | TSR-020 | SSR-FZC-013 | SWR-BSW-018 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Dem.c, ... | — | COVERED |
+| SG-007 | FSR-012 | TSR-020 | SSR-FZC-013 | SWR-FZC-015 | firmware/fzc/src/Swc_Lidar.c | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-012 | TSR-021 | SSR-FZC-014 | SWR-FZC-016 | firmware/fzc/include/Swc_Lidar.h, fir... | firmware/fzc/test/test_Swc_Lidar.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-007 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-007 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-007 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-007 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-007 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-007 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-007 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-007 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-007 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-007 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-CVC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-FZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-RZC-005 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | HSR-SC-004 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-001 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-023 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-BSW-025 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-CVC-008 | SWR-SC-003 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-001 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-023 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-BSW-025 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-FZC-015 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-001 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-023 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-BSW-025 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-RZC-008 | SWR-SC-003 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-001 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-023 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-BSW-025 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-022 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-002 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-011 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-015 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-016 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-BSW-024 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-FZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-008 | SWR-RZC-019 | firmware/cvc/src/Swc_Pedal.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-002 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-011 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-015 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-016 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-BSW-024 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-FZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-CVC-009 | SWR-RZC-019 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-002 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-015 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-002 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-011 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-015 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-016 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-BSW-024 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-FZC-016 | SWR-RZC-019 | firmware/fzc/src/Swc_Lidar.c, firmwar... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-002 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-011 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-015 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-016 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-BSW-024 | firmware/rzc/src/Swc_CurrentMonitor.c... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-008 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-CVC-014 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-FZC-019 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-023 | SSR-RZC-009 | SWR-RZC-019 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-003 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-011 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-015 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-016 | firmware/shared/bsw/services/Com.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-BSW-024 | firmware/shared/bsw/services/E2E.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-CVC-010 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-011 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-015 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-016 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-BSW-024 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-RZC-020 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-001 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-002 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-FZC-017 | SWR-SC-003 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-011 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-015 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-016 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-BSW-024 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-001 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-002 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-RZC-010 | SWR-SC-003 | firmware/rzc/src/Swc_TempMonitor.c, f... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sc... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-001 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-003 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-011 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_CanIf.c... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-015 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_005_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-016 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_Com.c, ... | test/sil/scenarios/sil_007_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-BSW-024 | firmware/sc/src/sc_can.c, firmware/sh... | firmware/shared/bsw/test/test_E2E.c, ... | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-CVC-015 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-FZC-020 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-RZC-020 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-001 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_004_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-002 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | test/sil/scenarios/sil_012_... | COVERED |
+| SG-008 | FSR-013 | TSR-024 | SSR-SC-002 | SWR-SC-003 | firmware/sc/include/sc_e2e.h, firmwar... | firmware/sc/test/test_sc_e2e.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-CVC-011 | SWR-CVC-020 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-CVC-011 | SWR-FZC-021 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-CVC-011 | SWR-RZC-021 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-FZC-018 | SWR-CVC-020 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-FZC-018 | SWR-FZC-021 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-FZC-018 | SWR-RZC-021 | firmware/fzc/src/Swc_Buzzer.c, firmwa... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-RZC-011 | SWR-CVC-020 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-RZC-011 | SWR-FZC-021 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-025 | SSR-RZC-011 | SWR-RZC-021 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-CVC-012 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-CVC-012 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-CVC-012 | SWR-RZC-022 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-FZC-019 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-FZC-019 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-FZC-019 | SWR-RZC-022 | firmware/fzc/src/Swc_FzcCom.c, firmwa... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-RZC-012 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-RZC-012 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-014 | TSR-026 | SSR-RZC-012 | SWR-RZC-022 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-015 | TSR-027 | SSR-SC-003 | SWR-SC-004 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-015 | TSR-027 | SSR-SC-003 | SWR-SC-005 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-015 | TSR-027 | SSR-SC-004 | SWR-SC-004 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-015 | TSR-027 | SSR-SC-004 | SWR-SC-005 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-015 | TSR-028 | SSR-SC-005 | SWR-SC-006 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-028 | SSR-SC-005 | SWR-SC-006 | firmware/sc/include/sc_heartbeat.h, f... | firmware/sc/test/test_sc_heartbeat.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | HSR-SC-001 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | HSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-010 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-029 | SSR-SC-006 | SWR-SC-012 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-030 | HSR-SC-006 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-011 | firmware/sc/include/sc_relay.h, firmw... | firmware/sc/test/test_sc_relay.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-030 | SSR-SC-007 | SWR-SC-014 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | HSR-SC-005 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-016 | TSR-050 | SSR-SC-016 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-CVC-012 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-CVC-012 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-CVC-012 | SWR-RZC-022 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-FZC-019 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-FZC-019 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-FZC-019 | SWR-RZC-022 | firmware/fzc/src/Swc_FzcCom.c, firmwa... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-RZC-012 | SWR-CVC-021 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-RZC-012 | SWR-FZC-022 | firmware/fzc/include/Swc_Heartbeat.h,... | firmware/fzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-026 | SSR-RZC-012 | SWR-RZC-022 | firmware/rzc/include/Swc_Heartbeat.h,... | firmware/rzc/test/test_Swc_Heartbeat.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-BSW-021 | firmware/cvc/src/Swc_VehicleState.c | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-CVC-023 | firmware/cvc/include/Swc_Watchdog.h, ... | firmware/cvc/test/test_Swc_Watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-FZC-023 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/fzc/test/test_Swc_FzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-RZC-023 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-SC-021 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013 | SWR-SC-022 | firmware/cvc/src/Swc_VehicleState.c, ... | firmware/sc/test/test_sc_watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-BSW-021 | firmware/fzc/src/Swc_FzcCom.c | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-CVC-023 | firmware/cvc/include/Swc_Watchdog.h, ... | firmware/cvc/test/test_Swc_Watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-FZC-023 | firmware/fzc/include/Swc_FzcSafety.h,... | firmware/fzc/test/test_Swc_FzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-RZC-023 | firmware/fzc/src/Swc_FzcCom.c, firmwa... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-SC-021 | firmware/fzc/src/Swc_FzcCom.c, firmwa... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-FZC-020 | SWR-SC-022 | firmware/fzc/src/Swc_FzcCom.c, firmwa... | firmware/sc/test/test_sc_watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-BSW-021 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-CVC-023 | firmware/cvc/include/Swc_Watchdog.h, ... | firmware/cvc/test/test_Swc_Watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-FZC-023 | firmware/fzc/include/Swc_FzcSafety.h,... | firmware/fzc/test/test_Swc_FzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-RZC-023 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-SC-021 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-RZC-013 | SWR-SC-022 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/sc/test/test_sc_watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-BSW-021 | firmware/sc/src/sc_plausibility.c | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-CVC-023 | firmware/cvc/include/Swc_Watchdog.h, ... | firmware/cvc/test/test_Swc_Watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-FZC-023 | firmware/fzc/include/Swc_FzcSafety.h,... | firmware/fzc/test/test_Swc_FzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-RZC-023 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-SC-021 | firmware/sc/src/sc_plausibility.c, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-031 | SSR-SC-008 | SWR-SC-022 | firmware/sc/include/sc_watchdog.h, fi... | firmware/sc/test/test_sc_watchdog.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-032 | HSR-CVC-002 | SWR-BSW-021 | — | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-032 | HSR-FZC-004 | SWR-BSW-021 | — | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-032 | HSR-RZC-003 | SWR-BSW-021 | — | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-032 | HSR-SC-002 | SWR-BSW-021 | — | firmware/shared/bsw/test/test_WdgM.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | HSR-SC-005 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | HSR-SC-005 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | HSR-SC-005 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | HSR-SC-005 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | SSR-SC-016 | SWR-SC-016 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | SSR-SC-016 | SWR-SC-017 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | SSR-SC-016 | SWR-SC-018 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-050 | SSR-SC-016 | SWR-SC-019 | firmware/sc/include/sc_selftest.h, fi... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-051 | HSR-SC-005 | SWR-SC-020 | firmware/sc/src/sc_selftest.c | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-017 | TSR-051 | SSR-SC-017 | SWR-SC-020 | firmware/sc/src/sc_main.c, firmware/s... | firmware/sc/test/test_sc_selftest.c | — | COVERED |
+| SG-008 | FSR-018 | TSR-033 | HSR-CVC-003 | SWR-BSW-009 | firmware/shared/bsw/mcal/Dio.c, firmw... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-008 | FSR-018 | TSR-033 | HSR-CVC-003 | SWR-CVC-018 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-018 | TSR-033 | SSR-CVC-014 | SWR-BSW-009 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Dio.c | — | COVERED |
+| SG-008 | FSR-018 | TSR-033 | SSR-CVC-014 | SWR-CVC-018 | firmware/cvc/include/Swc_EStop.h, fir... | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-018 | TSR-034 | SSR-CVC-015 | SWR-CVC-019 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_EStop.c | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-016 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-022 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-BSW-026 | firmware/cvc/src/Swc_CvcCom.c, firmwa... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-009 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-035 | SSR-CVC-017 | SWR-CVC-010 | firmware/cvc/src/Swc_CvcCom.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-BSW-022 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_BswM.c,... | — | COVERED |
+| SG-008 | FSR-019 | TSR-036 | SSR-CVC-018 | SWR-CVC-011 | firmware/cvc/src/Swc_EStop.c | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-BSW-020 | firmware/shared/bsw/services/WdgM.c, ... | firmware/shared/bsw/test/test_WdgM.c,... | test/sil/scenarios/sil_001_... | COVERED |
+| SG-008 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-012 | — | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-019 | TSR-037 | SSR-CVC-019 | SWR-CVC-013 | firmware/cvc/include/Swc_VehicleState... | firmware/cvc/test/test_Swc_VehicleSta... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-BSW-004 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-BSW-005 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-BSW-012 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-CVC-004 | SWR-SC-023 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-BSW-004 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-BSW-005 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-BSW-012 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-FZC-005 | SWR-SC-023 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-BSW-004 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-BSW-005 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-BSW-012 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-RZC-005 | SWR-SC-023 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-BSW-004 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-BSW-005 | firmware/shared/bsw/mcal/Can.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-BSW-012 | firmware/shared/bsw/ecual/CanIf.c, fi... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | HSR-SC-004 | SWR-SC-023 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-BSW-004 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-BSW-005 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-BSW-012 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-FZC-024 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-RZC-024 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020 | SWR-SC-023 | firmware/cvc/src/Swc_EStop.c, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-BSW-004 | firmware/fzc/src/Swc_Heartbeat.c, fir... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-BSW-005 | firmware/fzc/src/Swc_Heartbeat.c, fir... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-BSW-012 | firmware/fzc/src/Swc_Heartbeat.c, fir... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-RZC-024 | firmware/fzc/src/Swc_Heartbeat.c, fir... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-FZC-021 | SWR-SC-023 | firmware/fzc/src/Swc_Heartbeat.c, fir... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-BSW-004 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-BSW-005 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-BSW-012 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-RZC-014 | SWR-SC-023 | firmware/rzc/src/Swc_Encoder.c, firmw... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-BSW-004 | firmware/sc/src/sc_plausibility.c, fi... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-BSW-005 | firmware/sc/src/sc_plausibility.c, fi... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-BSW-012 | firmware/sc/src/sc_plausibility.c, fi... | firmware/shared/bsw/test/test_CanIf.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-CVC-024 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-FZC-024 | firmware/fzc/include/Swc_FzcCanMonito... | firmware/fzc/test/test_Swc_FzcCanMoni... | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-RZC-024 | firmware/rzc/include/Swc_RzcSafety.h,... | firmware/rzc/test/test_Swc_RzcSafety.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-038 | SSR-SC-009 | SWR-SC-023 | firmware/sc/include/sc_can.h, firmwar... | firmware/sc/test/test_sc_can.c | — | COVERED |
+| SG-008 | FSR-020 | TSR-039 | SSR-CVC-021 | SWR-BSW-004 | firmware/cvc/src/Swc_Heartbeat.c, fir... | firmware/shared/bsw/test/test_Can.c, ... | — | COVERED |
+| SG-008 | FSR-020 | TSR-039 | SSR-CVC-021 | SWR-CVC-025 | firmware/cvc/include/Swc_CanMonitor.h... | firmware/cvc/test/test_Swc_CanMonitor.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-043 | HSR-CVC-005 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-043 | SSR-CVC-022 | SWR-CVC-027 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-044 | HSR-FZC-007 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-044 | SSR-FZC-022 | SWR-FZC-017 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-045 | HSR-SC-003 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-008 | FSR-023 | TSR-045 | SSR-SC-013 | SWR-SC-013 | firmware/sc/include/sc_led.h, firmwar... | firmware/sc/test/test_sc_led.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-CVC-023 | SWR-SC-025 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-FZC-023 | SWR-SC-025 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-RZC-017 | SWR-SC-025 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-010 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-BSW-027 | firmware/sc/src/sc_esm.c, firmware/sh... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-RZC-028 | firmware/rzc/include/Swc_RzcScheduler... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-046 | SSR-SC-014 | SWR-SC-025 | firmware/sc/src/sc_esm.c, firmware/sc... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-010 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-BSW-027 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-FZC-029 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-CVC-023 | SWR-RZC-028 | firmware/cvc/src/Swc_Watchdog.c, firm... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-010 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-BSW-027 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-FZC-023 | SWR-RZC-028 | firmware/fzc/src/Swc_FzcSafety.c, fir... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-010 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Gpt.c, ... | test/sil/scenarios/sil_009_... | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-BSW-027 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/shared/bsw/test/test_Rte.c, ... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
+| SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| — | — | — | — | SWR-BCM-001 | firmware/bcm/cfg/Com_Cfg_Bcm.c, firmw... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
+| — | — | — | — | SWR-BCM-002 | firmware/bcm/include/Swc_BcmCan.h, fi... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
+| — | — | — | — | SWR-BCM-003 | firmware/bcm/include/Swc_Lights.h, fi... | firmware/bcm/test/test_Swc_Lights.c | — | COVERED |
+| — | — | — | — | SWR-BCM-004 | firmware/bcm/include/Swc_Lights.h, fi... | firmware/bcm/test/test_Swc_Lights.c | — | COVERED |
+| — | — | — | — | SWR-BCM-005 | firmware/bcm/include/Swc_Lights.h, fi... | firmware/bcm/test/test_Swc_Lights.c | — | COVERED |
+| — | — | — | — | SWR-BCM-006 | firmware/bcm/include/Swc_Indicators.h... | firmware/bcm/test/test_Swc_Indicators.c | — | COVERED |
+| — | — | — | — | SWR-BCM-007 | firmware/bcm/include/Swc_Indicators.h... | firmware/bcm/test/test_Swc_Indicators.c | — | COVERED |
+| — | — | — | — | SWR-BCM-008 | firmware/bcm/include/Swc_Indicators.h... | firmware/bcm/test/test_Swc_Indicators.c | — | COVERED |
+| — | — | — | — | SWR-BCM-009 | firmware/bcm/include/Swc_DoorLock.h, ... | firmware/bcm/test/test_Swc_DoorLock.c | — | COVERED |
+| — | — | — | — | SWR-BCM-010 | firmware/bcm/include/Swc_BcmCan.h, fi... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
+| — | — | — | — | SWR-BCM-011 | firmware/bcm/include/Swc_BcmCan.h, fi... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
+| — | — | — | — | SWR-BCM-012 | firmware/bcm/cfg/Com_Cfg_Bcm.c, firmw... | firmware/bcm/test/test_Swc_BcmMain.c | — | COVERED |
+| — | — | — | — | SWR-BSW-013 | firmware/shared/bsw/ecual/PduR.c, fir... | firmware/shared/bsw/test/test_PduR.c,... | — | COVERED |
+| — | — | — | — | SWR-BSW-017 | firmware/shared/bsw/services/Dcm.c, f... | firmware/shared/bsw/test/test_Dcm.c, ... | test/sil/scenarios/sil_006_... | COVERED |
+| — | — | — | — | SWR-CVC-016 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| — | — | — | — | SWR-CVC-017 | firmware/cvc/include/Swc_CvcCom.h, fi... | firmware/cvc/test/test_Swc_CvcCom.c | — | COVERED |
+| — | — | — | — | SWR-CVC-022 | firmware/cvc/include/Swc_Heartbeat.h,... | firmware/cvc/test/test_Swc_Heartbeat.c | — | COVERED |
+| — | — | — | — | SWR-CVC-026 | firmware/cvc/include/Ssd1306.h, firmw... | firmware/cvc/test/test_Ssd1306.c | — | COVERED |
+| — | — | — | — | SWR-CVC-028 | firmware/cvc/include/Swc_Dashboard.h,... | firmware/cvc/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-CVC-029 | firmware/cvc/include/Swc_SelfTest.h, ... | firmware/cvc/test/test_Swc_SelfTest.c | — | COVERED |
+| — | — | — | — | SWR-CVC-030 | firmware/cvc/cfg/Dcm_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_Nvm.c | — | COVERED |
+| — | — | — | — | SWR-CVC-031 | firmware/cvc/include/Swc_Nvm.h, firmw... | firmware/cvc/test/test_Swc_Nvm.c | — | COVERED |
+| — | — | — | — | SWR-CVC-033 | firmware/cvc/include/Swc_CvcDcm.h, fi... | firmware/cvc/test/test_Swc_CvcDcm.c | — | COVERED |
+| — | — | — | — | SWR-CVC-034 | firmware/cvc/include/Swc_CvcDcm.h, fi... | firmware/cvc/test/test_Swc_CvcDcm.c | — | COVERED |
+| — | — | — | — | SWR-CVC-035 | firmware/cvc/cfg/Com_Cfg_Cvc.c, firmw... | firmware/cvc/test/test_Swc_CvcDcm.c | — | COVERED |
+| — | — | — | — | SWR-FZC-008 | firmware/fzc/include/Swc_Steering.h, ... | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| — | — | — | — | SWR-FZC-018 | firmware/fzc/include/Swc_Buzzer.h, fi... | firmware/fzc/test/test_Swc_Buzzer.c | — | COVERED |
+| — | — | — | — | SWR-FZC-025 | firmware/fzc/include/Swc_FzcSafety.h,... | firmware/fzc/test/test_Swc_FzcSafety.c | — | COVERED |
+| — | — | — | — | SWR-FZC-026 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| — | — | — | — | SWR-FZC-027 | firmware/fzc/include/Swc_FzcCom.h, fi... | firmware/fzc/test/test_Swc_FzcCom.c | — | COVERED |
+| — | — | — | — | SWR-FZC-028 | firmware/fzc/include/Swc_Steering.h, ... | firmware/fzc/test/test_Swc_Steering.c | — | COVERED |
+| — | — | — | — | SWR-FZC-030 | firmware/fzc/include/Swc_FzcDcm.h, fi... | firmware/fzc/test/test_Swc_FzcDcm.c | — | COVERED |
+| — | — | — | — | SWR-FZC-031 | firmware/fzc/include/Swc_FzcNvm.h, fi... | firmware/fzc/test/test_Swc_FzcNvm.c | — | COVERED |
+| — | — | — | — | SWR-FZC-032 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/fzc/test/test_Swc_FzcNvm.c | — | COVERED |
+| — | — | — | — | SWR-GW-001 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-002 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-003 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-004 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-005 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-006 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-ICU-001 | firmware/icu/cfg/Com_Cfg_Icu.c, firmw... | firmware/icu/test/test_Swc_IcuCan.c | — | COVERED |
+| — | — | — | — | SWR-ICU-002 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-003 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-004 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-005 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-006 | firmware/icu/src/Swc_Dashboard.c | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-007 | firmware/icu/src/Swc_Dashboard.c | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-008 | firmware/icu/include/Swc_DtcDisplay.h... | firmware/icu/test/test_Swc_DtcDisplay.c | — | COVERED |
+| — | — | — | — | SWR-ICU-009 | firmware/icu/src/Swc_Dashboard.c | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
+| — | — | — | — | SWR-ICU-010 | firmware/icu/cfg/Com_Cfg_Icu.c, firmw... | firmware/icu/test/test_Swc_IcuMain.c | — | COVERED |
+| — | — | — | — | SWR-RZC-003 | — | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_010_... | COVERED |
+| — | — | — | — | SWR-RZC-004 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | test/sil/scenarios/sil_006_... | COVERED |
+| — | — | — | — | SWR-RZC-008 | firmware/rzc/include/Swc_CurrentMonit... | firmware/rzc/test/test_Swc_CurrentMon... | — | COVERED |
+| — | — | — | — | SWR-RZC-011 | firmware/rzc/include/Swc_TempMonitor.... | firmware/rzc/test/test_Swc_TempMonitor.c | — | COVERED |
+| — | — | — | — | SWR-RZC-012 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| — | — | — | — | SWR-RZC-013 | firmware/rzc/include/Swc_Encoder.h, f... | firmware/rzc/test/test_Swc_Encoder.c | — | COVERED |
+| — | — | — | — | SWR-RZC-016 | firmware/rzc/include/Swc_Motor.h, fir... | firmware/rzc/test/test_Swc_Motor.c | — | COVERED |
+| — | — | — | — | SWR-RZC-017 | firmware/rzc/include/Swc_Battery.h, f... | firmware/rzc/test/test_Swc_Battery.c | — | COVERED |
+| — | — | — | — | SWR-RZC-018 | firmware/rzc/include/Swc_Battery.h, f... | firmware/rzc/test/test_Swc_Battery.c | — | COVERED |
+| — | — | — | — | SWR-RZC-025 | firmware/rzc/include/Swc_RzcSelfTest.... | firmware/rzc/test/test_Swc_RzcSelfTest.c | — | COVERED |
+| — | — | — | — | SWR-RZC-026 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| — | — | — | — | SWR-RZC-027 | firmware/rzc/include/Swc_RzcCom.h, fi... | firmware/rzc/test/test_Swc_RzcCom.c | — | COVERED |
+| — | — | — | — | SWR-RZC-029 | firmware/rzc/include/Swc_RzcDcm.h, fi... | firmware/rzc/test/test_Swc_RzcDcm.c | — | COVERED |
+| — | — | — | — | SWR-RZC-030 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcNvm.c | — | COVERED |
+| — | — | — | — | SWR-SC-015 | firmware/sc/include/sc_esm.h, firmwar... | firmware/sc/test/test_sc_esm.c | — | COVERED |
+| — | — | — | — | SWR-SC-026 | firmware/sc/include/sc_cfg.h, firmwar... | firmware/sc/test/test_sc_main.c | — | COVERED |
+| — | — | — | — | SWR-TCU-001 | firmware/tcu/cfg/Com_Cfg_Tcu.c, firmw... | firmware/tcu/test/test_Swc_TcuCan.c | — | COVERED |
+| — | — | — | — | SWR-TCU-002 | firmware/tcu/include/Swc_UdsServer.h,... | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-003 | firmware/tcu/include/Swc_UdsServer.h,... | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-004 | firmware/tcu/include/Swc_UdsServer.h,... | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-005 | firmware/tcu/include/Swc_UdsServer.h,... | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-006 | firmware/tcu/src/Swc_UdsServer.c | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-007 | firmware/tcu/src/Swc_UdsServer.c | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-008 | firmware/tcu/include/Swc_DtcStore.h, ... | firmware/tcu/test/test_Swc_DtcStore.c | — | COVERED |
+| — | — | — | — | SWR-TCU-009 | firmware/tcu/include/Swc_DtcStore.h, ... | firmware/tcu/test/test_Swc_DtcStore.c | — | COVERED |
+| — | — | — | — | SWR-TCU-010 | firmware/tcu/include/Swc_Obd2Pids.h, ... | firmware/tcu/test/test_Swc_Obd2Pids.c | — | COVERED |
+| — | — | — | — | SWR-TCU-011 | firmware/tcu/src/Swc_UdsServer.c | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-012 | firmware/tcu/src/Swc_UdsServer.c | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-013 | firmware/tcu/src/Swc_UdsServer.c | firmware/tcu/test/test_Swc_UdsServer.c | — | COVERED |
+| — | — | — | — | SWR-TCU-014 | firmware/tcu/include/Swc_DataAggregat... | firmware/tcu/test/test_Swc_DataAggreg... | — | COVERED |
+| — | — | — | — | SWR-TCU-015 | firmware/tcu/src/tcu_main.c | firmware/tcu/test/test_Swc_TcuMain.c | — | COVERED |
 
-The matrix enables:
-- **Impact analysis**: When any requirement changes, all affected artifacts are immediately identifiable.
-- **Coverage verification**: Every requirement is implemented and tested; no orphan code or tests exist.
-- **Audit readiness**: Assessors can verify completeness at any traceability level in a single document.
-- **Gap detection**: Missing links are flagged in the gap analysis section.
+## Requirement Index by Level
 
-## 2. Traceability Chain
+### STK (32 requirements)
 
-```
-Stakeholder Requirements (STK-001 to STK-032)          — SYS.1
-    | bidirectional
-    v
-System Requirements (SYS-001 to SYS-056)               — SYS.2
-    | bidirectional
-    v
- +-------------------+-------------------+
- |                                       |
- v                                       v
-Safety Goals (SG-001 to SG-008)     Software Requirements (SWR-{ECU}-NNN)  — SWE.1
-    |                                    |
-    v                                    v
-Functional Safety Reqs               SW Architecture Components             — SWE.2
-(FSR-001 to FSR-025)                     |
-    |                                    v
-    v                                 SW Detailed Design / Source Code       — SWE.3
-Technical Safety Reqs                    |
-(TSR-001 to TSR-051)                     v
-    |                                 Unit Tests (SWE.4)
-    v                                    |
- +----------+----------+                 v
- |                      |             Integration Tests (SWE.5)
- v                      v                |
-Software Safety     Hardware Safety      v
-Requirements        Requirements      SW Verification Tests (SWE.6)
-(SSR-{ECU}-NNN)    (HSR-{ECU}-NNN)       |
- 81 total           25 total             v
-                                      System Integration Tests (SYS.4)
-                                         |
-                                         v
-                                      System Verification Tests (SYS.5)
-```
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| STK-001 | ISO 26262 Full Safety Lifecycle Demonstration | — | — | — | — |
+| STK-002 | ASPICE Level 2 Process Maturity Demonstration | — | — | — | — |
+| STK-003 | AUTOSAR-like BSW Architecture Demonstration | — | — | SYS-030 | — |
+| STK-004 | Diverse Redundancy and Multi-Vendor Safety Arch... | — | — | SYS-025, SYS-026 | — |
+| STK-005 | Drive-by-Wire Function | — | — | SYS-001, SYS-002, SYS-003... | — |
+| STK-006 | Steering Control Function | — | — | SYS-010, SYS-011, SYS-012... | — |
+| STK-007 | Braking Control Function | — | — | SYS-014, SYS-015, SYS-016... | — |
+| STK-008 | Forward Obstacle Detection Function | — | — | SYS-017, SYS-018, SYS-019... | — |
+| STK-009 | Independent Safety Monitoring Function | — | — | SYS-021, SYS-022, SYS-023... | — |
+| STK-010 | Emergency Stop Function | — | — | SYS-028 | — |
+| STK-011 | Body Control Function | — | — | SYS-035, SYS-036 | — |
+| STK-012 | UDS Diagnostic Services | — | — | SYS-037, SYS-038, SYS-039... | — |
+| STK-013 | Diagnostic Trouble Code Management | — | — | SYS-038, SYS-041 | — |
+| STK-014 | Cloud Telemetry and Dashboarding | — | — | SYS-009, SYS-042 | — |
+| STK-015 | Edge ML Anomaly Detection | — | — | SYS-043 | — |
+| STK-016 | ASIL D Compliance for Drive-by-Wire, Steering, ... | — | — | SYS-001, SYS-002, SYS-005... | — |
+| STK-017 | Defined Safe States for All Safety Goals | — | — | SYS-012, SYS-016, SYS-029... | — |
+| STK-018 | Fault Tolerant Time Interval Compliance | — | — | SYS-002, SYS-011, SYS-015... | — |
+| STK-019 | Independent Safety Monitoring with Kill Relay | — | — | SYS-021, SYS-022, SYS-024... | — |
+| STK-020 | E2E Protection on Safety-Critical CAN Messages | — | — | SYS-032 | — |
+| STK-021 | Control Loop Cycle Time | — | — | SYS-053, SYS-054 | — |
+| STK-022 | CAN Bus Timing and Throughput | — | — | SYS-004, SYS-031, SYS-033 | — |
+| STK-023 | Sensor Update Rates | — | — | SYS-047, SYS-048, SYS-049 | — |
+| STK-024 | Safe State Transition Times | — | — | — | — |
+| STK-025 | Demonstration Scenario Coverage | — | — | — | — |
+| STK-026 | Visual and Audible Operator Feedback | — | — | SYS-036, SYS-044, SYS-045... | — |
+| STK-027 | Reproducible Build and Demo Process | — | — | — | — |
+| STK-028 | ISO 26262:2018 Compliance | — | — | — | — |
+| STK-029 | ASPICE Level 2 Minimum Process Maturity | — | — | — | — |
+| STK-030 | MISRA C:2012/2023 Coding Compliance | — | — | SYS-051, SYS-052 | — |
+| STK-031 | Bidirectional Traceability | — | — | SYS-055 | — |
+| STK-032 | SAP QM Integration Demonstration | — | — | SYS-056 | — |
 
-## 3. Referenced Documents
+### SYS (56 requirements)
 
-| Document ID | Title | Version | Location |
-|-------------|-------|---------|----------|
-| STK | Stakeholder Requirements | 1.0 | docs/aspice/system/stakeholder-requirements.md |
-| SYSREQ | System Requirements Specification | 1.0 | docs/aspice/system/system-requirements.md |
-| SG | Safety Goals | 1.0 | docs/safety/concept/safety-goals.md |
-| FSR | Functional Safety Requirements | 1.0 | docs/safety/requirements/functional-safety-reqs.md |
-| TSR | Technical Safety Requirements | 1.0 | docs/safety/requirements/technical-safety-reqs.md |
-| SSR | Software Safety Requirements | 1.0 | docs/safety/requirements/sw-safety-reqs.md |
-| HSR | Hardware Safety Requirements | 1.0 | docs/safety/requirements/hw-safety-reqs.md |
-| SWR-CVC | SW Requirements — CVC | 1.0 | docs/aspice/software/sw-requirements/SWR-CVC.md |
-| SWR-FZC | SW Requirements — FZC | 1.0 | docs/aspice/software/sw-requirements/SWR-FZC.md |
-| SWR-RZC | SW Requirements — RZC | 1.0 | docs/aspice/software/sw-requirements/SWR-RZC.md |
-| SWR-SC | SW Requirements — SC | 0.1 | docs/aspice/software/sw-requirements/SWR-SC.md |
-| SWR-BCM | SW Requirements — BCM | 1.0 | docs/aspice/software/sw-requirements/SWR-BCM.md |
-| SWR-ICU | SW Requirements — ICU | 1.0 | docs/aspice/software/sw-requirements/SWR-ICU.md |
-| SWR-TCU | SW Requirements — TCU | 1.0 | docs/aspice/software/sw-requirements/SWR-TCU.md |
-| SWR-BSW | SW Requirements — BSW | 1.0 | docs/aspice/software/sw-requirements/SWR-BSW.md |
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| SYS-001 | Dual Pedal Position Sensing | D | STK-005, STK-016 | TSR-001, TSR-002, SWR-CVC-001... | — |
+| SYS-002 | Pedal Sensor Plausibility Monitoring | D | STK-005, STK-016, STK-018 | TSR-003, TSR-004, SWR-CVC-003... | — |
+| SYS-003 | Pedal-to-Torque Mapping | D | STK-005 | SWR-CVC-001, SWR-CVC-007 | — |
+| SYS-004 | Motor Torque Control via CAN | D | STK-005, STK-022 | TSR-005, SWR-CVC-008, SWR-CVC-016... | — |
+| SYS-005 | Motor Current Monitoring | A | STK-005, STK-016 | TSR-006, TSR-007, SWR-RZC-005... | — |
+| SYS-006 | Motor Temperature Monitoring and Derating | A | STK-005, STK-016 | TSR-008, TSR-009, SWR-ICU-004... | — |
+| SYS-007 | Motor Direction Control and Plausibility | C | STK-005, STK-016 | TSR-040, SWR-RZC-002, SWR-RZC-012... | — |
+| SYS-008 | Battery Voltage Monitoring | QM | STK-005 | SWR-ICU-005, SWR-RZC-003, SWR-RZC-017... | — |
+| SYS-009 | Encoder Feedback for Speed Measurement | QM | STK-005, STK-014 | SWR-ICU-002, SWR-RZC-004, SWR-RZC-012 | — |
+| SYS-010 | Steering Command Reception and Servo Control | D | STK-006 | TSR-012, SWR-FZC-001, SWR-FZC-008... | — |
+| SYS-011 | Steering Angle Feedback Monitoring | D | STK-006, STK-016, STK-018 | TSR-010, TSR-011, SWR-FZC-001... | — |
+| SYS-012 | Steering Return-to-Center on Fault | D | STK-006, STK-017 | TSR-012, TSR-013, SWR-FZC-004... | — |
+| SYS-013 | Steering Rate and Angle Limiting | C | STK-006, STK-016 | TSR-014, SWR-FZC-007 | — |
+| SYS-014 | Brake Command Reception and Servo Control | D | STK-007 | TSR-015, SWR-FZC-002, SWR-FZC-009... | — |
+| SYS-015 | Brake System Monitoring | D | STK-007, STK-016, STK-018 | TSR-015, TSR-016, SWR-FZC-010... | — |
+| SYS-016 | Auto-Brake on CAN Communication Loss | D | STK-007, STK-017 | TSR-017, SWR-FZC-011 | — |
+| SYS-017 | Emergency Braking from Obstacle Detection | C | STK-007, STK-008 | TSR-018, SWR-FZC-014 | — |
+| SYS-018 | Lidar Distance Sensing | C | STK-008 | TSR-018, TSR-019, SWR-FZC-013 | — |
+| SYS-019 | Graduated Obstacle Response | C | STK-008 | TSR-018, TSR-019, SWR-FZC-004... | — |
+| SYS-020 | Lidar Sensor Plausibility Checking | C | STK-008, STK-016 | TSR-020, TSR-021, SWR-FZC-015... | — |
+| SYS-021 | Heartbeat Transmission by Zone ECUs | C | STK-009, STK-019 | TSR-025, TSR-026, SWR-CVC-020... | — |
+| SYS-022 | Heartbeat Timeout Detection by Safety Controller | C | STK-009, STK-019 | TSR-027, TSR-028, SWR-CVC-022... | — |
+| SYS-023 | Cross-Plausibility Check — Torque vs. Current | C | STK-009, STK-016 | TSR-041, TSR-042, SWR-SC-007... | — |
+| SYS-024 | Kill Relay Control — Energize-to-Run | D | STK-009, STK-019 | TSR-029, TSR-030, SWR-SC-006... | — |
+| SYS-025 | Safety Controller CAN Listen-Only Mode | C | STK-009, STK-004 | SWR-SC-001, SWR-SC-002, SWR-SC-026 | — |
+| SYS-026 | Safety Controller Lockstep CPU Monitoring | D | STK-004, STK-009 | SWR-SC-002, SWR-SC-014, SWR-SC-015... | — |
+| SYS-027 | External Watchdog Monitoring (All Physical ECUs) | D | STK-009, STK-019 | TSR-031, TSR-032, SWR-BSW-021... | — |
+| SYS-028 | E-Stop Detection and Broadcast | B | STK-010, STK-016 | TSR-033, TSR-034, SWR-CVC-018... | — |
+| SYS-029 | Vehicle State Machine | D | STK-005, STK-006, STK-007... | TSR-035, TSR-036, TSR-037... | — |
+| SYS-030 | Coordinated Mode Management via BswM | D | STK-005, STK-006, STK-007... | SWR-BCM-002, SWR-BSW-001, SWR-BSW-022... | — |
+| SYS-031 | CAN Bus Configuration | D | STK-022 | SWR-BCM-001, SWR-BSW-001, SWR-BSW-002... | — |
+| SYS-032 | E2E Protection on Safety-Critical Messages | D | STK-020 | TSR-022, TSR-023, TSR-024... | — |
+| SYS-033 | CAN Message Priority Assignment | D | STK-022 | SWR-BSW-003, SWR-CVC-016, SWR-CVC-017 | — |
+| SYS-034 | CAN Bus Loss Detection per ECU | C | STK-009, STK-017 | TSR-038, TSR-039, SWR-BSW-004... | — |
+| SYS-035 | Automatic Headlight Control | QM | STK-011 | SWR-BCM-001, SWR-BCM-002, SWR-BCM-003... | — |
+| SYS-036 | Turn Indicator and Hazard Light Control | QM | STK-011, STK-026 | SWR-BCM-002, SWR-BCM-006, SWR-BCM-007... | — |
+| SYS-037 | UDS Diagnostic Session Control | QM | STK-012 | SWR-BSW-013, SWR-BSW-017, SWR-CVC-033... | — |
+| SYS-038 | UDS Read and Clear DTC Services | QM | STK-012, STK-013 | SWR-BSW-017, SWR-CVC-033, SWR-CVC-034... | — |
+| SYS-039 | UDS Read/Write Data by Identifier | QM | STK-012 | SWR-BSW-017, SWR-CVC-031, SWR-CVC-033... | — |
+| SYS-040 | UDS Security Access | QM | STK-012 | SWR-BSW-017, SWR-CVC-033, SWR-TCU-005... | — |
+| SYS-041 | DTC Storage and Persistence | QM | STK-013 | SWR-BSW-004, SWR-BSW-018, SWR-BSW-019... | — |
+| SYS-042 | MQTT Telemetry to AWS IoT Core | QM | STK-014 | SWR-GW-001, SWR-GW-002 | — |
+| SYS-043 | Edge ML Anomaly Detection | QM | STK-015 | SWR-GW-003, SWR-GW-004 | — |
+| SYS-044 | OLED Status Display | QM | STK-026 | SWR-CVC-002, SWR-CVC-026, SWR-CVC-027... | — |
+| SYS-045 | Audible Warning via Buzzer | QM | STK-026 | SWR-FZC-005, SWR-FZC-017, SWR-FZC-018 | — |
+| SYS-046 | Fault LED Panel on Safety Controller | C | STK-026, STK-019 | SWR-ICU-006, SWR-ICU-009, SWR-SC-003... | — |
+| SYS-047 | SPI Interface — Pedal and Steering Sensors | D | STK-005, STK-006, STK-023 | SWR-BSW-005, SWR-BSW-006, SWR-BSW-014... | — |
+| SYS-048 | UART Interface — Lidar Sensor | C | STK-008, STK-023 | SWR-BSW-006, SWR-FZC-013 | — |
+| SYS-049 | ADC Interface — Current, Temperature, Voltage | A | STK-005, STK-023 | SWR-BSW-007, SWR-BSW-014, SWR-RZC-005... | — |
+| SYS-050 | PWM Interface — Motor and Servos | D | STK-005, STK-006, STK-007 | SWR-BSW-008, SWR-BSW-009, SWR-BSW-014... | — |
+| SYS-051 | MISRA C Compliance | D | STK-030 | SWR-ALL-001 | — |
+| SYS-052 | Static RAM Only — No Dynamic Allocation | D | STK-016, STK-030 | SWR-ALL-002 | — |
+| SYS-053 | WCET Within Deadline Margin | D | STK-021, STK-018 | SWR-ALL-003, SWR-BSW-010, SWR-BSW-027... | — |
+| SYS-054 | Flash Memory Utilization | QM | STK-021 | SWR-ALL-004 | — |
+| SYS-055 | Bidirectional Traceability Chain | D | STK-031 | — | — |
+| SYS-056 | SAP QM Mock Integration | QM | STK-032 | SWR-GW-005, SWR-GW-006 | — |
+
+### SG (8 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| SG-001 | Prevent Unintended Acceleration -- FTTI = 50 ms | — | — | FSR-001, FSR-002, FSR-003... | — |
+| SG-002 | Prevent Unintended Loss of Drive Torque -- FTTI... | — | — | FSR-013, FSR-019, FSR-023... | — |
+| SG-003 | Prevent Unintended Steering Movement -- FTTI = ... | — | — | FSR-006, FSR-007, FSR-008... | — |
+| SG-004 | Prevent Unintended Loss of Braking -- FTTI = 50 ms | — | — | FSR-009, FSR-010, FSR-013... | — |
+| SG-005 | Prevent Unintended Braking -- FTTI = 200 ms | — | — | FSR-009, FSR-013, FSR-019... | — |
+| SG-006 | Ensure Motor Protection -- FTTI = 500 ms | — | — | FSR-004, FSR-005, FSR-013... | — |
+| SG-007 | Ensure Obstacle Detection -- FTTI = 200 ms | — | — | FSR-011, FSR-012, FSR-013... | — |
+| SG-008 | Ensure Independent Safety Monitoring Availabili... | — | — | FSR-013, FSR-014, FSR-015... | — |
+
+### FSR (25 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| FSR-001 | Dual Pedal Sensor Plausibility Monitoring | D | SG-001 | TSR-001, TSR-002 | — |
+| FSR-002 | Pedal Sensor Fault Detection Within 20 ms | D | SG-001 | TSR-003, TSR-002 | — |
+| FSR-003 | Motor Torque Cutoff on Pedal Plausibility Failure | D | SG-001 | TSR-004, TSR-005 | — |
+| FSR-004 | Motor Current Monitoring and Overcurrent Cutoff | A | SG-006 | TSR-006, TSR-007 | — |
+| FSR-005 | Motor Temperature Monitoring and Derating | A | SG-006 | TSR-008, TSR-009 | — |
+| FSR-006 | Steering Angle Feedback Monitoring | D | SG-003 | TSR-010, TSR-011 | — |
+| FSR-007 | Steering Return-to-Center on Fault | D | SG-003 | TSR-012, TSR-013 | — |
+| FSR-008 | Steering Rate Limiting | C | SG-003 | TSR-014 | — |
+| FSR-009 | Brake Command Monitoring | D | SG-004, SG-005 | TSR-015, TSR-016 | — |
+| FSR-010 | Auto-Brake on CAN Timeout | D | SG-004 | TSR-017 | — |
+| FSR-011 | Lidar Distance Monitoring and Obstacle Detection | C | SG-007 | TSR-018, TSR-019 | — |
+| FSR-012 | Lidar Sensor Plausibility Check | C | SG-007 | TSR-020, TSR-021, TSR-018 | — |
+| FSR-013 | CAN E2E Protection on Safety Messages | D | SG-001, SG-002, SG-003... | TSR-022, TSR-023, TSR-024 | — |
+| FSR-014 | Heartbeat Transmission by All Zone ECUs | C | SG-008 | TSR-025, TSR-026 | — |
+| FSR-015 | Heartbeat Timeout Detection by Safety Controller | C | SG-008 | TSR-027, TSR-028 | — |
+| FSR-016 | Kill Relay Activation on Safety Goal Violation | D | SG-001, SG-003, SG-004... | TSR-029, TSR-030, TSR-028... | — |
+| FSR-017 | External Watchdog Monitoring Per ECU | D | SG-008 | TSR-031, TSR-032, TSR-026... | — |
+| FSR-018 | E-Stop Broadcast and Immediate Motor Cutoff | B | SG-001, SG-008 | TSR-033, TSR-034 | — |
+| FSR-019 | Vehicle State Machine Management | D | SG-001, SG-002, SG-003... | TSR-035, TSR-036, TSR-037 | — |
+| FSR-020 | CAN Bus Loss Detection | C | SG-008 | TSR-038, TSR-039 | — |
+| FSR-021 | Motor Direction Control Plausibility | C | SG-001 | TSR-040 | — |
+| FSR-022 | Cross-Plausibility — Torque Request vs. Actual ... | C | SG-001 | TSR-041, TSR-042, TSR-007 | — |
+| FSR-023 | Operator Warning on Degradation | B | SG-001, SG-002, SG-003... | TSR-043, TSR-044, TSR-045 | — |
+| FSR-024 | Safe State Transition Within FTTI | D | SG-001, SG-002, SG-003... | TSR-046, TSR-047 | — |
+| FSR-025 | Loss of Braking Detection and Motor Cutoff | D | SG-004 | TSR-048, TSR-049, TSR-016 | — |
+
+### TSR (51 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| TSR-001 | CVC Dual Pedal Sensor SPI Acquisition | D | FSR-001, SG-001, SYS-001 | SSR-CVC-001, SSR-CVC-002, HSR-CVC-001... | — |
+| TSR-002 | CVC Dual Pedal Sensor Plausibility Comparison | D | FSR-001, FSR-002, SG-001... | SSR-CVC-003, SSR-CVC-004, HSR-CVC-001... | — |
+| TSR-003 | CVC Pedal Sensor Individual Diagnostics | D | FSR-002, SG-001, SYS-002 | SSR-CVC-005, SWR-CVC-005 | — |
+| TSR-004 | CVC Zero-Torque Command on Pedal Fault | D | FSR-003, SG-001, SYS-002 | SSR-CVC-006, SSR-CVC-007, SWR-BSW-018... | — |
+| TSR-005 | RZC Motor Disable on Zero-Torque Command | D | FSR-003, SG-001, SYS-004 | SSR-RZC-001, SSR-RZC-002, HSR-RZC-004... | — |
+| TSR-006 | RZC Motor Current Sampling and Overcurrent Dete... | A | FSR-004, SG-006, SYS-005 | SSR-RZC-003, SSR-RZC-004, HSR-RZC-001... | — |
+| TSR-007 | RZC Motor Current Broadcast to SC | C | FSR-004, FSR-022, SG-001... | SSR-RZC-005, SWR-RZC-007 | — |
+| TSR-008 | RZC Motor Temperature Sampling | A | FSR-005, SG-006, SYS-006 | SSR-RZC-006, HSR-RZC-002, SWR-BSW-007... | — |
+| TSR-009 | RZC Motor Temperature Derating Enforcement | A | FSR-005, SG-006, SYS-006 | SSR-RZC-007, HSR-RZC-007, SWR-RZC-010 | — |
+| TSR-010 | FZC Steering Angle Sensor Acquisition | D | FSR-006, SG-003, SYS-011 | SSR-FZC-001, HSR-FZC-001, SWR-BSW-006... | — |
+| TSR-011 | FZC Steering Angle Feedback Plausibility | D | FSR-006, SG-003, SYS-011 | SSR-FZC-002, SSR-FZC-003, SWR-BSW-018... | — |
+| TSR-012 | FZC Steering Return-to-Center Command | D | FSR-007, SG-003, SYS-010... | SSR-FZC-004, SSR-FZC-005, HSR-FZC-006... | — |
+| TSR-013 | FZC Steering Servo PWM Disable on Persistent Fault | D | FSR-007, SG-003, SYS-012 | SSR-FZC-006, HSR-FZC-006, SWR-FZC-006 | — |
+| TSR-014 | FZC Steering Rate Limiting | C | FSR-008, SG-003, SYS-013 | SSR-FZC-007, SWR-FZC-007 | — |
+| TSR-015 | FZC Brake Servo PWM Command Verification | D | FSR-009, SG-004, SG-005... | SSR-FZC-008, HSR-FZC-002, SWR-FZC-009 | — |
+| TSR-016 | FZC Brake System Fault Notification | D | FSR-009, FSR-025, SG-004... | SSR-FZC-009, SWR-FZC-010 | — |
+| TSR-017 | FZC Auto-Brake on CAN Command Timeout | D | FSR-010, SG-004, SYS-016 | SSR-FZC-010, SWR-FZC-011 | — |
+| TSR-018 | FZC Lidar Sensor UART Acquisition | C | FSR-011, FSR-012, SG-007... | SSR-FZC-011, HSR-FZC-003, SWR-FZC-013 | — |
+| TSR-019 | FZC Lidar Graduated Response | C | FSR-011, SG-007, SYS-018... | SSR-FZC-012, SWR-FZC-014 | — |
+| TSR-020 | FZC Lidar Range and Stuck Sensor Check | C | FSR-012, SG-007, SYS-020 | SSR-FZC-013, SWR-BSW-018, SWR-FZC-015 | — |
+| TSR-021 | FZC Lidar Sensor Fault Safe Default | C | FSR-012, SG-007, SYS-020 | SSR-FZC-014, SWR-FZC-016 | — |
+| TSR-022 | E2E Protection Header Format | D | FSR-013, SG-001, SG-008... | SSR-CVC-008, SSR-FZC-015, SSR-RZC-008... | — |
+| TSR-023 | E2E Transmitter Behavior | D | FSR-013, SG-001, SG-008... | SSR-CVC-009, SSR-FZC-016, SSR-RZC-009... | — |
+| TSR-024 | E2E Receiver Behavior | D | FSR-013, SG-001, SG-008... | SSR-CVC-010, SSR-FZC-017, SSR-RZC-010... | — |
+| TSR-025 | Zone ECU Heartbeat Transmission | C | FSR-014, SG-008, SYS-021 | SSR-CVC-011, SSR-FZC-018, SSR-RZC-011... | — |
+| TSR-026 | Zone ECU Heartbeat Conditioning on Self-Check | C | FSR-014, FSR-017, SG-008... | SSR-CVC-012, SSR-FZC-019, SSR-RZC-012... | — |
+| TSR-027 | SC Heartbeat Timeout Detection | C | FSR-015, SG-008, SYS-022 | SSR-SC-003, SSR-SC-004, SWR-SC-004... | — |
+| TSR-028 | SC Heartbeat Timeout Confirmation and Kill Relay | D | FSR-015, FSR-016, SG-008... | SSR-SC-005, SWR-SC-006 | — |
+| TSR-029 | SC Kill Relay GPIO Control | D | FSR-016, SG-001, SG-003... | SSR-SC-006, HSR-SC-001, HSR-SC-006... | — |
+| TSR-030 | SC Kill Relay De-energize Conditions | D | FSR-016, SG-001, SG-003... | SSR-SC-007, HSR-SC-006, SWR-SC-011... | — |
+| TSR-031 | External Watchdog Feed Conditioning | D | FSR-017, SG-008, SYS-027 | SSR-CVC-013, SSR-FZC-020, SSR-RZC-013... | — |
+| TSR-032 | External Watchdog Hardware Configuration | D | FSR-017, SG-008, SYS-027 | HSR-CVC-002, HSR-FZC-004, HSR-RZC-003... | — |
+| TSR-033 | CVC E-Stop GPIO Detection | B | FSR-018, SG-001, SG-008... | SSR-CVC-014, HSR-CVC-003, SWR-BSW-009... | — |
+| TSR-034 | CVC E-Stop CAN Broadcast and Local Reaction | B | FSR-018, SG-001, SG-008... | SSR-CVC-015, SWR-CVC-019 | — |
+| TSR-035 | CVC Vehicle State Machine Implementation | D | FSR-019, SG-001, SG-008... | SSR-CVC-016, SSR-CVC-017, SWR-BSW-022... | — |
+| TSR-036 | CVC Vehicle State CAN Broadcast | D | FSR-019, SG-001, SG-008... | SSR-CVC-018, SWR-BSW-022, SWR-CVC-011 | — |
+| TSR-037 | CVC State Persistence in Non-Volatile Memory | D | FSR-019, SG-001, SG-008... | SSR-CVC-019, SWR-BSW-020, SWR-CVC-012... | — |
+| TSR-038 | Per-ECU CAN Bus Loss Detection | C | FSR-020, SG-008, SYS-034 | SSR-CVC-020, SSR-FZC-021, SSR-RZC-014... | — |
+| TSR-039 | CVC CAN Bus Recovery | C | FSR-020, SG-008, SYS-034 | SSR-CVC-021, SWR-BSW-004, SWR-CVC-025 | — |
+| TSR-040 | RZC Motor Direction Plausibility and Shoot-Thro... | C | FSR-021, SG-001, SYS-007 | SSR-RZC-015, SSR-RZC-016, HSR-RZC-004... | — |
+| TSR-041 | SC Torque-Current Cross-Plausibility Check | C | FSR-022, SG-001, SYS-023 | SSR-SC-010, SSR-SC-011, SWR-SC-007... | — |
+| TSR-042 | SC Cross-Plausibility Fault Reaction | C | FSR-022, SG-001, SYS-023 | SSR-SC-012, SWR-SC-009 | — |
+| TSR-043 | CVC OLED Warning Display | B | FSR-023, SG-001, SG-008 | SSR-CVC-022, HSR-CVC-005, SWR-CVC-027 | — |
+| TSR-044 | FZC Buzzer Warning Patterns | B | FSR-023, SG-001, SG-008 | SSR-FZC-022, HSR-FZC-007, SWR-FZC-017 | — |
+| TSR-045 | SC Fault LED Indication | B | FSR-023, SG-001, SG-008 | SSR-SC-013, HSR-SC-003, SWR-SC-013 | — |
+| TSR-046 | FTTI Compliance Verification per Safety Goal | D | FSR-024, SG-001, SG-008 | SSR-CVC-023, SSR-FZC-023, SSR-RZC-017... | — |
+| TSR-047 | Diagnostic Cycle Time Configuration | D | FSR-024, SG-001, SG-008 | SSR-CVC-023, SSR-FZC-023, SSR-RZC-017... | — |
+| TSR-048 | FZC Loss-of-Braking Detection and Motor Cutoff ... | D | FSR-025, SG-004 | SSR-FZC-024, SWR-FZC-012 | — |
+| TSR-049 | SC Backup Motor Cutoff on Loss of Braking | D | FSR-025, SG-004 | SSR-SC-015, SWR-SC-024 | — |
+| TSR-050 | SC Startup Self-Test Sequence | C | FSR-016, FSR-017, SG-008 | SSR-SC-016, HSR-SC-005, SWR-SC-016... | — |
+| TSR-051 | SC Runtime Periodic Self-Test | C | FSR-017, SG-008 | SSR-SC-017, HSR-SC-005, SWR-SC-020 | — |
+
+### SSR (81 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| SSR-CVC-001 | SPI1 Initialization for Dual Pedal Sensors | D | TSR-001 | SWR-BSW-006, SWR-CVC-001 | — |
+| SSR-CVC-002 | Pedal Sensor SPI Read Cycle | D | TSR-001 | SWR-CVC-002 | — |
+| SSR-CVC-003 | Dual Pedal Sensor Plausibility Comparison | D | TSR-002 | SWR-CVC-003 | — |
+| SSR-CVC-004 | Pedal Sensor Stuck-at Detection | D | TSR-002 | SWR-CVC-004 | — |
+| SSR-CVC-005 | Pedal Sensor Individual Diagnostics | D | TSR-003 | SWR-CVC-005 | — |
+| SSR-CVC-006 | Zero-Torque Latching on Pedal Fault | D | TSR-004 | SWR-CVC-006 | — |
+| SSR-CVC-007 | Zero-Torque CAN Transmission | D | TSR-004 | SWR-BSW-015, SWR-CVC-007, SWR-CVC-008 | — |
+| SSR-CVC-008 | CAN E2E Protection — Transmit Side | D | TSR-022, TSR-023 | SWR-BSW-001, SWR-BSW-023, SWR-CVC-014 | — |
+| SSR-CVC-009 | CAN E2E Protection — Transmit Counter Management | D | TSR-023 | SWR-CVC-014 | — |
+| SSR-CVC-010 | CAN E2E Protection — Receive Side | D | TSR-024 | SWR-CVC-015 | — |
+| SSR-CVC-011 | CVC Heartbeat Transmission | C | TSR-025 | SWR-CVC-020 | — |
+| SSR-CVC-012 | CVC Heartbeat Conditioning on Self-Check | C | TSR-026 | SWR-CVC-021 | — |
+| SSR-CVC-013 | CVC External Watchdog Feed | D | TSR-031 | SWR-BSW-021, SWR-CVC-023 | — |
+| SSR-CVC-014 | CVC E-Stop GPIO Interrupt Handler | B | TSR-033 | SWR-BSW-009, SWR-CVC-018 | — |
+| SSR-CVC-015 | CVC E-Stop CAN Broadcast | B | TSR-034 | SWR-CVC-019 | — |
+| SSR-CVC-016 | Vehicle State Machine Transition Logic | D | TSR-035 | SWR-BSW-022, SWR-CVC-009 | — |
+| SSR-CVC-017 | Vehicle State Machine Entry Actions | D | TSR-035 | SWR-BSW-022, SWR-CVC-010 | — |
+| SSR-CVC-018 | Vehicle State CAN Broadcast | D | TSR-036 | SWR-BSW-015, SWR-CVC-011 | — |
+| SSR-CVC-019 | Vehicle State NVM Persistence | D | TSR-037 | SWR-CVC-012 | — |
+| SSR-CVC-020 | CVC CAN Bus Loss Detection | C | TSR-038 | SWR-CVC-024 | — |
+| SSR-CVC-021 | CVC CAN Bus Recovery Attempt | C | TSR-039 | SWR-CVC-025 | — |
+| SSR-CVC-022 | CVC OLED Warning Display Update | B | TSR-043 | SWR-CVC-027 | — |
+| SSR-CVC-023 | CVC WCET Compliance for Safety Runnables | D | TSR-046, TSR-047 | SWR-BSW-027, SWR-CVC-032 | — |
+| SSR-FZC-001 | Steering Angle Sensor SPI Read | D | TSR-010 | SWR-BSW-006, SWR-FZC-001 | — |
+| SSR-FZC-002 | Steering Command-vs-Feedback Comparison | D | TSR-011 | SWR-FZC-002 | — |
+| SSR-FZC-003 | Steering Sensor Range and Rate Check | D | TSR-011 | SWR-FZC-003 | — |
+| SSR-FZC-004 | Steering Return-to-Center Execution | D | TSR-012 | SWR-BSW-008, SWR-FZC-004 | — |
+| SSR-FZC-005 | Steering Return-to-Center CAN Notification | D | TSR-012 | SWR-FZC-005 | — |
+| SSR-FZC-006 | Steering Servo PWM Disable | D | TSR-013 | SWR-FZC-006 | — |
+| SSR-FZC-007 | Steering Rate Limiter | C | TSR-014 | SWR-FZC-007 | — |
+| SSR-FZC-008 | Brake Servo PWM Output and Feedback | D | TSR-015 | SWR-FZC-009 | — |
+| SSR-FZC-009 | Brake Fault CAN Notification | D | TSR-016 | SWR-FZC-010 | — |
+| SSR-FZC-010 | Auto-Brake on CAN Command Timeout | D | TSR-017 | SWR-FZC-011 | — |
+| SSR-FZC-011 | Lidar UART Frame Reception | C | TSR-018 | SWR-FZC-013 | — |
+| SSR-FZC-012 | Lidar Graduated Response Logic | C | TSR-019 | SWR-FZC-014 | — |
+| SSR-FZC-013 | Lidar Range and Stuck Sensor Detection | C | TSR-020 | SWR-FZC-015 | — |
+| SSR-FZC-014 | Lidar Fault Safe Default Substitution | C | TSR-021 | SWR-FZC-016 | — |
+| SSR-FZC-015 | FZC CAN E2E Transmit | D | TSR-022, TSR-023 | SWR-BSW-023, SWR-FZC-019 | — |
+| SSR-FZC-016 | FZC CAN E2E Transmit Counter Management | D | TSR-023 | SWR-FZC-019 | — |
+| SSR-FZC-017 | FZC CAN E2E Receive | D | TSR-024 | SWR-FZC-020 | — |
+| SSR-FZC-018 | FZC Heartbeat Transmission | C | TSR-025 | SWR-FZC-021 | — |
+| SSR-FZC-019 | FZC Heartbeat Conditioning | C | TSR-026 | SWR-FZC-022 | — |
+| SSR-FZC-020 | FZC External Watchdog Feed | D | TSR-031 | SWR-BSW-021, SWR-FZC-023 | — |
+| SSR-FZC-021 | FZC CAN Bus Loss Detection | C | TSR-038 | SWR-FZC-024 | — |
+| SSR-FZC-022 | FZC Buzzer Pattern Generation | B | TSR-044 | SWR-FZC-017 | — |
+| SSR-FZC-023 | FZC WCET Compliance for Safety Runnables | D | TSR-046, TSR-047 | SWR-BSW-027, SWR-FZC-029 | — |
+| SSR-FZC-024 | FZC Loss-of-Braking Motor Cutoff Request | D | TSR-048 | SWR-FZC-012 | — |
+| SSR-RZC-001 | RZC Motor Driver Disable on Zero-Torque | D | TSR-005 | SWR-BSW-008, SWR-BSW-009, SWR-RZC-001 | — |
+| SSR-RZC-002 | RZC Motor Driver State Validation | D | TSR-005 | SWR-RZC-002 | — |
+| SSR-RZC-003 | Motor Current ADC Sampling | A | TSR-006 | SWR-BSW-007, SWR-RZC-005 | — |
+| SSR-RZC-004 | Motor Overcurrent Detection and Cutoff | A | TSR-006 | SWR-RZC-006 | — |
+| SSR-RZC-005 | Motor Current CAN Broadcast | C | TSR-007 | SWR-RZC-007 | — |
+| SSR-RZC-006 | Motor Temperature ADC Sampling | A | TSR-008 | SWR-BSW-007, SWR-RZC-009 | — |
+| SSR-RZC-007 | Motor Temperature Derating Logic | A | TSR-009 | SWR-RZC-010 | — |
+| SSR-RZC-008 | RZC CAN E2E Transmit | D | TSR-022, TSR-023 | SWR-BSW-023, SWR-RZC-019 | — |
+| SSR-RZC-009 | RZC CAN E2E Transmit Counter | D | TSR-023 | SWR-RZC-019 | — |
+| SSR-RZC-010 | RZC CAN E2E Receive | D | TSR-024 | SWR-RZC-020 | — |
+| SSR-RZC-011 | RZC Heartbeat Transmission | C | TSR-025 | SWR-RZC-021 | — |
+| SSR-RZC-012 | RZC Heartbeat Conditioning | C | TSR-026 | SWR-RZC-022 | — |
+| SSR-RZC-013 | RZC External Watchdog Feed | D | TSR-031 | SWR-BSW-021, SWR-RZC-023 | — |
+| SSR-RZC-014 | RZC CAN Bus Loss Detection | C | TSR-038 | SWR-RZC-024 | — |
+| SSR-RZC-015 | Motor Direction Plausibility Check | C | TSR-040 | SWR-RZC-014 | — |
+| SSR-RZC-016 | Motor Shoot-Through Protection | C | TSR-040 | SWR-RZC-015 | — |
+| SSR-RZC-017 | RZC WCET Compliance for Safety Runnables | D | TSR-046, TSR-047 | SWR-BSW-027, SWR-RZC-028 | — |
+| SSR-SC-001 | SC CAN E2E Receive — Listen-Only | D | TSR-022, TSR-024 | SWR-SC-001, SWR-SC-003 | — |
+| SSR-SC-002 | SC CAN Message Filtering | D | TSR-024 | SWR-SC-002 | — |
+| SSR-SC-003 | SC Heartbeat Timeout Counter Management | C | TSR-027 | SWR-SC-004 | — |
+| SSR-SC-004 | SC Fault LED Activation on Heartbeat Timeout | C | TSR-027 | SWR-SC-005 | — |
+| SSR-SC-005 | SC Heartbeat Timeout Confirmation and Relay De-... | D | TSR-028 | SWR-SC-006 | — |
+| SSR-SC-006 | SC Kill Relay GPIO Control | D | TSR-029 | SWR-SC-010 | — |
+| SSR-SC-007 | SC Kill Relay De-energize Trigger Logic | D | TSR-030 | SWR-SC-011 | — |
+| SSR-SC-008 | SC External Watchdog Feed | D | TSR-031 | SWR-SC-022 | — |
+| SSR-SC-009 | SC CAN Bus Loss Detection | C | TSR-038 | SWR-SC-023 | — |
+| SSR-SC-010 | SC Torque-Current Cross-Plausibility Lookup | C | TSR-041 | SWR-SC-007 | — |
+| SSR-SC-011 | SC Cross-Plausibility Debounce and Fault Detection | C | TSR-041 | SWR-SC-008 | — |
+| SSR-SC-012 | SC Cross-Plausibility Fault Reaction | C | TSR-042 | SWR-SC-009 | — |
+| SSR-SC-013 | SC Fault LED Management | B | TSR-045 | SWR-SC-013 | — |
+| SSR-SC-014 | SC FTTI Monitoring | D | TSR-046 | SWR-SC-025 | — |
+| SSR-SC-015 | SC Backup Motor Cutoff via Kill Relay | D | TSR-049 | SWR-SC-024 | — |
+| SSR-SC-016 | SC Startup Self-Test Sequence | C | TSR-050 | SWR-SC-016, SWR-SC-017, SWR-SC-018... | — |
+| SSR-SC-017 | SC Runtime Periodic Self-Test | C | TSR-051 | SWR-SC-020 | — |
+
+### HSR (25 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| HSR-CVC-001 | Dual AS5048A Pedal Sensor SPI Bus | D | TSR-001, TSR-002 | — | — |
+| HSR-CVC-002 | CVC External Watchdog (TPS3823) | D | TSR-032 | — | — |
+| HSR-CVC-003 | CVC E-Stop Input Circuit | B | TSR-033 | — | — |
+| HSR-CVC-004 | CVC CAN Transceiver | D | TSR-022, TSR-038 | — | — |
+| HSR-CVC-005 | CVC OLED Display Interface | B | TSR-043 | — | — |
+| HSR-FZC-001 | FZC Steering Angle Sensor SPI Bus | D | TSR-010 | — | — |
+| HSR-FZC-002 | FZC Brake Servo PWM Circuit | D | TSR-015 | — | — |
+| HSR-FZC-003 | FZC Lidar UART Interface | C | TSR-018 | — | — |
+| HSR-FZC-004 | FZC External Watchdog (TPS3823) | D | TSR-032 | — | — |
+| HSR-FZC-005 | FZC CAN Transceiver | D | TSR-022, TSR-038 | — | — |
+| HSR-FZC-006 | FZC Steering Servo PWM Circuit | D | TSR-012, TSR-013 | — | — |
+| HSR-FZC-007 | FZC Buzzer Circuit | B | TSR-044 | — | — |
+| HSR-RZC-001 | RZC ACS723 Motor Current Sensing Circuit | A | TSR-006 | — | — |
+| HSR-RZC-002 | RZC NTC Temperature Sensing Circuit | A | TSR-008 | — | — |
+| HSR-RZC-003 | RZC External Watchdog (TPS3823) | D | TSR-032 | — | — |
+| HSR-RZC-004 | RZC BTS7960 Motor Driver Interface | C | TSR-005, TSR-040 | — | — |
+| HSR-RZC-005 | RZC CAN Transceiver | D | TSR-022, TSR-038 | — | — |
+| HSR-RZC-006 | RZC Motor Encoder Interface | C | TSR-040 | — | — |
+| HSR-RZC-007 | RZC Battery Voltage Monitoring | A | TSR-009 | — | — |
+| HSR-SC-001 | SC Kill Relay Circuit | D | TSR-029 | — | — |
+| HSR-SC-002 | SC External Watchdog (TPS3823) | D | TSR-032 | — | — |
+| HSR-SC-003 | SC Fault LED Circuit | B | TSR-045 | — | — |
+| HSR-SC-004 | SC DCAN1 Listen-Only Mode Configuration | D | TSR-022, TSR-038 | — | — |
+| HSR-SC-005 | SC TMS570LC43x Lockstep CPU Configuration | D | TSR-050, TSR-051 | — | — |
+| HSR-SC-006 | SC Power Supply Independence | D | TSR-029, TSR-030 | — | — |
+
+### SWR (193 requirements)
+
+| ID | Title | ASIL | Parents | Children | Tested |
+|---|---|---|---|---|---|
+| SWR-BCM-001 | SocketCAN Interface Initialization | A | SYS-031, SYS-035 | — | Yes |
+| SWR-BCM-002 | Vehicle State CAN Reception | A | SYS-029, SYS-030, SYS-035... | — | Yes |
+| SWR-BCM-003 | Headlight Auto-On Control | A | SYS-035 | — | Yes |
+| SWR-BCM-004 | Headlight Auto-Off Control | A | SYS-035 | — | Yes |
+| SWR-BCM-005 | Headlight Manual Override | A | SYS-035 | — | Yes |
+| SWR-BCM-006 | Turn Indicator Control | A | SYS-036 | — | Yes |
+| SWR-BCM-007 | Hazard Light Activation | A | SYS-036 | — | Yes |
+| SWR-BCM-008 | Hazard Light Deactivation | A | SYS-036 | — | Yes |
+| SWR-BCM-009 | Door Lock Simulation | A | SYS-035 | — | Yes |
+| SWR-BCM-010 | Body Status CAN Transmission | A | SYS-035, SYS-036 | — | Yes |
+| SWR-BCM-011 | Body Control Command Reception | A | SYS-035, SYS-036 | — | Yes |
+| SWR-BCM-012 | BCM Main Loop Execution | A | SYS-035 | — | Yes |
+| SWR-BSW-001 | CAN Driver Initialization | D | SYS-031, TSR-022, SSR-CVC-008... | — | Yes |
+| SWR-BSW-002 | CAN Driver Write | D | SYS-031, SYS-032, TSR-023 | — | Yes |
+| SWR-BSW-003 | CAN Driver MainFunction_Read | D | SYS-031, SYS-032, TSR-024... | — | Yes |
+| SWR-BSW-004 | CAN Driver Bus-Off Recovery | D | SYS-034, TSR-038, TSR-039... | — | Yes |
+| SWR-BSW-005 | CAN Driver Error Callback | D | SYS-034, TSR-038, SYS-047 | — | Yes |
+| SWR-BSW-006 | SPI Driver for AS5048A Sensors | D | SYS-047, TSR-001, TSR-010... | — | Yes |
+| SWR-BSW-007 | ADC Driver for Analog Sensing | A | SYS-049, TSR-006, TSR-008... | — | Yes |
+| SWR-BSW-008 | PWM Driver for Motor and Servo Control | D | SYS-050, TSR-005, TSR-012... | — | Yes |
+| SWR-BSW-009 | DIO Driver for Digital I/O | D | SYS-050, TSR-005, TSR-033... | — | Yes |
+| SWR-BSW-010 | GPT Driver for Timing | D | SYS-053, TSR-046, TSR-047 | — | Yes |
+| SWR-BSW-011 | CanIf PDU Routing | D | SYS-031, SYS-032, TSR-022... | — | Yes |
+| SWR-BSW-012 | CanIf Controller Mode Management | D | SYS-034, TSR-038 | — | Yes |
+| SWR-BSW-013 | PduR Routing between CanIf, Com, and Dcm | D | SYS-031, SYS-032, SYS-037 | — | Yes |
+| SWR-BSW-014 | IoHwAb Sensor and Actuator Abstraction | D | SYS-047, SYS-049, SYS-050... | — | Yes |
+| SWR-BSW-015 | Com Signal Packing and Unpacking | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-BSW-016 | Com E2E Integration | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-BSW-017 | Dcm UDS Service Dispatch | A | SYS-037, SYS-038, SYS-039... | — | Yes |
+| SWR-BSW-018 | Dem DTC Event Management | B | SYS-041, TSR-004, TSR-011... | — | Yes |
+| SWR-BSW-019 | Dem Counter-Based Debouncing | B | SYS-041, TSR-002, TSR-006 | — | Yes |
+| SWR-BSW-020 | Dem NVM Persistence | B | SYS-041, TSR-037 | — | Yes |
+| SWR-BSW-021 | WdgM Alive Supervision | D | SYS-027, TSR-031, TSR-032... | — | Yes |
+| SWR-BSW-022 | BswM Mode Management Rules | D | SYS-029, SYS-030, TSR-035... | — | Yes |
+| SWR-BSW-023 | E2E CRC-8 Calculation | D | SYS-032, TSR-022, SSR-CVC-008... | — | Yes |
+| SWR-BSW-024 | E2E Alive Counter and Data ID Management | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-BSW-025 | E2E Per-PDU Configuration | D | SYS-032, TSR-022 | — | Yes |
+| SWR-BSW-026 | Rte Port-Based Communication | D | SYS-029, SYS-030, TSR-035 | — | Yes |
+| SWR-BSW-027 | Rte Runnable Scheduling | D | SYS-053, TSR-046, TSR-047... | — | Yes |
+| SWR-CVC-001 | SPI1 Initialization for Dual Pedal Sensors | D | SYS-001, SYS-047, TSR-001... | — | Yes |
+| SWR-CVC-002 | Pedal Sensor SPI Read Cycle | D | SYS-001, TSR-001, SSR-CVC-002... | — | Yes |
+| SWR-CVC-003 | Dual Pedal Sensor Plausibility Comparison | D | SYS-002, TSR-002, SSR-CVC-003 | — | Yes |
+| SWR-CVC-004 | Pedal Sensor Stuck-at Detection | D | SYS-002, TSR-002, SSR-CVC-004 | — | Yes |
+| SWR-CVC-005 | Pedal Sensor Individual Diagnostics | D | SYS-002, TSR-003, SSR-CVC-005 | — | Yes |
+| SWR-CVC-006 | Zero-Torque Latching on Pedal Fault | D | SYS-002, TSR-004, SSR-CVC-006 | — | Yes |
+| SWR-CVC-007 | Pedal-to-Torque Mapping | D | SYS-003, TSR-004, SSR-CVC-007 | — | Yes |
+| SWR-CVC-008 | Torque Request CAN Transmission | D | SYS-004, TSR-004, SSR-CVC-007 | — | Yes |
+| SWR-CVC-009 | Vehicle State Machine Transition Logic | D | SYS-029, TSR-035, SSR-CVC-016 | — | Yes |
+| SWR-CVC-010 | Vehicle State Machine Entry Actions | D | SYS-029, SYS-030, TSR-035... | — | Yes |
+| SWR-CVC-011 | Vehicle State CAN Broadcast | D | SYS-029, TSR-036, SSR-CVC-018 | — | Yes |
+| SWR-CVC-012 | Vehicle State NVM Persistence | D | SYS-029, TSR-037, SSR-CVC-019 | — | Yes |
+| SWR-CVC-013 | State Recovery Logic on Startup | D | SYS-029, TSR-037 | — | Yes |
+| SWR-CVC-014 | CAN E2E Protection -- Transmit Side | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-CVC-015 | CAN E2E Protection -- Receive Side | D | SYS-032, TSR-024, SSR-CVC-010 | — | Yes |
+| SWR-CVC-016 | CAN Message Reception and Routing | D | SYS-004, SYS-031, SYS-033 | — | Yes |
+| SWR-CVC-017 | CAN Transmit Scheduling | D | SYS-004, SYS-031, SYS-033 | — | Yes |
+| SWR-CVC-018 | E-Stop GPIO Interrupt Handler | B | SYS-028, TSR-033, SSR-CVC-014 | — | Yes |
+| SWR-CVC-019 | E-Stop CAN Broadcast | B | SYS-028, TSR-034, SSR-CVC-015 | — | Yes |
+| SWR-CVC-020 | CVC Heartbeat Transmission | C | SYS-021, TSR-025, SSR-CVC-011 | — | Yes |
+| SWR-CVC-021 | CVC Heartbeat Conditioning on Self-Check | C | SYS-021, TSR-026, SSR-CVC-012 | — | Yes |
+| SWR-CVC-022 | ECU Heartbeat Reception Monitoring | C | SYS-022, SYS-034 | — | Yes |
+| SWR-CVC-023 | External Watchdog Feed | D | SYS-027, TSR-031, SSR-CVC-013 | — | Yes |
+| SWR-CVC-024 | CAN Bus Loss Detection | C | SYS-034, TSR-038, SSR-CVC-020 | — | Yes |
+| SWR-CVC-025 | CAN Bus Recovery Attempt | C | SYS-034, TSR-039, SSR-CVC-021 | — | Yes |
+| SWR-CVC-026 | OLED Display Initialization | A | SYS-044 | — | Yes |
+| SWR-CVC-027 | OLED Warning Display Update | A | SYS-044, TSR-043, SSR-CVC-022 | — | Yes |
+| SWR-CVC-028 | OLED Display Speed and Telemetry in RUN Mode | A | SYS-044 | — | Yes |
+| SWR-CVC-029 | Startup Self-Test Sequence | D | SYS-027, SYS-029 | — | Yes |
+| SWR-CVC-030 | DTC Persistence in NVM | A | SYS-041 | — | Yes |
+| SWR-CVC-031 | Calibration Data Storage | A | SYS-039 | — | Yes |
+| SWR-CVC-032 | RTOS Task Configuration and WCET Compliance | D | SYS-053, TSR-046, TSR-047... | — | Yes |
+| SWR-CVC-033 | UDS Service Routing via CAN | A | SYS-037, SYS-038, SYS-039... | — | Yes |
+| SWR-CVC-034 | DTC Reporting via Dem | A | SYS-038, SYS-041 | — | Yes |
+| SWR-CVC-035 | CVC Data Identifiers (DIDs) | A | SYS-039 | — | Yes |
+| SWR-FZC-001 | Steering Angle Sensor SPI Read | D | SYS-011, SYS-047, TSR-010... | — | Yes |
+| SWR-FZC-002 | Steering Command-vs-Feedback Comparison | D | SYS-011, TSR-011, SSR-FZC-002... | — | Yes |
+| SWR-FZC-003 | Steering Sensor Range and Rate Check | D | SYS-011, TSR-011, SSR-FZC-003 | — | Yes |
+| SWR-FZC-004 | Steering Return-to-Center Execution | D | SYS-012, TSR-012, SSR-FZC-004... | — | Yes |
+| SWR-FZC-005 | Steering Return-to-Center CAN Notification | D | SYS-012, TSR-012, SSR-FZC-005... | — | Yes |
+| SWR-FZC-006 | Steering Servo PWM Disable | D | SYS-012, TSR-013, SSR-FZC-006 | — | Yes |
+| SWR-FZC-007 | Steering Rate Limiter | C | SYS-013, TSR-014, SSR-FZC-007 | — | Yes |
+| SWR-FZC-008 | Steering Servo PWM Output | D | SYS-010, SYS-050 | — | Yes |
+| SWR-FZC-009 | Brake Servo PWM Output and Feedback | D | SYS-014, SYS-050, TSR-015... | — | Yes |
+| SWR-FZC-010 | Brake Fault CAN Notification | D | SYS-015, TSR-016, SSR-FZC-009 | — | Yes |
+| SWR-FZC-011 | Auto-Brake on CAN Command Timeout | D | SYS-016, TSR-017, SSR-FZC-010 | — | Yes |
+| SWR-FZC-012 | Loss-of-Braking Motor Cutoff Request | D | SYS-015, TSR-048, SSR-FZC-024 | — | Yes |
+| SWR-FZC-013 | Lidar UART Frame Reception | C | SYS-018, SYS-048, TSR-018... | — | Yes |
+| SWR-FZC-014 | Lidar Graduated Response Logic | C | SYS-017, SYS-019, TSR-019... | — | Yes |
+| SWR-FZC-015 | Lidar Range and Stuck Sensor Detection | C | SYS-020, TSR-020, SSR-FZC-013 | — | Yes |
+| SWR-FZC-016 | Lidar Fault Safe Default Substitution | C | SYS-020, TSR-021, SSR-FZC-014 | — | Yes |
+| SWR-FZC-017 | Buzzer Pattern Generation | A | SYS-045, TSR-044, SSR-FZC-022 | — | Yes |
+| SWR-FZC-018 | Buzzer Pattern from CAN State | A | SYS-045 | — | Yes |
+| SWR-FZC-019 | FZC CAN E2E Transmit | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-FZC-020 | FZC CAN E2E Receive | D | SYS-032, TSR-024, SSR-FZC-017 | — | Yes |
+| SWR-FZC-021 | FZC Heartbeat Transmission | C | SYS-021, TSR-025, SSR-FZC-018 | — | Yes |
+| SWR-FZC-022 | FZC Heartbeat Conditioning | C | SYS-021, TSR-026, SSR-FZC-019 | — | Yes |
+| SWR-FZC-023 | FZC External Watchdog Feed | D | SYS-027, TSR-031, SSR-FZC-020 | — | Yes |
+| SWR-FZC-024 | FZC CAN Bus Loss Detection | C | SYS-034, TSR-038, SSR-FZC-021 | — | Yes |
+| SWR-FZC-025 | FZC Startup Self-Test Sequence | D | SYS-027, SYS-029 | — | Yes |
+| SWR-FZC-026 | FZC CAN Message Reception | D | SYS-010, SYS-014, SYS-031 | — | Yes |
+| SWR-FZC-027 | FZC CAN Message Transmission | D | SYS-015, SYS-031 | — | Yes |
+| SWR-FZC-028 | Steering Command CAN Timeout | D | SYS-010, SYS-034 | — | Yes |
+| SWR-FZC-029 | RTOS Task Configuration and WCET Compliance | D | SYS-053, TSR-046, TSR-047... | — | Yes |
+| SWR-FZC-030 | UDS Service Support | A | SYS-037, SYS-038, SYS-039 | — | Yes |
+| SWR-FZC-031 | FZC DTC Persistence | A | SYS-041 | — | Yes |
+| SWR-FZC-032 | Servo Calibration Data Storage | A | SYS-010, SYS-014 | — | Yes |
+| SWR-GW-001 | MQTT Telemetry Publishing | A | SYS-042 | — | — |
+| SWR-GW-002 | CAN Bus Data Acquisition | A | SYS-042 | — | — |
+| SWR-GW-003 | Edge ML Anomaly Detection | A | SYS-043 | — | — |
+| SWR-GW-004 | ML Model Loading and Validation | A | SYS-043 | — | — |
+| SWR-GW-005 | SAP QM DTC Forwarding | A | SYS-056 | — | — |
+| SWR-GW-006 | 8D Report Template Generation | A | SYS-056 | — | — |
+| SWR-ICU-001 | SocketCAN Interface Initialization | A | SYS-031 | — | Yes |
+| SWR-ICU-002 | Speed Gauge Data Acquisition | A | SYS-009, SYS-044 | — | Yes |
+| SWR-ICU-003 | Torque Gauge Data Acquisition | A | SYS-044 | — | Yes |
+| SWR-ICU-004 | Temperature Gauge Data Acquisition | A | SYS-006, SYS-044 | — | Yes |
+| SWR-ICU-005 | Battery Gauge Data Acquisition | A | SYS-008, SYS-044 | — | Yes |
+| SWR-ICU-006 | Warning Indicator Management | A | SYS-044, SYS-046 | — | Yes |
+| SWR-ICU-007 | Vehicle State Display | A | SYS-029, SYS-044 | — | Yes |
+| SWR-ICU-008 | DTC Display | A | SYS-038, SYS-041, SYS-044 | — | Yes |
+| SWR-ICU-009 | ECU Health Monitoring Display | A | SYS-021, SYS-044, SYS-046 | — | Yes |
+| SWR-ICU-010 | ICU Main Loop Execution | A | SYS-044 | — | Yes |
+| SWR-RZC-001 | Motor Driver Disable on Zero-Torque | D | SYS-004, TSR-005, SSR-RZC-001 | — | Yes |
+| SWR-RZC-002 | Motor Driver State Validation | D | SYS-004, TSR-005, SSR-RZC-002... | — | Yes |
+| SWR-RZC-003 | Torque-to-PWM Conversion | D | SYS-004, SYS-050, SYS-008 | — | Yes |
+| SWR-RZC-004 | Motor PWM Output Configuration | D | SYS-050, SYS-009 | — | Yes |
+| SWR-RZC-005 | Motor Current ADC Sampling | A | SYS-005, SYS-049, TSR-006... | — | Yes |
+| SWR-RZC-006 | Motor Overcurrent Detection and Cutoff | A | SYS-005, TSR-006, SSR-RZC-004 | — | Yes |
+| SWR-RZC-007 | Motor Current CAN Broadcast | C | SYS-005, TSR-007, SSR-RZC-005 | — | Yes |
+| SWR-RZC-008 | ACS723 Zero-Current Calibration | A | SYS-005, SYS-049 | — | Yes |
+| SWR-RZC-009 | Motor Temperature ADC Sampling | A | SYS-006, SYS-049, TSR-008... | — | Yes |
+| SWR-RZC-010 | Motor Temperature Derating Logic | A | SYS-006, TSR-009, SSR-RZC-007 | — | Yes |
+| SWR-RZC-011 | Temperature CAN Broadcast | A | SYS-006 | — | Yes |
+| SWR-RZC-012 | Quadrature Encoder Speed Measurement | C | SYS-009, SYS-007 | — | Yes |
+| SWR-RZC-013 | Motor Stall Detection | C | SYS-007 | — | Yes |
+| SWR-RZC-014 | Motor Direction Plausibility Check | C | SYS-007, TSR-040, SSR-RZC-015 | — | Yes |
+| SWR-RZC-015 | Motor Shoot-Through Protection | C | SYS-007, TSR-040, SSR-RZC-016 | — | Yes |
+| SWR-RZC-016 | Motor CAN Command Timeout | D | SYS-004, SYS-034 | — | Yes |
+| SWR-RZC-017 | Battery Voltage ADC Sampling | A | SYS-008, SYS-049 | — | Yes |
+| SWR-RZC-018 | Battery Voltage Threshold Monitoring | A | SYS-008 | — | Yes |
+| SWR-RZC-019 | RZC CAN E2E Transmit | D | SYS-032, TSR-022, TSR-023... | — | Yes |
+| SWR-RZC-020 | RZC CAN E2E Receive | D | SYS-032, TSR-024, SSR-RZC-010 | — | Yes |
+| SWR-RZC-021 | RZC Heartbeat Transmission | C | SYS-021, TSR-025, SSR-RZC-011 | — | Yes |
+| SWR-RZC-022 | RZC Heartbeat Conditioning | C | SYS-021, TSR-026, SSR-RZC-012 | — | Yes |
+| SWR-RZC-023 | RZC External Watchdog Feed | D | SYS-027, TSR-031, SSR-RZC-013 | — | Yes |
+| SWR-RZC-024 | RZC CAN Bus Loss Detection | C | SYS-034, TSR-038, SSR-RZC-014 | — | Yes |
+| SWR-RZC-025 | RZC Startup Self-Test Sequence | D | SYS-027, SYS-029 | — | Yes |
+| SWR-RZC-026 | RZC CAN Message Reception | D | SYS-004, SYS-031 | — | Yes |
+| SWR-RZC-027 | RZC CAN Message Transmission | D | SYS-005, SYS-031 | — | Yes |
+| SWR-RZC-028 | RTOS Task Configuration and WCET Compliance | D | SYS-053, TSR-046, TSR-047... | — | Yes |
+| SWR-RZC-029 | UDS Service Support | A | SYS-037, SYS-038, SYS-039 | — | Yes |
+| SWR-RZC-030 | RZC DTC Persistence | A | SYS-041 | — | Yes |
+| SWR-SC-001 | DCAN1 Silent Mode Configuration | C | SYS-025, TSR-024, SSR-SC-001 | — | Yes |
+| SWR-SC-002 | CAN Message Acceptance Filtering | D | SYS-025, TSR-024, SSR-SC-002... | — | Yes |
+| SWR-SC-003 | CAN E2E Receive Validation | D | SYS-032, TSR-022, TSR-024... | — | Yes |
+| SWR-SC-004 | Per-ECU Heartbeat Timeout Counter | C | SYS-022, TSR-027, SSR-SC-003 | — | Yes |
+| SWR-SC-005 | Fault LED Activation on Heartbeat Timeout | A | SYS-046, TSR-027, SSR-SC-004 | — | Yes |
+| SWR-SC-006 | Heartbeat Timeout Confirmation and Kill Relay | D | SYS-022, SYS-024, TSR-028... | — | Yes |
+| SWR-SC-007 | Torque-Current Lookup Table | C | SYS-023, TSR-041, SSR-SC-010 | — | Yes |
+| SWR-SC-008 | Cross-Plausibility Debounce and Fault Detection | C | SYS-023, TSR-041, SSR-SC-011 | — | Yes |
+| SWR-SC-009 | Cross-Plausibility Fault Reaction | C | SYS-023, TSR-042, SSR-SC-012 | — | Yes |
+| SWR-SC-010 | Kill Relay GPIO Control | D | SYS-024, TSR-029, SSR-SC-006 | — | Yes |
+| SWR-SC-011 | Kill Relay De-energize Trigger Logic | D | SYS-024, TSR-030, SSR-SC-007 | — | Yes |
+| SWR-SC-012 | Kill Relay GPIO Readback Verification | D | SYS-024, TSR-029 | — | Yes |
+| SWR-SC-013 | Fault LED Panel Management | A | SYS-046, TSR-045, SSR-SC-013 | — | Yes |
+| SWR-SC-014 | Lockstep ESM Configuration | D | SYS-026, TSR-030 | — | Yes |
+| SWR-SC-015 | Lockstep ESM Interrupt Handler | D | SYS-026 | — | Yes |
+| SWR-SC-016 | SC Startup Self-Test -- Lockstep CPU | D | SYS-026, TSR-050, SSR-SC-016 | — | Yes |
+| SWR-SC-017 | SC Startup Self-Test -- RAM PBIST | D | TSR-050, SSR-SC-016 | — | Yes |
+| SWR-SC-018 | SC Startup Self-Test -- Flash CRC | C | TSR-050, SSR-SC-016 | — | Yes |
+| SWR-SC-019 | SC Startup Self-Test Sequence | D | SYS-024, SYS-026, SYS-027... | — | Yes |
+| SWR-SC-020 | SC Runtime Periodic Self-Test | D | TSR-051, SSR-SC-017 | — | Yes |
+| SWR-SC-021 | SC Stack Canary Check | D | TSR-031 | — | Yes |
+| SWR-SC-022 | SC External Watchdog Feed | D | SYS-027, TSR-031, SSR-SC-008 | — | Yes |
+| SWR-SC-023 | SC CAN Bus Loss Detection | C | SYS-034, TSR-038, SSR-SC-009 | — | Yes |
+| SWR-SC-024 | SC Backup Motor Cutoff via Kill Relay | D | TSR-049, SSR-SC-015 | — | Yes |
+| SWR-SC-025 | SC Main Loop Structure and Timing | D | SYS-053, TSR-046, SSR-SC-014 | — | Yes |
+| SWR-SC-026 | SC System Initialization | D | SYS-024, SYS-025, SYS-026... | — | Yes |
+| SWR-TCU-001 | SocketCAN Interface Initialization | A | SYS-031, SYS-037 | — | Yes |
+| SWR-TCU-002 | UDS Diagnostic Session Control (0x10) | A | SYS-037, SYS-038 | — | Yes |
+| SWR-TCU-003 | UDS Clear Diagnostic Information (0x14) | A | SYS-038 | — | Yes |
+| SWR-TCU-004 | UDS Read DTC Information (0x19) | A | SYS-038, SYS-039 | — | Yes |
+| SWR-TCU-005 | UDS Read Data By Identifier (0x22) | A | SYS-039, SYS-040 | — | Yes |
+| SWR-TCU-006 | UDS Write Data By Identifier (0x2E) | A | SYS-039 | — | Yes |
+| SWR-TCU-007 | UDS Security Access (0x27) | A | SYS-040 | — | Yes |
+| SWR-TCU-008 | DTC Storage and Management | A | SYS-041 | — | Yes |
+| SWR-TCU-009 | DTC Freeze-Frame Capture | A | SYS-041 | — | Yes |
+| SWR-TCU-010 | OBD-II PID Support | A | SYS-038 | — | Yes |
+| SWR-TCU-011 | UDS Transport Layer (ISO-TP) | A | SYS-037, SYS-038 | — | Yes |
+| SWR-TCU-012 | Diagnostic Request Routing | A | SYS-037 | — | Yes |
+| SWR-TCU-013 | Negative Response Code Handling | A | SYS-037 | — | Yes |
+| SWR-TCU-014 | CAN Data Aggregation for DIDs | A | SYS-037, SYS-039 | — | Yes |
+| SWR-TCU-015 | TCU Main Loop Execution | A | SYS-037 | — | Yes |
+
+## Gap Analysis
+
+### Broken Links
+
+- SYS-051 traces down to SWR-ALL-001 (not found)
+- SYS-052 traces down to SWR-ALL-002 (not found)
+- SYS-053 traces down to SWR-ALL-003 (not found)
+- SYS-054 traces down to SWR-ALL-004 (not found)
+
+### Orphan Requirements
+
+None found.
+
+### Untested Requirements (SSR/SWR without test)
+
+- `SWR-GW-001`
+- `SWR-GW-002`
+- `SWR-GW-003`
+- `SWR-GW-004`
+- `SWR-GW-005`
+- `SWR-GW-006`
+
+### ASIL Consistency Warnings
+
+- HSR-RZC-004 (C) < TSR-005 (D)
+- SWR-BCM-001 (A) < SYS-031 (D)
+- SWR-BCM-002 (A) < SYS-029 (D)
+- SWR-BCM-002 (A) < SYS-030 (D)
+- SWR-BSW-018 (B) < TSR-004 (D)
+- SWR-BSW-018 (B) < TSR-011 (D)
+- SWR-BSW-018 (B) < TSR-020 (C)
+- SWR-BSW-019 (B) < TSR-002 (D)
+- SWR-BSW-020 (B) < TSR-037 (D)
+- SWR-CVC-027 (A) < SSR-CVC-022 (B)
+- SWR-CVC-027 (A) < TSR-043 (B)
+- SWR-FZC-017 (A) < SSR-FZC-022 (B)
+- SWR-FZC-017 (A) < TSR-044 (B)
+- SWR-FZC-032 (A) < SYS-010 (D)
+- SWR-FZC-032 (A) < SYS-014 (D)
+- SWR-ICU-001 (A) < SYS-031 (D)
+- SWR-ICU-006 (A) < SYS-046 (C)
+- SWR-ICU-007 (A) < SYS-029 (D)
+- SWR-ICU-009 (A) < SYS-021 (C)
+- SWR-ICU-009 (A) < SYS-046 (C)
+- SWR-SC-001 (C) < SSR-SC-001 (D)
+- SWR-SC-001 (C) < TSR-024 (D)
+- SWR-SC-005 (A) < SSR-SC-004 (C)
+- SWR-SC-005 (A) < SYS-046 (C)
+- SWR-SC-005 (A) < TSR-027 (C)
+- SWR-SC-013 (A) < SSR-SC-013 (B)
+- SWR-SC-013 (A) < SYS-046 (C)
+- SWR-SC-013 (A) < TSR-045 (B)
+- SWR-TCU-001 (A) < SYS-031 (D)
+- TSR-026 (C) < FSR-017 (D)
+- TSR-050 (C) < FSR-016 (D)
+- TSR-050 (C) < FSR-017 (D)
+- TSR-051 (C) < FSR-017 (D)
 
 ---
 
-## 4. Safety Goal to FSR Matrix
-
-This section traces each safety goal to its derived functional safety requirements. Every SG must trace to at least one FSR. Every FSR must trace to at least one SG.
-
-| SG | ASIL | Derived FSRs |
-|----|------|-------------|
-| SG-001 (Unintended acceleration) | D | FSR-001, FSR-002, FSR-003, FSR-013, FSR-016, FSR-018, FSR-019, FSR-021, FSR-022, FSR-024 |
-| SG-002 (Loss of drive torque) | B | FSR-013, FSR-019, FSR-023, FSR-024 |
-| SG-003 (Unintended steering) | D | FSR-006, FSR-007, FSR-008, FSR-013, FSR-016, FSR-019, FSR-024 |
-| SG-004 (Loss of braking) | D | FSR-009, FSR-010, FSR-013, FSR-016, FSR-019, FSR-024, FSR-025 |
-| SG-005 (Unintended braking) | A | FSR-009, FSR-013, FSR-019, FSR-024 |
-| SG-006 (Motor protection) | A | FSR-004, FSR-005, FSR-013, FSR-019, FSR-024 |
-| SG-007 (Obstacle detection) | C | FSR-011, FSR-012, FSR-013, FSR-019, FSR-024 |
-| SG-008 (Independent monitoring) | C | FSR-013, FSR-014, FSR-015, FSR-016, FSR-017, FSR-018, FSR-019, FSR-020, FSR-024 |
-
-### 4.1 Reverse — FSR to SG
-
-| FSR | ASIL | Parent SGs |
-|-----|------|-----------|
-| FSR-001 | D | SG-001 |
-| FSR-002 | D | SG-001 |
-| FSR-003 | D | SG-001 |
-| FSR-004 | A | SG-006 |
-| FSR-005 | A | SG-006 |
-| FSR-006 | D | SG-003 |
-| FSR-007 | D | SG-003 |
-| FSR-008 | C | SG-003 |
-| FSR-009 | D | SG-004, SG-005 |
-| FSR-010 | D | SG-004 |
-| FSR-011 | C | SG-007 |
-| FSR-012 | C | SG-007 |
-| FSR-013 | D | SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008 |
-| FSR-014 | C | SG-008 |
-| FSR-015 | C | SG-008 |
-| FSR-016 | D | SG-001, SG-003, SG-004, SG-008 |
-| FSR-017 | D | SG-008 |
-| FSR-018 | B | SG-001, SG-008 |
-| FSR-019 | D | SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008 |
-| FSR-020 | C | SG-008 |
-| FSR-021 | C | SG-001 |
-| FSR-022 | C | SG-001 |
-| FSR-023 | B | SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008 |
-| FSR-024 | D | SG-001, SG-002, SG-003, SG-004, SG-005, SG-006, SG-007, SG-008 |
-| FSR-025 | D | SG-004 |
-
----
-
-## 5. FSR to TSR Matrix
-
-Each functional safety requirement is refined into one or more technical safety requirements.
-
-| FSR | ASIL | Derived TSRs |
-|-----|------|-------------|
-| FSR-001 | D | TSR-001, TSR-002 |
-| FSR-002 | D | TSR-002, TSR-003 |
-| FSR-003 | D | TSR-004, TSR-005 |
-| FSR-004 | A | TSR-006, TSR-007 |
-| FSR-005 | A | TSR-008, TSR-009 |
-| FSR-006 | D | TSR-010, TSR-011 |
-| FSR-007 | D | TSR-012, TSR-013 |
-| FSR-008 | C | TSR-014 |
-| FSR-009 | D | TSR-015, TSR-016 |
-| FSR-010 | D | TSR-017 |
-| FSR-011 | C | TSR-018, TSR-019 |
-| FSR-012 | C | TSR-020, TSR-021 |
-| FSR-013 | D | TSR-022, TSR-023, TSR-024 |
-| FSR-014 | C | TSR-025, TSR-026 |
-| FSR-015 | C | TSR-027, TSR-028 |
-| FSR-016 | D | TSR-029, TSR-030 |
-| FSR-017 | D | TSR-031, TSR-032 |
-| FSR-018 | B | TSR-033, TSR-034 |
-| FSR-019 | D | TSR-035, TSR-036, TSR-037 |
-| FSR-020 | C | TSR-038, TSR-039 |
-| FSR-021 | C | TSR-040 |
-| FSR-022 | C | TSR-041, TSR-042 |
-| FSR-023 | B | TSR-043, TSR-044, TSR-045 |
-| FSR-024 | D | TSR-046, TSR-047 |
-| FSR-025 | D | TSR-048, TSR-049 |
-
-### 5.1 Reverse — TSR to FSR
-
-| TSR | ASIL | Parent FSRs |
-|-----|------|------------|
-| TSR-001 | D | FSR-001 |
-| TSR-002 | D | FSR-001, FSR-002 |
-| TSR-003 | D | FSR-002 |
-| TSR-004 | D | FSR-003 |
-| TSR-005 | D | FSR-003 |
-| TSR-006 | A | FSR-004 |
-| TSR-007 | C | FSR-004, FSR-022 |
-| TSR-008 | A | FSR-005 |
-| TSR-009 | A | FSR-005 |
-| TSR-010 | D | FSR-006 |
-| TSR-011 | D | FSR-006 |
-| TSR-012 | D | FSR-007 |
-| TSR-013 | D | FSR-007 |
-| TSR-014 | C | FSR-008 |
-| TSR-015 | D | FSR-009 |
-| TSR-016 | D | FSR-009, FSR-025 |
-| TSR-017 | D | FSR-010 |
-| TSR-018 | C | FSR-011, FSR-012 |
-| TSR-019 | C | FSR-011 |
-| TSR-020 | C | FSR-012 |
-| TSR-021 | C | FSR-012 |
-| TSR-022 | D | FSR-013 |
-| TSR-023 | D | FSR-013 |
-| TSR-024 | D | FSR-013 |
-| TSR-025 | C | FSR-014 |
-| TSR-026 | C | FSR-014, FSR-017 |
-| TSR-027 | C | FSR-015 |
-| TSR-028 | D | FSR-015, FSR-016 |
-| TSR-029 | D | FSR-016 |
-| TSR-030 | D | FSR-016 |
-| TSR-031 | D | FSR-017 |
-| TSR-032 | D | FSR-017 |
-| TSR-033 | B | FSR-018 |
-| TSR-034 | B | FSR-018 |
-| TSR-035 | D | FSR-019 |
-| TSR-036 | D | FSR-019 |
-| TSR-037 | D | FSR-019 |
-| TSR-038 | C | FSR-020 |
-| TSR-039 | C | FSR-020 |
-| TSR-040 | C | FSR-021 |
-| TSR-041 | C | FSR-022 |
-| TSR-042 | C | FSR-022 |
-| TSR-043 | B | FSR-023 |
-| TSR-044 | B | FSR-023 |
-| TSR-045 | B | FSR-023 |
-| TSR-046 | D | FSR-024 |
-| TSR-047 | D | FSR-024 |
-| TSR-048 | D | FSR-025 |
-| TSR-049 | D | FSR-025 |
-| TSR-050 | C | FSR-016, FSR-017 |
-| TSR-051 | C | FSR-017 |
-
----
-
-## 6. TSR to SSR Matrix
-
-Each TSR is refined into software safety requirements allocated to specific ECUs.
-
-| TSR | ASIL | Derived SSRs |
-|-----|------|-------------|
-| TSR-001 | D | SSR-CVC-001, SSR-CVC-002 |
-| TSR-002 | D | SSR-CVC-003, SSR-CVC-004 |
-| TSR-003 | D | SSR-CVC-005 |
-| TSR-004 | D | SSR-CVC-006, SSR-CVC-007 |
-| TSR-005 | D | SSR-RZC-001, SSR-RZC-002 |
-| TSR-006 | A | SSR-RZC-003, SSR-RZC-004 |
-| TSR-007 | C | SSR-RZC-005 |
-| TSR-008 | A | SSR-RZC-006 |
-| TSR-009 | A | SSR-RZC-007 |
-| TSR-010 | D | SSR-FZC-001 |
-| TSR-011 | D | SSR-FZC-002, SSR-FZC-003 |
-| TSR-012 | D | SSR-FZC-004, SSR-FZC-005 |
-| TSR-013 | D | SSR-FZC-006 |
-| TSR-014 | C | SSR-FZC-007 |
-| TSR-015 | D | SSR-FZC-008 |
-| TSR-016 | D | SSR-FZC-009 |
-| TSR-017 | D | SSR-FZC-010 |
-| TSR-018 | C | SSR-FZC-011 |
-| TSR-019 | C | SSR-FZC-012 |
-| TSR-020 | C | SSR-FZC-013 |
-| TSR-021 | C | SSR-FZC-014 |
-| TSR-022 | D | SSR-CVC-008, SSR-FZC-015, SSR-RZC-008, SSR-SC-001 |
-| TSR-023 | D | SSR-CVC-009, SSR-FZC-016, SSR-RZC-009 |
-| TSR-024 | D | SSR-CVC-010, SSR-FZC-017, SSR-RZC-010, SSR-SC-002 |
-| TSR-025 | C | SSR-CVC-011, SSR-FZC-018, SSR-RZC-011 |
-| TSR-026 | C | SSR-CVC-012, SSR-FZC-019, SSR-RZC-012 |
-| TSR-027 | C | SSR-SC-003, SSR-SC-004 |
-| TSR-028 | D | SSR-SC-005 |
-| TSR-029 | D | SSR-SC-006 |
-| TSR-030 | D | SSR-SC-007 |
-| TSR-031 | D | SSR-CVC-013, SSR-FZC-020, SSR-RZC-013, SSR-SC-008 |
-| TSR-033 | B | SSR-CVC-014 |
-| TSR-034 | B | SSR-CVC-015 |
-| TSR-035 | D | SSR-CVC-016, SSR-CVC-017 |
-| TSR-036 | D | SSR-CVC-018 |
-| TSR-037 | D | SSR-CVC-019 |
-| TSR-038 | C | SSR-CVC-020, SSR-FZC-021, SSR-RZC-014, SSR-SC-009 |
-| TSR-039 | C | SSR-CVC-021 |
-| TSR-040 | C | SSR-RZC-015, SSR-RZC-016 |
-| TSR-041 | C | SSR-SC-010, SSR-SC-011 |
-| TSR-042 | C | SSR-SC-012 |
-| TSR-043 | B | SSR-CVC-022 |
-| TSR-044 | B | SSR-FZC-022 |
-| TSR-045 | B | SSR-SC-013 |
-| TSR-046 | D | SSR-CVC-023, SSR-FZC-023, SSR-RZC-017, SSR-SC-014 |
-| TSR-047 | D | SSR-CVC-023, SSR-FZC-023, SSR-RZC-017 |
-| TSR-048 | D | SSR-FZC-024 |
-| TSR-049 | D | SSR-SC-015 |
-| TSR-050 | C | SSR-SC-016 |
-| TSR-051 | C | SSR-SC-017 |
-
-**Note**: TSR-032 traces only to HSR (hardware safety requirements) — see Section 7.
-
----
-
-## 7. TSR to HSR Matrix
-
-Each TSR with hardware implications is refined into hardware safety requirements allocated to specific ECUs.
-
-| TSR | ASIL | Derived HSRs |
-|-----|------|-------------|
-| TSR-001 | D | HSR-CVC-001 |
-| TSR-002 | D | HSR-CVC-001 |
-| TSR-005 | D | HSR-RZC-004 |
-| TSR-006 | A | HSR-RZC-001 |
-| TSR-008 | A | HSR-RZC-002 |
-| TSR-010 | D | HSR-FZC-001 |
-| TSR-012 | D | HSR-FZC-006 |
-| TSR-013 | D | HSR-FZC-006 |
-| TSR-015 | D | HSR-FZC-002 |
-| TSR-018 | C | HSR-FZC-003 |
-| TSR-022 | D | HSR-CVC-004, HSR-FZC-005, HSR-RZC-005, HSR-SC-004 |
-| TSR-029 | D | HSR-SC-001, HSR-SC-006 |
-| TSR-030 | D | HSR-SC-006 |
-| TSR-032 | D | HSR-CVC-002, HSR-FZC-004, HSR-RZC-003, HSR-SC-002 |
-| TSR-033 | B | HSR-CVC-003 |
-| TSR-038 | C | HSR-CVC-004, HSR-FZC-005, HSR-RZC-005, HSR-SC-004 |
-| TSR-040 | C | HSR-RZC-004, HSR-RZC-006 |
-| TSR-043 | B | HSR-CVC-005 |
-| TSR-044 | B | HSR-FZC-007 |
-| TSR-045 | B | HSR-SC-003 |
-| TSR-050 | C | HSR-SC-005 |
-| TSR-051 | C | HSR-SC-005 |
-
----
-
-## 8. SYS to SWR Matrix
-
-System requirements are refined into software requirements per ECU.
-
-### 8.1 Physical ECUs
-
-#### CVC — Central Vehicle Computer (35 SWR)
-
-| SYS | SWR-CVC |
-|-----|---------|
-| SYS-001 | SWR-CVC-001, SWR-CVC-002 |
-| SYS-002 | SWR-CVC-003, SWR-CVC-004, SWR-CVC-005, SWR-CVC-006 |
-| SYS-003 | SWR-CVC-007 |
-| SYS-004 | SWR-CVC-008, SWR-CVC-016, SWR-CVC-017 |
-| SYS-021 | SWR-CVC-020, SWR-CVC-021 |
-| SYS-022 | SWR-CVC-022 |
-| SYS-027 | SWR-CVC-023, SWR-CVC-029 |
-| SYS-028 | SWR-CVC-018, SWR-CVC-019 |
-| SYS-029 | SWR-CVC-009, SWR-CVC-010, SWR-CVC-011, SWR-CVC-012, SWR-CVC-013, SWR-CVC-029 |
-| SYS-030 | SWR-CVC-010 |
-| SYS-031 | SWR-CVC-016, SWR-CVC-017 |
-| SYS-032 | SWR-CVC-014, SWR-CVC-015 |
-| SYS-033 | SWR-CVC-016, SWR-CVC-017 |
-| SYS-034 | SWR-CVC-022, SWR-CVC-024, SWR-CVC-025 |
-| SYS-037 | SWR-CVC-033 |
-| SYS-038 | SWR-CVC-033, SWR-CVC-034 |
-| SYS-039 | SWR-CVC-031, SWR-CVC-033, SWR-CVC-035 |
-| SYS-040 | SWR-CVC-033 |
-| SYS-041 | SWR-CVC-030, SWR-CVC-034 |
-| SYS-044 | SWR-CVC-026, SWR-CVC-027, SWR-CVC-028 |
-| SYS-047 | SWR-CVC-001 |
-| SYS-053 | SWR-CVC-032 |
-
-#### FZC — Front Zone Controller (32 SWR)
-
-| SYS | SWR-FZC |
-|-----|---------|
-| SYS-010 | SWR-FZC-008, SWR-FZC-026, SWR-FZC-028, SWR-FZC-032 |
-| SYS-011 | SWR-FZC-001, SWR-FZC-002, SWR-FZC-003 |
-| SYS-012 | SWR-FZC-004, SWR-FZC-005, SWR-FZC-006 |
-| SYS-013 | SWR-FZC-007 |
-| SYS-014 | SWR-FZC-009, SWR-FZC-026, SWR-FZC-032 |
-| SYS-015 | SWR-FZC-010, SWR-FZC-012, SWR-FZC-027 |
-| SYS-016 | SWR-FZC-011 |
-| SYS-018 | SWR-FZC-013 |
-| SYS-019 | SWR-FZC-014 |
-| SYS-020 | SWR-FZC-015, SWR-FZC-016 |
-| SYS-021 | SWR-FZC-021, SWR-FZC-022 |
-| SYS-027 | SWR-FZC-023, SWR-FZC-025 |
-| SYS-029 | SWR-FZC-025 |
-| SYS-031 | SWR-FZC-026, SWR-FZC-027 |
-| SYS-032 | SWR-FZC-019, SWR-FZC-020 |
-| SYS-034 | SWR-FZC-024, SWR-FZC-028 |
-| SYS-037 | SWR-FZC-030 |
-| SYS-038 | SWR-FZC-030 |
-| SYS-039 | SWR-FZC-030 |
-| SYS-041 | SWR-FZC-031 |
-| SYS-045 | SWR-FZC-017, SWR-FZC-018 |
-| SYS-047 | SWR-FZC-001 |
-| SYS-048 | SWR-FZC-013 |
-| SYS-050 | SWR-FZC-008, SWR-FZC-009 |
-| SYS-053 | SWR-FZC-029 |
-
-#### RZC — Rear Zone Controller (30 SWR)
-
-| SYS | SWR-RZC |
-|-----|---------|
-| SYS-004 | SWR-RZC-001, SWR-RZC-002, SWR-RZC-003, SWR-RZC-016 |
-| SYS-005 | SWR-RZC-005, SWR-RZC-006, SWR-RZC-007, SWR-RZC-008 |
-| SYS-006 | SWR-RZC-009, SWR-RZC-010, SWR-RZC-011 |
-| SYS-007 | SWR-RZC-012, SWR-RZC-013, SWR-RZC-014, SWR-RZC-015 |
-| SYS-008 | SWR-RZC-017, SWR-RZC-018 |
-| SYS-009 | SWR-RZC-012 |
-| SYS-021 | SWR-RZC-021, SWR-RZC-022 |
-| SYS-027 | SWR-RZC-023, SWR-RZC-025 |
-| SYS-029 | SWR-RZC-025 |
-| SYS-031 | SWR-RZC-026, SWR-RZC-027 |
-| SYS-032 | SWR-RZC-019, SWR-RZC-020 |
-| SYS-034 | SWR-RZC-016, SWR-RZC-024 |
-| SYS-037 | SWR-RZC-029 |
-| SYS-038 | SWR-RZC-029 |
-| SYS-039 | SWR-RZC-029 |
-| SYS-041 | SWR-RZC-030 |
-| SYS-049 | SWR-RZC-005, SWR-RZC-008, SWR-RZC-009 |
-| SYS-050 | SWR-RZC-003, SWR-RZC-004 |
-| SYS-053 | SWR-RZC-028 |
-
-#### SC — Safety Controller (stub — SWR-SC pending)
-
-The SC SWR document is at version 0.1 (stub). SC software requirements are currently captured in the SSR-SC requirements (SSR-SC-001 to SSR-SC-017). The SWR-SC document will be completed in a subsequent phase.
-
-| SYS | SSR-SC (interim traceability) |
-|-----|------|
-| SYS-021 | SSR-SC-003, SSR-SC-004 (heartbeat monitoring) |
-| SYS-023 | SSR-SC-006, SSR-SC-007 (kill relay control) |
-| SYS-024 | SSR-SC-010, SSR-SC-011, SSR-SC-012 (cross-plausibility) |
-| SYS-025 | SSR-SC-016, SSR-SC-017 (self-test) |
-| SYS-026 | SSR-SC-013 (fault LEDs) |
-| SYS-027 | SSR-SC-008 (watchdog feed) |
-| SYS-032 | SSR-SC-001, SSR-SC-002 (E2E protection) |
-| SYS-034 | SSR-SC-009 (CAN bus loss detection) |
-
-### 8.2 Simulated ECUs (Docker)
-
-#### BCM — Body Control Module (12 SWR)
-
-| SYS | SWR-BCM |
-|-----|---------|
-| SYS-029 | SWR-BCM-002 |
-| SYS-030 | SWR-BCM-002 |
-| SYS-031 | SWR-BCM-001 |
-| SYS-035 | SWR-BCM-001, SWR-BCM-002, SWR-BCM-003, SWR-BCM-004, SWR-BCM-005, SWR-BCM-009, SWR-BCM-010, SWR-BCM-011, SWR-BCM-012 |
-| SYS-036 | SWR-BCM-006, SWR-BCM-007, SWR-BCM-008, SWR-BCM-010, SWR-BCM-011 |
-
-#### ICU — Instrument Cluster Unit (10 SWR)
-
-| SYS | SWR-ICU |
-|-----|---------|
-| SYS-006 | SWR-ICU-004 |
-| SYS-008 | SWR-ICU-005 |
-| SYS-009 | SWR-ICU-002 |
-| SYS-021 | SWR-ICU-009 |
-| SYS-029 | SWR-ICU-007 |
-| SYS-031 | SWR-ICU-001 |
-| SYS-038 | SWR-ICU-008 |
-| SYS-041 | SWR-ICU-008 |
-| SYS-044 | SWR-ICU-002, SWR-ICU-003, SWR-ICU-004, SWR-ICU-005, SWR-ICU-006, SWR-ICU-007, SWR-ICU-008, SWR-ICU-009, SWR-ICU-010 |
-| SYS-046 | SWR-ICU-006, SWR-ICU-009 |
-
-#### TCU — Telematics Control Unit (15 SWR)
-
-| SYS | SWR-TCU |
-|-----|---------|
-| SYS-031 | SWR-TCU-001 |
-| SYS-037 | SWR-TCU-001, SWR-TCU-002, SWR-TCU-011, SWR-TCU-012, SWR-TCU-013, SWR-TCU-014, SWR-TCU-015 |
-| SYS-038 | SWR-TCU-003, SWR-TCU-004, SWR-TCU-010, SWR-TCU-011 |
-| SYS-039 | SWR-TCU-005, SWR-TCU-006, SWR-TCU-014 |
-| SYS-040 | SWR-TCU-007 |
-| SYS-041 | SWR-TCU-008, SWR-TCU-009 |
-
-### 8.3 BSW — Base Software (27 SWR)
-
-| SYS | SWR-BSW |
-|-----|---------|
-| SYS-027 | SWR-BSW-021 |
-| SYS-029 | SWR-BSW-022, SWR-BSW-026 |
-| SYS-030 | SWR-BSW-022, SWR-BSW-026 |
-| SYS-031 | SWR-BSW-001, SWR-BSW-002, SWR-BSW-003, SWR-BSW-011, SWR-BSW-013 |
-| SYS-032 | SWR-BSW-002, SWR-BSW-003, SWR-BSW-013, SWR-BSW-015, SWR-BSW-016, SWR-BSW-023, SWR-BSW-024, SWR-BSW-025 |
-| SYS-034 | SWR-BSW-004, SWR-BSW-005, SWR-BSW-012 |
-| SYS-037 | SWR-BSW-013, SWR-BSW-017 |
-| SYS-038 | SWR-BSW-017 |
-| SYS-039 | SWR-BSW-017 |
-| SYS-040 | SWR-BSW-017 |
-| SYS-041 | SWR-BSW-018, SWR-BSW-019, SWR-BSW-020 |
-| SYS-047 | SWR-BSW-006, SWR-BSW-014 |
-| SYS-049 | SWR-BSW-007, SWR-BSW-014 |
-| SYS-050 | SWR-BSW-008, SWR-BSW-009, SWR-BSW-014 |
-| SYS-053 | SWR-BSW-010, SWR-BSW-027 |
-
----
-
-## 9. End-to-End Traceability — Safety Chain
-
-This section provides the complete traceability chain from each safety goal through to source code modules and test cases. Source code modules and test cases are placeholders (status: planned) as implementation has not yet begun.
-
-### 9.1 SG-001: Prevent Unintended Acceleration (ASIL D, FTTI 50 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-001 | FSR-001 | TSR-001 | SSR-CVC-001, SSR-CVC-002 | SWR-CVC-001, SWR-CVC-002 | firmware/cvc/src/mcal/spi_cfg.c, firmware/cvc/src/swc/swc_pedal.c | TC-CVC-001 to TC-CVC-003 |
-| SG-001 | FSR-001, FSR-002 | TSR-002 | SSR-CVC-003, SSR-CVC-004 | SWR-CVC-003, SWR-CVC-004 | firmware/cvc/src/swc/swc_pedal.c | TC-CVC-004 to TC-CVC-008 |
-| SG-001 | FSR-002 | TSR-003 | SSR-CVC-005 | SWR-CVC-005 | firmware/cvc/src/swc/swc_pedal.c | TC-CVC-009 |
-| SG-001 | FSR-003 | TSR-004 | SSR-CVC-006, SSR-CVC-007 | SWR-CVC-006, SWR-CVC-007, SWR-CVC-008 | firmware/cvc/src/swc/swc_pedal.c, firmware/cvc/src/swc/swc_torque.c | TC-CVC-010 to TC-CVC-014 |
-| SG-001 | FSR-003 | TSR-005 | SSR-RZC-001, SSR-RZC-002 | SWR-RZC-001, SWR-RZC-002 | firmware/rzc/src/swc/swc_motor.c | TC-RZC-001 to TC-RZC-004 |
-| SG-001 | FSR-013 | TSR-022 | SSR-CVC-008, SSR-FZC-015, SSR-RZC-008, SSR-SC-001 | SWR-BSW-023, SWR-BSW-024, SWR-BSW-025 | firmware/shared/bsw/services/e2e/ | TC-BSW-044 to TC-BSW-052 |
-| SG-001 | FSR-016 | TSR-029, TSR-030 | SSR-SC-006, SSR-SC-007 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-006, TC-SC-007 |
-| SG-001 | FSR-019 | TSR-035, TSR-036 | SSR-CVC-016 to SSR-CVC-018 | SWR-CVC-009 to SWR-CVC-011, SWR-BSW-022, SWR-BSW-026 | firmware/cvc/src/swc/swc_state.c, firmware/shared/bsw/services/bswm/ | TC-CVC-017 to TC-CVC-021 |
-| SG-001 | FSR-021 | TSR-040 | SSR-RZC-015, SSR-RZC-016 | SWR-RZC-014, SWR-RZC-015 | firmware/rzc/src/swc/swc_motor.c | TC-RZC-019 to TC-RZC-021 |
-| SG-001 | FSR-022 | TSR-041, TSR-042 | SSR-SC-010 to SSR-SC-012 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-010 to TC-SC-012 |
-
-### 9.2 SG-002: Prevent Loss of Drive Torque (ASIL B, FTTI 200 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-002 | FSR-013 | TSR-022 to TSR-024 | SSR-CVC-008 to SSR-CVC-010, SSR-FZC-015 to SSR-FZC-017, SSR-RZC-008 to SSR-RZC-010, SSR-SC-001, SSR-SC-002 | SWR-BSW-015, SWR-BSW-016, SWR-BSW-023 to SWR-BSW-025 | firmware/shared/bsw/services/e2e/, firmware/shared/bsw/services/com/ | TC-BSW-028 to TC-BSW-052 |
-| SG-002 | FSR-019 | TSR-035 to TSR-037 | SSR-CVC-016 to SSR-CVC-019 | SWR-CVC-009 to SWR-CVC-013, SWR-BSW-022 | firmware/cvc/src/swc/swc_state.c | TC-CVC-017 to TC-CVC-025 |
-| SG-002 | FSR-023 | TSR-043, TSR-044, TSR-045 | SSR-CVC-022, SSR-FZC-022, SSR-SC-013 | SWR-CVC-027, SWR-FZC-017 | firmware/cvc/src/swc/swc_oled.c, firmware/fzc/src/swc/swc_buzzer.c | TC-CVC-053, TC-FZC-033 |
-
-### 9.3 SG-003: Prevent Unintended Steering (ASIL D, FTTI 100 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-003 | FSR-006 | TSR-010, TSR-011 | SSR-FZC-001 to SSR-FZC-003 | SWR-FZC-001 to SWR-FZC-003 | firmware/fzc/src/swc/swc_steering.c | TC-FZC-001 to TC-FZC-006 |
-| SG-003 | FSR-007 | TSR-012, TSR-013 | SSR-FZC-004 to SSR-FZC-006 | SWR-FZC-004 to SWR-FZC-006 | firmware/fzc/src/swc/swc_steering.c | TC-FZC-007 to TC-FZC-012 |
-| SG-003 | FSR-008 | TSR-014 | SSR-FZC-007 | SWR-FZC-007 | firmware/fzc/src/swc/swc_steering.c | TC-FZC-013, TC-FZC-014 |
-| SG-003 | FSR-013 | TSR-022 to TSR-024 | (cross-ECU — see SG-001 row) | SWR-BSW-023 to SWR-BSW-025 | firmware/shared/bsw/services/e2e/ | TC-BSW-044 to TC-BSW-052 |
-| SG-003 | FSR-016 | TSR-029, TSR-030 | SSR-SC-006, SSR-SC-007 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-006, TC-SC-007 |
-
-### 9.4 SG-004: Prevent Loss of Braking (ASIL D, FTTI 50 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-004 | FSR-009 | TSR-015, TSR-016 | SSR-FZC-008, SSR-FZC-009 | SWR-FZC-009, SWR-FZC-010, SWR-FZC-012 | firmware/fzc/src/swc/swc_brake.c | TC-FZC-015 to TC-FZC-019 |
-| SG-004 | FSR-010 | TSR-017 | SSR-FZC-010 | SWR-FZC-011 | firmware/fzc/src/swc/swc_brake.c | TC-FZC-020, TC-FZC-021 |
-| SG-004 | FSR-025 | TSR-048 | SSR-FZC-024 | SWR-FZC-012 | firmware/fzc/src/swc/swc_brake.c | TC-FZC-046 |
-| SG-004 | FSR-025 | TSR-049 | SSR-SC-015 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-015 |
-
-### 9.5 SG-005: Prevent Unintended Braking (ASIL A, FTTI 200 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-005 | FSR-009 | TSR-015, TSR-016 | SSR-FZC-008, SSR-FZC-009 | SWR-FZC-009, SWR-FZC-010 | firmware/fzc/src/swc/swc_brake.c | TC-FZC-015 to TC-FZC-019 |
-| SG-005 | FSR-013 | TSR-022 to TSR-024 | (cross-ECU — see SG-001 row) | SWR-BSW-023 to SWR-BSW-025 | firmware/shared/bsw/services/e2e/ | TC-BSW-044 to TC-BSW-052 |
-
-### 9.6 SG-006: Motor Protection (ASIL A, FTTI 500 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-006 | FSR-004 | TSR-006 | SSR-RZC-003, SSR-RZC-004 | SWR-RZC-005, SWR-RZC-006 | firmware/rzc/src/swc/swc_current.c | TC-RZC-005 to TC-RZC-008 |
-| SG-006 | FSR-004 | TSR-007 | SSR-RZC-005 | SWR-RZC-007 | firmware/rzc/src/swc/swc_current.c | TC-RZC-009, TC-RZC-010 |
-| SG-006 | FSR-005 | TSR-008 | SSR-RZC-006 | SWR-RZC-009 | firmware/rzc/src/swc/swc_temp.c | TC-RZC-011, TC-RZC-012 |
-| SG-006 | FSR-005 | TSR-009 | SSR-RZC-007 | SWR-RZC-010 | firmware/rzc/src/swc/swc_temp.c | TC-RZC-013 to TC-RZC-015 |
-
-### 9.7 SG-007: Obstacle Detection (ASIL C, FTTI 200 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-007 | FSR-011 | TSR-018 | SSR-FZC-011 | SWR-FZC-013 | firmware/fzc/src/swc/swc_lidar.c | TC-FZC-022, TC-FZC-023 |
-| SG-007 | FSR-011 | TSR-019 | SSR-FZC-012 | SWR-FZC-014 | firmware/fzc/src/swc/swc_lidar.c | TC-FZC-024 to TC-FZC-026 |
-| SG-007 | FSR-012 | TSR-020 | SSR-FZC-013 | SWR-FZC-015 | firmware/fzc/src/swc/swc_lidar.c | TC-FZC-027, TC-FZC-028 |
-| SG-007 | FSR-012 | TSR-021 | SSR-FZC-014 | SWR-FZC-016 | firmware/fzc/src/swc/swc_lidar.c | TC-FZC-029 |
-
-### 9.8 SG-008: Independent Monitoring (ASIL C, FTTI 100 ms)
-
-| SG | FSR | TSR | SSR | SWR | Source Module | Test Cases |
-|----|-----|-----|-----|-----|--------------|------------|
-| SG-008 | FSR-014 | TSR-025 | SSR-CVC-011, SSR-FZC-018, SSR-RZC-011 | SWR-CVC-020, SWR-FZC-021, SWR-RZC-021 | firmware/{cvc,fzc,rzc}/src/swc/swc_heartbeat.c | TC-CVC-039, TC-FZC-037, TC-RZC-029 |
-| SG-008 | FSR-014 | TSR-026 | SSR-CVC-012, SSR-FZC-019, SSR-RZC-012 | SWR-CVC-021, SWR-FZC-022, SWR-RZC-022 | firmware/{cvc,fzc,rzc}/src/swc/swc_heartbeat.c | TC-CVC-040, TC-FZC-038, TC-RZC-030 |
-| SG-008 | FSR-015 | TSR-027, TSR-028 | SSR-SC-003 to SSR-SC-005 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-003 to TC-SC-005 |
-| SG-008 | FSR-016 | TSR-029, TSR-030 | SSR-SC-006, SSR-SC-007 | (SWR-SC pending) | firmware/sc/src/main.c | TC-SC-006, TC-SC-007 |
-| SG-008 | FSR-017 | TSR-031 | SSR-CVC-013, SSR-FZC-020, SSR-RZC-013, SSR-SC-008 | SWR-CVC-023, SWR-FZC-023, SWR-RZC-023, SWR-BSW-021 | firmware/{cvc,fzc,rzc}/src/swc/swc_wdg.c, firmware/sc/src/main.c | TC-CVC-043, TC-FZC-041, TC-RZC-033, TC-SC-008 |
-| SG-008 | FSR-017 | TSR-032 | (HSR only) | (HSR — no SWR) | — | TC-HW-001 to TC-HW-004 |
-| SG-008 | FSR-018 | TSR-033, TSR-034 | SSR-CVC-014, SSR-CVC-015 | SWR-CVC-018, SWR-CVC-019 | firmware/cvc/src/swc/swc_estop.c | TC-CVC-033 to TC-CVC-036 |
-| SG-008 | FSR-020 | TSR-038 | SSR-CVC-020, SSR-FZC-021, SSR-RZC-014, SSR-SC-009 | SWR-CVC-024, SWR-FZC-024, SWR-RZC-024, SWR-BSW-004, SWR-BSW-005 | firmware/{cvc,fzc,rzc}/src/swc/swc_can.c, firmware/sc/src/main.c | TC-CVC-045, TC-FZC-043, TC-RZC-035, TC-SC-009 |
-| SG-008 | FSR-020 | TSR-039 | SSR-CVC-021 | SWR-CVC-025 | firmware/cvc/src/swc/swc_can.c | TC-CVC-046, TC-CVC-047 |
-
----
-
-## 10. Coverage Summary
-
-### 10.1 Safety Traceability Coverage
-
-| Traceability Level | Total Items | Traced Down | Coverage | Gaps |
-|--------------------|-------------|-------------|----------|------|
-| SG to FSR | 8 SGs | 8 (all traced to at least 1 FSR) | 100% | 0 |
-| FSR to TSR | 25 FSRs | 25 (all traced to at least 1 TSR) | 100% | 0 |
-| TSR to SSR | 51 TSRs | 49 (TSR-032 is HW-only; TSR-009 has SSR) | 96% | 1 (TSR-032 is HSR-only, by design) |
-| TSR to HSR | 51 TSRs | 22 (only TSRs with HW implications) | 43% | N/A (not all TSRs have HW implications) |
-| SSR to SWR (CVC) | 23 SSR-CVC | 23 (mapped via SWR-CVC) | 100% | 0 |
-| SSR to SWR (FZC) | 24 SSR-FZC | 24 (mapped via SWR-FZC) | 100% | 0 |
-| SSR to SWR (RZC) | 17 SSR-RZC | 17 (mapped via SWR-RZC) | 100% | 0 |
-| SSR to SWR (SC) | 17 SSR-SC | 0 (SWR-SC is stub v0.1) | 0% | 17 (pending SWR-SC completion) |
-
-### 10.2 ASPICE Traceability Coverage
-
-| Traceability Level | Total Items | Traced Down | Coverage | Gaps |
-|--------------------|-------------|-------------|----------|------|
-| STK to SYS | 32 STK | 31 traced + 1 process (STK-027) | 97% | 0 (STK-027 is process scope) |
-| SYS to SWR (all ECUs) | 56 SYS | 48 traced to at least 1 SWR | 86% | 8 (see gap analysis) |
-| SWR to Source | 161 total SWR | 0 (not yet implemented) | 0% | 161 (pending Phase 1+) |
-| Source to Test | — | 0 (not yet implemented) | 0% | — (pending Phase 1+) |
-
-### 10.3 SWR Count per Document
-
-| Document | SWR Count | ASIL D | ASIL C | ASIL B | ASIL A | QM |
-|----------|-----------|--------|--------|--------|--------|-----|
-| SWR-CVC | 35 | 18 | 6 | 2 | 0 | 9 |
-| SWR-FZC | 32 | 16 | 8 | 0 | 0 | 8 |
-| SWR-RZC | 30 | 10 | 7 | 0 | 5 | 8 |
-| SWR-SC | 1 (stub) | — | — | — | — | — |
-| SWR-BCM | 12 | 0 | 0 | 0 | 0 | 12 |
-| SWR-ICU | 10 | 0 | 0 | 0 | 0 | 10 |
-| SWR-TCU | 15 | 0 | 0 | 0 | 0 | 15 |
-| SWR-BSW | 27 | 21 | 0 | 3 | 1 | 2 |
-| **Total** | **162** | **65** | **21** | **5** | **6** | **64** |
-
-### 10.4 Requirement Totals Across All Levels
-
-| Level | Count |
-|-------|-------|
-| Stakeholder Requirements (STK) | 32 |
-| System Requirements (SYS) | 56 |
-| Safety Goals (SG) | 8 |
-| Functional Safety Requirements (FSR) | 25 |
-| Technical Safety Requirements (TSR) | 51 |
-| Software Safety Requirements (SSR) | 81 |
-| Hardware Safety Requirements (HSR) | 25 |
-| Software Requirements (SWR) | 162 |
-| **Grand Total** | **440** |
-
-### 10.5 ASIL Distribution Summary
-
-| ASIL | SG | FSR | TSR | SSR | HSR | SWR | Total |
-|------|----|-----|-----|-----|-----|-----|-------|
-| D | 3 | 13 | 26 | 43 | 15 | 65 | 165 |
-| C | 2 | 7 | 17 | 23 | 3 | 21 | 73 |
-| B | 1 | 2 | 4 | 6 | 3 | 5 | 21 |
-| A | 1 | 2 | 4 | 5 | 2 | 6 | 20 |
-| QM | 0 | 0 | 0 | 0 | 1 | 64 | 65 |
-| **Total** | **8** | **25** | **51** | **81** | **25** | **162** | **344** |
-
-Note: Totals exclude STK and SYS from ASIL count as their ASIL assignment is not always 1:1 (some SYS requirements span multiple ASIL levels depending on the safety goal they support).
-
----
-
-## 11. Gap Analysis
-
-### 11.1 Orphan Requirements Check
-
-| Check | Result | Details |
-|-------|--------|---------|
-| Safety goals without FSR children | PASS | All 8 SGs trace to at least 1 FSR |
-| FSRs without SG parent | PASS | All 25 FSRs trace to at least 1 SG |
-| FSRs without TSR children | PASS | All 25 FSRs trace to at least 1 TSR |
-| TSRs without FSR parent | PASS | All 51 TSRs trace to at least 1 FSR |
-| TSRs without SSR or HSR child | PASS | All 51 TSRs trace to at least 1 SSR or HSR (TSR-032 is HSR-only) |
-| SSRs without TSR parent | PASS | All 81 SSRs trace to at least 1 TSR |
-| STK without SYS child | PASS | 31 of 32 STK trace directly; STK-027 is process-scope |
-| SYS without STK parent | PASS | All 56 SYS trace to at least 1 STK |
-| SWR without SYS parent | PASS | All SWR documents contain SYS-to-SWR mapping |
-
-### 11.2 Identified Gaps
-
-| Gap ID | Level | Description | Impact | Resolution |
-|--------|-------|-------------|--------|------------|
-| GAP-001 | SWR-SC | SWR-SC document is a v0.1 stub — SC has 17 SSR-SC requirements without corresponding SWR-SC | SC software requirements not formally documented at SWE.1 level | Complete SWR-SC document in a subsequent phase. Interim traceability via SSR-SC (Section 8.1). |
-| GAP-002 | SYS to SWR | 8 SYS requirements (SYS-042, SYS-043, SYS-051, SYS-052, SYS-054, SYS-055, SYS-056, SYS-026) have no SWR child | These are cloud/telemetry (SYS-042, SYS-043), non-functional (SYS-051 to SYS-056), or process-level requirements | SYS-042, SYS-043 will be addressed by gateway software (Python, not SWR scope). SYS-051 to SYS-056 are non-functional/architectural constraints verified by analysis and inspection. SYS-026 is a process constraint (independent monitoring architecture). |
-| GAP-003 | Source | No source code exists yet for any SWR | 0% code coverage | Expected — project is in Phase 0 (architecture and requirements). Code implementation begins in Phase 1. |
-| GAP-004 | Test | No test cases have been executed | 0% test coverage | Expected — test execution follows code implementation. Test case IDs (TC-xxx) are allocated in all SWR documents. |
-
-### 11.3 Coverage Gap Disposition
-
-| Gap Category | Count | Acceptable | Rationale |
-|--------------|-------|------------|-----------|
-| SWR-SC stub | 17 SSR | Yes (interim) | SSR-SC provides equivalent content; SWR-SC will be completed before SWE.2 |
-| SYS without SWR (cloud/non-functional) | 8 SYS | Yes | These requirements are outside the embedded SWR scope (cloud, process, or architectural constraints) |
-| Source code not yet written | 162 SWR | Yes | Phase 0 (requirements) — code implementation is Phase 1 |
-| Tests not yet executed | All TC-xxx | Yes | Phase 0 (requirements) — test execution follows implementation |
-
----
-
-## 12. ECU Allocation Summary
-
-### 12.1 Requirements per ECU
-
-| ECU | Type | SWR Count | SSR Count | HSR Count | Safety-Critical |
-|-----|------|-----------|-----------|-----------|-----------------|
-| CVC (STM32G474RE) | Physical | 35 | 23 | 5 | Yes (ASIL D) |
-| FZC (STM32G474RE) | Physical | 32 | 24 | 7 | Yes (ASIL D) |
-| RZC (STM32G474RE) | Physical | 30 | 17 | 7 | Yes (ASIL D) |
-| SC (TMS570LC43x) | Physical | 1 (stub) | 17 | 6 | Yes (ASIL D) |
-| BCM (Docker) | Simulated | 12 | 0 | 0 | No (QM) |
-| ICU (Docker) | Simulated | 10 | 0 | 0 | No (QM) |
-| TCU (Docker) | Simulated | 15 | 0 | 0 | No (QM) |
-| BSW (shared) | Library | 27 | — | — | Yes (ASIL D) |
-| **Total** | | **162** | **81** | **25** | |
-
-### 12.2 TSR Allocation per ECU
-
-| ECU | TSRs Allocated |
-|-----|---------------|
-| CVC | TSR-001, TSR-002, TSR-003, TSR-004, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-033, TSR-034, TSR-035, TSR-036, TSR-037, TSR-038, TSR-039, TSR-043, TSR-046, TSR-047 |
-| FZC | TSR-010, TSR-011, TSR-012, TSR-013, TSR-014, TSR-015, TSR-016, TSR-017, TSR-018, TSR-019, TSR-020, TSR-021, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-038, TSR-044, TSR-046, TSR-047, TSR-048 |
-| RZC | TSR-005, TSR-006, TSR-007, TSR-008, TSR-009, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-038, TSR-040, TSR-046, TSR-047 |
-| SC | TSR-022, TSR-024, TSR-027, TSR-028, TSR-029, TSR-030, TSR-031, TSR-038, TSR-041, TSR-042, TSR-045, TSR-046, TSR-049, TSR-050, TSR-051 |
-
----
-
-## 13. Verification Method Summary
-
-### 13.1 Verification Methods by Level
-
-| Level | Test | Analysis | Inspection | Demonstration |
-|-------|------|----------|------------|---------------|
-| SYS | 42 | 6 | 1 | 7 |
-| SWR-CVC | 28 unit, 18 SIL, 10 PIL | 1 WCET | — | 2 |
-| SWR-FZC | 22 unit, 16 SIL, 8 PIL | 1 WCET | — | 2 |
-| SWR-RZC | 22 unit, 14 SIL, 10 PIL | 1 WCET | — | — |
-| SWR-BCM | 21 test cases planned | — | — | — |
-| SWR-ICU | 18 test cases planned | — | — | — |
-| SWR-TCU | 35 test cases planned | — | — | — |
-| SWR-BSW | 52 test cases planned | — | — | — |
-
-### 13.2 Test Case ID Ranges
-
-| Document | Test Case Range | Count |
-|----------|----------------|-------|
-| TC-CVC-xxx | TC-CVC-001 to TC-CVC-070 | ~70 |
-| TC-FZC-xxx | TC-FZC-001 to TC-FZC-064 | ~64 |
-| TC-RZC-xxx | TC-RZC-001 to TC-RZC-060 | ~60 |
-| TC-SC-xxx | TC-SC-001 to TC-SC-034 | ~34 |
-| TC-BCM-xxx | TC-BCM-001 to TC-BCM-021 | 21 |
-| TC-ICU-xxx | TC-ICU-001 to TC-ICU-018 | 18 |
-| TC-TCU-xxx | TC-TCU-001 to TC-TCU-035 | 35 |
-| TC-BSW-xxx | TC-BSW-001 to TC-BSW-052 | 52 |
-| **Total** | | **~354** |
-
----
-
-## 14. FTTI Compliance Traceability
-
-This section links each safety goal's FTTI to the timing chain of requirements that ensures compliance.
-
-| SG | FTTI | Detection Req | Detection Budget | Reaction Req | Reaction Budget | Actuation Req | Actuation Budget | Margin | Compliance |
-|----|------|--------------|------------------|-------------|-----------------|--------------|------------------|--------|------------|
-| SG-001 | 50 ms | TSR-002 (pedal plausibility) | 20 ms | TSR-004 (CVC zero-torque) | 10 ms | TSR-005 (RZC motor disable) | 5 ms | 15 ms | PASS |
-| SG-002 | 200 ms | TSR-009 (motor health) | 50 ms | TSR-036 (state broadcast) | 20 ms | TSR-005 (controlled ramp) | 100 ms | 30 ms | PASS |
-| SG-003 | 100 ms | TSR-011 (steering feedback) | 50 ms | TSR-012 (return-to-center) | 10 ms | TSR-013 (servo travel) | 30 ms | 10 ms | PASS |
-| SG-004 | 50 ms | TSR-015 (brake PWM check) | 10 ms | TSR-016 (fault notify) | 5 ms | TSR-048 (motor cutoff) | 15 ms | 20 ms | PASS |
-| SG-005 | 200 ms | TSR-015 (brake plausibility) | 20 ms | TSR-016 (brake release) | 10 ms | — (servo return) | 100 ms | 70 ms | PASS |
-| SG-006 | 500 ms | TSR-006 (current sampling) | 100 ms | TSR-009 (derating) | 10 ms | — (GPIO write) | 1 ms | 389 ms | PASS |
-| SG-007 | 200 ms | TSR-018 (lidar UART) | 50 ms | TSR-019 (graduated response) | 10 ms | TSR-017 (brake ramp) | 100 ms | 40 ms | PASS |
-| SG-008 | 100 ms | TSR-027 (heartbeat timeout) | 50 ms | TSR-028 (confirmation) | 5 ms | TSR-029 (relay dropout) | 10 ms | 35 ms | PASS |
-
----
-
-## 15. Generation Notes
-
-### 15.1 Manual vs. Automated
-
-This traceability matrix was manually compiled from the requirement documents listed in Section 3. Future updates should be generated automatically using:
-
-```bash
-python scripts/trace-gen.py  # Scans docs/ and firmware/ for trace tags
-```
-
-The trace-gen.py script scans for the following tags:
-- `Traces up:` in requirement documents
-- `Traces down:` in requirement documents
-- `@safety_req` in source code files
-- `@traces_to` in source code files
-- `@verifies` in test files
-
-### 15.2 Update Triggers
-
-This document shall be updated whenever:
-- A new requirement is added at any level (SG, FSR, TSR, SSR, HSR, SWR)
-- A requirement is modified, deleted, or decomposed
-- Source code is written that implements a requirement
-- Test cases are created or executed
-- A new ECU or module is added to the platform
-
-### 15.3 Review Schedule
-
-| Review | Frequency | Reviewer |
-|--------|-----------|----------|
-| Traceability completeness check | Every phase gate | Configuration Manager |
-| Gap analysis update | Monthly during development | System Engineer |
-| ASIL distribution audit | Every SWE.1 review | Functional Safety Engineer |
-| Independent traceability verification | Before each release baseline | Independent Reviewer (I3) |
-
----
-
-## 16. Revision History
-
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 0.1 | 2026-02-21 | System | Initial stub with placeholder matrix |
-| 1.0 | 2026-02-21 | System | Complete traceability matrix: SG-to-FSR (8 SGs, 25 FSRs), FSR-to-TSR (25 FSRs, 51 TSRs), TSR-to-SSR (81 SSRs), TSR-to-HSR (25 HSRs), SYS-to-SWR (162 SWRs across 8 documents), end-to-end safety chains for all 8 SGs, coverage summary, gap analysis, FTTI compliance, ECU allocation, verification method summary |
-
+*Generated: 2026-02-25 22:40 UTC*
