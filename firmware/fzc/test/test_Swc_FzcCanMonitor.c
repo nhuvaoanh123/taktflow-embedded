@@ -29,6 +29,15 @@ typedef uint8           Std_ReturnType;
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
 
+/* Prevent BSW headers from redefining types */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_FZC_CAN_MONITOR_H
+#define FZC_CFG_H
+#define RTE_H
+#define CAN_H
+#define DEM_H
+
 /* ==================================================================
  * FZC Config Constants
  * ================================================================== */
@@ -48,9 +57,17 @@ typedef uint8           Std_ReturnType;
 #define FZC_CAN_SILENCE_CYCLES     20u
 #define FZC_CAN_ERR_WARN_CYCLES    50u
 
-/* CanIf controller modes */
-#define CANIF_CS_STARTED            0u
-#define CANIF_CS_STOPPED            1u
+/* Can controller state (mirrors Can_StateType from Can.h) */
+typedef enum {
+    CAN_CS_UNINIT  = 0u,
+    CAN_CS_STOPPED = 1u,
+    CAN_CS_STARTED = 2u,
+    CAN_CS_SLEEP   = 3u
+} Can_StateType;
+
+/* CanIf controller modes (legacy aliases used in test setup helpers) */
+#define CANIF_CS_STARTED            CAN_CS_STARTED
+#define CANIF_CS_STOPPED            CAN_CS_STOPPED
 #define CANIF_CS_ERROR_WARNING      2u
 
 /* DEM event status */
@@ -67,15 +84,33 @@ extern uint8 Swc_FzcCanMonitor_GetStatus(void);
 extern void  Swc_FzcCanMonitor_NotifyRx(void);
 
 /* ==================================================================
- * Mock: CanIf_GetControllerMode
+ * Mock: Can_GetControllerMode
  * ================================================================== */
 
-static uint8  mock_canif_mode;
+static Can_StateType  mock_canif_mode;
 
-uint8 CanIf_GetControllerMode(uint8 ControllerId)
+Can_StateType Can_GetControllerMode(uint8 Controller)
 {
-    (void)ControllerId;
+    (void)Controller;
     return mock_canif_mode;
+}
+
+/* ==================================================================
+ * Mock: Can_GetErrorCounters
+ * ================================================================== */
+
+static uint8 mock_can_tec;
+static uint8 mock_can_rec;
+
+Std_ReturnType Can_GetErrorCounters(uint8 Controller, uint8* tec, uint8* rec)
+{
+    (void)Controller;
+    if ((tec == NULL_PTR) || (rec == NULL_PTR)) {
+        return E_NOT_OK;
+    }
+    *tec = mock_can_tec;
+    *rec = mock_can_rec;
+    return E_OK;
 }
 
 /* ==================================================================
@@ -113,6 +148,12 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Include SWC under test (source inclusion for test build)
+ * ================================================================== */
+
+#include "../src/Swc_FzcCanMonitor.c"
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 
@@ -120,7 +161,9 @@ void setUp(void)
 {
     uint8 i;
 
-    mock_canif_mode        = CANIF_CS_STARTED;
+    mock_canif_mode        = CAN_CS_STARTED;
+    mock_can_tec           = 0u;
+    mock_can_rec           = 0u;
     mock_rte_write_count   = 0u;
     mock_dem_call_count    = 0u;
     mock_dem_last_event_id = 0xFFu;
@@ -143,7 +186,7 @@ void tearDown(void) { }
 void test_FzcCanMonitor_busoff_triggers_autobrake(void)
 {
     /* Simulate bus-off condition */
-    mock_canif_mode = CANIF_CS_STOPPED;
+    mock_canif_mode = CAN_CS_STOPPED;
 
     Swc_FzcCanMonitor_Check();
 
@@ -199,12 +242,12 @@ void test_FzcCanMonitor_no_recovery_stays_safe(void)
     uint16 i;
 
     /* Trigger bus-off */
-    mock_canif_mode = CANIF_CS_STOPPED;
+    mock_canif_mode = CAN_CS_STOPPED;
     Swc_FzcCanMonitor_Check();
     TEST_ASSERT_EQUAL_UINT8(FZC_CAN_BUS_OFF, Swc_FzcCanMonitor_GetStatus());
 
     /* Restore CAN to normal */
-    mock_canif_mode = CANIF_CS_STARTED;
+    mock_canif_mode = CAN_CS_STARTED;
 
     /* Notify RX (bus is alive again) */
     Swc_FzcCanMonitor_NotifyRx();
@@ -229,8 +272,8 @@ void test_FzcCanMonitor_error_warning_sustained(void)
 {
     uint16 i;
 
-    /* Set CAN to error warning mode */
-    mock_canif_mode = CANIF_CS_ERROR_WARNING;
+    /* Inject error counters at/above the error warning threshold (96) */
+    mock_can_tec = 96u;
 
     /* Notify RX to prevent silence timeout during this test */
     /* Run 49 cycles: error warning but not yet sustained threshold */
