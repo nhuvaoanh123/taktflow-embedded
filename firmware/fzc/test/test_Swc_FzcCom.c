@@ -439,3 +439,17 @@ int main(void)
 
     return UNITY_END();
 }
+
+/* ==================================================================
+ * Source inclusion — link SWC under test directly into test binary
+ * ================================================================== */
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_FZC_COM_H
+#define FZC_CFG_H
+#define RTE_H
+#define COM_H
+
+#include "../src/Swc_FzcCom.c"

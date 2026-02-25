@@ -826,3 +826,18 @@ int main(void)
 
     return UNITY_END();
 }
+
+/* ==================================================================
+ * Source inclusion — link SWC under test directly into test binary
+ * ================================================================== */
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_VEHICLESTATE_H
+#define CVC_CFG_H
+#define RTE_H
+#define BSWM_H
+#define DEM_H
+
+#include "../src/Swc_VehicleState.c"

@@ -388,3 +388,17 @@ int main(void)
 
     return UNITY_END();
 }
+
+/* ==================================================================
+ * Source inclusion — link SWC under test directly into test binary
+ * ================================================================== */
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_CVCDCM_H
+#define CVC_CFG_H
+#define DEM_H
+#define RTE_H
+
+#include "../src/Swc_CvcDcm.c"

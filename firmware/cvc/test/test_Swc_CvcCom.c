@@ -65,6 +65,21 @@ typedef struct {
 #define CVC_E2E_VEHSTATE_DATA_ID    0x05u
 #define CVC_E2E_TORQUE_DATA_ID      0x06u
 
+/* CvcCom TX schedule entry type (mirrors header) */
+typedef struct {
+    uint16  canId;
+    uint16  periodMs;
+    uint8   dataId;
+    uint8   dlc;
+} Swc_CvcCom_TxEntryType;
+
+/* CvcCom RX routing entry type (mirrors header) */
+typedef struct {
+    uint16  canId;
+    uint8   dataId;
+    uint8   dlc;
+} Swc_CvcCom_RxEntryType;
+
 /* CvcCom RX status type (mirrors header) */
 typedef struct {
     uint8   failCount;
