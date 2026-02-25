@@ -16,8 +16,7 @@
 
 **Status**: IN PROGRESS (Phases 0-17 DONE)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24
-**Target**: 24.5 working days
+**Updated**: 2026-02-25
 **Goal**: Hire-ready automotive functional safety + cloud + ML portfolio
 
 ---
@@ -389,27 +388,27 @@ SC  ──┘                                 TCU ──┘
 
 ## Phase Table
 
-| Phase | Name | Days | Status |
-|-------|------|------|--------|
-| 0 | Project Setup & Architecture Docs | 1 | DONE |
-| 1 | Safety Concept (HARA, Safety Goals, FSC) | 1 | DONE |
-| 2 | Safety Analysis (FMEA, DFA, Hardware Metrics) | 1 | DONE |
-| 3 | Requirements & System Architecture | 1 | DONE |
-| 4 | CAN Protocol & HSI Design | 1 | DONE |
-| 5 | Shared BSW Layer (16 AUTOSAR-like modules) | 2 | DONE |
-| 6 | CVC Firmware (6 SWCs, 88 tests) | 1 | DONE |
-| 7 | FZC Firmware (steering, braking, lidar) | 1 | DONE |
-| 8 | RZC Firmware (motor control, current, battery) | 1 | DONE |
-| 9 | Safety Controller (TMS570 independent monitor) | 1 | DONE |
-| 10 | BCM, ICU, TCU Firmware (simulated ECUs) | 1 | DONE |
-| 11 | POSIX Port + Docker SIL (7 ECUs containerized) | 2 | DONE |
-| 12 | DBC File + Plant Simulator (physics models) | 1.5 | DONE |
-| 13 | CAN-to-MQTT Gateway + WebSocket Bridge | 1.5 | DONE |
-| 14 | Live Telemetry Dashboard (/embedded) | 2 | DONE |
-| 15 | SAP QM Mock API (OData endpoints) | 1.5 | DONE |
-| 16 | Edge ML Anomaly Detection + Fault Injection | 1 | DONE |
-| 17 | VPS Deployment + Live Demo | 1.5 | DONE |
-| 18 | Physical Hardware Build + HIL Testing | 3 | PENDING |
+| Phase | Name | Status |
+|-------|------|--------|
+| 0 | Project Setup & Architecture Docs | DONE |
+| 1 | Safety Concept (HARA, Safety Goals, FSC) | DONE |
+| 2 | Safety Analysis (FMEA, DFA, Hardware Metrics) | DONE |
+| 3 | Requirements & System Architecture | DONE |
+| 4 | CAN Protocol & HSI Design | DONE |
+| 5 | Shared BSW Layer (16 AUTOSAR-like modules) | DONE |
+| 6 | CVC Firmware (6 SWCs, 88 tests) | DONE |
+| 7 | FZC Firmware (steering, braking, lidar) | DONE |
+| 8 | RZC Firmware (motor control, current, battery) | DONE |
+| 9 | Safety Controller (TMS570 independent monitor) | DONE |
+| 10 | BCM, ICU, TCU Firmware (simulated ECUs) | DONE |
+| 11 | POSIX Port + Docker SIL (7 ECUs containerized) | DONE |
+| 12 | DBC File + Plant Simulator (physics models) | DONE |
+| 13 | CAN-to-MQTT Gateway + WebSocket Bridge | DONE |
+| 14 | Live Telemetry Dashboard (/embedded) | DONE |
+| 15 | SAP QM Mock API (OData endpoints) | DONE |
+| 16 | Edge ML Anomaly Detection + Fault Injection | DONE |
+| 17 | VPS Deployment + Live Demo | DONE |
+| 18 | Physical Hardware Build + HIL Testing | PENDING |
 
 ---
 
@@ -516,10 +515,14 @@ SC  ──┘                                 TCU ──┘
 - [x] System architecture document (10 element categories, 24 CAN messages, state machine)
 - [x] Software architecture per ECU (modules, interfaces, MPU config, task scheduling)
 - [x] BSW architecture (16 modules with full API signatures)
-- [x] Per-ECU SW requirements (187 SWR across 8 documents)
+- [x] Per-ECU SW requirements (197 SWR across 10 documents)
   - [x] SWR-CVC: 35 reqs | SWR-FZC: 32 reqs | SWR-RZC: 30 reqs | SWR-SC: 26 reqs
   - [x] SWR-BCM: 12 reqs | SWR-ICU: 10 reqs | SWR-TCU: 15 reqs | SWR-BSW: 27 reqs
-- [x] Traceability matrix (440 total traced: SG → FSR → TSR → SSR → SWR → module → test)
+  - [x] SWR-GW: 6 reqs (gateway: MQTT, CAN acquisition, ML, SAP QM)
+  - [x] SWR-ALL: 4 reqs (cross-cutting: MISRA, no malloc, WCET, flash budget)
+- [x] Traceability matrix (475 total traced: SG → FSR → TSR → SSR → SWR → module → test)
+- [x] CI traceability enforcement (`trace-gen.py --check` blocks merge on broken links or untested SWR)
+- [x] Suspect-link detection (`suspect-links.py` reports downstream impact on PRs)
 
 ### Files
 - `docs/aspice/system/stakeholder-requirements.md`
@@ -538,11 +541,17 @@ SC  ──┘                                 TCU ──┘
 - `docs/aspice/software/sw-requirements/SWR-ICU.md`
 - `docs/aspice/software/sw-requirements/SWR-TCU.md`
 - `docs/aspice/software/sw-requirements/SWR-BSW.md`
+- `docs/aspice/software/sw-requirements/SWR-GW.md`
+- `docs/aspice/software/sw-requirements/SWR-ALL.md`
 - `docs/aspice/traceability/traceability-matrix.md`
+- `scripts/trace-gen.py` (954-line V-model traceability generator, pure stdlib)
+- `scripts/suspect-links.py` (change impact detection for PRs)
+- `.github/workflows/traceability.yml` (CI: blocking check + suspect-link analysis)
 
 ### DONE Criteria
 - [x] Every safety goal traces to TSR → SSR → architecture element
-- [x] Traceability matrix complete (4 gaps identified with dispositions)
+- [x] Traceability matrix complete — 475 requirements, 0 broken links, 0 untested, SWR 100%
+- [x] CI enforcement green — `trace-gen.py --check` blocks merge on gaps (ADR-013)
 
 ---
 
@@ -1068,10 +1077,10 @@ Plant models simulating physical dynamics. No firmware, no CAN — pure algorith
   - [ ] Branch coverage (target: 100% for ASIL D modules)
   - [ ] MC/DC coverage (target: 100% for ASIL D safety paths)
   - [ ] Generate per-module coverage reports
-- [ ] Static analysis:
-  - [ ] cppcheck on all firmware sources
-  - [ ] MISRA C:2012 subset check (mandatory + required rules)
-  - [ ] Document all deviations with rationale
+- [x] Static analysis:
+  - [x] cppcheck on all firmware sources — 0 violations, CI blocking
+  - [x] MISRA C:2012 full check (mandatory + required rules) — `.github/workflows/misra.yml`
+  - [x] All deviations documented: DEV-001 (Rule 11.5), DEV-002 (Rule 11.8) in deviation register
 - [ ] Gap identification:
   - [ ] Identify modules below coverage targets
   - [ ] Write additional tests for uncovered branches/conditions
@@ -1093,6 +1102,12 @@ All 7 ECUs compiled for Linux, running on PC with virtual CAN. No hardware neede
   - [ ] Verify: correct state transitions, DTC storage, CAN message timing
   - [ ] Verify: safety mechanisms trigger at correct thresholds
   - [ ] Regression: run full suite in CI (GitHub Actions) — no hardware needed
+- [x] SIL scenario YAML definitions (19 scenarios in `test/sil/scenarios/`):
+  - [x] SIL-001..015: firmware scenarios (startup, faults, recovery, endurance)
+  - [x] SIL-016: gateway MQTT telemetry + CAN acquisition (SWR-GW-001, SWR-GW-002)
+  - [x] SIL-017: gateway ML anomaly detection (SWR-GW-003, SWR-GW-004)
+  - [x] SIL-018: gateway SAP QM DTC forwarding + 8D report (SWR-GW-005, SWR-GW-006)
+  - [x] SIL-019: cross-cutting analysis verification (SWR-ALL-001..004)
 - [ ] SIL timing analysis: measure loop execution time, CAN latency on vcan
 
 ### 12d: PIL — Processor-in-the-Loop (partial hardware)
@@ -1124,9 +1139,10 @@ Real MCU executing firmware, but with simulated sensors/actuators from PC.
 ### DONE Criteria
 - [ ] MIL: plant models produce physically plausible outputs, control algorithms validated
 - [ ] Unit tests: every safety module has tests, MC/DC coverage documented
-- [ ] SIL: all 16 scenarios pass in pure-software mode, CI-ready
+- [ ] SIL: all 19 scenarios pass in pure-software mode, CI-ready
 - [ ] PIL: at least 1 ECU validated on real MCU with plant simulation
-- [ ] Zero MISRA mandatory violations
+- [x] Zero MISRA mandatory violations (CI green, blocking)
+- [x] Traceability CI green — 475 reqs, 0 broken links, 0 untested
 - [ ] All tests pass across all xIL levels
 
 ---
@@ -1197,7 +1213,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 
 ### 14c: Safety Case
 - [ ] Safety case document (claims, arguments, evidence)
-- [ ] Final traceability verification (no gaps in matrix)
+- [x] Final traceability verification — 475 reqs, 0 gaps, CI-enforced
 
 ### 14d: Portfolio Polish
 - [ ] README.md — portfolio landing page
@@ -1221,7 +1237,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 - [ ] All 16 scenarios demonstrated and recorded
 - [ ] Every fault results in correct safe state
 - [ ] Safety case references all evidence
-- [ ] Traceability matrix 100% complete
+- [x] Traceability matrix 100% complete (CI-enforced, 475 reqs, SWR 100%)
 - [ ] README is portfolio-ready
 - [ ] Tagged v1.0.0 on main
 
@@ -1254,6 +1270,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 | Automotive Cybersecurity | CAN anomaly detection | ISO/SAE 21434, intrusion detection |
 | **SAP QM / Quality Management** | DTC → Q-Meldung pipeline, 8D report generation | SAP QM, quality notification, 8D process, BAPI |
 | **End-to-End Traceability** | Sensor fault → DTC → cloud → SAP QM → 8D → corrective action | Field quality, warranty analysis, closed-loop quality |
+| **Traceability Tooling** | Custom trace-gen.py (475 reqs, 8 V-model levels), CI enforcement, suspect-link detection | Requirements engineering, V-model, traceability matrix, CI/CD, ISO 26262 Part 8 |
 | Containerization | Simulated ECU runtime | Docker, docker-compose, Linux containers |
 
 ---
