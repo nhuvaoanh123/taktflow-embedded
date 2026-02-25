@@ -67,6 +67,7 @@ static uint32 real_get_tick_ms(void)
 static boolean bcm_main_initialized;
 static uint16  bcm_main_cycle_counter;
 static uint32  bcm_main_prev_tick_ms;
+static boolean bcm_main_first_cycle_done;
 
 /* ====================================================================
  * Public API
@@ -95,7 +96,7 @@ void BCM_Main(void)
     cycle_start = GET_TICK_MS();
 
     /* Check for overrun from previous cycle */
-    if (bcm_main_prev_tick_ms != 0u) {
+    if (bcm_main_first_cycle_done == TRUE) {
         elapsed = cycle_start - bcm_main_prev_tick_ms;
         if (elapsed > BCM_MAIN_CYCLE_MS) {
             LOG_OVERRUN(elapsed);
@@ -120,4 +121,5 @@ void BCM_Main(void)
     /* Record end time for overrun detection */
     cycle_end = GET_TICK_MS();
     bcm_main_prev_tick_ms = cycle_end;
+    bcm_main_first_cycle_done = TRUE;
 }

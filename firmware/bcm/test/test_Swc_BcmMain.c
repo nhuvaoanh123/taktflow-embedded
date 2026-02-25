@@ -117,6 +117,7 @@ void setUp(void)
 
     bcm_main_cycle_counter   = 0u;
     bcm_main_initialized     = TRUE;
+    bcm_main_first_cycle_done = FALSE;
 }
 
 void tearDown(void) { }

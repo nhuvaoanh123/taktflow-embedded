@@ -128,8 +128,7 @@ void Dcm_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
     }
 }
 
-/* CanIf_ControllerBusOff stub — required by Can.c extern */
-void CanIf_ControllerBusOff(uint8 controllerId) { (void)controllerId; }
+/* CanIf_ControllerBusOff is provided by the real CanIf.c linked above */
 
 /* ====================================================================
  * CAN Message Matrix — subset from can-message-matrix.md

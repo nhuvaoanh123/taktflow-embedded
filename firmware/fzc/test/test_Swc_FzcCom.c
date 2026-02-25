@@ -245,7 +245,7 @@ void test_FzcCom_e2e_protect_crc_and_alive(void)
     TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
 
     /* assert: CRC in byte[0] is non-zero (computed over data + Data ID) */
-    TEST_ASSERT_NOT_EQUAL(0u, data[0]);
+    TEST_ASSERT_TRUE(data[0] != 0u);
 
     /* assert: alive counter in byte[1] bits [3:0] starts at 0 (first call after init) */
     TEST_ASSERT_EQUAL_UINT8(0u, (uint8)(data[1] & 0x0Fu));

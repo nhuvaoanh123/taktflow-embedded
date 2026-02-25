@@ -483,7 +483,7 @@ void test_No_timeout_with_commands(void)
 
     /* No timeout fault */
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
-    TEST_ASSERT_NOT_EQUAL(FZC_BRAKE_CMD_TIMEOUT, fault);
+    TEST_ASSERT_TRUE(fault != FZC_BRAKE_CMD_TIMEOUT);
 
     /* Position should track the last command, not 100% */
     uint32 pos = mock_rte_signals[FZC_SIG_BRAKE_POS];
@@ -654,7 +654,7 @@ void test_Latch_clear_50_cycles(void)
     run_cycles(30u, 12u);
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
-    TEST_ASSERT_NOT_EQUAL(FZC_BRAKE_NO_FAULT, fault);
+    TEST_ASSERT_TRUE(fault != FZC_BRAKE_NO_FAULT);
 
     /* Now alternate commands to prevent further timeout, run 49 cycles */
     uint16 i;

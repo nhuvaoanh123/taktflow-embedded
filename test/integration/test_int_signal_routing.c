@@ -95,8 +95,7 @@ void Dcm_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
     (void)RxPduId; (void)PduInfoPtr;
 }
 
-/* CanIf_ControllerBusOff stub */
-void CanIf_ControllerBusOff(uint8 controllerId) { (void)controllerId; }
+/* CanIf_ControllerBusOff is provided by the real CanIf.c linked above */
 
 /* ====================================================================
  * Integration configuration — two independent PDU paths

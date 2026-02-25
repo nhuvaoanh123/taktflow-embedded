@@ -124,8 +124,13 @@ static uint8  mock_rx_e2e_valid;
 sint32 mock_posix_read(sint32 fd, void* buf, uint32 count)
 {
     (void)fd;
-    (void)buf;
     (void)count;
+    if ((mock_read_return > 0) && (buf != NULL_PTR)) {
+        uint8 i;
+        for (i = 0u; i < 8u; i++) {
+            ((uint8*)buf)[i] = mock_rx_data[i];
+        }
+    }
     return mock_read_return;
 }
 

@@ -407,7 +407,7 @@ void test_UdsServer_security_access_seed_request(void)
                   ((uint32)rsp_buf[3] << 16u) |
                   ((uint32)rsp_buf[4] << 8u)  |
                   ((uint32)rsp_buf[5]);
-    TEST_ASSERT_NOT_EQUAL(0u, seed);
+    TEST_ASSERT_TRUE(seed != 0u);
 }
 
 /* ====================================================================

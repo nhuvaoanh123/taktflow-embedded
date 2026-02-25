@@ -168,7 +168,7 @@ void test_FzcNvm_store_load_dtc(void)
     TEST_ASSERT_EQUAL_UINT16(100u, record.freezeLidar);
 
     /* CRC should be non-zero and valid */
-    TEST_ASSERT_NOT_EQUAL(0u, record.crc);
+    TEST_ASSERT_TRUE(record.crc != 0u);
 }
 
 /* ==================================================================
@@ -298,7 +298,7 @@ void test_FzcNvm_cal_lidar_thresholds(void)
     TEST_ASSERT_EQUAL_UINT16(30u, loaded.lidarEmergencyCm);
 
     /* assert: CRC is valid (non-zero, computed by StoreCal) */
-    TEST_ASSERT_NOT_EQUAL(0u, loaded.crc);
+    TEST_ASSERT_TRUE(loaded.crc != 0u);
 
     /* Verify CRC matches independently computed value */
     {

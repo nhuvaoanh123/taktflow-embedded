@@ -115,6 +115,7 @@ typedef uint8           Com_SignalIdType;
 #define RZC_MOTOR_NO_FAULT          0u
 #define RZC_MOTOR_SHOOT_THROUGH     1u
 #define RZC_MOTOR_CMD_TIMEOUT_FAULT 2u
+#define RZC_MOTOR_CMD_TIMEOUT       2u   /* matches Rzc_Cfg.h — needed since RZC_CFG_H is pre-defined */
 
 /* ==================================================================
  * BTS7960 enable pin channels (from Rzc_Cfg.h)

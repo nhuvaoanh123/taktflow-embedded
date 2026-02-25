@@ -175,7 +175,6 @@ void test_Clear_fills_display_with_zeros(void)
     mock_i2c_result = E_OK;
     (void)Ssd1306_Init();
 
-    uint8 init_calls = mock_i2c_call_count;
     mock_i2c_call_count = 0u;
 
     Ssd1306_Clear();

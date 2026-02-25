@@ -21,6 +21,8 @@
 #include <errno.h>
 #include <sys/types.h>   /* ssize_t for mock syscall signatures & Can_Posix.c */
 
+#include "Platform_Types.h"  /* uint8, uint16, uint32, boolean, NULL_PTR etc. */
+
 /* Forward-declare the struct used by SocketCAN */
 #ifndef AF_CAN
 #define AF_CAN          29
