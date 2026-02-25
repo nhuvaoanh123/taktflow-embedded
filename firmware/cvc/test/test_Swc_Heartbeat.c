@@ -34,6 +34,15 @@ typedef uint8          boolean;
 #define SWC_HEARTBEAT_H
 #define CVC_CFG_H
 
+/* Prevent real Dem.h / E2E.h from being pulled in through Swc_Heartbeat.c —
+ * the mocks below provide the required function definitions.
+ * DEM_EVENT_STATUS_FAILED is defined here because it is used both in
+ * Swc_Heartbeat.c and in this test file, and Dem.h is now blocked. */
+#define DEM_H
+#define E2E_H
+#define DEM_EVENT_STATUS_PASSED  0u
+#define DEM_EVENT_STATUS_FAILED  1u
+
 /* Signal/DTC IDs (must match Cvc_Cfg.h) */
 #define CVC_SIG_FZC_COMM_STATUS   23u
 #define CVC_SIG_RZC_COMM_STATUS   24u
