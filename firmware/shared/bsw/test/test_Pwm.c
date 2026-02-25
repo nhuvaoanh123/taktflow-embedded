@@ -185,6 +185,11 @@ void test_Pwm_SetDutyCycle_invalid_channel(void)
 {
     Pwm_Init(&test_config);
 
+    /* Clear mock flags set by Init's default-duty writes */
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        mock_duty_set[i] = FALSE;
+    }
+
     /* Should not crash or write out of bounds */
     Pwm_SetDutyCycle(PWM_MAX_CHANNELS, 0x4000u);
 
@@ -317,6 +322,11 @@ void test_Pwm_SetDutyCycle_channel_equals_num_channels_noop(void)
 {
     /* numChannels=2, channel 2 is out of range — no-op */
     Pwm_Init(&test_config);
+
+    /* Clear mock flags set by Init's default-duty writes */
+    for (uint8 i = 0u; i < PWM_MAX_CHANNELS; i++) {
+        mock_duty_set[i] = FALSE;
+    }
 
     Pwm_SetDutyCycle(2u, 0x4000u);
 
