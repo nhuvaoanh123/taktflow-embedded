@@ -4,7 +4,7 @@
  * @date    2026-02-21
  *
  * @details Implements a table-driven state machine for the CVC with 6 states
- *          and 11 events. The transition table is a const 2D array that maps
+ *          and 14 events. The transition table is a const 2D array that maps
  *          (current_state, event) -> next_state. Invalid combinations map to
  *          CVC_STATE_INVALID (0xFF) and are rejected.
  *
@@ -67,7 +67,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_SC_KILL            -> SAFE_STOP    */
         CVC_STATE_INVALID,     /* EVT_FAULT_CLEARED      -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_CAN_RESTORED       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
     },
     /* CVC_STATE_RUN */
     {
@@ -81,7 +84,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_SC_KILL            -> SAFE_STOP    */
         CVC_STATE_INVALID,     /* EVT_FAULT_CLEARED      -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_CAN_RESTORED       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_DEGRADED,    /* EVT_MOTOR_CUTOFF       -> DEGRADED     */
+        CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
     },
     /* CVC_STATE_DEGRADED */
     {
@@ -95,7 +101,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_SC_KILL            -> SAFE_STOP    */
         CVC_STATE_RUN,         /* EVT_FAULT_CLEARED      -> RUN          */
         CVC_STATE_INVALID,     /* EVT_CAN_RESTORED       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_SAFE_STOP,   /* EVT_MOTOR_CUTOFF       -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
     },
     /* CVC_STATE_LIMP */
     {
@@ -109,7 +118,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_SC_KILL            -> SAFE_STOP    */
         CVC_STATE_RUN,         /* EVT_FAULT_CLEARED      -> RUN          */
         CVC_STATE_DEGRADED,    /* EVT_CAN_RESTORED       -> DEGRADED     */
-        CVC_STATE_INVALID      /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_SAFE_STOP,   /* EVT_MOTOR_CUTOFF       -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
     },
     /* CVC_STATE_SAFE_STOP */
     {
@@ -123,7 +135,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_SC_KILL            -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_FAULT_CLEARED      -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_CAN_RESTORED       -> (invalid)    */
-        CVC_STATE_SHUTDOWN     /* EVT_VEHICLE_STOPPED    -> SHUTDOWN     */
+        CVC_STATE_SHUTDOWN,    /* EVT_VEHICLE_STOPPED    -> SHUTDOWN     */
+        CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
     },
     /* CVC_STATE_SHUTDOWN */
     {
@@ -137,7 +152,10 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_SC_KILL            -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_FAULT_CLEARED      -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_CAN_RESTORED       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
     }
 };
 
@@ -323,20 +341,23 @@ void Swc_VehicleState_MainFunction(void)
         Swc_VehicleState_OnEvent(CVC_EVT_FAULT_CLEARED);
     }
 
-    /* ---- Step 4: Report DTCs for subsystem faults ---- */
+    /* ---- Step 4: Report DTCs and derive events for subsystem faults ---- */
     if (motor_cutoff != 0u)
     {
         Dem_ReportErrorStatus(CVC_DTC_MOTOR_CUTOFF_RX, DEM_EVENT_STATUS_FAILED);
+        Swc_VehicleState_OnEvent(CVC_EVT_MOTOR_CUTOFF);
     }
 
     if (brake_fault != 0u)
     {
         Dem_ReportErrorStatus(CVC_DTC_BRAKE_FAULT_RX, DEM_EVENT_STATUS_FAILED);
+        Swc_VehicleState_OnEvent(CVC_EVT_BRAKE_FAULT);
     }
 
     if (steering_fault != 0u)
     {
         Dem_ReportErrorStatus(CVC_DTC_STEERING_FAULT_RX, DEM_EVENT_STATUS_FAILED);
+        Swc_VehicleState_OnEvent(CVC_EVT_STEERING_FAULT);
     }
 
     /* ---- Step 5: Write current state to RTE ---- */

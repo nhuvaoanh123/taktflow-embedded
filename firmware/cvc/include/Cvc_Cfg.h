@@ -177,7 +177,10 @@
 #define CVC_EVT_FAULT_CLEARED        8u
 #define CVC_EVT_CAN_RESTORED         9u
 #define CVC_EVT_VEHICLE_STOPPED     10u
-#define CVC_EVT_COUNT               11u
+#define CVC_EVT_MOTOR_CUTOFF        11u
+#define CVC_EVT_BRAKE_FAULT         12u
+#define CVC_EVT_STEERING_FAULT      13u
+#define CVC_EVT_COUNT               14u
 
 /* Invalid/no transition sentinel */
 #define CVC_STATE_INVALID          0xFFu

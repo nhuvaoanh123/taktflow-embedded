@@ -64,7 +64,10 @@ typedef uint8 Std_ReturnType;
 #define CVC_EVT_FAULT_CLEARED       8u
 #define CVC_EVT_CAN_RESTORED        9u
 #define CVC_EVT_VEHICLE_STOPPED    10u
-#define CVC_EVT_COUNT              11u
+#define CVC_EVT_MOTOR_CUTOFF       11u
+#define CVC_EVT_BRAKE_FAULT        12u
+#define CVC_EVT_STEERING_FAULT     13u
+#define CVC_EVT_COUNT              14u
 
 #define CVC_COMM_OK                 0u
 #define CVC_COMM_TIMEOUT            1u
@@ -567,7 +570,7 @@ void test_OnEvent_boundary_event_at_count(void)
     Swc_VehicleState_MainFunction();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 
-    /* Fire event with ID = CVC_EVT_COUNT (11) — out of range */
+    /* Fire event with ID = CVC_EVT_COUNT (14) — out of range */
     Swc_VehicleState_OnEvent(CVC_EVT_COUNT);
 
     /* State should remain RUN */
@@ -757,6 +760,80 @@ void test_RUN_to_SAFE_STOP_on_dual_CAN_timeout(void)
 }
 
 /* ==================================================================
+ * SWR-CVC-010: Subsystem Fault State Transitions (Motor/Brake/Steering)
+ * ================================================================== */
+
+/** @verifies SWR-CVC-010 — RUN -> DEGRADED on motor cutoff signal */
+void test_RUN_to_DEGRADED_on_motor_cutoff(void)
+{
+    /* Get to RUN */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Motor cutoff signal active */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-010 — RUN -> SAFE_STOP on brake fault signal */
+void test_RUN_to_SAFE_STOP_on_brake_fault(void)
+{
+    /* Get to RUN */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Brake fault signal active */
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-010 — RUN -> SAFE_STOP on steering fault signal */
+void test_RUN_to_SAFE_STOP_on_steering_fault(void)
+{
+    /* Get to RUN */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Steering fault signal active */
+    mock_rte_signals[CVC_SIG_STEERING_FAULT] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-011 — DEGRADED -> SAFE_STOP on motor cutoff (escalation) */
+void test_DEGRADED_to_SAFE_STOP_on_motor_cutoff(void)
+{
+    /* Get to DEGRADED via pedal fault */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+
+    /* Motor cutoff in DEGRADED -> escalate to SAFE_STOP */
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 1u;  /* Keep pedal fault to prevent FAULT_CLEARED */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -826,6 +903,12 @@ int main(void)
     /* SWR-CVC-010: RTE failure and dual CAN timeout */
     RUN_TEST(test_MainFunction_rte_read_failure_no_crash);
     RUN_TEST(test_RUN_to_SAFE_STOP_on_dual_CAN_timeout);
+
+    /* SWR-CVC-010/011: Subsystem fault state transitions */
+    RUN_TEST(test_RUN_to_DEGRADED_on_motor_cutoff);
+    RUN_TEST(test_RUN_to_SAFE_STOP_on_brake_fault);
+    RUN_TEST(test_RUN_to_SAFE_STOP_on_steering_fault);
+    RUN_TEST(test_DEGRADED_to_SAFE_STOP_on_motor_cutoff);
 
     return UNITY_END();
 }

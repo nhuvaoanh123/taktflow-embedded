@@ -4,7 +4,7 @@
  * @date    2026-02-21
  *
  * @details Manages the CVC vehicle state machine with 6 states (INIT, RUN,
- *          DEGRADED, LIMP, SAFE_STOP, SHUTDOWN) and 11 event types. Transitions
+ *          DEGRADED, LIMP, SAFE_STOP, SHUTDOWN) and 14 event types. Transitions
  *          are defined by a const lookup table. The MainFunction (10ms cyclic)
  *          reads fault signals from RTE, derives events, reports DTCs, and
  *          writes current state back to RTE.
@@ -44,7 +44,7 @@ uint8 Swc_VehicleState_GetState(void);
 
 /**
  * @brief  Inject an external event into the state machine
- * @param  event  Event ID (CVC_EVT_SELF_TEST_PASS..CVC_EVT_VEHICLE_STOPPED)
+ * @param  event  Event ID (CVC_EVT_SELF_TEST_PASS..CVC_EVT_STEERING_FAULT)
  * @note   Looks up transition_table[current_state][event]. If the result
  *         is not CVC_STATE_INVALID, transitions to the new state and
  *         notifies BswM_RequestMode with the corresponding BswM mode.
