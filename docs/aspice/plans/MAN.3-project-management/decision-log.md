@@ -66,6 +66,7 @@ The daily scan script (`scripts/decision-audit.sh`) searches for:
 | ADR-010 | Unity + CCS Test + pytest for testing | T2 | 7/12 | 2026-02-21 | Approved |
 | ADR-011 | CAN 2.0B at 500 kbps (no CAN FD) | T1 | 7/12 | 2026-02-21 | Approved |
 | ADR-012 | AWS IoT Core + Timestream + Grafana | T2 | 6/12 | 2026-02-21 | Approved |
+| ADR-013 | Custom trace-gen.py for traceability | T2 | 8/12 | 2026-02-25 | Approved |
 
 ---
 
@@ -354,4 +355,33 @@ CAN 2.0B at 500 kbps is the zero-cost, zero-risk baseline that satisfies all pro
 
 ### Why chosen wins
 AWS IoT Core costs ~$4-7/month (comparable to self-hosted at ~$6/month) but adds managed infrastructure, device provisioning, device shadows, and the highest automotive industry credibility. Azure costs 4-5x more ($25+/month) for the same message volume and locks dashboards behind Power BI Pro licensing. Self-hosted is cheapest and technically excellent but sacrifices the "AWS IoT Core" resume keyword that automotive hiring managers specifically look for. The AWS stack is the optimal balance of cost, credibility, and managed simplicity for a portfolio project targeting automotive employers.
+
+---
+
+## ADR-013: Custom trace-gen.py + CI for Traceability Management
+
+- **Date**: 2026-02-25
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 2 | Safety 3 | Resume 2 = **8/12**
+- **Decision**: Use a custom Python script (`scripts/trace-gen.py`) + GitHub Actions CI workflow for bidirectional traceability enforcement across the full V-model (8 levels, 475 requirements), with `scripts/suspect-links.py` for change impact analysis on PRs
+- **Rationale**: The traceability data already lives in Markdown docs and code comments (`@verifies`, `@safety_req`, `**Traces up**:`). A 954-line pure-stdlib Python script parses all of it, builds a bidirectional graph, validates links, and generates both Markdown matrix and JSON output. CI enforcement (`--check` flag) blocks merge on broken links or untested leaf requirements. This is version-controlled, auditable, free, and demonstrates systems engineering skill — not just tool usage. For a portfolio project, showing you can BUILD the tooling is more impressive than showing you can buy a license.
+- **Effort**: ~3 days implementation, $0/month
+
+### Alternative A: Siemens Polarion ALM
+- **Effort**: $15,000-50,000/year (per-seat licensing), 2-4 weeks setup + training
+- **Pros**: Industry-standard ALM tool used by BMW, Continental, Bosch, ZF. Full lifecycle management (requirements, test management, change requests, baselines). Built-in traceability matrix with GUI. Regulatory compliance reports (ISO 26262, ASPICE). Workflow automation with configurable approval chains. Live collaboration for distributed teams. TUV-recognized as qualified tool for safety-critical development. Assessors expect and trust Polarion data exports.
+- **Cons**: Prohibitively expensive for a solo portfolio project ($15K+ minimum). Requires server infrastructure (on-prem or cloud instance). Licensing complexity (named vs concurrent seats). Heavy admin overhead — configuring schemas, workflows, roles takes weeks before any productive use. Requirements live in a proprietary database, not in version-controlled files alongside the code. Cannot diff requirement changes in git — breaks the "everything in git" philosophy. Learning curve for Polarion-specific concepts (Work Items, Live Documents, Linked Work Items). Vendor lock-in: extracting data for migration is notoriously painful (proprietary XML export). Overkill for 475 requirements managed by one person.
+
+### Alternative B: IBM DOORS / DOORS Next Generation
+- **Effort**: $8,000-30,000/year (per-seat licensing), 3-6 weeks setup
+- **Pros**: The most widely used requirements management tool in automotive (legacy installed base: VW, Toyota, GM). OSLC integration for cross-tool traceability. Formal baseline and change management. Module-based structure mirrors V-model hierarchy well. Strong regulatory acceptance — assessors know DOORS inside and out.
+- **Cons**: Even more expensive than Polarion for small teams. DOORS Classic is aging (Windows-only, dated UI). DOORS Next (DNG) is web-based but resource-heavy. Same vendor lock-in problem as Polarion — requirements stored in proprietary format. IBM's automotive tools division has been declining (Rational brand is legacy). Setup complexity is extreme for a solo developer — DOORS requires database server, license server, admin training. No git integration — requirements and code live in separate worlds. Cannot be demonstrated in a portfolio without a live license.
+
+### Alternative C: Jama Connect
+- **Effort**: $10,000-25,000/year, 1-2 weeks setup
+- **Pros**: Modern web UI, strong automotive/defense customer base (Aptiv, Magna, Qualcomm). Built-in traceability views and impact analysis. REST API for integration. Good ASPICE/ISO 26262 compliance reporting.
+- **Cons**: Same cost barrier ($10K+/year). SaaS-only — no self-hosted option, data lives on Jama's servers. Requirements disconnected from git. Smaller automotive footprint than Polarion or DOORS. Cannot run locally or in CI — depends on cloud service availability.
+
+### Why chosen wins
+All commercial ALM tools (Polarion, DOORS, Jama) cost $8,000-50,000/year and require weeks of setup — absurd for a solo portfolio project with 475 requirements. More importantly, they all store requirements in proprietary databases disconnected from the codebase. The custom approach keeps everything in git: requirements in Markdown, trace tags in code comments, validation in CI. This means `git diff` shows requirement changes, `git blame` shows who changed what, and every baseline is a git tag — all ASPICE SUP.8 requirements met for free. The CI enforcement (blocking merge on broken links) is functionally equivalent to what Polarion provides via workflow rules, but it's transparent, auditable, and version-controlled. For hiring, building a traceability pipeline from scratch demonstrates deeper systems engineering understanding than clicking through a Polarion UI — any engineer can learn Polarion in 2 weeks, but designing a V-model traceability graph with suspect-link detection shows architectural thinking.
 

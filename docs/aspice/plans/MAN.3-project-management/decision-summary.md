@@ -66,6 +66,7 @@ Quick reference for all approved decisions with tier ranking and impact scores. 
 | ADR-009 | **Docker containers** for vECUs | $0 | 1-2d | 1/1/1/2 | **5** | Isolation + reproducibility + CI/CD |
 | ADR-010 | **Unity + CCS Test + pytest** | $0 | 2-4h+1-2d | 1/1/3/2 | **7** | Pure C, MIT, embedded-designed, actively maintained |
 | ADR-012 | **AWS IoT Core + Timestream + Grafana** | $4-7/mo | 3-5d | 1/1/1/3 | **6** | Highest automotive OEM adoption, free tier |
+| ADR-013 | **Custom trace-gen.py + CI** for traceability | $0 | 3d | 1/2/3/2 | **8** | Free, git-native, CI-enforced, demonstrates systems engineering |
 
 ### T4 — Process (workflow, easy to reverse)
 
@@ -83,9 +84,9 @@ Quick reference for all approved decisions with tier ranking and impact scores. 
 | Tier | Count | Total Cost | Total Time | Avg Score |
 |------|-------|-----------|------------|-----------|
 | T1 — Architecture | 3 | $60 | 20-28 days | 8.7 |
-| T2 — Design | 5 | $4-7/mo | 14-24 days | 6.2 |
+| T2 — Design | 6 | $4-7/mo | 17-27 days | 6.5 |
 | T4 — Process | 4 | $0 | 6 hours | 4.5 |
-| **All** | **12** | **$60 + $4-7/mo** | **~36-50 days** | **6.2** |
+| **All** | **13** | **$60 + $4-7/mo** | **~39-53 days** | **6.3** |
 
 ## Rejected Alternatives (Top Reasons)
 
@@ -106,4 +107,7 @@ Quick reference for all approved decisions with tier ranking and impact scores. 
 | CUnit | 010 | T2 | Abandoned since 2018, no mock generation |
 | Azure IoT Hub | 012 | T2 | $25/month min (5x AWS cost) |
 | Self-hosted Mosquitto | 012 | T2 | Loses automotive resume keyword |
+| Siemens Polarion ALM | 013 | T2 | $15K+/year, weeks of setup, proprietary DB |
+| IBM DOORS / DNG | 013 | T2 | $8K+/year, aging UI, no git integration |
+| Jama Connect | 013 | T2 | $10K+/year, SaaS-only, disconnected from git |
 
