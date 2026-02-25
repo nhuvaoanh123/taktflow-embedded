@@ -198,7 +198,7 @@ boolean Can_Hw_Receive(Can_IdType* id, uint8* data, uint8* dlc)
 
     *id  = (Can_IdType)frame.can_id;
     *dlc = frame.can_dlc;
-    if (frame.can_dlc > 8u) {
+    if ((uint32)frame.can_dlc > 8u) {
         *dlc = 8u;
     }
     memcpy(data, frame.data, *dlc);

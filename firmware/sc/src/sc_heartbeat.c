@@ -87,6 +87,11 @@ void SC_Heartbeat_Monitor(void)
             hb_counter[i]++;
         }
 
+        /* If not timed out, ensure fault LED is cleared */
+        if ((hb_timed_out[i] == FALSE) && (hb_confirmed[i] == FALSE)) {
+            gioSetBit(SC_GIO_PORT_A, ecu_led_pin[i], 0u);
+        }
+
         /* Check for timeout threshold (150ms) */
         if (hb_counter[i] >= SC_HB_TIMEOUT_TICKS) {
             if (hb_timed_out[i] == FALSE) {
@@ -96,14 +101,14 @@ void SC_Heartbeat_Monitor(void)
 
                 /* Drive fault LED HIGH immediately */
                 gioSetBit(SC_GIO_PORT_A, ecu_led_pin[i], 1u);
-            }
+            } else {
+                /* Already timed out — increment confirmation counter */
+                hb_confirm_counter[i]++;
 
-            /* Increment confirmation counter */
-            hb_confirm_counter[i]++;
-
-            /* Check confirmation threshold (50ms additional) */
-            if (hb_confirm_counter[i] >= SC_HB_CONFIRM_TICKS) {
-                hb_confirmed[i] = TRUE;
+                /* Check confirmation threshold (50ms additional) */
+                if (hb_confirm_counter[i] >= SC_HB_CONFIRM_TICKS) {
+                    hb_confirmed[i] = TRUE;
+                }
             }
         }
     }

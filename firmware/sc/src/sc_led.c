@@ -62,14 +62,14 @@ void SC_LED_Update(void)
     uint8 i;
     boolean blink_phase;
 
-    /* Advance blink counter */
+    /* Determine blink phase: ON for first half, OFF for second */
+    blink_phase = (blink_counter < SC_LED_BLINK_ON_TICKS) ? TRUE : FALSE;
+
+    /* Advance blink counter (after phase check) */
     blink_counter++;
     if (blink_counter >= SC_LED_BLINK_PERIOD) {
         blink_counter = 0u;
     }
-
-    /* Determine blink phase: ON for first half, OFF for second */
-    blink_phase = (blink_counter < SC_LED_BLINK_ON_TICKS) ? TRUE : FALSE;
 
     for (i = 0u; i < SC_LED_COUNT; i++) {
         if (led_state[i] == SC_LED_ON) {
@@ -86,6 +86,10 @@ void SC_LED_Update(void)
 void SC_LED_SetState(uint8 ledIndex, uint8 state)
 {
     if (ledIndex < SC_LED_COUNT) {
+        if (state == SC_LED_BLINK) {
+            /* Reset blink counter for fresh cycle */
+            blink_counter = 0u;
+        }
         led_state[ledIndex] = state;
     }
 }

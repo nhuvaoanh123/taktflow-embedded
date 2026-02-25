@@ -26,11 +26,24 @@ typedef signed short    sint16;
 typedef signed long     sint32;
 typedef uint8           Std_ReturnType;
 
-#define E_OK        0u
-#define E_NOT_OK    1u
+#define E_OK        ((Std_ReturnType)0x00U)
+#define E_NOT_OK    ((Std_ReturnType)0x01U)
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+typedef uint8           boolean;
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define COMSTACK_TYPES_H
+#define SWC_ENCODER_H
+#define RZC_CFG_H
+#define IOHWAB_H
+#define RTE_H
+#define DEM_H
+#define WDGM_H
 
 /* ==================================================================
  * Constants (from Rzc_Cfg.h — redefined locally for test isolation)

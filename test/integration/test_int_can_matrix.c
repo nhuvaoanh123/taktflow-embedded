@@ -526,7 +526,7 @@ void test_int_can_matrix_e2e_protected_messages(void)
         "Torque_Request DataId mismatch in E2E header byte 0");
 
     /* Verify CRC byte is non-zero (valid CRC computed) */
-    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, pdu_torque[E2E_BYTE_CRC],
+    TEST_ASSERT_FALSE_MESSAGE(0u == pdu_torque[E2E_BYTE_CRC],
         "Torque_Request E2E CRC byte should be non-zero after protection");
 
     /* --- Verify Steer_Command E2E header --- */
@@ -534,7 +534,7 @@ void test_int_can_matrix_e2e_protected_messages(void)
     TEST_ASSERT_EQUAL_HEX8_MESSAGE(E2E_DATAID_STEER_CMD, dataid_nibble,
         "Steer_Command DataId mismatch in E2E header byte 0");
 
-    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, pdu_steer[E2E_BYTE_CRC],
+    TEST_ASSERT_FALSE_MESSAGE(0u == pdu_steer[E2E_BYTE_CRC],
         "Steer_Command E2E CRC byte should be non-zero after protection");
 
     /* --- Verify Motor_Status E2E header --- */
@@ -542,7 +542,7 @@ void test_int_can_matrix_e2e_protected_messages(void)
     TEST_ASSERT_EQUAL_HEX8_MESSAGE(E2E_DATAID_MOTOR_STATUS, dataid_nibble,
         "Motor_Status DataId mismatch in E2E header byte 0");
 
-    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, pdu_motor[E2E_BYTE_CRC],
+    TEST_ASSERT_FALSE_MESSAGE(0u == pdu_motor[E2E_BYTE_CRC],
         "Motor_Status E2E CRC byte should be non-zero after protection");
 }
 

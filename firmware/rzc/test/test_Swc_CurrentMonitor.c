@@ -25,11 +25,26 @@ typedef unsigned long   uint32;
 typedef signed short    sint16;
 typedef uint8           Std_ReturnType;
 
-#define E_OK        0u
-#define E_NOT_OK    1u
+#define E_OK        ((Std_ReturnType)0x00U)
+#define E_NOT_OK    ((Std_ReturnType)0x01U)
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+typedef uint8           boolean;
+typedef uint8           Com_SignalIdType;
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define COMSTACK_TYPES_H
+#define SWC_CURRENTMONITOR_H
+#define RZC_CFG_H
+#define IOHWAB_H
+#define RTE_H
+#define COM_H
+#define DEM_H
+#define WDGM_H
 
 /* ==================================================================
  * Rzc_Cfg.h constants (redefined locally for test isolation)
@@ -140,18 +155,15 @@ Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
 static uint8   mock_com_send_count;
 static uint16  mock_com_last_signal_id;
 static uint8   mock_com_last_data[MOCK_COM_MAX_DATA];
-static uint8   mock_com_last_data_len;
 
-Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr, uint8 Length)
+Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
 {
     uint8 i;
+    const uint8* DataPtr = (const uint8*)SignalDataPtr;
     mock_com_send_count++;
-    mock_com_last_signal_id = SignalId;
-    mock_com_last_data_len  = Length;
-    for (i = 0u; i < Length; i++) {
-        if (i < MOCK_COM_MAX_DATA) {
-            mock_com_last_data[i] = DataPtr[i];
-        }
+    mock_com_last_signal_id = (uint16)SignalId;
+    for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
+        mock_com_last_data[i] = DataPtr[i];
     }
     return E_OK;
 }
@@ -227,7 +239,6 @@ void setUp(void)
     /* Reset COM mock */
     mock_com_send_count     = 0u;
     mock_com_last_signal_id = 0xFFu;
-    mock_com_last_data_len  = 0u;
     for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
         mock_com_last_data[i] = 0u;
     }
@@ -533,7 +544,6 @@ void test_CAN_broadcast(void)
     /* Exactly one CAN frame should have been sent */
     TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
     TEST_ASSERT_EQUAL_UINT16(RZC_COM_TX_MOTOR_CURRENT, mock_com_last_signal_id);
-    TEST_ASSERT_EQUAL_UINT8(8u, mock_com_last_data_len);
 
     /* Verify current value in payload (big-endian: hi, lo) */
     uint16 payload_current = ((uint16)mock_com_last_data[0] << 8u)

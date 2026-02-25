@@ -32,8 +32,13 @@ typedef uint8          boolean;
 /* Prevent BSW headers from redefining types */
 #define PLATFORM_TYPES_H
 #define STD_TYPES_H
+#define COMSTACK_TYPES_H
 #define SWC_DOORLOCK_H
 #define BCM_CFG_H
+#define DEM_H
+#define WDGM_H
+#define IOHWAB_H
+#define RTE_H
 
 /* ====================================================================
  * Signal IDs (must match Bcm_Cfg.h)

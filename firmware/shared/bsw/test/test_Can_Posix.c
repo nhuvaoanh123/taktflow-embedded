@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>   /* ssize_t for mock syscall signatures & Can_Posix.c */
 
 /* Forward-declare the struct used by SocketCAN */
 #ifndef AF_CAN

@@ -26,9 +26,10 @@ typedef signed char     sint8;
 typedef signed short    sint16;
 typedef signed long     sint32;
 typedef uint8           Std_ReturnType;
+typedef uint8           boolean;
 
-#define E_OK        0u
-#define E_NOT_OK    1u
+#define E_OK        ((Std_ReturnType)0x00U)
+#define E_NOT_OK    ((Std_ReturnType)0x01U)
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
@@ -222,5 +223,18 @@ int main(void)
 
 /* ==================================================================
  * Include implementation under test (source inclusion pattern)
+ *
+ * Pre-define BSW header guards so that the real BSW headers are NOT
+ * pulled in -- the test already provides its own mock declarations.
  * ================================================================== */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define COMSTACK_TYPES_H
+#define SWC_RZC_SCHEDULER_H
+#define RZC_CFG_H
+#define RTE_H
+#define WDGM_H
+#define DEM_H
+#define IOHWAB_H
+
 #include "../src/Swc_RzcScheduler.c"

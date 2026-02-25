@@ -37,7 +37,8 @@ static uint8 readback_mismatch_count;
 
 void SC_Relay_Init(void)
 {
-    relay_killed            = FALSE;
+    /* Kill latch is NOT cleared — once killed, only a power cycle resets it.
+     * This ensures the kill latch survives re-initialization (SWR-SC-011). */
     relay_commanded         = FALSE;
     readback_mismatch_count = 0u;
 
@@ -96,7 +97,13 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (f): GPIO readback mismatch */
+    /* Trigger (f): CAN bus-off */
+    if (SC_CAN_IsBusOff() == TRUE) {
+        SC_Relay_DeEnergize();
+        return;
+    }
+
+    /* Trigger (g): GPIO readback mismatch */
     readback = gioGetBit(SC_GIO_PORT_A, SC_PIN_RELAY);
     if (relay_commanded == TRUE) {
         if (readback != 1u) {

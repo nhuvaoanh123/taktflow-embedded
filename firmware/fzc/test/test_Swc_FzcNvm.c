@@ -80,16 +80,23 @@ typedef struct {
 } Swc_FzcNvm_CalData;
 
 /* ==================================================================
- * Swc_FzcNvm API declarations
+ * Prevent BSW headers from redefining types
  * ================================================================== */
 
-extern void            Swc_FzcNvm_Init(void);
-extern Std_ReturnType  Swc_FzcNvm_StoreDtc(uint8 dtcId, sint16 steerAngle,
-                                            uint8 brakePos, uint16 lidarDist);
-extern Std_ReturnType  Swc_FzcNvm_LoadDtc(uint8 index, Swc_FzcNvm_DtcRecord* record);
-extern Std_ReturnType  Swc_FzcNvm_LoadCal(Swc_FzcNvm_CalData* cal);
-extern Std_ReturnType  Swc_FzcNvm_StoreCal(const Swc_FzcNvm_CalData* cal);
-extern uint16          Swc_FzcNvm_Crc16(const uint8* data, uint16 length);
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_FZC_NVM_H
+#define FZC_CFG_H
+#define NVM_H
+
+/* Forward-declare public API (guarded out from header) */
+void               Swc_FzcNvm_Init(void);
+Std_ReturnType     Swc_FzcNvm_StoreDtc(uint8 dtcId, sint16 steerAngle,
+                                        uint8 brakePos, uint16 lidarDist);
+Std_ReturnType     Swc_FzcNvm_LoadDtc(uint8 index, Swc_FzcNvm_DtcRecord* record);
+Std_ReturnType     Swc_FzcNvm_LoadCal(Swc_FzcNvm_CalData* cal);
+Std_ReturnType     Swc_FzcNvm_StoreCal(const Swc_FzcNvm_CalData* cal);
+uint16             Swc_FzcNvm_Crc16(const uint8* data, uint16 length);
 
 /* ==================================================================
  * Mock: NvM_ReadBlock / NvM_WriteBlock
@@ -114,6 +121,12 @@ Std_ReturnType NvM_WriteBlock(uint8 BlockId, const void* SrcPtr)
     (void)SrcPtr;
     return E_OK;
 }
+
+/* ==================================================================
+ * Include SWC under test (source inclusion for test build)
+ * ================================================================== */
+
+#include "../src/Swc_FzcNvm.c"
 
 /* ==================================================================
  * Test Configuration

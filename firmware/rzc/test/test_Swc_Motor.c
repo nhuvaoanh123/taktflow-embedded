@@ -31,11 +31,26 @@ typedef signed short    sint16;
 typedef signed long     sint32;
 typedef uint8           Std_ReturnType;
 
-#define E_OK        0u
-#define E_NOT_OK    1u
+#define E_OK        ((Std_ReturnType)0x00U)
+#define E_NOT_OK    ((Std_ReturnType)0x01U)
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+typedef uint8           boolean;
+typedef uint8           Com_SignalIdType;
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define COMSTACK_TYPES_H
+#define SWC_MOTOR_H
+#define RZC_CFG_H
+#define IOHWAB_H
+#define RTE_H
+#define COM_H
+#define DEM_H
+#define WDGM_H
 
 /* ==================================================================
  * RZC signal IDs (from Rzc_Cfg.h -- redefined locally for test isolation)
@@ -241,11 +256,10 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
  * Mock: Com_SendSignal (not used by motor but required for link)
  * ================================================================== */
 
-Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr, uint8 Length)
+Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
 {
     (void)SignalId;
-    (void)DataPtr;
-    (void)Length;
+    (void)SignalDataPtr;
     return E_OK;
 }
 

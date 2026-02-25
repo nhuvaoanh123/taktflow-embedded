@@ -143,6 +143,73 @@ void Main_Hw_PlantStackCanary(void)
 }
 
 /* ==================================================================
+ * Self-test stubs (SelfTest_Hw_* from Swc_SelfTest.c)
+ * ================================================================== */
+
+/**
+ * @brief  SPI loopback self-test — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_SpiLoopback(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  CAN loopback self-test — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_CanLoopback(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  NVM integrity check — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_NvmCheck(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  OLED I2C ACK self-test — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_OledAck(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  MPU region verify — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_MpuVerify(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  Stack canary check — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_CanaryCheck(void)
+{
+    return E_OK;
+}
+
+/**
+ * @brief  RAM pattern test — always passes in SIL
+ * @return E_OK
+ */
+Std_ReturnType SelfTest_Hw_RamPattern(void)
+{
+    return E_OK;
+}
+
+/* ==================================================================
  * SSD1306 OLED I2C stub (from Ssd1306.c:19)
  * ================================================================== */
 

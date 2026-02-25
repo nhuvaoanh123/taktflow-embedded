@@ -109,6 +109,7 @@ BSW_SRCS = \
     $(SERVICES_DIR)/E2E.c \
     $(SERVICES_DIR)/WdgM.c \
     $(SERVICES_DIR)/BswM.c \
+    $(SERVICES_DIR)/NvM.c \
     $(RTE_DIR)/Rte.c
 
 # --- FZC additionally needs Uart MCAL ---
@@ -306,6 +307,7 @@ MISRA_BSW_SRCS = \
     $(_ECUAL_DIR)/CanIf.c $(_ECUAL_DIR)/PduR.c $(_ECUAL_DIR)/IoHwAb.c \
     $(_SERVICES_DIR)/Com.c $(_SERVICES_DIR)/Dcm.c $(_SERVICES_DIR)/Dem.c \
     $(_SERVICES_DIR)/E2E.c $(_SERVICES_DIR)/WdgM.c $(_SERVICES_DIR)/BswM.c \
+    $(_SERVICES_DIR)/NvM.c \
     $(_RTE_DIR)/Rte.c
 
 # --- ECU application sources (src/ + cfg/, no test/) ---

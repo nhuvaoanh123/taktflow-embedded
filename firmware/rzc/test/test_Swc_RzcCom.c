@@ -29,11 +29,26 @@ typedef signed short    sint16;
 typedef signed long     sint32;
 typedef uint8           Std_ReturnType;
 
-#define E_OK        0u
-#define E_NOT_OK    1u
+#define E_OK        ((Std_ReturnType)0x00U)
+#define E_NOT_OK    ((Std_ReturnType)0x01U)
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+typedef uint8           boolean;
+typedef uint8           Com_SignalIdType;
+
+/* Prevent BSW headers from redefining types when source is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define COMSTACK_TYPES_H
+#define SWC_RZC_COM_H
+#define RZC_CFG_H
+#define RTE_H
+#define COM_H
+#define DEM_H
+#define WDGM_H
+#define IOHWAB_H
 
 /* ==================================================================
  * RZC signal IDs (from Rzc_Cfg.h -- redefined locally for test isolation)
@@ -140,12 +155,13 @@ static uint8   mock_com_send_count;
 static uint16  mock_com_last_signal_id;
 static uint8   mock_com_last_data[8];
 
-Std_ReturnType Com_SendSignal(uint16 SignalId, const uint8* DataPtr)
+Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
 {
     uint8 i;
+    const uint8* DataPtr = (const uint8*)SignalDataPtr;
     mock_com_send_count++;
-    mock_com_last_signal_id = SignalId;
-    if (DataPtr != NULL_PTR) {
+    mock_com_last_signal_id = (uint16)SignalId;
+    if (SignalDataPtr != NULL_PTR) {
         for (i = 0u; i < 8u; i++) {
             mock_com_last_data[i] = DataPtr[i];
         }

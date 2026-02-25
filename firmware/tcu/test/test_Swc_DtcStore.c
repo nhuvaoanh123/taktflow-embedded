@@ -56,6 +56,32 @@ typedef uint8          boolean;
 #define DTC_STATUS_PENDING              0x04u
 #define DTC_STATUS_CONFIRMED            0x08u
 
+/* ====================================================================
+ * DtcStoreEntry_t — must match Swc_DtcStore.h (guarded out above)
+ * ==================================================================== */
+
+typedef struct {
+    uint32  dtcCode;        /**< 24-bit DTC number               */
+    uint8   status;         /**< ISO 14229 status byte            */
+    uint16  agingCounter;   /**< Drive cycles since last fail     */
+    /* Freeze frame */
+    uint16  ff_speed;       /**< Vehicle speed at capture         */
+    uint16  ff_current;     /**< Motor current at capture         */
+    uint16  ff_voltage;     /**< Battery voltage at capture       */
+    uint8   ff_temp;        /**< Motor temp at capture            */
+    uint32  ff_timestamp;   /**< Tick when first detected         */
+} DtcStoreEntry_t;
+
+/* Forward-declare public API (guarded out from header) */
+void               Swc_DtcStore_Init(void);
+void               Swc_DtcStore_10ms(void);
+uint8              Swc_DtcStore_GetCount(void);
+const DtcStoreEntry_t* Swc_DtcStore_GetByIndex(uint8 index);
+void               Swc_DtcStore_Clear(void);
+Std_ReturnType     Swc_DtcStore_Add(uint32 dtcCode, uint8 status);
+uint8              Swc_DtcStore_GetByMask(uint8 statusMask, uint32* dtcCodes,
+                                          uint8 maxCount);
+
 /* DTC aging threshold */
 #define TCU_DTC_AGING_CLEAR_CYCLES  40u
 

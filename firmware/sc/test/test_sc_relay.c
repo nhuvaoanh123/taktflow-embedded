@@ -123,6 +123,9 @@ void setUp(void)
     mock_esm_error        = FALSE;
     mock_can_bus_off      = FALSE;
 
+    /* Direct reset of kill latch for test isolation.
+     * SC_Relay_Init() does NOT clear the latch (SWR-SC-011). */
+    relay_killed = FALSE;
     SC_Relay_Init();
 }
 
