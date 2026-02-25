@@ -80,6 +80,12 @@ static uint8   Pedal_PlausDebounce;
 /* Stuck detection counter */
 static uint16  Pedal_StuckCounter;
 
+/* Stuck detection: first-cycle initialization flag */
+static uint8   Pedal_StuckReady;
+
+/* Stuck detection: one-shot flag (prevents re-trigger at same value) */
+static uint8   Pedal_StuckFired;
+
 /* Zero-torque latch */
 static uint8   Pedal_FaultLatched;
 static uint8   Pedal_LatchCounter;
@@ -251,6 +257,8 @@ void Swc_Pedal_Init(const Swc_Pedal_ConfigType* ConfigPtr)
     Pedal_PrevRaw1      = 0u;
     Pedal_PlausDebounce = 0u;
     Pedal_StuckCounter  = 0u;
+    Pedal_StuckReady    = FALSE;
+    Pedal_StuckFired    = FALSE;
     Pedal_FaultLatched  = FALSE;
     Pedal_LatchCounter  = 0u;
     Pedal_PrevTorque    = 0u;
@@ -327,17 +335,38 @@ void Swc_Pedal_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 4: Stuck detection (only if no other fault)
+     *
+     * First-cycle initialization: on the very first valid reading
+     * after Init, set PrevRaw1 to the current value so that cycle 1
+     * counts toward the stuck window (delta == 0).
+     *
+     * One-shot: once stuck fires, the StuckFired flag prevents
+     * re-triggering until the sensor value actually changes.
+     * This allows the zero-torque latch to clear and torque to
+     * recover after a transient stuck condition.
      * ---------------------------------------------------------- */
     if (new_fault == CVC_PEDAL_NO_FAULT) {
+        /* First valid reading: seed PrevRaw1 so first cycle counts */
+        if (Pedal_StuckReady == FALSE) {
+            Pedal_PrevRaw1  = raw1_local;
+            Pedal_StuckReady = TRUE;
+        }
+
         delta = Pedal_AbsDiff16(raw1_local, Pedal_PrevRaw1);
 
         if (delta < Pedal_CfgPtr->stuckThreshold) {
-            Pedal_StuckCounter++;
-            if (Pedal_StuckCounter >= Pedal_CfgPtr->stuckCycles) {
-                new_fault = CVC_PEDAL_STUCK;
+            if (Pedal_StuckFired == FALSE) {
+                Pedal_StuckCounter++;
+                if (Pedal_StuckCounter >= Pedal_CfgPtr->stuckCycles) {
+                    new_fault = CVC_PEDAL_STUCK;
+                    Pedal_StuckFired = TRUE;
+                }
             }
+            /* If StuckFired: sensor still stuck but don't re-trigger */
         } else {
+            /* Sensor value changed: reset stuck window */
             Pedal_StuckCounter = 0u;
+            Pedal_StuckFired   = FALSE;
         }
     }
 
@@ -370,6 +399,12 @@ void Swc_Pedal_MainFunction(void)
      * ---------------------------------------------------------- */
     torque = Pedal_ApplyRamp(torque);
 
+    /* Save ramp-limited torque BEFORE mode limit and fault handling.
+     * This preserves the ramp state through fault/latch periods so
+     * that torque can resume ramping from the correct baseline after
+     * the zero-torque latch clears. */
+    Pedal_PrevTorque = torque;
+
     /* ----------------------------------------------------------
      * Step 8: Read vehicle state and apply mode limit
      * ---------------------------------------------------------- */
@@ -384,31 +419,55 @@ void Swc_Pedal_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 9: Fault handling — zero-torque latch
+     *
+     * SPI and plausibility faults zero torque immediately on the
+     * detection cycle. Stuck faults activate the latch but do NOT
+     * zero torque on the detection cycle itself — the latch takes
+     * effect starting from the next cycle. This ensures the torque
+     * output remains valid on the cycle the stuck condition is first
+     * detected, while still entering the zero-torque safe state.
+     *
+     * The fault code (Pedal_Fault) persists during the latch period
+     * so that diagnostic readers see the original fault until the
+     * latch clears after sufficient fault-free cycles.
      * ---------------------------------------------------------- */
-    Pedal_Fault = new_fault;
-
     if (new_fault != CVC_PEDAL_NO_FAULT) {
-        /* Active fault: latch torque to zero, reset latch counter */
-        Pedal_FaultLatched = TRUE;
-        Pedal_LatchCounter = 0u;
-        torque = 0u;
+        /* New fault detected this cycle */
+        Pedal_Fault = new_fault;
+
+        if (Pedal_FaultLatched == FALSE) {
+            /* First fault — activate latch */
+            Pedal_FaultLatched = TRUE;
+            Pedal_LatchCounter = 0u;
+        } else {
+            /* Fault during active latch — restart latch counter */
+            Pedal_LatchCounter = 0u;
+        }
+
+        /* Zero torque immediately for all faults EXCEPT stuck.
+         * Stuck activates the latch (torque zeroed next cycle)
+         * but does not zero torque on the detection cycle itself. */
+        if (new_fault != CVC_PEDAL_STUCK) {
+            torque = 0u;
+        }
     } else if (Pedal_FaultLatched == TRUE) {
-        /* No new fault but latch still active: count fault-free cycles */
+        /* No new fault but latch still active: count fault-free cycles.
+         * Pedal_Fault retains the previous fault code so diagnostics
+         * can identify which fault caused the latch. */
         Pedal_LatchCounter++;
         if (Pedal_LatchCounter >= Pedal_CfgPtr->latchClearCycles) {
             /* Latch cleared after sufficient fault-free cycles */
             Pedal_FaultLatched = FALSE;
             Pedal_LatchCounter = 0u;
+            Pedal_Fault        = CVC_PEDAL_NO_FAULT;
         } else {
             /* Latch still active: force zero torque */
             torque = 0u;
         }
     } else {
         /* No fault, no latch — normal operation */
+        Pedal_Fault = CVC_PEDAL_NO_FAULT;
     }
-
-    /* Store torque for ramp limiting on next cycle */
-    Pedal_PrevTorque = torque;
 
     /* ----------------------------------------------------------
      * Step 10: Write signals to RTE

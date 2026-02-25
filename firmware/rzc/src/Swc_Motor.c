@@ -355,9 +355,28 @@ void Swc_Motor_MainFunction(void)
      *         this cycle, apply new direction next cycle.
      * ---------------------------------------------------------- */
     if (Motor_DeadtimeActive == TRUE) {
-        /* Dead-time was active last cycle: now apply new direction */
+        /* Dead-time was active last cycle: now apply deferred direction */
         Motor_DeadtimeActive = FALSE;
         Motor_Direction      = Motor_CmdDirection;
+
+        /* Check if direction changed AGAIN during deadtime — need another
+         * dead-time cycle to prevent shoot-through on rapid reversal */
+        if ((new_direction != Motor_Direction) &&
+            (new_direction != RZC_DIR_STOP) &&
+            (Motor_Direction != RZC_DIR_STOP)) {
+            Motor_DeadtimeActive = TRUE;
+            Motor_CmdDirection   = new_direction;
+
+            Motor_DisableOutputs();
+            Motor_Direction = RZC_DIR_STOP;
+            Motor_DutyPct   = 0u;
+
+            (void)Rte_Write(RZC_SIG_TORQUE_ECHO, 0u);
+            (void)Rte_Write(RZC_SIG_MOTOR_DIR, (uint32)RZC_DIR_STOP);
+            (void)Rte_Write(RZC_SIG_MOTOR_ENABLE, 0u);
+            (void)Rte_Write(RZC_SIG_MOTOR_FAULT, (uint32)Motor_Fault);
+            return;
+        }
     } else if ((new_direction != Motor_Direction) &&
                (new_direction != RZC_DIR_STOP) &&
                (Motor_Direction != RZC_DIR_STOP)) {

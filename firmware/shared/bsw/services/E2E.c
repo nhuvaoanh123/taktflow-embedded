@@ -114,6 +114,11 @@ Std_ReturnType E2E_Protect(const E2E_ConfigType* Config,
         return E_NOT_OK;
     }
 
+    /* Verify length matches configured DataLength */
+    if (Length != Config->DataLength) {
+        return E_NOT_OK;
+    }
+
     /* Increment alive counter (4-bit, wraps 0..15) */
     State->Counter = (State->Counter + 1u) & 0x0Fu;
 
@@ -150,6 +155,11 @@ E2E_CheckStatusType E2E_Check(const E2E_ConfigType* Config,
         return E2E_STATUS_ERROR;
     }
 
+    /* Verify length matches configured DataLength */
+    if (Length != Config->DataLength) {
+        return E2E_STATUS_ERROR;
+    }
+
     /* Extract fields from received PDU */
     rx_counter = (DataPtr[E2E_BYTE_COUNTER_ID] >> 4u) & 0x0Fu;
     rx_data_id = DataPtr[E2E_BYTE_COUNTER_ID] & 0x0Fu;
@@ -175,6 +185,11 @@ E2E_CheckStatusType E2E_Check(const E2E_ConfigType* Config,
 
     if (delta == 0u) {
         return E2E_STATUS_REPEATED;
+    }
+
+    /* Consecutive message (delta=1) is always valid */
+    if (delta == 1u) {
+        return E2E_STATUS_OK;
     }
 
     if (delta > Config->MaxDeltaCounter) {

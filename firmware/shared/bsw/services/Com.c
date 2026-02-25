@@ -149,6 +149,10 @@ void Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr)
         return;
     }
 
+    if (PduInfoPtr->SduLength == 0u) {
+        return;
+    }
+
     if (ComRxPduId >= COM_MAX_PDUS) {
         return;
     }

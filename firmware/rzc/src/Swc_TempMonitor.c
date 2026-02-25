@@ -141,18 +141,18 @@ static uint8 TM_ApplyHysteresis(uint8 raw_derating, uint8 cur_derating,
         result = cur_derating;
 
         if (cur_derating == RZC_TEMP_DERATE_0_PCT) {
-            /* From 0% -> 50%: need temp < (DERATE_50_C - HYSTERESIS) = 90 */
-            if (temp_C < (sint16)(RZC_TEMP_DERATE_50_C - RZC_TEMP_HYSTERESIS_C)) {
+            /* From 0% -> 50%: need temp <= (DERATE_50_C - HYSTERESIS) = 90 */
+            if (temp_C <= (sint16)(RZC_TEMP_DERATE_50_C - RZC_TEMP_HYSTERESIS_C)) {
                 result = RZC_TEMP_DERATE_50_PCT;
             }
         } else if (cur_derating == RZC_TEMP_DERATE_50_PCT) {
-            /* From 50% -> 75%: need temp < (DERATE_75_C - HYSTERESIS) = 70 */
-            if (temp_C < (sint16)(RZC_TEMP_DERATE_75_C - RZC_TEMP_HYSTERESIS_C)) {
+            /* From 50% -> 75%: need temp <= (DERATE_75_C - HYSTERESIS) = 70 */
+            if (temp_C <= (sint16)(RZC_TEMP_DERATE_75_C - RZC_TEMP_HYSTERESIS_C)) {
                 result = RZC_TEMP_DERATE_75_PCT;
             }
         } else if (cur_derating == RZC_TEMP_DERATE_75_PCT) {
-            /* From 75% -> 100%: need temp < (DERATE_NONE_C - HYSTERESIS) = 50 */
-            if (temp_C < (sint16)(RZC_TEMP_DERATE_NONE_C - RZC_TEMP_HYSTERESIS_C)) {
+            /* From 75% -> 100%: need temp <= (DERATE_NONE_C - HYSTERESIS) = 50 */
+            if (temp_C <= (sint16)(RZC_TEMP_DERATE_NONE_C - RZC_TEMP_HYSTERESIS_C)) {
                 result = RZC_TEMP_DERATE_100_PCT;
             }
         } else {
@@ -204,7 +204,17 @@ void Swc_TempMonitor_MainFunction(void)
     /* ------------------------------------------------------------ */
     {
         uint16 raw_temp = 0U;
-        (void)IoHwAb_ReadMotorTemp(&raw_temp);
+        Std_ReturnType io_result;
+
+        io_result = IoHwAb_ReadMotorTemp(&raw_temp);
+        if (io_result != E_OK) {
+            /* IoHwAb read failure: report fault and return */
+            TM_TempFault = TRUE;
+            Dem_ReportErrorStatus((uint8)RZC_DTC_OVERTEMP,
+                                  DEM_EVENT_STATUS_FAILED);
+            (void)Rte_Write(RZC_SIG_TEMP_FAULT, (uint32)TM_TempFault);
+            return;
+        }
         temp_dC = (sint16)raw_temp;
     }
 

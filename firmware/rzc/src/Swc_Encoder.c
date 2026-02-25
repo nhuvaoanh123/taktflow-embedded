@@ -135,11 +135,16 @@ void Swc_Encoder_MainFunction(void)
     (void)Rte_Read(RZC_SIG_TORQUE_ECHO, &torque_echo);
 
     /* ---- Step 10: Direction change detection (before fault checks)
-     *       Set grace periods when commanded direction changes ------ */
+     *       Set grace periods only on actual direction reversals
+     *       (FORWARD <-> REVERSE), not on transitions from/to STOP -- */
     if ((uint8)commanded_dir != Enc_PrevDirection) {
-        Enc_StallGraceCounter = ENC_STALL_GRACE_CYCLES;
-        Enc_DirGraceCounter   = ENC_DIR_GRACE_CYCLES;
-        Enc_PrevDirection     = (uint8)commanded_dir;
+        if ((Enc_PrevDirection != RZC_DIR_STOP) &&
+            ((uint8)commanded_dir != RZC_DIR_STOP)) {
+            /* Actual reversal: suppress false faults during transition */
+            Enc_StallGraceCounter = ENC_STALL_GRACE_CYCLES;
+            Enc_DirGraceCounter   = ENC_DIR_GRACE_CYCLES;
+        }
+        Enc_PrevDirection = (uint8)commanded_dir;
     }
 
     /* ---- Step 8: Stall detection --------------------------------- */
@@ -176,8 +181,10 @@ void Swc_Encoder_MainFunction(void)
             /* Grace period active — decrement and skip dir check */
             Enc_DirGraceCounter--;
         } else {
-            if (((uint8)commanded_dir != encoder_dir) && (delta > 0u)) {
-                /* Motor is moving but direction does not match command */
+            if (((uint8)commanded_dir != encoder_dir) &&
+                ((uint8)commanded_dir != RZC_DIR_STOP) &&
+                (delta > 0u)) {
+                /* Motor is moving in wrong direction (commanded is active) */
                 Enc_DirMismatchCounter++;
 
                 if (Enc_DirMismatchCounter >= RZC_ENCODER_DIR_CHECKS) {

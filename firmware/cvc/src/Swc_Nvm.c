@@ -24,6 +24,8 @@
 
 #include "Swc_Nvm.h"
 
+#include <stddef.h>  /* offsetof — used for padding-safe CRC computation */
+
 /* ==================================================================
  * Default Calibration Data (compiled-in fallback)
  * ================================================================== */
@@ -93,10 +95,10 @@ uint16 Swc_Nvm_CalcCrc16(const uint8* data, uint16 length)
 
 static uint16 Nvm_ComputeDtcCrc(const Swc_Nvm_DtcEntryType* entry)
 {
-    /* CRC over all bytes before the crc field */
+    /* CRC over all bytes before the crc field (padding-safe) */
     uint16 dataLen;
 
-    dataLen = (uint16)(sizeof(Swc_Nvm_DtcEntryType) - sizeof(uint16));
+    dataLen = (uint16)offsetof(Swc_Nvm_DtcEntryType, crc);
 
     return Swc_Nvm_CalcCrc16((const uint8*)entry, dataLen);
 }
@@ -109,7 +111,7 @@ static uint16 Nvm_ComputeCalCrc(const Swc_Nvm_CalDataType* cal)
 {
     uint16 dataLen;
 
-    dataLen = (uint16)(sizeof(Swc_Nvm_CalDataType) - sizeof(uint16));
+    dataLen = (uint16)offsetof(Swc_Nvm_CalDataType, crc);
 
     return Swc_Nvm_CalcCrc16((const uint8*)cal, dataLen);
 }

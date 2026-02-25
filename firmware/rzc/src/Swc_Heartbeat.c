@@ -94,8 +94,9 @@ void Swc_Heartbeat_MainFunction(void)
     fault_mask = 0u;
     (void)Rte_Read(RZC_SIG_FAULT_MASK, &fault_mask);
 
-    /* Suppress TX during bus-off (indicated by CAN fault in mask) */
-    if ((fault_mask & (uint32)RZC_FAULT_CAN) != 0u) {
+    /* Suppress TX during bus-off (CAN fault set AND vehicle in SAFE_STOP) */
+    if (((fault_mask & (uint32)RZC_FAULT_CAN) != 0u) &&
+        (vehicle_state == (uint32)RZC_STATE_SAFE_STOP)) {
         return;
     }
 

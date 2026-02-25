@@ -42,8 +42,10 @@
 /** Brake servo PWM channel (TIM2_CH2) */
 #define BRAKE_PWM_CHANNEL          2u
 
-/** Timeout threshold in cycles (autoTimeoutMs / 10ms per cycle) */
-#define BRAKE_TIMEOUT_CYCLES       10u
+/** Timeout threshold in cycles (autoTimeoutMs / 10ms per cycle).
+ *  First cycle establishes the baseline, so threshold = (100ms / 10ms) - 1 = 9
+ *  to trigger on the 10th consecutive identical command. */
+#define BRAKE_TIMEOUT_CYCLES        9u
 
 /** Maximum brake command value */
 #define BRAKE_CMD_MAX              100u

@@ -50,13 +50,13 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
             ev->debounceCounter++;
         }
 
-        /* Set testFailed bit immediately */
+        /* Set testFailed and pendingDTC on first failure (AUTOSAR DEM) */
         ev->statusByte |= DEM_STATUS_TEST_FAILED;
+        ev->statusByte |= DEM_STATUS_PENDING_DTC;
 
         /* Confirm DTC when threshold reached */
         if (ev->debounceCounter >= DEM_DEBOUNCE_FAIL_THRESHOLD) {
             ev->statusByte |= DEM_STATUS_CONFIRMED_DTC;
-            ev->statusByte |= DEM_STATUS_PENDING_DTC;
             ev->occurrenceCounter++;
         }
     } else {
@@ -65,9 +65,13 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
             ev->debounceCounter--;
         }
 
-        /* Clear testFailed when healed */
-        if (ev->debounceCounter <= DEM_DEBOUNCE_PASS_THRESHOLD) {
+        /* Clear testFailed when counter reaches zero (healed) */
+        if (ev->debounceCounter <= 0) {
             ev->statusByte &= (uint8)(~DEM_STATUS_TEST_FAILED);
+        }
+
+        /* Clamp at pass threshold */
+        if (ev->debounceCounter <= DEM_DEBOUNCE_PASS_THRESHOLD) {
             ev->debounceCounter = DEM_DEBOUNCE_PASS_THRESHOLD;
         }
     }

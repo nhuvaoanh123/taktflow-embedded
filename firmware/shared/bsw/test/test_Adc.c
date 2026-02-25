@@ -71,6 +71,8 @@ static Adc_GroupConfigType test_groups[2];
 
 void setUp(void)
 {
+    Adc_DeInit();
+
     mock_hw_init_called = FALSE;
     mock_hw_init_fail = FALSE;
     mock_hw_start_called = FALSE;

@@ -295,12 +295,18 @@ void Swc_CurrentMonitor_MainFunction(void)
              * If current < threshold while overcurrent is active,
              * increment recovery counter. 500 consecutive cycles
              * below threshold clears the overcurrent condition.
+             * A single raw reading above threshold resets recovery
+             * even if the average remains below threshold.
              * ------------------------------------------------------- */
-            CM_RecoveryCycles++;
-            if (CM_RecoveryCycles >= RZC_CURRENT_RECOVERY_MS) {
-                CM_OvercurrentActive = FALSE;
-                CM_OcDebounceCount   = 0u;
-                CM_RecoveryCycles    = 0u;
+            if (raw_mA > RZC_CURRENT_OC_THRESH_MA) {
+                CM_RecoveryCycles = 0u;
+            } else {
+                CM_RecoveryCycles++;
+                if (CM_RecoveryCycles >= RZC_CURRENT_RECOVERY_MS) {
+                    CM_OvercurrentActive = FALSE;
+                    CM_OcDebounceCount   = 0u;
+                    CM_RecoveryCycles    = 0u;
+                }
             }
         }
     }

@@ -63,6 +63,8 @@ static Pwm_ChannelConfigType test_channels[2];
 
 void setUp(void)
 {
+    Pwm_DeInit();
+
     mock_hw_init_called = FALSE;
     mock_hw_init_fail = FALSE;
 

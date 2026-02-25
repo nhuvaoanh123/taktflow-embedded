@@ -12,7 +12,7 @@
  *           3. Local override: lidar emergency overrides vehicle state pattern
  *           4. Drives buzzer DIO pin with selected pattern timing
  *
- *           Patterns (10ms resolution):
+ *           Patterns (1ms resolution):
  *           - Silent:       always LOW
  *           - Single beep:  HIGH 100ms, then LOW
  *           - Slow repeat:  500ms on, 500ms off (1s period)
@@ -41,12 +41,12 @@
 
 #define BUZZER_DIO_CHANNEL     8u    /* Buzzer output pin */
 
-/** Pattern timing in 10ms cycles */
-#define BUZZER_SLOW_ON_CYCLES   50u   /* 500ms on */
-#define BUZZER_SLOW_OFF_CYCLES  50u   /* 500ms off */
-#define BUZZER_FAST_ON_CYCLES   10u   /* 100ms on */
-#define BUZZER_FAST_OFF_CYCLES  10u   /* 100ms off */
-#define BUZZER_SINGLE_ON_CYCLES 10u   /* 100ms single beep */
+/** Pattern timing in 1ms cycles (1ms per MainFunction call) */
+#define BUZZER_SLOW_ON_CYCLES   500u  /* 500ms on */
+#define BUZZER_SLOW_OFF_CYCLES  500u  /* 500ms off */
+#define BUZZER_FAST_ON_CYCLES   100u  /* 100ms on */
+#define BUZZER_FAST_OFF_CYCLES  100u  /* 100ms off */
+#define BUZZER_SINGLE_ON_CYCLES 100u  /* 100ms single beep */
 
 /* ==================================================================
  * Module State
@@ -127,13 +127,10 @@ void Swc_Buzzer_Init(void)
     Buzzer_OutputState    = 0u;
     Buzzer_SingleDone     = FALSE;
     Buzzer_Initialized    = TRUE;
-
-    /* Ensure buzzer starts off */
-    Dio_WriteChannel(BUZZER_DIO_CHANNEL, STD_LOW);
 }
 
 /* ==================================================================
- * API: Swc_Buzzer_MainFunction (10ms cyclic)
+ * API: Swc_Buzzer_MainFunction (1ms cyclic)
  * ================================================================== */
 
 void Swc_Buzzer_MainFunction(void)

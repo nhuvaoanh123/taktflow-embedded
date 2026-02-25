@@ -33,14 +33,15 @@
  * Constants
  * ================================================================== */
 
-/** Heartbeat period in 10ms cycles: 50ms / 10ms = 5 */
-#define HB_PERIOD_CYCLES    5u
+/** Heartbeat period in 1ms cycles: 50ms / 1ms = 50 */
+#define HB_PERIOD_CYCLES    50u
 
 /** Heartbeat TX data layout (8 bytes) */
 #define HB_BYTE_ALIVE       0u
 #define HB_BYTE_ECU_ID      1u
 #define HB_BYTE_STATE       2u
-#define HB_BYTE_FAULT_MASK  3u
+#define HB_BYTE_FAULT_LO    3u
+#define HB_BYTE_FAULT_HI    4u
 
 /* ==================================================================
  * Module State
@@ -62,7 +63,7 @@ void Swc_Heartbeat_Init(void)
 }
 
 /* ==================================================================
- * API: Swc_Heartbeat_MainFunction (10ms cyclic)
+ * API: Swc_Heartbeat_MainFunction (1ms cyclic)
  * ================================================================== */
 
 void Swc_Heartbeat_MainFunction(void)
@@ -93,8 +94,8 @@ void Swc_Heartbeat_MainFunction(void)
     fault_mask = 0u;
     (void)Rte_Read(FZC_SIG_FAULT_MASK, &fault_mask);
 
-    /* Suppress TX during bus-off (indicated by CAN fault in mask) */
-    if ((fault_mask & (uint32)FZC_FAULT_CAN) != 0u) {
+    /* Suppress TX during bus-off (indicated by CAN bus-off bit in mask) */
+    if ((fault_mask & (uint32)FZC_FAULT_CAN_BUS_OFF) != 0u) {
         return;
     }
 
@@ -106,7 +107,8 @@ void Swc_Heartbeat_MainFunction(void)
     tx_data[HB_BYTE_ALIVE]      = Hb_AliveCounter;
     tx_data[HB_BYTE_ECU_ID]     = FZC_ECU_ID;
     tx_data[HB_BYTE_STATE]      = (uint8)vehicle_state;
-    tx_data[HB_BYTE_FAULT_MASK] = (uint8)fault_mask;
+    tx_data[HB_BYTE_FAULT_LO]   = (uint8)(fault_mask & 0xFFu);
+    tx_data[HB_BYTE_FAULT_HI]   = (uint8)((fault_mask >> 8u) & 0xFFu);
 
     /* Send via Com */
     (void)Com_SendSignal(FZC_COM_TX_HEARTBEAT, tx_data);

@@ -218,12 +218,15 @@ void Swc_RzcSafety_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 4: Determine safety status
-     *   Critical: overcurrent, overtemp, direction, CAN -> FAULT
-     *   Non-critical: stall, battery, self-test, estop -> DEGRADED
+     *   Critical: overcurrent, overtemp, direction, CAN, estop -> FAULT
+     *   Non-critical: stall, battery, self-test -> DEGRADED
      *   None -> OK
      * ---------------------------------------------------------- */
     if ((fault_mask & (RZC_FAULT_OVERCURRENT | RZC_FAULT_OVERTEMP |
                        RZC_FAULT_DIRECTION | RZC_FAULT_CAN)) != 0u) {
+        Safety_Status = SAFETY_STATUS_FAULT;
+    } else if (estop_active != 0u) {
+        /* E-stop is a critical safety event -> FAULT */
         Safety_Status = SAFETY_STATUS_FAULT;
     } else if (fault_mask != RZC_FAULT_NONE) {
         Safety_Status = SAFETY_STATUS_DEGRADED;

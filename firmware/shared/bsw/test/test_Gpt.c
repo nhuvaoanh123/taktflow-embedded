@@ -71,6 +71,8 @@ static Gpt_ChannelConfigType test_ch_configs[2];
 
 void setUp(void)
 {
+    Gpt_DeInit();
+
     mock_hw_init_called = FALSE;
     mock_hw_init_fail = FALSE;
 

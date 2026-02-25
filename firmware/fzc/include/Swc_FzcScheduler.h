@@ -12,7 +12,7 @@
  *           - LidarMonitor     10ms  High   ASIL C
  *           - CanReceive       10ms  High   ASIL D
  *           - HeartbeatTx      50ms  Med    ASIL B
- *           - WatchdogFeed     100ms Med    ASIL D
+ *           - WatchdogFeed     100ms High   ASIL D
  *           - BuzzerDriver     10ms  Low    QM
  *
  * @standard AUTOSAR SWC pattern, ISO 26262 Part 6

@@ -8,7 +8,7 @@
  *
  * @details  Implements the steering servo control SWC for the FZC:
  *           1.  Reads commanded steering angle from RTE
- *           2.  Tracks command timeout (increments each cycle, resets on new cmd)
+ *           2.  Tracks command freshness (resets on fresh RTE read, increments on no data)
  *           3.  Reads actual angle from IoHwAb_ReadSteeringAngle
  *           4.  Range check on command angle (-45..+45 deg)
  *           5.  Plausibility check (|cmd - actual| > 5 deg for 5 cycles)
@@ -192,8 +192,14 @@ static sint16 Steering_ApplyRateLimit(sint16 target10)
     diff = (sint16)(target10 - Steering_PrevAngle10);
 
     if (diff > max_step) {
-        /* Positive increase beyond rate limit: cap */
-        limited = (sint16)(Steering_PrevAngle10 + max_step);
+        /* Positive increase beyond rate limit: cap.
+         * But if target is closer to 0 than previous, this is actually
+         * a decrease toward center — allow unrestricted for safety. */
+        if (Steering_AbsDiffSint16(target10, 0) < Steering_AbsDiffSint16(Steering_PrevAngle10, 0)) {
+            limited = target10;
+        } else {
+            limited = (sint16)(Steering_PrevAngle10 + max_step);
+        }
     } else if (diff < (sint16)(-max_step)) {
         /* Negative increase (moving more negative) beyond rate limit */
         /* Check if this is a decrease toward center (allowed) or
@@ -209,14 +215,6 @@ static sint16 Steering_ApplyRateLimit(sint16 target10)
     } else {
         /* Within rate limit: pass through */
         limited = target10;
-    }
-
-    /* Also check the positive direction for toward-center case */
-    if (diff > max_step) {
-        /* Was already limited above. But check if moving toward center. */
-        if (Steering_AbsDiffSint16(target10, 0) < Steering_AbsDiffSint16(Steering_PrevAngle10, 0)) {
-            limited = target10;
-        }
     }
 
     return limited;
@@ -294,15 +292,17 @@ void Swc_Steering_MainFunction(void)
     }
 
     /* ----------------------------------------------------------
-     * Step 2: Detect new command and manage timeout counter
+     * Step 2: Track command freshness for timeout detection
+     *         Fresh RTE read (E_OK) = reset counter
+     *         No data (E_NOT_OK) = increment toward timeout
      * ---------------------------------------------------------- */
-    if (cmd_angle != Steering_PrevCommandAngle) {
-        /* New command received: reset timeout */
+    if (ret == E_OK) {
+        /* Fresh command received via RTE: reset timeout */
         new_cmd_received = TRUE;
         Steering_CmdTimeoutCounter = 0u;
         Steering_CmdTimedOut = FALSE;
     } else {
-        /* Same command as last cycle: increment timeout counter */
+        /* No fresh command data: increment timeout counter */
         new_cmd_received = FALSE;
         if (Steering_CmdTimeoutCounter < 0xFFFFu) {
             Steering_CmdTimeoutCounter++;
@@ -339,12 +339,11 @@ void Swc_Steering_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 5: Plausibility check (only if no prior fault this cycle)
-     *         |current_output_angle - actual_feedback| > threshold
+     *         |cmd_angle - actual_feedback| > threshold
      * ---------------------------------------------------------- */
     if (new_fault == FZC_STEER_NO_FAULT) {
-        /* Compare current output angle (degrees) with actual feedback */
-        sint16 current_deg = (sint16)(Steering_CurrentAngle10 / (sint16)DEG_TO_TENTHS);
-        plaus_diff = Steering_AbsDiffSint16(current_deg, actual_angle);
+        /* Compare commanded angle with actual feedback (not output angle) */
+        plaus_diff = Steering_AbsDiffSint16(cmd_angle, actual_angle);
 
         if (plaus_diff >= (uint16)Steering_CfgPtr->plausThreshold) {
             Steering_PlausDebounce++;

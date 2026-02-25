@@ -589,15 +589,10 @@ void test_RTC_on_timeout(void)
     Swc_Steering_GetAngle(&angle_initial);
     TEST_ASSERT_INT_WITHIN(2, 20, angle_initial);
 
-    /* Stop sending new commands: simulate timeout by not updating cmd.
-     * Timeout = 100ms / 10ms = 10 cycles of same command.
-     * The SWC's internal timeout counter increments each cycle
-     * when no NEW command is detected. We simulate "no new command"
-     * by reading the stale signal (same value). But the SWC detects
-     * this via an internal monotonic counter on the RTE signal.
-     *
-     * For testing: after 10+ cycles with stale cmd, RTC activates.
+    /* Simulate loss of fresh command data — Rte_Read returns E_NOT_OK.
+     * Timeout counter increments each cycle without fresh data.
      * Run 15 cycles — 10 for timeout detection + 5 RTC movement. */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(20, 20, 15u);
 
     /* After RTC: angle should be moving toward 0 */
@@ -615,8 +610,9 @@ void test_RTC_stops_at_center(void)
     /* Establish small angle at 2 degrees */
     run_cycles(2, 2, 50u);
 
-    /* Trigger timeout + enough RTC cycles to reach center */
-    /* 2 deg / 0.3 deg/cycle = ~7 cycles + 10 timeout = 17 cycles */
+    /* Simulate loss of command data to trigger timeout + RTC */
+    /* 10 cycles for timeout + ~7 cycles for RTC (2 deg / 0.3 deg/cycle) */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(2, 0, 30u);
 
     sint16 angle = 0;
@@ -638,7 +634,8 @@ void test_RTC_rate(void)
     Swc_Steering_GetAngle(&angle_start);
     TEST_ASSERT_INT_WITHIN(2, 30, angle_start);
 
-    /* Trigger timeout (10 cycles), then run exactly 10 more RTC cycles */
+    /* Simulate command loss: 10 cycles for timeout + 10 RTC cycles */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(30, 30, 20u);
 
     sint16 angle_end = 0;
@@ -807,7 +804,8 @@ void test_Cmd_timeout_triggers_RTC(void)
     Swc_Steering_GetAngle(&angle_before);
     TEST_ASSERT_INT_WITHIN(2, 15, angle_before);
 
-    /* Simulate 20 cycles with same stale command (timeout at 10 cycles) */
+    /* Simulate loss of command data — timeout fires after 10 cycles */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(15, 15, 20u);
 
     /* Angle should be moving toward center */
@@ -822,7 +820,8 @@ void test_Cmd_timeout_reports_DTC(void)
     /* Establish angle */
     run_cycles(10, 10, 80u);
 
-    /* Run enough cycles for timeout detection */
+    /* Simulate command loss — enough cycles for timeout detection */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(10, 10, 15u);
 
     TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_STEER_TIMEOUT]);
@@ -983,12 +982,13 @@ void test_FaultInj_cmd_timeout_exact_boundary(void)
         Swc_Steering_MainFunction();
     }
 
-    /* Now hold same command for 9 cycles — should NOT timeout */
+    /* Simulate command loss — 9 cycles should NOT timeout */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(10, 10, 9u);
     uint32 fault9 = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault9);
 
-    /* 10th cycle — timeout triggers */
+    /* 10th cycle without fresh data — timeout triggers */
     run_cycles(10, 10, 1u);
     uint32 fault10 = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_CMD_TIMEOUT, fault10);
@@ -1019,7 +1019,8 @@ void test_FaultInj_RTC_reaches_zero_and_stops(void)
     /* Establish small angle at 1 deg */
     run_cycles(1, 1, 40u);
 
-    /* Trigger timeout + enough cycles for RTC to reach center */
+    /* Simulate command loss to trigger timeout + RTC to reach center */
+    mock_rte_read_result = E_NOT_OK;
     run_cycles(1, 0, 30u);
 
     sint16 angle = 99;

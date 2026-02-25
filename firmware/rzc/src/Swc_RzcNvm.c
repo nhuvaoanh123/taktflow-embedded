@@ -83,10 +83,13 @@ static uint16 RzcNvm_Crc16(const uint8 *data, uint16 length)
  */
 static uint16 RzcNvm_ComputeEntryCrc(const Swc_RzcNvm_DtcEntryType *pEntry)
 {
-    /* CRC is over all bytes of the entry except the last 2 (crc16 field) */
+    /* CRC is over all bytes of the entry up to (but not including) the
+     * crc16 field.  Using pointer arithmetic for the length avoids
+     * struct-padding issues where sizeof(struct) - sizeof(uint16)
+     * could overshoot and include the crc16 field itself. */
     uint16 dataLen;
 
-    dataLen = (uint16)(sizeof(Swc_RzcNvm_DtcEntryType) - sizeof(uint16));
+    dataLen = (uint16)((const uint8 *)&pEntry->crc16 - (const uint8 *)pEntry);
 
     return RzcNvm_Crc16((const uint8 *)pEntry, dataLen);
 }

@@ -102,13 +102,13 @@ Std_ReturnType E2E_Protect(const void* Config, void* State,
  * Mock: Rte_Write
  * ==================================================================== */
 
-static uint16 mock_rte_write_sig_ids[16];
-static uint32 mock_rte_write_vals[16];
+static uint16 mock_rte_write_sig_ids[64];
+static uint32 mock_rte_write_vals[64];
 static uint8  mock_rte_write_count;
 
 Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
 {
-    if (mock_rte_write_count < 16u) {
+    if (mock_rte_write_count < 64u) {
         mock_rte_write_sig_ids[mock_rte_write_count] = SignalId;
         mock_rte_write_vals[mock_rte_write_count]    = Data;
     }
@@ -190,7 +190,7 @@ void setUp(void)
         mock_dem_event_ids[i]      = 0xFFu;
         mock_dem_event_statuses[i] = 0xFFu;
     }
-    for (i = 0u; i < 16u; i++) {
+    for (i = 0u; i < 64u; i++) {
         mock_rte_write_sig_ids[i] = 0xFFu;
         mock_rte_write_vals[i]    = 0xFFu;
     }

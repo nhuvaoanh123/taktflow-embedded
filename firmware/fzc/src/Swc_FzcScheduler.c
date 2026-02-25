@@ -14,7 +14,7 @@
  *           2      LidarMonitor      10ms    High  500       C
  *           3      CanReceive        10ms    High  400       D
  *           4      HeartbeatTx       50ms    Med   200       B
- *           5      WatchdogFeed      100ms   Med   100       D
+ *           5      WatchdogFeed      100ms   High  100       D
  *           6      BuzzerDriver      10ms    Low   300       QM
  *
  *           Total WCET for 10ms slot (all High + Low runnables):
@@ -85,11 +85,11 @@ static const Swc_FzcScheduler_RunnableType FzcSched_Table[FZC_SCHED_RUNNABLE_COU
         200u,
         ASIL_B
     },
-    /* 5: WatchdogFeed — ASIL D, 100ms, Med priority */
+    /* 5: WatchdogFeed — ASIL D, 100ms, High priority */
     {
         "WatchdogFeed",
         100u,
-        FZC_SCHED_PRIO_MED,
+        FZC_SCHED_PRIO_HIGH,
         100u,
         ASIL_D
     },

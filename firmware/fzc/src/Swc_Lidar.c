@@ -56,6 +56,9 @@ static uint16  Lidar_StuckCounter;
 /* Persistent fault counter for degradation request */
 static uint16  Lidar_PersistentFaultCounter;
 
+/* Checksum error flag — set by ParseFrame, consumed by MainFunction */
+static uint8   Lidar_ChecksumError;
+
 /* Frame buffer */
 static uint8   Lidar_FrameBuf[FZC_LIDAR_FRAME_SIZE];
 
@@ -106,6 +109,7 @@ static Std_ReturnType Lidar_ParseFrame(uint16* dist_out, uint16* strength_out)
     }
 
     if (checksum != Lidar_FrameBuf[8]) {
+        Lidar_ChecksumError = TRUE;
         Dem_ReportErrorStatus(FZC_DTC_LIDAR_CHECKSUM, DEM_EVENT_STATUS_FAILED);
         return E_NOT_OK;
     }
@@ -167,6 +171,7 @@ void Swc_Lidar_Init(const Swc_Lidar_ConfigType* ConfigPtr)
     Lidar_PrevDistance          = 0u;
     Lidar_StuckCounter         = 0u;
     Lidar_PersistentFaultCounter = 0u;
+    Lidar_ChecksumError          = FALSE;
 
     Lidar_Initialized          = TRUE;
 }
@@ -193,6 +198,7 @@ void Swc_Lidar_MainFunction(void)
 
     new_fault      = 0u;
     frame_received = FALSE;
+    Lidar_ChecksumError = FALSE;
 
     /* ----------------------------------------------------------
      * Step 1: Attempt to parse a UART frame
@@ -207,6 +213,11 @@ void Swc_Lidar_MainFunction(void)
     } else {
         /* No valid frame — increment timeout */
         Lidar_TimeoutCounter++;
+
+        /* Checksum error is an immediate fault (corrupt data received) */
+        if (Lidar_ChecksumError == TRUE) {
+            new_fault = 1u;
+        }
     }
 
     /* ----------------------------------------------------------
@@ -234,11 +245,13 @@ void Swc_Lidar_MainFunction(void)
             Dem_ReportErrorStatus(FZC_DTC_LIDAR_SIGNAL_LOW, DEM_EVENT_STATUS_FAILED);
         }
 
-        /* Stuck detection */
+        /* Stuck detection: first cycle establishes baseline, so the
+         * counter reaches (stuckCycles - 1) after stuckCycles total
+         * identical readings.  Trigger at (stuckCycles - 1). */
         if (new_fault == 0u) {
             if (raw_dist == Lidar_PrevDistance) {
                 Lidar_StuckCounter++;
-                if (Lidar_StuckCounter >= Lidar_CfgPtr->stuckCycles) {
+                if (Lidar_StuckCounter >= (Lidar_CfgPtr->stuckCycles - 1u)) {
                     new_fault = 1u;
                     Dem_ReportErrorStatus(FZC_DTC_LIDAR_STUCK, DEM_EVENT_STATUS_FAILED);
                 }

@@ -149,6 +149,8 @@ static Can_ConfigType test_config;
 
 void setUp(void)
 {
+    Can_DeInit();
+
     /* Reset all mock state */
     mock_hw_init_called = FALSE;
     mock_hw_init_fail = FALSE;

@@ -109,8 +109,8 @@ void Uart_MainFunction(void)
         if (uart_status == UART_TIMEOUT) {
             uart_status = UART_IDLE;
         }
-    } else {
-        /* No new data — increment timer */
+    } else if (current_rx == 0u) {
+        /* No data in buffer — increment timer */
         uart_timer++;
 
         if (uart_timer >= uart_timeoutMs) {
@@ -118,5 +118,7 @@ void Uart_MainFunction(void)
             /* Keep timer at max to avoid overflow */
             uart_timer = uart_timeoutMs;
         }
+    } else {
+        /* Data present but count unchanged — sensor active, no timeout */
     }
 }

@@ -116,7 +116,9 @@ void Swc_FzcSafety_MainFunction(void)
         fault_mask |= FZC_FAULT_LIDAR;
     }
 
-    if (self_test_result == FZC_SELF_TEST_FAIL) {
+    /* Self-test fault only if self-test has actually completed */
+    if ((Safety_SelfTestDone == TRUE) &&
+        (self_test_result == FZC_SELF_TEST_FAIL)) {
         fault_mask |= FZC_FAULT_SELF_TEST;
     }
 
@@ -147,7 +149,8 @@ void Swc_FzcSafety_MainFunction(void)
     }
 
     /* Condition 3: Self-test passed (or not yet run) */
-    if (self_test_result == FZC_SELF_TEST_FAIL) {
+    if ((Safety_SelfTestDone == TRUE) &&
+        (self_test_result == FZC_SELF_TEST_FAIL)) {
         wdg_feed_ok = FALSE;
     }
 
