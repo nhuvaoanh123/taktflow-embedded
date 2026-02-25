@@ -54,10 +54,24 @@ typedef uint8           Std_ReturnType;
 #define DEM_EVENT_STATUS_PASSED      0u
 #define DEM_EVENT_STATUS_FAILED      1u
 
+/* Additional signal IDs used by Swc_FzcSafety.c (from Fzc_Cfg.h) */
+#define FZC_SIG_SELF_TEST_RESULT    33u
+
+/* Vehicle state values (from Fzc_Cfg.h) */
+#define FZC_STATE_INIT               0u
+#define FZC_STATE_SHUTDOWN           5u
+
+/* Self-test result values (from Fzc_Cfg.h) */
+#define FZC_SELF_TEST_PASS           1u
+#define FZC_SELF_TEST_FAIL           0u
+
 /* Fault mask bits */
+#define FZC_FAULT_NONE            0x00u
 #define FZC_FAULT_STEER             (1u << 0u)
 #define FZC_FAULT_BRAKE             (1u << 1u)
 #define FZC_FAULT_LIDAR             (1u << 2u)
+#define FZC_FAULT_WATCHDOG         0x10u
+#define FZC_FAULT_SELF_TEST        0x20u
 
 /* Safety status values */
 #define FZC_SAFETY_OK                0u

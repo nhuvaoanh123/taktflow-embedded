@@ -48,6 +48,14 @@ typedef uint8           Std_ReturnType;
 #define CVCDCM_DID_PEDAL_FAULT       0xF012u
 #define CVCDCM_DID_PEDAL_SENSORS     0xF016u
 
+#define CVCDCM_DID_ECU_SERIAL        0xF18Cu
+#define CVCDCM_DID_HW_VERSION        0xF191u
+#define CVCDCM_DID_TORQUE_REQUEST    0xF013u
+#define CVCDCM_DID_CAN_STATUS        0xF014u
+#define CVCDCM_DID_BATTERY_VOLTAGE   0xF015u
+
+#define CVCDCM_NUM_DIDS                10u
+
 #define CVCDCM_NRC_SERVICE_NOT_SUPPORTED   0x11u
 #define CVCDCM_NRC_REQUEST_OUT_OF_RANGE    0x31u
 
