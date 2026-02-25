@@ -203,6 +203,7 @@
 #define FZC_FAULT_CAN              0x08u
 #define FZC_FAULT_WATCHDOG         0x10u
 #define FZC_FAULT_SELF_TEST        0x20u
+#define FZC_FAULT_CAN_BUS_OFF     0x40u
 
 /* ====================================================================
  * Steering Fault Enum

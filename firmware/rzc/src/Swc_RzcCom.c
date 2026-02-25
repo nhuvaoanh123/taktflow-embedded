@@ -241,7 +241,7 @@ Std_ReturnType Swc_RzcCom_E2eCheck(uint8 pduId, const uint8 *data, uint8 length)
         return E_NOT_OK;
     }
 
-    dataId = RzcCom_GetTxDataId(pduId);
+    dataId = RzcCom_GetRxDataId(pduId);
 
     /* Extract received CRC from byte 0 */
     rx_crc = data[0];

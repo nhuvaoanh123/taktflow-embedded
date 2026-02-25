@@ -108,9 +108,9 @@ coverage: clean $(TEST_BINS)
 	@echo "=== Collecting coverage data ==="
 	mkdir -p coverage
 	lcov --capture --directory $(TEST_DIR)/build --output-file coverage/bsw.info \
-		--rc branch_coverage=1 --ignore-errors mismatch
+		--rc branch_coverage=1 --ignore-errors mismatch --ignore-errors unused
 	lcov --remove coverage/bsw.info '*/test/*' '/usr/*' \
-		--output-file coverage/bsw-filtered.info --rc branch_coverage=1
+		--output-file coverage/bsw-filtered.info --rc branch_coverage=1 --ignore-errors unused
 	@echo "=== Generating HTML report ==="
 	genhtml coverage/bsw-filtered.info --output-directory coverage/html \
 		--branch-coverage --title "BSW Unit Test Coverage"
@@ -125,7 +125,7 @@ coverage-report: clean $(TEST_BINS)
 	@for t in $(TEST_BINS); do ./$$t || true; done
 	mkdir -p coverage
 	lcov --capture --directory $(TEST_DIR)/build --output-file coverage/bsw.info \
-		--rc branch_coverage=1 --ignore-errors mismatch
+		--rc branch_coverage=1 --ignore-errors mismatch --ignore-errors unused
 	lcov --remove coverage/bsw.info '*/test/*' '/usr/*' \
-		--output-file coverage/bsw-filtered.info --rc branch_coverage=1
+		--output-file coverage/bsw-filtered.info --rc branch_coverage=1 --ignore-errors unused
 	lcov --summary coverage/bsw-filtered.info --rc branch_coverage=1
