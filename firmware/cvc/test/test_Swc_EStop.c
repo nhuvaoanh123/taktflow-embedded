@@ -34,6 +34,14 @@ typedef uint8          boolean;
 #define SWC_ESTOP_H
 #define CVC_CFG_H
 
+/* Prevent real Dem.h / E2E.h from being pulled in through Swc_EStop.c —
+ * the mocks below provide the required function definitions.
+ * DEM_EVENT_STATUS_FAILED is defined here because it is used both in
+ * Swc_EStop.c and in this test file, and Dem.h is now blocked. */
+#define DEM_H
+#define E2E_H
+#define DEM_EVENT_STATUS_FAILED  1u
+
 /* Signal/DTC IDs (must match Cvc_Cfg.h) */
 #define CVC_SIG_ESTOP_ACTIVE      22u
 #define CVC_DTC_ESTOP_ACTIVATED   12u

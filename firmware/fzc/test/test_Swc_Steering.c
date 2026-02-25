@@ -25,6 +25,7 @@ typedef unsigned char   uint8;
 typedef unsigned short  uint16;
 typedef unsigned int   uint32;
 typedef signed short    sint16;
+typedef signed int      sint32;
 typedef uint8           Std_ReturnType;
 
 #define E_OK        0u
@@ -110,13 +111,13 @@ static Std_ReturnType  mock_iohwab_result;
 static sint16          mock_iohwab_angle;
 static uint8           mock_iohwab_read_count;
 
-Std_ReturnType IoHwAb_ReadSteeringAngle(sint16* Angle)
+Std_ReturnType IoHwAb_ReadSteeringAngle(uint16* Angle)
 {
     mock_iohwab_read_count++;
     if (Angle == NULL_PTR) {
         return E_NOT_OK;
     }
-    *Angle = mock_iohwab_angle;
+    *Angle = (uint16)mock_iohwab_angle;
     return mock_iohwab_result;
 }
 
@@ -379,7 +380,7 @@ void test_Normal_steering_center(void)
 
     /* Verify angle signal written to RTE */
     sint16 written_angle = (sint16)((uint16)mock_rte_signals[FZC_SIG_STEER_ANGLE]);
-    TEST_ASSERT_INT16_WITHIN(1, 0, written_angle);
+    TEST_ASSERT_INT_WITHIN(1, 0, written_angle);
 }
 
 /** @verifies SWR-FZC-002 — Negative angle produces left PWM (~1000us) */
@@ -551,7 +552,7 @@ void test_Rate_limit_allows_small_change(void)
      * Command is 10 deg. Should have reached ~10 deg. */
     sint16 angle = 0;
     Swc_Steering_GetAngle(&angle);
-    TEST_ASSERT_INT16_WITHIN(2, 10, angle);
+    TEST_ASSERT_INT_WITHIN(2, 10, angle);
 }
 
 /** @verifies SWR-FZC-005 — Decrease not rate limited (safety) */
@@ -562,7 +563,7 @@ void test_Rate_limit_allows_decrease(void)
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
-    TEST_ASSERT_INT16_WITHIN(2, 20, angle_before);
+    TEST_ASSERT_INT_WITHIN(2, 20, angle_before);
 
     /* Command drops to 5 — decrease should be immediate (not rate-limited) */
     run_cycles(5, 5, 1u);
@@ -571,7 +572,7 @@ void test_Rate_limit_allows_decrease(void)
     Swc_Steering_GetAngle(&angle_after);
     /* Should drop immediately (or very close) to 5 */
     TEST_ASSERT_TRUE(angle_after < angle_before);
-    TEST_ASSERT_INT16_WITHIN(2, 5, angle_after);
+    TEST_ASSERT_INT_WITHIN(2, 5, angle_after);
 }
 
 /* ==================================================================
@@ -586,7 +587,7 @@ void test_RTC_on_timeout(void)
 
     sint16 angle_initial = 0;
     Swc_Steering_GetAngle(&angle_initial);
-    TEST_ASSERT_INT16_WITHIN(2, 20, angle_initial);
+    TEST_ASSERT_INT_WITHIN(2, 20, angle_initial);
 
     /* Stop sending new commands: simulate timeout by not updating cmd.
      * Timeout = 100ms / 10ms = 10 cycles of same command.
@@ -621,7 +622,7 @@ void test_RTC_stops_at_center(void)
     sint16 angle = 0;
     Swc_Steering_GetAngle(&angle);
     /* Should be at or very near 0 */
-    TEST_ASSERT_INT16_WITHIN(1, 0, angle);
+    TEST_ASSERT_INT_WITHIN(1, 0, angle);
 
     /* PWM should be at center */
     TEST_ASSERT_EQUAL_UINT16(FZC_STEER_PWM_CENTER_US, mock_pwm_last_duty);
@@ -635,7 +636,7 @@ void test_RTC_rate(void)
 
     sint16 angle_start = 0;
     Swc_Steering_GetAngle(&angle_start);
-    TEST_ASSERT_INT16_WITHIN(2, 30, angle_start);
+    TEST_ASSERT_INT_WITHIN(2, 30, angle_start);
 
     /* Trigger timeout (10 cycles), then run exactly 10 more RTC cycles */
     run_cycles(30, 30, 20u);
@@ -646,7 +647,7 @@ void test_RTC_rate(void)
     /* After 10 RTC cycles at 0.3 deg/cycle = 3 deg decrease.
      * Expected: ~27 degrees. */
     sint16 delta = (sint16)(angle_start - angle_end);
-    TEST_ASSERT_INT16_WITHIN(2, 3, delta);
+    TEST_ASSERT_INT_WITHIN(2, 3, delta);
 }
 
 /* ==================================================================
@@ -804,7 +805,7 @@ void test_Cmd_timeout_triggers_RTC(void)
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
-    TEST_ASSERT_INT16_WITHIN(2, 15, angle_before);
+    TEST_ASSERT_INT_WITHIN(2, 15, angle_before);
 
     /* Simulate 20 cycles with same stale command (timeout at 10 cycles) */
     run_cycles(15, 15, 20u);
@@ -925,7 +926,7 @@ void test_GetAngle_valid_after_init(void)
 
     Std_ReturnType ret = Swc_Steering_GetAngle(&angle);
     TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
-    TEST_ASSERT_INT16_WITHIN(1, 0, angle);
+    TEST_ASSERT_INT_WITHIN(1, 0, angle);
 }
 
 /** @verifies SWR-FZC-001
@@ -1025,7 +1026,7 @@ void test_FaultInj_RTC_reaches_zero_and_stops(void)
     Swc_Steering_GetAngle(&angle);
 
     /* Should be at or very near 0 */
-    TEST_ASSERT_INT16_WITHIN(1, 0, angle);
+    TEST_ASSERT_INT_WITHIN(1, 0, angle);
 }
 
 /** @verifies SWR-FZC-001
@@ -1037,7 +1038,7 @@ void test_FaultInj_double_init_steering(void)
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
-    TEST_ASSERT_INT16_WITHIN(2, 20, angle_before);
+    TEST_ASSERT_INT_WITHIN(2, 20, angle_before);
 
     /* Second init should reset angle to 0 */
     Swc_Steering_Init(&test_config);
