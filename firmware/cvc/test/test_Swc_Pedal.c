@@ -69,6 +69,9 @@ typedef uint8           Std_ReturnType;
 #define CVC_PEDAL_STUCK_CYCLES        100u
 #define CVC_PEDAL_LATCH_CLEAR_CYCLES   50u
 #define CVC_PEDAL_RAMP_LIMIT            5u
+#define CVC_PEDAL_MAX_RUN            1000u   /* 100% torque in RUN mode */
+#define CVC_PEDAL_MAX_DEGRADED        750u   /* 75% torque in DEGRADED */
+#define CVC_PEDAL_MAX_LIMP            300u   /* 30% torque in LIMP */
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_PASSED    0u

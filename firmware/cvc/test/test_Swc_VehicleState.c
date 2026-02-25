@@ -69,6 +69,9 @@ typedef uint8 Std_ReturnType;
 #define CVC_COMM_OK                 0u
 #define CVC_COMM_TIMEOUT            1u
 
+/* ECU IDs (from Cvc_Cfg.h) */
+#define CVC_ECU_ID_CVC              0x01u
+
 /* Pedal fault values */
 #define CVC_PEDAL_NO_FAULT          0u
 #define CVC_PEDAL_PLAUSIBILITY      1u
