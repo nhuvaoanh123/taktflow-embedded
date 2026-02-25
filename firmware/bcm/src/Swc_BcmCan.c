@@ -30,6 +30,23 @@
 #include "Swc_BcmCan.h"
 #include "Bcm_Cfg.h"
 
+/* MISRA 20.1: POSIX system headers must precede all code/declarations.
+ * These are needed only in the real (non-mock) POSIX build.  Placed here
+ * so that #include directives come before any function definitions. */
+#ifndef BCM_CAN_USE_MOCK
+#include <sys/socket.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <net/if.h>
+#include <string.h>
+#include <unistd.h>
+/* cppcheck-suppress misra-c2012-21.10
+ * Deviation: time.h is required for clock_gettime() in the Docker-simulated
+ * BCM ECU (POSIX simulation, not safety-critical firmware). */
+#include <time.h>
+#include <sys/ioctl.h>
+#endif /* !BCM_CAN_USE_MOCK */
+
 /* ====================================================================
  * Platform Abstraction (POSIX or mock)
  * ==================================================================== */
@@ -57,15 +74,6 @@ extern sint32   mock_usleep(uint32 usec);
 #define POSIX_USLEEP(us)                mock_usleep((us))
 
 #else /* Real POSIX */
-
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <net/if.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/ioctl.h>
 
 #define POSIX_SOCKET(d, t, p)           socket((d), (t), (p))
 #define POSIX_BIND(fd, addr, len)       bind((fd), (const struct sockaddr*)(addr), (len))
@@ -196,7 +204,7 @@ Std_ReturnType BCM_CAN_Init(void)
         fd = POSIX_SOCKET(29, 3, 1);  /* PF_CAN, SOCK_RAW, CAN_RAW */
 
         if (fd < 0) {
-            POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
+            (void)POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
             continue;
         }
 
@@ -207,8 +215,14 @@ Std_ReturnType BCM_CAN_Init(void)
             bind_addr[j] = 0u;
         }
 
+        /* cppcheck-suppress misra-c2012-11.3
+         * Deviation: bind() requires (const struct sockaddr*) per POSIX API.
+         * The addr buffer is a correctly-sized sockaddr_can replacement. */
+        /* cppcheck-suppress misra-c2012-17.3
+         * bind() is declared in <sys/socket.h> included above; cppcheck
+         * cannot resolve POSIX system headers in its analysis. */
         if (POSIX_BIND(fd, bind_addr, 16u) < 0) {
-            POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
+            (void)POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
             continue;
         }
 
@@ -218,8 +232,11 @@ Std_ReturnType BCM_CAN_Init(void)
         filter_ids[1] = BCM_CAN_ID_BODY_CMD;
         filter_ids[2] = BCM_CAN_ID_ESTOP;
 
+        /* cppcheck-suppress misra-c2012-17.3
+         * setsockopt() is declared in <sys/socket.h> included above;
+         * cppcheck cannot resolve POSIX system headers in its analysis. */
         if (POSIX_SETSOCKOPT(fd, 101, 1, filter_ids, 24u) < 0) {
-            POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
+            (void)POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
             continue;
         }
 

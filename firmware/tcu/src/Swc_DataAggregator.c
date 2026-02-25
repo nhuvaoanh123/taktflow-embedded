@@ -23,6 +23,15 @@
  */
 #include "Swc_DataAggregator.h"
 
+/* MISRA 20.1: All #include directives must precede code/declarations.
+ * POSIX header needed by the real (non-mock) Docker-simulated TCU ECU. */
+#ifndef TCU_DATA_USE_MOCK
+/* cppcheck-suppress misra-c2012-21.10
+ * Deviation: time.h is required for clock_gettime() in the Docker-simulated
+ * TCU ECU (POSIX simulation, not safety-critical firmware). */
+#include <time.h>
+#endif /* !TCU_DATA_USE_MOCK */
+
 /* ====================================================================
  * Platform Abstraction (real or mock)
  * ==================================================================== */
@@ -34,7 +43,6 @@ extern uint32 mock_get_tick_ms(void);
 
 #else
 
-#include <time.h>
 static uint32 real_get_tick_ms(void)
 {
     struct timespec ts;

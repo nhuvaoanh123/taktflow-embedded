@@ -25,6 +25,8 @@
 #include "Swc_RzcNvm.h"
 #include "Rzc_Cfg.h"
 
+#include <stddef.h>  /* offsetof — used for padding-safe CRC computation */
+
 /* ==================================================================
  * Module State (all static file-scope -- ASIL D: no dynamic memory)
  * ================================================================== */
@@ -84,12 +86,12 @@ static uint16 RzcNvm_Crc16(const uint8 *data, uint16 length)
 static uint16 RzcNvm_ComputeEntryCrc(const Swc_RzcNvm_DtcEntryType *pEntry)
 {
     /* CRC is over all bytes of the entry up to (but not including) the
-     * crc16 field.  Using pointer arithmetic for the length avoids
-     * struct-padding issues where sizeof(struct) - sizeof(uint16)
-     * could overshoot and include the crc16 field itself. */
+     * crc16 field.  Using offsetof avoids both struct-padding issues
+     * (sizeof - sizeof could overshoot) and pointer arithmetic
+     * (MISRA C:2012 Rule 18.4). */
     uint16 dataLen;
 
-    dataLen = (uint16)((const uint8 *)&pEntry->crc16 - (const uint8 *)pEntry);
+    dataLen = (uint16)offsetof(Swc_RzcNvm_DtcEntryType, crc16);
 
     return RzcNvm_Crc16((const uint8 *)pEntry, dataLen);
 }

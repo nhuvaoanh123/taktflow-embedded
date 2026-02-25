@@ -16,6 +16,20 @@
  */
 #include "Swc_BcmMain.h"
 
+/* MISRA 20.1: All #include directives must precede code/declarations.
+ * POSIX headers needed by the real (non-mock) Docker-simulated BCM ECU. */
+#ifndef BCM_MAIN_USE_MOCK
+#include "Swc_BcmCan.h"
+/* cppcheck-suppress misra-c2012-21.6
+ * Deviation: stdio.h is required for printf() cycle-overrun logging in
+ * the Docker-simulated BCM ECU (not safety-critical firmware). */
+#include <stdio.h>
+/* cppcheck-suppress misra-c2012-21.10
+ * Deviation: time.h is required for clock_gettime() in the Docker-simulated
+ * BCM ECU (POSIX simulation, not safety-critical firmware). */
+#include <time.h>
+#endif /* !BCM_MAIN_USE_MOCK */
+
 /* ====================================================================
  * Platform Abstraction (real or mock)
  * ==================================================================== */
@@ -32,10 +46,6 @@ extern void           mock_log_overrun(uint32 duration_ms);
 #define LOG_OVERRUN(duration)    mock_log_overrun((duration))
 
 #else /* Real implementation */
-
-#include "Swc_BcmCan.h"
-#include <stdio.h>
-#include <time.h>
 
 static uint32 real_get_tick_ms(void)
 {
