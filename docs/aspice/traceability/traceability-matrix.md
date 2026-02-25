@@ -3,7 +3,7 @@ document_id: TRACE-FULL
 title: "Full V-Model Traceability Matrix"
 aspice_processes: "SYS.1-5, SWE.1-6"
 iso_26262_part: "3, 4, 5, 6"
-generated: "2026-02-25 22:40 UTC"
+generated: "2026-02-25 22:48 UTC"
 ---
 
 # Full V-Model Traceability Matrix
@@ -17,18 +17,18 @@ generated: "2026-02-25 22:40 UTC"
 
 ## Coverage Summary
 
-**Total requirements**: 471
+**Total requirements**: 475
 
 | Level | Total | Traced Up | Traced Down | Tested | Coverage |
 |-------|-------|-----------|-------------|--------|----------|
-| STK | 32 | — | 25 | 21 | 78% |
-| SYS | 56 | 56 | 55 | 49 | 98% |
+| STK | 32 | — | 25 | 24 | 78% |
+| SYS | 56 | 56 | 55 | 55 | 98% |
 | SG | 8 | — | 8 | 8 | 100% |
 | FSR | 25 | 25 | 25 | 25 | 100% |
 | TSR | 51 | 51 | 51 | 51 | 100% |
 | SSR | 81 | 81 | 81 | 81 | 100% |
 | HSR | 25 | 25 | 0 | — | 0% |
-| SWR | 193 | 193 | 0 | 187 | 96% |
+| SWR | 197 | 197 | 0 | 197 | 100% |
 
 ## Full Traceability Chains
 
@@ -2371,6 +2371,10 @@ generated: "2026-02-25 22:40 UTC"
 | SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-CVC-032 | firmware/cvc/include/Swc_Scheduler.h,... | firmware/cvc/test/test_Swc_Scheduler.c | — | COVERED |
 | SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-FZC-029 | firmware/fzc/include/Swc_FzcScheduler... | firmware/fzc/test/test_Swc_FzcSchedul... | — | COVERED |
 | SG-008 | FSR-024 | TSR-047 | SSR-RZC-017 | SWR-RZC-028 | firmware/rzc/cfg/Com_Cfg_Rzc.c, firmw... | firmware/rzc/test/test_Swc_RzcSchedul... | — | COVERED |
+| — | — | — | — | SWR-ALL-001 | — | — | test/sil/scenarios/sil_019_... | COVERED |
+| — | — | — | — | SWR-ALL-002 | — | — | test/sil/scenarios/sil_019_... | COVERED |
+| — | — | — | — | SWR-ALL-003 | — | — | test/sil/scenarios/sil_019_... | COVERED |
+| — | — | — | — | SWR-ALL-004 | — | — | test/sil/scenarios/sil_019_... | COVERED |
 | — | — | — | — | SWR-BCM-001 | firmware/bcm/cfg/Com_Cfg_Bcm.c, firmw... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
 | — | — | — | — | SWR-BCM-002 | firmware/bcm/include/Swc_BcmCan.h, fi... | firmware/bcm/test/test_Swc_BcmCan.c | — | COVERED |
 | — | — | — | — | SWR-BCM-003 | firmware/bcm/include/Swc_Lights.h, fi... | firmware/bcm/test/test_Swc_Lights.c | — | COVERED |
@@ -2405,12 +2409,12 @@ generated: "2026-02-25 22:40 UTC"
 | — | — | — | — | SWR-FZC-030 | firmware/fzc/include/Swc_FzcDcm.h, fi... | firmware/fzc/test/test_Swc_FzcDcm.c | — | COVERED |
 | — | — | — | — | SWR-FZC-031 | firmware/fzc/include/Swc_FzcNvm.h, fi... | firmware/fzc/test/test_Swc_FzcNvm.c | — | COVERED |
 | — | — | — | — | SWR-FZC-032 | firmware/fzc/cfg/Com_Cfg_Fzc.c, firmw... | firmware/fzc/test/test_Swc_FzcNvm.c | — | COVERED |
-| — | — | — | — | SWR-GW-001 | — | — | — | **UNCOVERED** |
-| — | — | — | — | SWR-GW-002 | — | — | — | **UNCOVERED** |
-| — | — | — | — | SWR-GW-003 | — | — | — | **UNCOVERED** |
-| — | — | — | — | SWR-GW-004 | — | — | — | **UNCOVERED** |
-| — | — | — | — | SWR-GW-005 | — | — | — | **UNCOVERED** |
-| — | — | — | — | SWR-GW-006 | — | — | — | **UNCOVERED** |
+| — | — | — | — | SWR-GW-001 | — | — | test/sil/scenarios/sil_016_... | COVERED |
+| — | — | — | — | SWR-GW-002 | — | — | test/sil/scenarios/sil_016_... | COVERED |
+| — | — | — | — | SWR-GW-003 | — | — | test/sil/scenarios/sil_017_... | COVERED |
+| — | — | — | — | SWR-GW-004 | — | — | test/sil/scenarios/sil_017_... | COVERED |
+| — | — | — | — | SWR-GW-005 | — | — | test/sil/scenarios/sil_018_... | COVERED |
+| — | — | — | — | SWR-GW-006 | — | — | test/sil/scenarios/sil_018_... | COVERED |
 | — | — | — | — | SWR-ICU-001 | firmware/icu/cfg/Com_Cfg_Icu.c, firmw... | firmware/icu/test/test_Swc_IcuCan.c | — | COVERED |
 | — | — | — | — | SWR-ICU-002 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
 | — | — | — | — | SWR-ICU-003 | firmware/icu/include/Swc_Dashboard.h,... | firmware/icu/test/test_Swc_Dashboard.c | — | COVERED |
@@ -2768,10 +2772,14 @@ generated: "2026-02-25 22:40 UTC"
 | HSR-SC-005 | SC TMS570LC43x Lockstep CPU Configuration | D | TSR-050, TSR-051 | — | — |
 | HSR-SC-006 | SC Power Supply Independence | D | TSR-029, TSR-030 | — | — |
 
-### SWR (193 requirements)
+### SWR (197 requirements)
 
 | ID | Title | ASIL | Parents | Children | Tested |
 |---|---|---|---|---|---|
+| SWR-ALL-001 | MISRA C:2012 Compliance | D | SYS-051 | — | Yes |
+| SWR-ALL-002 | Static RAM Only — No Dynamic Allocation | D | SYS-052 | — | Yes |
+| SWR-ALL-003 | WCET Within Deadline Margin | D | SYS-053 | — | Yes |
+| SWR-ALL-004 | Flash Memory Utilization Below 80% | A | SYS-054 | — | Yes |
 | SWR-BCM-001 | SocketCAN Interface Initialization | A | SYS-031, SYS-035 | — | Yes |
 | SWR-BCM-002 | Vehicle State CAN Reception | A | SYS-029, SYS-030, SYS-035... | — | Yes |
 | SWR-BCM-003 | Headlight Auto-On Control | A | SYS-035 | — | Yes |
@@ -2878,12 +2886,12 @@ generated: "2026-02-25 22:40 UTC"
 | SWR-FZC-030 | UDS Service Support | A | SYS-037, SYS-038, SYS-039 | — | Yes |
 | SWR-FZC-031 | FZC DTC Persistence | A | SYS-041 | — | Yes |
 | SWR-FZC-032 | Servo Calibration Data Storage | A | SYS-010, SYS-014 | — | Yes |
-| SWR-GW-001 | MQTT Telemetry Publishing | A | SYS-042 | — | — |
-| SWR-GW-002 | CAN Bus Data Acquisition | A | SYS-042 | — | — |
-| SWR-GW-003 | Edge ML Anomaly Detection | A | SYS-043 | — | — |
-| SWR-GW-004 | ML Model Loading and Validation | A | SYS-043 | — | — |
-| SWR-GW-005 | SAP QM DTC Forwarding | A | SYS-056 | — | — |
-| SWR-GW-006 | 8D Report Template Generation | A | SYS-056 | — | — |
+| SWR-GW-001 | MQTT Telemetry Publishing | A | SYS-042 | — | Yes |
+| SWR-GW-002 | CAN Bus Data Acquisition | A | SYS-042 | — | Yes |
+| SWR-GW-003 | Edge ML Anomaly Detection | A | SYS-043 | — | Yes |
+| SWR-GW-004 | ML Model Loading and Validation | A | SYS-043 | — | Yes |
+| SWR-GW-005 | SAP QM DTC Forwarding | A | SYS-056 | — | Yes |
+| SWR-GW-006 | 8D Report Template Generation | A | SYS-056 | — | Yes |
 | SWR-ICU-001 | SocketCAN Interface Initialization | A | SYS-031 | — | Yes |
 | SWR-ICU-002 | Speed Gauge Data Acquisition | A | SYS-009, SYS-044 | — | Yes |
 | SWR-ICU-003 | Torque Gauge Data Acquisition | A | SYS-044 | — | Yes |
@@ -2970,23 +2978,15 @@ generated: "2026-02-25 22:40 UTC"
 
 ### Broken Links
 
-- SYS-051 traces down to SWR-ALL-001 (not found)
-- SYS-052 traces down to SWR-ALL-002 (not found)
-- SYS-053 traces down to SWR-ALL-003 (not found)
-- SYS-054 traces down to SWR-ALL-004 (not found)
+None found.
 
 ### Orphan Requirements
 
 None found.
 
-### Untested Requirements (SSR/SWR without test)
+### Untested Requirements
 
-- `SWR-GW-001`
-- `SWR-GW-002`
-- `SWR-GW-003`
-- `SWR-GW-004`
-- `SWR-GW-005`
-- `SWR-GW-006`
+None found.
 
 ### ASIL Consistency Warnings
 
@@ -3026,4 +3026,4 @@ None found.
 
 ---
 
-*Generated: 2026-02-25 22:40 UTC*
+*Generated: 2026-02-25 22:48 UTC*

@@ -1,0 +1,81 @@
+# =============================================================================
+# @file    sil_019_cross_cutting_analysis.yaml
+# @brief   SIL scenario: Cross-cutting build and analysis verification
+# @aspice  SWE.4 — Software Unit Verification (static analysis)
+# @date    2026-02-25
+#
+# Validates cross-cutting build constraints: MISRA compliance (zero
+# violations in CI), no dynamic allocation (Rule 21.3/Dir 4.12), WCET
+# within 80% of deadline, and flash utilization below 80%.
+#
+# These are verified by CI pipelines and build tooling rather than
+# runtime testing, but are tracked here for traceability completeness.
+# =============================================================================
+
+name: "Cross-Cutting Build Analysis Verification"
+id: "SIL-019"
+description: >
+  Verify cross-cutting firmware constraints via static analysis and build
+  output: MISRA C:2012 compliance (cppcheck CI gate), absence of dynamic
+  allocation (Rule 21.3), WCET within deadline margin, and flash utilization
+  below 80% budget. This scenario confirms that CI gates enforce these
+  constraints on every push.
+verifies:
+  - "SWR-ALL-001"   # MISRA C:2012 Compliance
+  - "SWR-ALL-002"   # Static RAM Only — No Dynamic Allocation
+  - "SWR-ALL-003"   # WCET Within Deadline Margin
+  - "SWR-ALL-004"   # Flash Memory Utilization Below 80%
+aspice: "SWE.4"
+iso_reference: "ISO 26262 Part 6, Section 9 — Static Analysis"
+timeout_sec: 60
+
+setup:
+  - action: build
+    target: all
+    description: "Build all ECU firmware to generate linker maps and analysis data"
+
+steps:
+  - action: static_analysis
+    tool: cppcheck
+    config: tools/misra/misra.json
+    description: "Run MISRA C:2012 check — expect zero violations"
+
+  - action: grep_absent
+    pattern: "malloc|calloc|realloc|\\bfree\\b"
+    scope: "firmware/**/*.c"
+    description: "Verify no dynamic allocation calls in firmware source"
+
+  - action: linker_map_check
+    threshold_pct: 80
+    description: "Verify flash utilization below 80% on all targets"
+
+  - action: timing_analysis
+    max_utilization_pct: 80
+    description: "Verify WCET below 80% of scheduling deadline"
+
+verdicts:
+  - type: analysis_result
+    tool: cppcheck
+    expected: 0
+    metric: violations
+    description: "MISRA analysis reports zero violations"
+
+  - type: analysis_result
+    tool: grep
+    expected: 0
+    metric: matches
+    description: "No malloc/calloc/realloc/free calls found in firmware"
+
+  - type: analysis_result
+    tool: linker
+    expected_below: 80
+    metric: flash_utilization_pct
+    description: "Flash utilization below 80% budget on all MCUs"
+
+  - type: analysis_result
+    tool: timing
+    expected_below: 80
+    metric: wcet_utilization_pct
+    description: "WCET below 80% of deadline on all safety-critical tasks"
+
+teardown: []
