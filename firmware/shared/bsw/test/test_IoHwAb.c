@@ -58,6 +58,7 @@ static uint8          mock_adc_start_count;
 
 Std_ReturnType Adc_StartGroupConversion(uint8 Group)
 {
+    (void)Group;
     mock_adc_start_count++;
     return mock_adc_result;
 }

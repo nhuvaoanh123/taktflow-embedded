@@ -162,7 +162,9 @@ Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
  * Injectable HW Test Callbacks
  * ================================================================== */
 
+static Std_ReturnType mock_hw_pass(void)  __attribute__((unused));
 static Std_ReturnType mock_hw_pass(void)  { return E_OK; }
+static Std_ReturnType mock_hw_fail(void)  __attribute__((unused));
 static Std_ReturnType mock_hw_fail(void)  { return E_NOT_OK; }
 
 /* Track which callback was actually called */

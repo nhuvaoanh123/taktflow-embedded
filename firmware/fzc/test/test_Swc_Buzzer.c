@@ -30,6 +30,13 @@ typedef uint8           Std_ReturnType;
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
 
+/* Prevent BSW headers from redefining types */
+#define STD_TYPES_H
+#define SWC_BUZZER_H
+#define FZC_CFG_H
+#define IOHWAB_H
+#define RTE_H
+
 /* ==================================================================
  * Signal IDs (from Fzc_Cfg.h)
  * ================================================================== */
@@ -73,10 +80,6 @@ typedef uint8           Std_ReturnType;
 #define BUZZER_SLOW_OFF_MS         500u
 #define BUZZER_FAST_ON_MS          100u
 #define BUZZER_FAST_OFF_MS         100u
-
-/* Swc_Buzzer API declarations */
-extern void Swc_Buzzer_Init(void);
-extern void Swc_Buzzer_MainFunction(void);
 
 /* ==================================================================
  * Mock: Rte_Read
@@ -132,6 +135,12 @@ void Dio_WriteChannel(uint8 ChannelId, uint8 Level)
         mock_dio_history_idx++;
     }
 }
+
+/* ==================================================================
+ * Include SWC under test (source inclusion for test build)
+ * ================================================================== */
+
+#include "../src/Swc_Buzzer.c"
 
 /* ==================================================================
  * Test Configuration

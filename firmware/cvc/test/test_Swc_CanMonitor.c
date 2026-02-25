@@ -43,13 +43,6 @@ typedef uint8           Std_ReturnType;
 #define CANMON_STATUS_SAFE_STOP         4u
 #define CANMON_STATUS_SHUTDOWN          5u
 
-/* Swc_CanMonitor API declarations */
-extern void            Swc_CanMonitor_Init(void);
-extern uint8           Swc_CanMonitor_Check(uint8 isBusOff, uint32 rxMsgCount,
-                                             uint8 errorWarning, uint32 currentTimeMs);
-extern Std_ReturnType  Swc_CanMonitor_Recovery(uint32 currentTimeMs);
-extern uint8           Swc_CanMonitor_GetStatus(void);
-
 /* ==================================================================
  * Test Configuration
  * ================================================================== */
@@ -239,3 +232,14 @@ int main(void)
 
     return UNITY_END();
 }
+
+/* ==================================================================
+ * Source inclusion — link SWC under test directly into test binary
+ * ================================================================== */
+
+/* Prevent BSW headers from redefining types when Swc_CanMonitor.c is included */
+#define PLATFORM_TYPES_H
+#define STD_TYPES_H
+#define SWC_CANMONITOR_H
+
+#include "../src/Swc_CanMonitor.c"
