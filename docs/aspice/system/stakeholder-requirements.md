@@ -284,6 +284,12 @@ The platform shall store diagnostic trouble codes (DTCs) with associated freeze-
 
 The platform shall transmit vehicle telemetry data (speed, torque, temperature, current, sensor health, DTCs) to a cloud endpoint over a secure (TLS-encrypted) connection. A cloud dashboard shall provide real-time and historical visualization of vehicle operating data and fault events.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-28 -->
+> **Why:** STK-014 exists to demonstrate full-circle system thinking — planning cloud telemetry and dashboarding from the stakeholder level, not bolting it on later. Even though cloud/dashboard is QM-rated, including it at SYS.1 shows that the complete operational circle (vehicle → cloud → visualization → quality feedback) was architected as a whole from the start.
+> **Tradeoff:** including cloud/dashboard scope increases project workload (TLS integration, gateway, MQTT pipeline, web dashboard), but attracts tech leadership (especially SDV-oriented CTOs) who recognize full-system competence beyond bare-metal firmware.
+> **Alternative:** omit cloud and dashboard entirely, focusing only on embedded firmware and safety — reduces scope and effort significantly, but loses the end-to-end differentiation that signals system-level engineering maturity to senior technical evaluators.
+<!-- HITL-LOCK END:COMMENT-BLOCK-28 -->
+
 ---
 
 ### STK-015: Edge ML Anomaly Detection
@@ -293,6 +299,12 @@ The platform shall transmit vehicle telemetry data (speed, torque, temperature, 
 - **Status**: draft
 
 The platform shall include an edge machine learning inference capability that detects anomalous patterns in motor current, temperature, and CAN bus traffic. Anomaly alerts shall be forwarded to the cloud dashboard and shall not be used for safety-critical decisions.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-29 -->
+> **Why:** STK-015 adds an ML layer that catches multivariate anomaly patterns (e.g., high current + low temperature together) that single-channel thresholds would miss. Isolation Forest was chosen because it's unsupervised (no labeled fault data needed), runs on Pi-class hardware, and "edge ML" is a strong resume/portfolio keyword for SDV-oriented roles.
+> **Tradeoff:** adds gateway complexity (model training, scoring pipeline, MQTT forwarding) for a QM-only observation feature — but the demo impact and technical breadth signal outweigh the extra scope.
+> **Alternative:** simple z-score thresholds per channel — 90% of the demo effect at 10% of the code, but loses the multivariate detection capability and the "ML on edge" differentiation.
+<!-- HITL-LOCK END:COMMENT-BLOCK-29 -->
 
 ---
 
@@ -305,6 +317,12 @@ The platform shall include an edge machine learning inference capability that de
 - **Status**: draft
 
 The drive-by-wire (acceleration control), steering, and braking functions shall be developed to ASIL D integrity per ISO 26262. All safety mechanisms, diagnostic coverage, and verification activities for these functions shall meet ASIL D requirements including MC/DC code coverage, independent verification, and formal methods where applicable.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-30 -->
+> **Why:** drive-by-wire replaces mechanical linkages with software and electrical signals — no cable fallback if software fails. ASIL D is mandatory because a fault in acceleration, steering, or braking can directly cause fatal/life-threatening harm (S3+E4+C3). The engineering rigor (redundant sensors, plausibility checks, independent safety monitor, kill relay) is the substitute for the mechanical safety net.
+> **Tradeoff:** ASIL D demands the highest process rigor (MC/DC coverage, independent verification, formal methods), which significantly increases development and documentation effort — but these three functions have no acceptable lower classification.
+> **Alternative:** none for these functions. ASIL D is the HARA-determined outcome, not a design choice. The only flexibility is ASIL decomposition (e.g., D → B(D)+B(D) across redundant elements), which reduces process rigor per element but still requires ASIL D hardware metrics and integration testing.
+<!-- HITL-LOCK END:COMMENT-BLOCK-30 -->
 
 ---
 
