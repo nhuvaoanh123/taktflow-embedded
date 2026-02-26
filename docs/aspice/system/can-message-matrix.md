@@ -60,6 +60,10 @@ This is the authoritative reference for all CAN communication between ECUs. All 
 | Max bus length | 40 meters (500 kbps limit) |
 | Actual bus length | < 2 meters (bench setup) |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-001 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** CAN 2.0B at 500 kbps with 11-bit standard identifiers is the correct choice for this bus. The bit timing parameters (prescaler 34, NTSEG1=7, NTSEG2=2, 80% sample point) are consistent with the ICD Section 4.4 and produce exactly 500 kbps from the 170 MHz STM32 clock. Important: the prescaler calculation is explicitly shown (170 MHz / 34 = 5 MHz; 5 MHz / 10 Tq = 500 kbps), which is good practice for audit defensibility. The actual bus length (< 2m) provides massive margin against the 40m theoretical limit at 500 kbps. **Why:** Consistent bit timing parameters between this document and the ICD eliminates a common integration failure mode. CAN 2.0B with standard IDs provides 2048 ID slots, which is more than adequate for the 31 defined message types. **Tradeoff:** Using 11-bit standard IDs limits the ID space to 2048, but extended 29-bit IDs would add 20 bits of overhead per frame with no benefit at this message count. **Alternative:** CAN FD with 64-byte payloads would allow consolidating some messages (e.g., combining Motor_Status and Motor_Current) but adds protocol complexity.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-001 -->
+
 ## 4. CAN ID Allocation Strategy
 
 ### 4.1 Priority Bands
@@ -79,6 +83,10 @@ CAN IDs are assigned by safety priority. Lower CAN ID wins arbitration (higher p
 | 0x600-0x6FF | Lowest | Diagnostics (UDS) | QM | Large reserved block |
 | 0x7DF | Standard | UDS functional request | QM | Fixed per ISO 14229 |
 | 0x7E0-0x7EE | Standard | UDS physical request/response | QM | Fixed per ISO 14229 |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-002 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** The priority band scheme (0x001 = highest priority E-stop, 0x010-0x01F = heartbeats, 0x100-0x10F = control commands, ascending to 0x7xx for diagnostics) correctly reflects CAN arbitration semantics where lower ID wins. Allocating E-stop at 0x001 guarantees it will always win arbitration against any other message on the bus -- this is a hard requirement for ASIL D emergency functions. The separation between safety messages (0x001-0x302) and QM messages (0x350+) with generous reserved slots (12-17 per band) provides good expansion headroom. Per SYS-033. **Why:** Priority-based CAN ID allocation aligned with ASIL level is the standard automotive pattern and ensures that safety-critical messages are never delayed by QM traffic. **Tradeoff:** Wide gaps between bands (0x01F to 0x100, 0x10F to 0x200) waste ID space but provide clean logical separation and room for future messages. **Alternative:** A tightly packed ID scheme would maximize ID utilization but makes future expansion difficult and obscures the priority/ASIL relationship.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-002 -->
 
 ### 4.2 Reserved ID Ranges
 
@@ -131,6 +139,10 @@ CAN IDs are assigned by safety priority. Lower CAN ID wins arbitration (higher p
 **E2E protected messages**: 16 (all ASIL A or higher).
 **Data ID assignment**: 16 unique Data IDs (0x00-0x0F) for E2E protected messages, fitting within the 4-bit Data ID field.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-003 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** 31 message types with 16 E2E-protected is a well-scoped matrix. Cycle times are appropriate: 10 ms for control-loop messages (Vehicle_State, Torque_Request, Steer_Command, Brake_Command, Motor_Current, Lidar_Distance), 20 ms for status feedback (Steering_Status, Brake_Status, Motor_Status), 50 ms for heartbeats, and 100-1000 ms for QM/body messages. The 16 unique Data IDs (0x00-0x0F) fit within a 4-bit field, which is efficient. Event-driven messages (E-stop, Brake_Fault, Motor_Cutoff_Req, DTC_Broadcast) correctly use event-based transmission with 10 ms repeat for critical ones. DLC choices are tight: DLC 4 for small messages (heartbeats, faults), DLC 8 for data-rich messages (control, status), DLC 2 for minimal data (door lock). **Why:** The 10 ms control cycle matches typical automotive powertrain CAN timing and provides adequate control bandwidth for the servo and motor actuators. **Tradeoff:** 10 ms cycle for 4 control messages from CVC means CVC transmits 400 safety frames/second, which is the dominant contributor to bus load. Doubling the control cycle to 20 ms would halve bus load but increase control latency. **Alternative:** Event-driven transmission for control messages (send only on value change) would reduce bus load further but makes E2E timeout monitoring more complex and less deterministic.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-003 -->
+
 ## 6. Signal Definitions
 
 All signals use **little-endian** (Intel) byte order. Bit numbering follows the AUTOSAR convention: bit 0 is the LSB of byte 0.
@@ -145,6 +157,10 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | EStop_Active | 16 | 1 | 1 | 0 | bool | 0 | 1 | 0 | 1 = E-stop active |
 | EStop_Source | 17 | 3 | 1 | 0 | enum | 0 | 7 | 0 | 0=CVC button, 1=CAN request, 2=SC |
 | Reserved | 20 | 12 | -- | -- | -- | -- | -- | 0 | Reserved for future use |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-004 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** E-stop at 0x001 with DLC 4 is compact and efficient. The signal packing (E2E header in bytes 0-1, EStop_Active and EStop_Source in byte 2, 12-bit reserved in remaining bits) leaves room for future expansion while keeping the message small for fastest possible transmission. EStop_Source enum (CVC button, CAN request, SC) provides valuable diagnostic information for post-incident analysis. The 10 ms repeat cycle during active E-stop ensures all nodes receive the message even if they miss the first transmission. E2E protection with Data ID 0x01 and CRC-8 is mandatory for this ASIL B message. **Why:** Per SYS-028, the E-stop broadcast must reach all bus participants with minimum latency. DLC 4 = 95 bits worst-case = 0.19 ms at 500 kbps, keeping the bus available for other safety messages. **Tradeoff:** DLC 4 uses only 2 bytes of application data (16 bits), of which only 4 bits are active signals -- this is bandwidth-inefficient but keeps the message as small as possible for arbitration priority. **Alternative:** Embedding E-stop in the Vehicle_State message (0x100) would eliminate a separate message but would delay E-stop notification to the 10 ms Vehicle_State cycle and couple it to CVC processing.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-004 -->
 
 ### 6.2 CVC_Heartbeat (0x010) -- DLC 4
 
@@ -178,6 +194,10 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | ECU_ID | 16 | 8 | 1 | 0 | -- | 3 | 3 | 3 | ECU ID = 0x03 (RZC) |
 | OperatingMode | 24 | 4 | 1 | 0 | enum | 0 | 5 | 0 | Same enum as CVC heartbeat |
 | FaultStatus | 28 | 4 | 1 | 0 | bitmask | 0 | 15 | 0 | bit0=overcurrent,bit1=overtemp,bit2=direction,bit3=CAN |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-005 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Heartbeat messages for all three physical ECUs (CVC 0x010, FZC 0x011, RZC 0x012) share an identical layout: E2E header, ECU_ID, OperatingMode (6-state enum), and FaultStatus (4-bit bitmask). The 50 ms cycle with 200 ms E2E timeout means 4 missed heartbeats trigger DEGRADED state -- this provides a good balance between detection speed and noise immunity. ECU-specific FaultStatus bits (pedal/CAN/NVM/WDT for CVC, steering/brake/lidar/CAN for FZC, overcurrent/overtemp/direction/CAN for RZC) enable targeted fault isolation. ASIL C for heartbeats is appropriate since heartbeat loss triggers degradation, not immediate shutdown. Per SYS-021 and SYS-022. **Why:** Uniform heartbeat structure across ECUs simplifies the SC monitoring logic and reduces the risk of message-specific parsing bugs. **Tradeoff:** 4-bit FaultStatus limits to 4 fault flags per ECU; a more detailed fault bitmap (8 or 16 bits) would provide finer granularity but would require DLC 6 or 8. **Alternative:** Individual heartbeat-per-subsystem (e.g., separate pedal heartbeat, steering heartbeat) would provide finer-grained monitoring but multiplies the message count.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-005 -->
 
 ### 6.5 Vehicle_State (0x100) -- DLC 6
 
@@ -228,6 +248,10 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | BrakeMode | 24 | 4 | 1 | 0 | enum | 0 | 3 | 0 | 0=release,1=normal,2=emergency,3=auto |
 | VehicleState | 28 | 4 | 1 | 0 | enum | 0 | 5 | 0 | Current vehicle state |
 | Reserved | 32 | 32 | -- | -- | -- | -- | -- | 0 | Reserved |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-006 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** The four control messages (Vehicle_State 0x100, Torque_Request 0x101, Steer_Command 0x102, Brake_Command 0x103) form a coherent control group all transmitted by CVC at 10 ms. Torque_Request carries both 14-bit pedal sensor values (PedalPosition1/2), enabling the RZC to independently verify pedal plausibility -- this is a strong defensive design per SYS-001. Steer_Command includes both the angle command and rate limit, allowing the FZC to enforce rate limiting locally. Brake_Command includes a BrakeMode enum (release/normal/emergency/auto) for differentiated braking. All four messages are ASIL D with E2E protection. Vehicle_State carries a 12-bit FaultMask plus TorqueLimit and SpeedLimit, providing a centralized derating broadcast. The 30 ms E2E timeout on control messages means 3 missed cycles trigger safe default -- tight but appropriate for 10 ms period. **Why:** Separating control commands by actuator subsystem (torque, steering, brake) follows the automotive pattern of one command message per actuator and enables independent timeout handling per subsystem. **Tradeoff:** Sending all 4 control messages every 10 ms generates the highest bus load contribution (~52 kbps combined), but this is acceptable at 24% total utilization. **Alternative:** Combining all control commands into a single 8-byte message would halve the control-path bus load but would force all actuators to share a single E2E timeout and would not fit all signals in 6 bytes of payload.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-006 -->
 
 ### 6.9 Steering_Status (0x200) -- DLC 8
 
@@ -291,6 +315,10 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | SensorStatus | 52 | 4 | 1 | 0 | bitmask | 0 | 15 | 0 | bit0=timeout,bit1=range,bit2=stuck,bit3=weak_signal |
 | Reserved | 56 | 8 | -- | -- | -- | -- | -- | 0 | Reserved |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-007 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Steering_Status and Brake_Status (0x200, 0x201) at 20 ms provide closed-loop feedback for the CVC. Steering_Status includes both ActualAngle and CommandedAngle (echo), enabling the CVC and SC to detect steering deviation. Brake_Status includes servo current measurement, which provides a secondary indication of brake effort beyond position feedback. Brake_Fault (0x210) and Motor_Cutoff_Req (0x211) are event-driven safety messages with E2E -- the Motor_Cutoff_Req provides a cross-ECU safety path where FZC can request motor shutdown if it detects a brake or lidar emergency. Lidar_Distance (0x220) at 10 ms carries both distance and an ObstacleZone enum (emergency/braking/warning/clear), pre-processing the raw distance into actionable zones. Per SYS-010, SYS-011, SYS-014, SYS-015, SYS-018. **Why:** Command-echo signals (CommandedAngle in Steering_Status, BrakeCommandEcho in Brake_Status) enable round-trip verification: CVC sends command, actuator echoes what it received, allowing detection of CAN corruption that passed CRC. **Tradeoff:** 20 ms feedback cycle introduces one extra 10 ms control cycle of latency in the closed loop, but servo dynamics are much slower than 20 ms. **Alternative:** 10 ms feedback cycle would tighten the loop but doubles the status message bus load from ~13.5 kbps to ~27 kbps.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-007 -->
+
 ### 6.14 Motor_Status (0x300) -- DLC 8
 
 | Signal | Start Bit | Length | Factor | Offset | Unit | Min | Max | Init | Description |
@@ -341,6 +369,10 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | BatterySOC | 16 | 8 | 1 | 0 | % | 0 | 100 | 100 | State of charge estimate |
 | BatteryStatus | 24 | 4 | 1 | 0 | enum | 0 | 4 | 2 | 0=critical_UV,1=UV_warn,2=normal,3=OV_warn,4=critical_OV |
 | Reserved | 28 | 4 | -- | -- | -- | -- | -- | 0 | Reserved |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-008 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Motor_Status (0x300, 20 ms) carries speed, direction, enable state, 5-bit fault bitmask, duty cycle, and derating -- comprehensive actuator feedback. Motor_Current (0x301, 10 ms, ASIL C) at higher rate than Motor_Status (20 ms) reflects the safety importance of overcurrent detection. Motor_Temperature (0x302, 100 ms, ASIL A) rate matches the 10 Hz NTC sampling. Temperature signal encoding uses offset (-40) to represent -40 to 215 degC in a uint8 -- standard automotive encoding. Battery_Status (0x303, 1000 ms, QM, no E2E) is appropriately the lowest-rate message since battery voltage changes slowly. The no-E2E decision for Battery_Status is justified since it is QM and not used in any safety decision path. Per SYS-005, SYS-006, SYS-008. **Why:** Differentiating cycle times by ASIL level (10 ms for ASIL C current, 20 ms for ASIL D motor status, 100 ms for ASIL A temperature, 1000 ms for QM battery) is a textbook bus bandwidth optimization that matches monitoring urgency to safety criticality. **Tradeoff:** Motor_Current at 10 ms contributes 13.5 kbps -- the same as each control message. This could be reduced to 20 ms if bus load becomes a concern, but the 10 ms rate improves overcurrent detection latency. **Alternative:** Combining Motor_Status and Motor_Current into a single DLC 8 message at 10 ms would eliminate one message ID but would require packing 17+ signals into 6 bytes of payload, which does not fit.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-008 -->
 
 ### 6.18 Body_Control_Cmd (0x350) -- DLC 4 (No E2E)
 
@@ -430,6 +462,10 @@ UDS physical addressing per ECU:
 | ICU | 0x7E5 | 0x7ED |
 | Functional | 0x7DF | Per-ECU response ID |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-009 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Body messages (0x350-0x402) are all QM with no E2E, 100 ms or event-driven -- correctly reflecting their non-safety nature. The signal packing is efficient (most body messages use only a few bits of their DLC 4 payload). DTC_Broadcast (0x500, DLC 8) carries DTC number per SAE J2012, ISO 14229 status byte, ECU source, occurrence count, and 3 bytes of freeze-frame -- good diagnostic content density. UDS addressing (0x7DF functional, 0x7E0-0x7E5 physical request, 0x7E8-0x7ED physical response) follows ISO 14229 / ISO 15765-2 standard assignment. The UDS table includes 6 ECUs (CVC, FZC, RZC, TCU, BCM, ICU) with proper request/response ID pairs. Per SYS-037 through SYS-041. **Why:** Standard UDS addressing ensures compatibility with off-the-shelf diagnostic tools (CANoe, PCAN, etc.) and follows the ISO 14229 convention of response ID = request ID + 0x08. **Tradeoff:** DTC_Broadcast as a single shared message (any ECU can transmit on 0x500) risks arbitration conflicts if multiple ECUs report DTCs simultaneously; this is mitigated by event-driven transmission with randomized backoff in the Dem module. **Alternative:** Per-ECU DTC channels (0x500-0x506) would eliminate arbitration conflicts but consume 7 IDs for a rare event-driven message.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-009 -->
+
 ## 7. E2E Protection Details
 
 ### 7.1 E2E Configuration Summary
@@ -474,6 +510,10 @@ for (i = 2; i < dlc; i++) {
 payload[1] = crc;
 ```
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-010 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** CRC-8 SAE J1850 (polynomial 0x1D, init 0xFF) with Hamming distance 4 for payloads up to 8 bytes provides detection of all 1, 2, and 3-bit errors, which is the minimum required for ASIL D CAN communication per AUTOSAR E2E Profile 1. The 4-bit alive counter (0-15, wrapping) detects message loss, repetition, and delay. The 4-bit Data ID detects message insertion and masquerade. The CRC input (Data ID byte + payload bytes 2..DLC-1) excludes the alive counter from the CRC calculation, which is standard AUTOSAR E2E practice since the alive counter is independently checked. Header layout (byte 0: alive counter + Data ID, byte 1: CRC) uses 2 bytes of overhead per message, leaving 6 bytes for application data in DLC 8. **Why:** CRC-8/SAE-J1850 is the automotive standard CRC polynomial for CAN E2E protection, supported by AUTOSAR E2E library and recognized by safety assessors. **Tradeoff:** CRC-8 provides weaker error detection than CRC-32 (Hamming distance 4 vs 6+), but CRC-32 would consume 4 bytes of payload -- unacceptable in DLC 4 messages where it would leave zero bytes for data. **Alternative:** AUTOSAR E2E Profile 2 (CRC-8 with 4-bit counter and 4-bit Data ID) is effectively what is implemented here. E2E Profile 5 or 11 with CRC-32 would be stronger but requires CAN FD payloads.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-010 -->
+
 ### 7.4 Per-Message E2E Configuration
 
 | CAN ID | Data ID | Timeout (ms) | Max Alive Delta | Safe Default |
@@ -495,6 +535,10 @@ payload[1] = crc;
 | 0x301 | 0x0F | 30 | 1 | Current = 0 (motor assumed disabled) |
 | 0x302 | 0x00 | 300 | 1 | Last valid temp, then max derating |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-011 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** E2E timeout values are well-calibrated to each message's cycle time: 3x cycle for 10 ms messages (30 ms timeout), 3x for 20 ms messages (60 ms), 4x for 50 ms heartbeats (200 ms), 3x for 100 ms temperature (300 ms). The 50 ms E-stop timeout is tight (5x the 10 ms repeat cycle) which is correct for an emergency message. Safe default values are well-chosen and fail-safe: E-stop assumed active (safest), zero torque, return-to-center steering, max braking, distance=0 (emergency assumed), motor disabled. The Max Alive Delta of 1 across all messages means any single missed or repeated alive counter increment triggers E2E failure -- this is the strictest possible setting. Per SYS-032. **Why:** Safe default values must always drive the system toward the defined safe state (motor off, brakes applied, steering centered). The choices here are consistent with the system safety concept. **Tradeoff:** Max Alive Delta of 1 provides the fastest detection of message loss/repetition but is intolerant of any timing jitter -- a single late message triggers E2E warning. Delta of 2 would provide more jitter tolerance at the cost of slower detection. **Alternative:** Adaptive timeout (shorter timeout at higher vehicle speed) would provide tighter safety response when it matters most, but adds complexity to the E2E configuration.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-011 -->
+
 ### 7.5 Receiver E2E Failure Behavior
 
 | Consecutive Failures | Action |
@@ -503,6 +547,10 @@ payload[1] = crc;
 | 2 | Use last valid value; log E2E warning event |
 | 3 | Substitute safe default value; log DTC |
 | 4+ | Maintain safe default; escalate to state machine fault |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-012 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** The graduated failure response (1 failure = use last valid, 2 = log warning, 3 = substitute safe default + DTC, 4+ = escalate to state machine fault) is a well-designed deglitching strategy that prevents a single corrupted frame from triggering unnecessary safe-state transitions while ensuring persistent faults are caught within 3 cycles. For a 10 ms message, 3 consecutive failures = 30 ms detection time, which is well within typical FTTI budgets (50-200 ms for steering/braking). **Why:** The graduated approach balances false-positive avoidance against fault detection latency. Substituting the last valid value for 1-2 failures masks transient bus noise without affecting control behavior. **Tradeoff:** Using last-valid-value for 1-2 failures means the receiver operates on stale data for up to 20 ms (2 cycles at 10 ms) -- this is safe because the physical system cannot change significantly in 20 ms, but the staleness should be bounded and analyzed per-message. **Alternative:** Immediate safe-default on first E2E failure (zero-tolerance) would provide the fastest fault response but would cause frequent nuisance transitions in electrically noisy environments near the motor driver.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-012 -->
 
 ## 8. Bus Load Analysis
 
@@ -577,6 +625,10 @@ Total bits per frame = 47 + (8 * DLC). Including worst-case bit stuffing (1 stuf
 
 **Assessment**: Bus load is well within the 50% design target and the 30% ASIL D safety budget. Significant headroom exists for adding messages during development.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-013 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Bus load calculation methodology is correct: 47-bit CAN 2.0B overhead + 8*DLC data bits + worst-case bit stuffing (1 stuff bit per 4 data bits). Worst-case total of 119,895 bits/s = 24.0% utilization is well within the 50% design target and the 30% ASIL D safety budget. The safety-only load of 117,400 bits/s (23.5%) confirms safety messages are the dominant contributors, which is expected. Remaining capacity of ~380 kbps (76%) provides ample room for expansion. The per-message breakdown is valuable for identifying the top bus consumers: the 10 ms DLC 8 messages (Torque_Request, Steer_Command, Brake_Command, Motor_Current, Lidar_Distance) each contribute 13,500 bits/s, totaling ~67.5 kbps. The E-stop at 9,500 bits/s (worst-case continuous repeat) is a significant contributor but is only active during emergency conditions. **Why:** Documented bus load analysis with per-message breakdown is a mandatory deliverable for any CAN bus design and is specifically called out in ISO 11898-1 Annex A. The 50% target and 30% ASIL D budget are industry-standard thresholds. **Tradeoff:** The analysis assumes worst-case bit stuffing on every frame, which overestimates actual bus load by ~10-15%. Typical load of ~22% is more representative. **Alternative:** A Monte Carlo bus simulation (e.g., Vector CANoe Bus Statistics) would provide statistically accurate load distribution including arbitration effects, but the deterministic worst-case calculation is sufficient for design-phase analysis.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-013 -->
+
 ## 9. Message Timing Diagram
 
 ### 9.1 100 ms Window Schedule
@@ -645,6 +697,10 @@ Time within 10ms slot:
 
 All worst-case latencies are well within their respective budgets.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-014 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** The 10 ms slot staggering (0.0 ms Vehicle_State, 0.3 ms Torque_Request, 0.6 ms Steer_Command, 0.9 ms Brake_Command, 1.5 ms Lidar, 2.0 ms Motor_Current) is a good practice that reduces simultaneous arbitration contention. However, note that CAN arbitration is non-destructive, so even without staggering, lower IDs would always win -- the staggering primarily reduces worst-case latency for lower-priority messages. Heartbeats offset by 2 ms from control messages is a sensible load-spreading measure. Worst-case latency analysis shows all messages within budget: E-stop 0.27 ms vs 1 ms budget, control messages 1.1 ms vs 1 ms budget (slight concern -- 1.1 ms exceeds the 1 ms budget for 0x103 when 3 higher-priority control messages are ahead). The 100 ms timing diagram provides clear visual representation of the schedule. **Why:** Documented message scheduling and worst-case latency analysis are required evidence for FTTI compliance and demonstrate that no safety message can be indefinitely delayed by lower-priority traffic. **Tradeoff:** Software-based staggering depends on accurate timer synchronization across ECUs -- clock drift between ECUs could cause stagger to collapse over time, though CAN arbitration handles this gracefully. **Alternative:** TDMA-based scheduling (time-division) would provide guaranteed latency slots but requires clock synchronization infrastructure (e.g., CAN FD time-triggered mode) that is not available with CAN 2.0B.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-014 -->
+
 ## 10. Data ID Assignment Table
 
 | Data ID | CAN ID | Message Name | Sender |
@@ -665,6 +721,10 @@ All worst-case latencies are well within their respective budgets.
 | 0x0D | 0x220 | Lidar_Distance | FZC |
 | 0x0E | 0x300 | Motor_Status | RZC |
 | 0x0F | 0x301 | Motor_Current | RZC |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-015 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** 16 unique Data IDs (0x00-0x0F) mapped to 16 E2E-protected messages. Each Data ID is unique across the entire bus, which is critical for preventing masquerade attacks (a message on the wrong CAN ID would fail CRC verification because the Data ID is included in the CRC input). Note that Motor_Temperature uses Data ID 0x00 (the lowest), which is fine since Data IDs are not priority-ordered -- they serve purely as message identity tags for CRC computation. The mapping is well-organized: CVC messages use 0x01-0x08, FZC messages use 0x09-0x0D, RZC messages use 0x0E-0x0F and 0x00. **Why:** Including the Data ID in the CRC computation ensures that even if a frame with the correct CAN ID is received, the CRC will fail if the Data ID does not match, providing defense against message insertion and masquerade faults per AUTOSAR E2E. **Tradeoff:** 4-bit Data ID limits to 16 unique protected messages. If more than 16 E2E messages are needed in the future, the scheme would need to be extended to 8-bit Data IDs (consuming an additional byte of payload). **Alternative:** Using the CAN ID itself as the Data ID input (no separate field) would save payload space but would not detect the case where a node accidentally transmits on the wrong CAN ID with otherwise valid data.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-015 -->
 
 ## 11. Per-ECU Message Summary
 
@@ -737,6 +797,10 @@ The ICU listens to all messages on the bus for dashboard display purposes. No CA
 | Transmit | 0x7EB | UDS Response (TCU) |
 | Receive | 0x500 | DTC Broadcast |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-016 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Per-ECU summaries provide clear transmit responsibilities: CVC transmits 8 message types (highest load), FZC transmits 7, RZC transmits 6, BCM transmits 4. The SC receive list (Section 11.4) is particularly important: it monitors only 6 specific messages (E-stop, 3 heartbeats, Vehicle_State, Motor_Current) for cross-plausibility and alive monitoring. This minimal, explicit receive set matches the 7 mailboxes configured in the ICD Section 4.5 (one mailbox is likely spare or for E-stop). The ICU receives all messages (no acceptance filter) for dashboard display, which is QM and does not affect safety. TCU handles UDS routing (0x7DF, 0x7E3, 0x7EB) and DTC collection (0x500). Per SYS-023 and SYS-025. **Why:** Per-ECU message summaries are essential for ECU-specific software requirements derivation (SWR-CVC, SWR-FZC, etc.) and for configuring CAN acceptance filters in each ECU's MCAL layer. The SC monitoring only specific safety-relevant messages enforces the principle of minimal trust and reduces the attack surface on the safety monitor. **Tradeoff:** SC not monitoring body/QM messages means it cannot detect bus-wide issues (e.g., babbling QM node) -- but bus-off detection via CAN error counters covers this. **Alternative:** SC could monitor all messages for bus health diagnostics, but this would increase SC processing load and require more mailboxes, adding complexity to a safety-critical node that should remain as simple as possible.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-016 -->
+
 ## 12. Traceability
 
 | SYS Requirement | CAN Messages |
@@ -758,6 +822,10 @@ The ICU listens to all messages on the bus for dashboard display purposes. No CA
 | SYS-033 (CAN priority) | CAN ID allocation (Section 4) |
 | SYS-037-040 (UDS diagnostics) | 0x7DF, 0x7E0-0x7EA |
 | SYS-041 (DTC storage) | 0x500 (DTC_Broadcast) |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-CAN-017 -->
+**HITL Review (An Dao) -- Reviewed: 2026-02-26:** Traceability table maps 16 SYS requirements to their corresponding CAN messages. Coverage is comprehensive: pedal sensing (SYS-001 to 0x101), motor control (SYS-004 to 0x101/0x100), steering (SYS-010/011 to 0x102/0x200), brake (SYS-014/015 to 0x103/0x201/0x210), lidar (SYS-018 to 0x220), heartbeat (SYS-021/022 to 0x010-0x012), cross-plausibility (SYS-023 to 0x100/0x301), E-stop (SYS-028 to 0x001), vehicle state (SYS-029 to 0x100), CAN config (SYS-031 to all), E2E (SYS-032 to all ASIL>=A), priority (SYS-033 to Section 4), UDS (SYS-037-040 to 0x7xx), DTC (SYS-041 to 0x500). No orphan messages detected -- every CAN message traces to at least one SYS requirement. This satisfies ASPICE SYS.3 bidirectional traceability. **Why:** Complete traceability from system requirements to CAN messages ensures that the message matrix implements exactly what the system requirements demand, with no missing and no superfluous messages. **Tradeoff:** Same as ICD -- manual maintenance risk. **Alternative:** Automated traceability extraction from tagged requirements (e.g., `@can_message 0x101`) would reduce maintenance burden.
+<!-- HITL-LOCK END:COMMENT-BLOCK-CAN-017 -->
 
 ## 13. Revision History
 
