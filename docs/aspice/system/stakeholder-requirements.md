@@ -562,6 +562,10 @@ All firmware source code shall comply with MISRA C:2012 (with Amendment 2 / 2023
 
 The platform shall maintain bidirectional traceability across the full V-model: stakeholder requirements to system requirements, system requirements to architecture elements, architecture to software requirements, software requirements to source code and unit tests, and up through integration and system verification. Every requirement shall trace down to implementation and test. Every test shall trace back to a requirement.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-45 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-25:** STK-031 is a required process-governance requirement — bidirectional traceability is mandated by both ISO 26262 (all parts) and ASPICE SWE.2–SWE.6. It overlaps with STK-002 (ASPICE Level 2) which implicitly requires traceability, but keeping it as a standalone STK is justified: traceability is the single most audited artifact in assessments, and having an explicit stakeholder requirement for it ensures it gets its own verification chain rather than being assumed under STK-002. The traceability matrix at `docs/aspice/traceability/traceability-matrix.md` is the primary evidence artifact. **Why:** explicit traceability requirement prevents "we assumed it was covered by STK-002" gaps during assessment. **Tradeoff:** slight redundancy with STK-002, but the audit signal is worth the duplication. **Alternative:** fold into STK-002 as a sub-clause — reduces requirement count but weakens traceability's visibility as a first-class deliverable.
+<!-- HITL-LOCK END:COMMENT-BLOCK-45 -->
+
 ---
 
 ### STK-032: SAP QM Integration Demonstration
@@ -571,6 +575,10 @@ The platform shall maintain bidirectional traceability across the full V-model: 
 - **Status**: draft
 
 The platform shall demonstrate integration with SAP Quality Management (QM) processes by routing diagnostic trouble codes from the vehicle to a mock SAP QM endpoint, triggering the creation of a quality notification (Q-Meldung) and an automated 8D report. This demonstrates automotive industry awareness of quality management workflows.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-46 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-25:** STK-032 is an extra/nice-to-have — Priority "May" is correct. The SAP QM mock is already implemented (`gateway/sap_qm_mock/`) and the SIL demo shows the SAP QM panel. This requirement adds portfolio breadth (automotive quality workflow awareness) but is not safety-relevant and has no downstream SYS/SWE derivation obligation. Open item STK-O-003 (scope confirmation, target "Phase 0") is stale — should be closed as "implemented, scope confirmed by demo." **Why:** SAP QM integration differentiates the portfolio for roles that bridge embedded + enterprise (e.g., SDV platform teams), but adds no safety or process value. **Tradeoff:** keeping it shows industry breadth; removing it reduces scope without losing safety credibility. **Alternative:** promote to "Should" if targeting SAP-heavy OEMs (VW, BMW) — but "May" is honest for a portfolio project.
+<!-- HITL-LOCK END:COMMENT-BLOCK-46 -->
 
 ---
 

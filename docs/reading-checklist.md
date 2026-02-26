@@ -17,11 +17,8 @@
 Use this as your clickable review tracker.
 
 ## Rank 1 - Critical
-- [ ] [Project state summary](./PROJECT_STATE.md)
-- [ ] [Master document registry](./INDEX.md)
-- [ ] [Master plan](./plans/master-plan.md)
-- [ ] [Stakeholder requirements](./aspice/system/stakeholder-requirements.md)
-- [ ] [System requirements](./aspice/system/system-requirements.md)
+- [x] [Stakeholder requirements](./aspice/system/stakeholder-requirements.md) — Reviewed: 2026-02-25
+- [ ] [System requirements](./aspice/system/system-requirements.md) — In progress: ASIL summary fixed, SYS-028 HITL done, detail review by section pending
 - [ ] [System architecture](./aspice/system/system-architecture.md)
 - [ ] [Interface control doc](./aspice/system/interface-control-doc.md)
 - [ ] [CAN message matrix](./aspice/system/can-message-matrix.md)

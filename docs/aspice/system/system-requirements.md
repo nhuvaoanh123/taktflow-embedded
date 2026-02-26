@@ -440,6 +440,10 @@ Each physical ECU (CVC, FZC, RZC, SC) shall be monitored by an external TPS3823 
 
 The system shall detect E-stop button activation within 1 ms via hardware interrupt on the CVC (PC13, falling edge, hardware debounce). On detection, the CVC shall immediately set the local torque request to zero and broadcast a high-priority E-stop CAN message (ID 0x001) within 1 ms. All receiving ECUs shall react within 10 ms: RZC disables motor, FZC applies full brake and centers steering. The system shall remain in SAFE_STOP until E-stop is released and a manual restart is performed.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SYS028-ASIL -->
+**HITL Review (An Dao) — Reviewed: 2026-02-26:** ASIL B is defensible. E-stop is an operator-initiated convenience path to safe state, not the primary safety enforcement. The safety chain that meets HARA-derived safety goals is: (1) zone ECU fault detection at ASIL D (SYS-002, SYS-011, SYS-015), (2) SC cross-plausibility + kill relay at ASIL D (SYS-023, SYS-024), (3) TPS3823 hardware watchdog at ASIL D (SYS-027). All three layers achieve safe state automatically without operator intervention. E-stop provides additional controllability (ISO 26262 Part 3 Table 4 C-factor reduction) but is not relied upon by any safety goal. The implementation is simple (GPIO interrupt → CAN broadcast) — upgrading to ASIL D would impose MC/DC, independent verification, and formal methods on trivial logic with no proportional safety benefit. **Audit preparation:** if an assessor argues E-stop is the only operator-initiated safe-state path, conceding to ASIL C is acceptable. ASIL B is the floor, ASIL C is the fallback, ASIL D is disproportionate. **Why not higher:** E-stop does not appear as a required safety mechanism in any safety goal's FTTI chain — the automatic paths (Layers 1-3) satisfy all safety goals independently.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SYS028-ASIL -->
+
 ---
 
 ## 10. Functional System Requirements — Vehicle State Management
@@ -959,11 +963,11 @@ The following matrix provides complete bidirectional traceability from stakehold
 
 | ASIL | Count | SYS IDs |
 |------|-------|---------|
-| ASIL D | 18 | SYS-001, SYS-002, SYS-003, SYS-004, SYS-010, SYS-011, SYS-012, SYS-014, SYS-015, SYS-016, SYS-024, SYS-028, SYS-029, SYS-030, SYS-031, SYS-032, SYS-033, SYS-047, SYS-050, SYS-051, SYS-052, SYS-053, SYS-055 |
-| ASIL C | 12 | SYS-007, SYS-013, SYS-017, SYS-018, SYS-019, SYS-020, SYS-021, SYS-022, SYS-023, SYS-025, SYS-034, SYS-046, SYS-048 |
+| ASIL D | 24 | SYS-001, SYS-002, SYS-003, SYS-004, SYS-010, SYS-011, SYS-012, SYS-014, SYS-015, SYS-016, SYS-024, SYS-026, SYS-027, SYS-029, SYS-030, SYS-031, SYS-032, SYS-033, SYS-047, SYS-050, SYS-051, SYS-052, SYS-053, SYS-055 |
+| ASIL C | 13 | SYS-007, SYS-013, SYS-017, SYS-018, SYS-019, SYS-020, SYS-021, SYS-022, SYS-023, SYS-025, SYS-034, SYS-046, SYS-048 |
 | ASIL B | 1 | SYS-028 |
 | ASIL A | 3 | SYS-005, SYS-006, SYS-049 |
-| QM | 22 | SYS-003, SYS-008, SYS-009, SYS-026, SYS-027, SYS-035, SYS-036, SYS-037, SYS-038, SYS-039, SYS-040, SYS-041, SYS-042, SYS-043, SYS-044, SYS-045, SYS-054, SYS-056 |
+| QM | 15 | SYS-008, SYS-009, SYS-035, SYS-036, SYS-037, SYS-038, SYS-039, SYS-040, SYS-041, SYS-042, SYS-043, SYS-044, SYS-045, SYS-054, SYS-056 |
 
 ### 19.3 By Verification Method
 
