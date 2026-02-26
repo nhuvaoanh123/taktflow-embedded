@@ -141,6 +141,7 @@ class PlantSimulator:
                     self.motor.reset_faults()
                     self.steering.clear_fault()
                     self.brake.clear_fault()
+                    self.battery.clear_override()
                     self._active_dtcs.clear()
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
@@ -150,9 +151,18 @@ class PlantSimulator:
                     self.motor.reset_faults()
                     self.steering.clear_fault()
                     self.brake.clear_fault()
+                    self.battery.clear_override()
                     self._active_dtcs.clear()
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
+
+        elif arb_id == TX_BATTERY_STATUS:
+            # External battery injection (from fault_inject) — override model
+            if len(data) >= 4:
+                v = data[0] | (data[1] << 8)
+                soc = data[2]
+                self.battery.inject_voltage(v, soc)
+                log.info("Battery override: %dmV, %d%% SOC", v, soc)
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
@@ -381,11 +391,27 @@ class PlantSimulator:
                         break
                     self._process_rx(msg)
 
-                # Update physics
+                # Update physics — limit output in degraded/limp/safe states
                 if self.estop_active:
                     self.motor.update(0, 0, dt)
                     self.steering.update(0, dt)
                     self.brake.update(100, dt)
+                elif self.vehicle_state == VS_LIMP:
+                    # Limp mode: cap torque at 15%, force gentle braking
+                    capped_duty = min(self.motor.duty_pct, 15.0)
+                    brake_load = max(self.brake.actual_pct / 100.0, 0.3)
+                    self.motor.update(capped_duty, self.motor.direction, dt,
+                                      brake_load=brake_load)
+                    self.steering.update(self.steering.commanded_angle, dt)
+                    self.brake.update(max(self.brake.commanded_pct, 30), dt)
+                elif self.vehicle_state == VS_DEGRADED:
+                    # Degraded: cap torque at 50%
+                    capped_duty = min(self.motor.duty_pct, 50.0)
+                    brake_load = self.brake.actual_pct / 100.0
+                    self.motor.update(capped_duty, self.motor.direction, dt,
+                                      brake_load=brake_load)
+                    self.steering.update(self.steering.commanded_angle, dt)
+                    self.brake.update(self.brake.commanded_pct, dt)
                 else:
                     brake_load = self.brake.actual_pct / 100.0
                     self.motor.update(self.motor.duty_pct,
