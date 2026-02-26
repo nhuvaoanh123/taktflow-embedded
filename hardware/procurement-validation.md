@@ -147,9 +147,9 @@ Single-file merge of requirements baseline + procurement validation, kept in chr
 
 ### Q-001 (2026-02-22): Which safety launchpad part number is canonical?
 
-- Evidence: `bom-list.md` uses `LAUNCHXL2-570LC43`; `bom.md` uses `LAUNCHXL2-TMS57012`.
+- Evidence: `bom-list.md` uses `LAUNCHXL2-570LC43`; older docs had a stale/incorrect TMS570 LaunchPad part number.
 - Resolution: Treat `LAUNCHXL2-570LC43` as active purchase target because that is what was ordered and validated in this procurement cycle.
-- Status: Closed for procurement tracking; document consistency update still needed.
+- Status: **Fully closed (2026-02-26)**. All documents (bom.md, bom-list.md, pin-mapping.md) now use canonical `LAUNCHXL2-570LC43`.
 
 ### Q-002 (2026-02-22): Are USB-CAN substitutes acceptable vs CANable 2.0?
 

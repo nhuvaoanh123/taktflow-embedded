@@ -148,6 +148,8 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 **Total pins used: 17** (out of 51 available GPIO)
 
+> **Note**: PB3 (RZC LED Red, pin #17) is shared with SWO (Serial Wire Output) debug trace. If SB63/SB65 are removed to free PA2/PA3, SWO on PB3 becomes the recommended alternative debug output. If SWO debug is needed on RZC, relocate LED Red to another available pin (e.g., PC10).
+
 ### 6.2 Pin Conflict Check
 
 | Check | Result |
@@ -164,7 +166,7 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 ---
 
-## 7. SC -- TMS570LC43x LaunchPad (LAUNCHXL2-TMS57012)
+## 7. SC -- TMS570LC43x LaunchPad (LAUNCHXL2-570LC43)
 
 ### 7.1 Pin Assignment Table
 

@@ -628,8 +628,9 @@ All integration points researched and confirmed feasible:
   - Target path: `taktflow-embedded/hardware/procurement-validation.md` and this section in `taktflow-embedded/docs/PROJECT_STATE.md`.
   - Completion signal: both open confirmations are closed with dated as-built evidence (rail map + fuse/wiring checklist).
 
-- `RECOMMENDED (NOT DONE)` [Severity: HIGH] Align hardware BOM source-of-truth for safety controller part number and budget totals.
-  - Finding: procurement baseline uses `LAUNCHXL2-570LC43` while `hardware/bom.md` still lists `LAUNCHXL2-TMS57012`; `hardware/bom.md` also contains budget-total drift (`$577/$977` vs `$537.10/$937.10` in same file).
+- `DONE (2026-02-26)` [Severity: HIGH] Align hardware BOM source-of-truth for safety controller part number and budget totals.
+  - Finding: procurement baseline uses `LAUNCHXL2-570LC43` while other docs had a stale/incorrect part number; `hardware/bom.md` also contains budget-total drift (`$577/$977` vs `$537.10/$937.10` in same file).
+  - Part number fix: all docs now use canonical `LAUNCHXL2-570LC43` (pin-mapping.md, bom.md, bom-list.md aligned). Budget-total drift remains a separate item.
   - Meaningful metric: at least 2 critical procurement-control fields (part ID, budget totals) are internally inconsistent.
   - Why it matters: mismatched part/cost baselines weaken purchasing control and downstream audit traceability.
   - Target path: `taktflow-embedded/hardware/bom.md` and `taktflow-embedded/hardware/procurement-validation.md`.
