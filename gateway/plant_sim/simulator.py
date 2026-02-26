@@ -392,7 +392,7 @@ class PlantSimulator:
                     self._process_rx(msg)
 
                 # Update physics — limit output in degraded/limp/safe states
-                if self.estop_active:
+                if self.estop_active or self.vehicle_state == VS_SAFE_STOP:
                     self.motor.update(0, 0, dt)
                     self.steering.update(0, dt)
                     self.brake.update(100, dt)
@@ -405,7 +405,7 @@ class PlantSimulator:
                     self.steering.update(self.steering.commanded_angle, dt)
                     self.brake.update(max(self.brake.commanded_pct, 30), dt)
                 elif self.vehicle_state == VS_DEGRADED:
-                    # Degraded: cap torque at 50%
+                    # DEGRADED: 50% torque cap (battery warning)
                     capped_duty = min(self.motor.duty_pct, 50.0)
                     brake_load = self.brake.actual_pct / 100.0
                     self.motor.update(capped_duty, self.motor.direction, dt,
@@ -433,30 +433,42 @@ class PlantSimulator:
                     # Transition to RUN after 3 seconds of startup
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (startup complete)")
-                elif self.vehicle_state == VS_SAFE_STOP and not self.estop_active:
-                    # After E-Stop cleared, go to INIT (will transition to RUN after 3s)
+                elif (self.vehicle_state == VS_SAFE_STOP
+                      and not self.estop_active
+                      and not self.brake.fault
+                      and not self.steering.fault
+                      and not self.motor.overcurrent
+                      and not self.motor._hw_disabled):
+                    # Exit SAFE_STOP only when ALL safety triggers cleared
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
-                    log.info("Vehicle state -> INIT (E-Stop cleared, re-initializing)")
+                    log.info("Vehicle state -> INIT (safety triggers cleared, re-initializing)")
 
-                # Transition to DEGRADED/LIMP on faults (only from RUN)
-                has_fault = (
-                    self.motor.overcurrent or self.steering.fault
-                    or self.brake.fault
+                # Transition to SAFE_STOP/DEGRADED/LIMP on faults
+                # SG-003 (ASIL D): steer fault → SAFE_STOP (SS-MOTOR-OFF)
+                # SG-004 (ASIL D): brake fault → SAFE_STOP (SS-MOTOR-OFF)
+                # SG-006 (ASIL A): overcurrent → SAFE_STOP (SS-MOTOR-OFF)
+                safe_stop_fault = (
+                    self.brake.fault or self.steering.fault
+                    or self.motor.overcurrent
+                    or self.motor._hw_disabled
                 )
                 battery_critical = self.battery.status == 0  # critical UV
                 battery_warn = self.battery.status == 1      # UV warning
 
-                if battery_critical and self.vehicle_state in (VS_RUN, VS_DEGRADED):
+                if safe_stop_fault and self.vehicle_state in (
+                        VS_RUN, VS_DEGRADED):
+                    self.vehicle_state = VS_SAFE_STOP
+                    log.info("Vehicle state -> SAFE_STOP (safety-critical fault)")
+                elif battery_critical and self.vehicle_state in (
+                        VS_RUN, VS_DEGRADED):
                     self.vehicle_state = VS_LIMP
                     log.info("Vehicle state -> LIMP (battery critical UV)")
-                elif has_fault and self.vehicle_state == VS_RUN:
-                    self.vehicle_state = VS_DEGRADED
-                    log.info("Vehicle state -> DEGRADED (fault detected)")
                 elif battery_warn and self.vehicle_state == VS_RUN:
                     self.vehicle_state = VS_DEGRADED
                     log.info("Vehicle state -> DEGRADED (battery undervoltage warning)")
-                elif (not has_fault and not battery_warn and not battery_critical
+                elif (not safe_stop_fault
+                      and not battery_warn and not battery_critical
                       and self.vehicle_state in (VS_DEGRADED, VS_LIMP)):
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (faults cleared)")

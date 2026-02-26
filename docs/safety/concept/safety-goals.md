@@ -78,7 +78,7 @@ The following hazardous events were identified in the HARA. They are grouped int
 |-------|-------------|------|------------|------|-----------|
 | SG-001 | The system shall prevent unintended acceleration due to erroneous pedal sensor readings. | ASIL D | SS-MOTOR-OFF | 50 ms | HE-001 |
 | SG-002 | The system shall prevent unintended loss of drive torque during vehicle operation. | ASIL B | SS-CONTROLLED-STOP | 200 ms | HE-002 |
-| SG-003 | The system shall prevent unintended steering movement and ensure steering availability during turning manoeuvres. | ASIL D | SS-STEER-CENTER | 100 ms | HE-003, HE-004 |
+| SG-003 | The system shall prevent unintended steering movement and ensure steering availability during turning manoeuvres. | ASIL D | SS-MOTOR-OFF | 100 ms | HE-003, HE-004 |
 | SG-004 | The system shall prevent unintended loss of braking capability during braking operations. | ASIL D | SS-MOTOR-OFF | 50 ms | HE-005 |
 | SG-005 | The system shall prevent unintended braking events during normal driving. | ASIL A | SS-CONTROLLED-STOP | 200 ms | HE-006, HE-010 |
 | SG-006 | The system shall ensure motor protection against overcurrent, overtemperature, and supply voltage excursion. | ASIL A | SS-MOTOR-OFF | 500 ms | HE-007, HE-008, HE-015 |
@@ -110,9 +110,9 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **Safety Goal**: The system shall prevent unintended steering movement and ensure steering availability during turning manoeuvres.
 - **ASIL**: D (highest from HE-003 ASIL C and HE-004 ASIL D)
 - **Source**: HE-003 (Unintended steering movement, ASIL C), HE-004 (Loss of steering during turning, ASIL D)
-- **Safe State**: SS-STEER-CENTER -- Steering servo returns to centre position, vehicle speed reduced.
+- **Safe State**: SS-MOTOR-OFF -- Motor torque = 0, H-bridge disabled, brakes applied, steering servo disabled.
 - **FTTI**: 100 ms
-- **Rationale**: These two hazardous events are grouped because they share the same functional domain (steering control) and the same safe state. Loss of steering during a turn (HE-004, ASIL D) is the more severe scenario -- the vehicle departs its lane with potentially fatal consequences (S3, E4, C3). Unintended steering movement (HE-003, ASIL C) can also cause lane departure. The safety goal inherits ASIL D from HE-004. The safe state commands the servo to centre and reduces speed to minimise the consequences of loss of directional control.
+- **Rationale**: These two hazardous events are grouped because they share the same functional domain (steering control) and the same safe state. Loss of steering during a turn (HE-004, ASIL D) is the more severe scenario -- the vehicle departs its lane with potentially fatal consequences (S3, E4, C3). Unintended steering movement (HE-003, ASIL C) can also cause lane departure. The safety goal inherits ASIL D from HE-004. The platform has no mechanical fallback steering and no redundant steering actuator -- if steering is faulted, the vehicle cannot be controlled regardless of speed. The safe state is therefore SS-MOTOR-OFF (motor off, brakes applied, vehicle stopped) rather than a degraded-speed approach, which would require a functioning backup steering path.
 
 #### SG-004: Prevent Unintended Loss of Braking
 
@@ -165,8 +165,7 @@ The following hazardous events were identified in the HARA. They are grouped int
 
 | Safe State ID | Name | Description | Entry Conditions | Affected Systems |
 |---------------|------|-------------|------------------|------------------|
-| SS-MOTOR-OFF | Motor Off | Motor torque set to 0, H-bridge RPWM and LPWM driven low, R_EN and L_EN disabled, brake servo commanded to full braking position. | Pedal plausibility failure (SG-001), loss of braking (SG-004), motor protection trip (SG-006). | RZC (motor control), FZC (brake servo), CVC (torque request cancelled). |
-| SS-STEER-CENTER | Steering Centre | Steering servo commanded to mechanical centre position (0 degree offset). Motor torque reduced to limit speed. FZC maintains centre position until operator intervention or system shutdown. | Steering sensor fault, unintended steering movement, loss of steering during turn (SG-003). | FZC (steering servo, speed reduction request), CVC (torque limiting), RZC (speed reduction). |
+| SS-MOTOR-OFF | Motor Off | Motor torque set to 0, H-bridge RPWM and LPWM driven low, R_EN and L_EN disabled, brake servo commanded to full braking position, steering servo disabled. | Pedal plausibility failure (SG-001), steering fault (SG-003), loss of braking (SG-004), motor protection trip (SG-006). | RZC (motor control), FZC (brake servo, steering servo disable), CVC (torque request cancelled). |
 | SS-CONTROLLED-STOP | Controlled Stop | Motor torque ramped down over 500 ms (not instantaneous cutoff). Brake servo gradually applied. Steering locked to last valid commanded position. Hazard lights activated via BCM. | Loss of drive torque (SG-002), unintended braking (SG-005), obstacle detection failure (SG-007). | RZC (motor ramp-down), FZC (brake application, steering lock), CVC (state transition), BCM (hazard lights). |
 | SS-SYSTEM-SHUTDOWN | System Shutdown | Kill relay opened by Safety Controller (energize-to-run pattern: relay de-energizes = safe). All power to motor, servos, and actuators removed. Only ECU logic power remains for DTC logging. SC fault LEDs indicate which subsystem failed. | CAN bus total failure, SC failure, E-stop failure, unintended motor reversal (SG-008). | SC (kill relay), all ECUs (power removed from actuators), ICU (fault display). |
 
@@ -188,23 +187,26 @@ The following hazardous events were identified in the HARA. They are grouped int
 
 **Verification**: This safe state must be achievable within 50 ms of fault detection for SG-001 and SG-004.
 
-#### SS-STEER-CENTER: Steering Centre
+#### SS-MOTOR-OFF for Steering Fault (SG-003)
+
+**Rationale for SAFE_STOP instead of degraded operation:** The platform has no mechanical fallback steering, no redundant steering actuator, and no steer-by-brake capability. A steering fault means the vehicle cannot be directionally controlled regardless of speed. Degraded-speed operation (e.g., 30% torque cap) is only appropriate for platforms with a functioning backup steering path. Without one, the only safe response is to stop the vehicle.
 
 **Entry sequence:**
-1. FZC detects steering fault (sensor timeout, plausibility failure, CAN command loss).
-2. FZC commands steering servo to mechanical centre position (calibrated during INIT mode).
-3. FZC sends speed reduction request to CVC over CAN.
-4. CVC reduces torque request to limit vehicle speed (maximum 30% of full torque).
-5. RZC executes reduced torque command.
-6. FZC activates buzzer to warn operator.
-7. CVC transitions to DEGRADED mode, OLED displays steering fault.
+1. FZC detects steering fault (sensor timeout, plausibility failure, CAN command loss, rapid oscillation).
+2. FZC broadcasts steering fault on CAN.
+3. CVC sets torque request to 0, transitions to SAFE_STOP mode.
+4. RZC sets BTS7960 RPWM = 0, LPWM = 0, R_EN = LOW, L_EN = LOW (H-bridge disabled).
+5. FZC commands brake servo to maximum braking position.
+6. FZC disables steering servo PWM (no further steering commands accepted).
+7. CVC displays SAFE_STOP + steering fault indicator on OLED.
+8. Dem stores DTC_STEER_FAULT with freeze-frame data.
 
 **Exit conditions:**
-- Steering sensor fault clears (sensor reconnected, value returns to valid range).
-- System transitions back to RUN mode after 3 consecutive valid readings.
-- If fault persists beyond 5 seconds, system transitions to SS-CONTROLLED-STOP.
+- Operator cycles ignition (power off, then power on).
+- System performs full self-test on restart before returning to RUN mode.
+- Steering sensor fault must have cleared before self-test passes.
 
-**Verification**: Steering servo must reach centre position within 100 ms of fault detection.
+**Verification**: Vehicle must reach SAFE_STOP (motor off, brakes applied) within 100 ms of steering fault detection.
 
 #### SS-CONTROLLED-STOP: Controlled Stop
 
@@ -398,7 +400,7 @@ This section provides the complete bidirectional traceability between hazardous 
 |-------|------------|---------------------|
 | SG-001 | SS-MOTOR-OFF | 1 (Highest -- immediate motor disable) |
 | SG-002 | SS-CONTROLLED-STOP | 3 (Controlled deceleration) |
-| SG-003 | SS-STEER-CENTER | 2 (Steering centre + speed reduction) |
+| SG-003 | SS-MOTOR-OFF | 1 (Highest -- immediate motor disable, brakes applied) |
 | SG-004 | SS-MOTOR-OFF | 1 (Highest -- immediate motor disable) |
 | SG-005 | SS-CONTROLLED-STOP | 3 (Release brake, controlled stop) |
 | SG-006 | SS-MOTOR-OFF | 1 (Motor protection -- immediate disable) |
@@ -428,7 +430,7 @@ The following table shows the intended downstream traceability from safety goals
 |-------|--------|
 | All 15 hazardous events traced to a safety goal? | YES -- HE-001 through HE-015 all assigned. |
 | All safety goals have at least one source HE? | YES -- SG-001 through SG-008 all have sources. |
-| All safety goals have a defined safe state? | YES -- SS-MOTOR-OFF, SS-STEER-CENTER, SS-CONTROLLED-STOP, SS-SYSTEM-SHUTDOWN. |
+| All safety goals have a defined safe state? | YES -- SS-MOTOR-OFF, SS-CONTROLLED-STOP, SS-SYSTEM-SHUTDOWN. |
 | All safety goals have a justified FTTI? | YES -- See Section 7.2. |
 | ASIL inheritance correct (highest from grouped HEs)? | YES -- Verified for SG-003 (D from HE-004), SG-005 (A from HE-006/010), SG-006 (A from HE-007), SG-008 (C from HE-011/014). |
 | No orphan hazardous events? | YES -- 0 HEs without SG assignment. |
@@ -452,4 +454,5 @@ The presence of 3 ASIL D safety goals confirms that the Taktflow Zonal Vehicle P
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub (planned status) |
 | 1.0 | 2026-02-21 | System | Complete safety goals with 8 SGs, 4 safe states, FTTI justification, and full traceability |
+| 1.1 | 2026-02-26 | System | SG-003 safe state changed from SS-STEER-CENTER to SS-MOTOR-OFF — no mechanical fallback steering on this platform, steer fault requires vehicle stop |
 

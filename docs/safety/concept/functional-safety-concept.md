@@ -53,7 +53,7 @@ The following safety goals were derived from the HARA and form the basis for thi
 |-------|-------------|------|------------|------|
 | SG-001 | Prevent unintended acceleration | D | Motor off, brakes applied | 50 ms |
 | SG-002 | Prevent unintended loss of drive torque | B | Controlled stop | 200 ms |
-| SG-003 | Prevent unintended steering movement | D | Steer to center, speed reduced | 100 ms |
+| SG-003 | Prevent unintended steering movement | D | Motor off, brakes applied (SAFE_STOP) | 100 ms |
 | SG-004 | Prevent unintended loss of braking | D | Motor off (fail-safe) | 50 ms |
 | SG-005 | Prevent unintended braking | A | Release brake | 200 ms |
 | SG-006 | Ensure motor protection (overcurrent/overtemp) | A | Motor off | 500 ms |
@@ -148,7 +148,7 @@ Unintended steering movement at any speed can cause loss of vehicle control. Thi
 
 - **Mechanism**: The FZC reads the steering AS5048A angle sensor via SPI2 at 100 Hz and compares the actual steering angle against the commanded angle (received via CAN from CVC). If the position error exceeds a calibratable threshold (default: 5 degrees) for more than 50 ms, a steering position fault is declared. Additionally, the sensor reading is range-checked (valid mechanical range: -45 to +45 degrees) and rate-of-change checked (maximum slew rate: 360 degrees/second).
 - **Detection**: Servo runaway, sensor fault, CAN command corruption that passed E2E, mechanical binding.
-- **Fault reaction**: FZC commands the steering servo to center position (0 degrees) using a controlled rate-limited ramp. FZC broadcasts a steering fault on CAN. CVC reduces speed command (DEGRADED mode). If steering cannot reach center within 200 ms, FZC disables servo PWM entirely.
+- **Fault reaction**: FZC broadcasts a steering fault on CAN. CVC transitions to SAFE_STOP (motor off, brakes applied). FZC disables steering servo PWM. The platform has no mechanical fallback steering — a steering fault means the vehicle cannot be directionally controlled, so SAFE_STOP (not DEGRADED) is required.
 - **ECU**: FZC (STM32G474RE)
 - **Diagnostic coverage**: 95% (single feedback sensor; residual risk from simultaneous servo and sensor fault)
 - **FTTI compliance**: Detection within 50 ms, reaction within 50 ms (servo ramp to center). Total: 100 ms = FTTI.
@@ -409,9 +409,9 @@ The system implements five operational levels with progressively restricted capa
 | Level | State | Motor | Steering | Braking | Lidar | Monitoring | Entry Criteria |
 |-------|-------|-------|----------|---------|-------|------------|----------------|
 | 0 | NORMAL | 100% torque, 100% speed | Full range, full rate | Full authority | Active, all thresholds | All systems nominal | Startup self-test passed, no active faults |
-| 1 | DEGRADED | 75% torque, 50% speed | Full range, 50% rate | Full authority | Active, reduced thresholds | Warning active | Single sensor fault, intermittent CAN error, temperature warning |
+| 1 | DEGRADED | 75% torque, 50% speed | Full range, 50% rate | Full authority | Active, reduced thresholds | Warning active | Battery undervoltage warning, intermittent CAN error, temperature warning |
 | 2 | LIMP | 30% torque, 20% speed | Center +/- 15 deg, 25% rate | Full authority | Active, emergency only | Continuous warning | Persistent sensor fault, dual sensor disagreement, repeated CAN errors |
-| 3 | SAFE_STOP | Disabled (0%) | Return to center | Full brake applied | Active | Emergency warning | Critical fault, E-stop, safety goal violation, kill relay imminent |
+| 3 | SAFE_STOP | Disabled (0%) | Disabled (servo off) | Full brake applied | Active | Emergency warning | Steering fault, brake fault, overcurrent, E-stop, safety goal violation, kill relay imminent |
 | 4 | SHUTDOWN | Disabled, power cut | Disabled | Mechanical hold | Disabled | Off (LEDs last state) | Kill relay opened, controlled power-down complete |
 
 #### 5.2.1 Degradation Transition Rules
@@ -546,4 +546,5 @@ Per ISO 26262-4, elements of different ASIL levels sharing resources must demons
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete functional safety concept: 23 safety mechanisms across 8 safety goals, warning/degradation concept, allocation matrix, timing analysis, FFI summary |
+| 1.1 | 2026-02-26 | System | SM-008 fault reaction updated: steer fault → SAFE_STOP (not DEGRADED) — no mechanical fallback steering on this platform. Degradation table updated accordingly. |
 
