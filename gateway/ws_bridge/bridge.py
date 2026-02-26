@@ -124,11 +124,16 @@ class TelemetryState:
         # DTC deduplication — track last event time per DTC code
         self._dtc_last_seen: dict[int, float] = {}
 
+    # Vehicle speed derivation from motor RPM
+    # Wheel radius 0.15m (30cm diameter), gear ratio 8:1
+    _SPEED_FACTOR = 2 * 3.14159 * 0.15 * 60 / (8 * 1000)  # RPM -> km/h
+
     def to_snapshot(self) -> dict:
         """Build the JSON snapshot for WebSocket broadcast."""
         now = time.time()
         # Heartbeats are alive if seen within last 200ms
         hb_timeout = 0.2
+        speed_kmh = round(self.motor_rpm * self._SPEED_FACTOR, 1)
         return {
             "ts": now,
             "motor": {
@@ -172,6 +177,7 @@ class TelemetryState:
                 "fault_mask": self.vehicle_fault_mask,
                 "torque_limit": self.torque_limit,
                 "speed_limit": self.speed_limit,
+                "speed_kmh": speed_kmh,
             },
             "heartbeats": {
                 "cvc": (now - self._hb_cvc_ts) < hb_timeout,

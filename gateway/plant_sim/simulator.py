@@ -413,15 +413,25 @@ class PlantSimulator:
                     self._startup_ticks = 0
                     log.info("Vehicle state -> INIT (E-Stop cleared, re-initializing)")
 
-                # Transition to DEGRADED on faults (only from RUN)
+                # Transition to DEGRADED/LIMP on faults (only from RUN)
                 has_fault = (
                     self.motor.overcurrent or self.steering.fault
                     or self.brake.fault
                 )
-                if has_fault and self.vehicle_state == VS_RUN:
+                battery_critical = self.battery.status == 0  # critical UV
+                battery_warn = self.battery.status == 1      # UV warning
+
+                if battery_critical and self.vehicle_state in (VS_RUN, VS_DEGRADED):
+                    self.vehicle_state = VS_LIMP
+                    log.info("Vehicle state -> LIMP (battery critical UV)")
+                elif has_fault and self.vehicle_state == VS_RUN:
                     self.vehicle_state = VS_DEGRADED
                     log.info("Vehicle state -> DEGRADED (fault detected)")
-                elif not has_fault and self.vehicle_state == VS_DEGRADED:
+                elif battery_warn and self.vehicle_state == VS_RUN:
+                    self.vehicle_state = VS_DEGRADED
+                    log.info("Vehicle state -> DEGRADED (battery undervoltage warning)")
+                elif (not has_fault and not battery_warn and not battery_critical
+                      and self.vehicle_state in (VS_DEGRADED, VS_LIMP)):
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (faults cleared)")
 
