@@ -3,6 +3,5 @@ sil.taktflow-systems.com {
     reverse_proxy /api/sap/* localhost:8090
     reverse_proxy /api/fault/* localhost:8091
 
-    root * /srv/dashboard
-    file_server
+    redir / https://taktflow-systems.com/embedded permanent
 }
