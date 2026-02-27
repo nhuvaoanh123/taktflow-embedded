@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every safety goal (SG-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per safety goal (SG-NNN). File naming: `SG-NNN-<short-title>.md`.
+
 
 # Safety Goals
 
@@ -37,6 +41,10 @@ This document also defines the safe states, Fault Tolerant Time Intervals (FTTI)
 The safety goals cover all hazardous events identified in the HARA for the Taktflow Zonal Vehicle Platform item as defined in the item definition (ITEM-DEF v1.0). The item comprises 7 ECU nodes (4 physical + 3 simulated), sensors, actuators, and a CAN bus network providing drive-by-wire, steering, braking, distance sensing, and independent safety monitoring functions.
 
 **Assumption**: Per assumption A-001 in the item definition, Severity, Exposure, and Controllability ratings assume the platform controls a real vehicle. This is intentional for demonstrating full ISO 26262 competence.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG0 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Sections 1-3 provide appropriate context. The purpose statement correctly identifies this document as implementing ISO 26262-3 Clause 8. The reference table lists HARA v0.1 but the HARA document metadata shows v1.0 -- this version reference should be updated for consistency. The scope correctly identifies the item and the foundational assumption A-001.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG0 -->
 
 ## 3. References
 
@@ -70,6 +78,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 | HE-014 | Unintended motor reversal | ASIL C | SG-008 |
 | HE-015 | Battery overvoltage/undervoltage | QM | SG-006 |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The hazardous events summary table lists HE-001 through HE-015 but omits HE-016 through HE-020, which are defined in the HARA Section 6.2. This is a traceability gap: the HARA identifies 20 hazardous events, but this SG document only traces 15. The missing events are: HE-016 (unintended acceleration at high speed, ASIL C), HE-017 (unintended vehicle motion from rest, ASIL D), HE-018 (unintended forward motion during reversing, ASIL A), HE-019 (motor enable stuck, ASIL C), and HE-020 (CAN bus babbling node, ASIL B). These must be mapped to safety goals. HE-017 is particularly critical as it is ASIL D and should be assigned to SG-001 or a new SG. The HARA safety goals preview (Section 9.3) actually defines 13 safety goals including SG-004 for HE-017, but this SG document reduces to 8 by grouping differently. The grouping rationale should be documented.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG1 -->
+
 ## 5. Safety Goals
 
 ### 5.1 Safety Goals Table
@@ -96,6 +108,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **FTTI**: 50 ms
 - **Rationale**: Unintended acceleration at any vehicle speed can result in life-threatening consequences (S3). The dual redundant pedal sensors (AS5048A on SPI1 with separate chip selects) enable plausibility checking. If both sensors simultaneously read high due to a common cause fault (e.g., power supply corruption, SPI bus fault), the system must detect the anomaly and transition to the safe state within the FTTI. The ASIL D rating demands the highest level of diagnostic coverage and freedom from interference.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-001 is well-defined with a clear safety goal statement, ASIL D assignment, and SS-MOTOR-OFF safe state. The 50 ms FTTI is aggressive but justified in Section 7.2 with a detailed timing budget. The source traces to HE-001 only, but should also reference HE-016 (unintended acceleration at high speed, ASIL C) and HE-017 (unintended vehicle motion from rest, ASIL D) per the HARA safety goals preview. The safe state (motor off, brakes applied) is well-defined and achievable independently by both the RZC (local motor disable) and SC (kill relay). The rationale correctly identifies the common cause fault scenario for dual sensors sharing SPI1.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG2 -->
+
 #### SG-002: Prevent Unintended Loss of Drive Torque
 
 - **Safety Goal**: The system shall prevent unintended loss of drive torque during vehicle operation.
@@ -104,6 +120,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **Safe State**: SS-CONTROLLED-STOP -- Motor ramps down gradually, brakes applied, steering locked to last commanded position.
 - **FTTI**: 200 ms
 - **Rationale**: Sudden loss of drive torque in traffic can cause a rear-end collision (S2). The system must either maintain torque delivery or transition to a controlled stop. A sudden motor cutoff is not an acceptable response; the safe state requires a controlled deceleration ramp. The ASIL B rating reflects moderate severity with moderate exposure.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-002 is appropriate at ASIL B with a controlled stop safe state. The 200 ms FTTI provides adequate margin for the less-critical loss-of-torque scenario. The rationale correctly notes that a sudden motor cutoff is NOT an acceptable response -- the controlled deceleration ramp is important to prevent rear-end collisions. The safe state definition (SS-CONTROLLED-STOP) with "steering locked to last commanded position" should be reconsidered if the steering fault also occurs simultaneously, though this is a compound failure scenario.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG3 -->
 
 #### SG-003: Prevent Unintended Steering Movement
 
@@ -114,6 +134,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **FTTI**: 100 ms
 - **Rationale**: These two hazardous events are grouped because they share the same functional domain (steering control) and the same safe state. Loss of steering during a turn (HE-004, ASIL D) is the more severe scenario -- the vehicle departs its lane with potentially fatal consequences (S3, E4, C3). Unintended steering movement (HE-003, ASIL C) can also cause lane departure. The safety goal inherits ASIL D from HE-004. The platform has no mechanical fallback steering and no redundant steering actuator -- if steering is faulted, the vehicle cannot be controlled regardless of speed. The safe state is therefore SS-MOTOR-OFF (motor off, brakes applied, vehicle stopped) rather than a degraded-speed approach, which would require a functioning backup steering path.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-003 correctly inherits ASIL D from HE-004 (loss of steering during turning). The grouping of HE-003 and HE-004 is logical since both relate to steering control integrity. The updated safe state (SS-MOTOR-OFF, changed from SS-STEER-CENTER in v1.1) is the correct decision for this platform -- without mechanical fallback steering, degraded-speed operation is not viable. The rationale explicitly documents why SAFE_STOP is chosen over degraded operation, which is excellent engineering judgment. The 100 ms FTTI accounts for servo mechanical response time, which is physically grounded.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG4 -->
+
 #### SG-004: Prevent Unintended Loss of Braking
 
 - **Safety Goal**: The system shall prevent unintended loss of braking capability during braking operations.
@@ -122,6 +146,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **Safe State**: SS-MOTOR-OFF -- Motor torque = 0 (fail-safe), H-bridge disabled.
 - **FTTI**: 50 ms
 - **Rationale**: Loss of braking during an active braking manoeuvre can result in collision with a leading vehicle or obstacle, with life-threatening consequences (S3, E4, C3). The safe state removes drive torque as an immediate mitigation -- without motor propulsion, the vehicle decelerates through friction and drag. This is a fail-safe approach where removing the energy source is the primary containment action. The 50 ms FTTI reflects the critical nature of braking loss at speed.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-004 addresses the critical loss-of-braking scenario at ASIL D. The safe state (SS-MOTOR-OFF) is a fail-safe approach: removing drive torque as the primary mitigation when the brake actuator fails. This is the correct strategy for a single-actuator brake system with no mechanical fallback. The 50 ms FTTI is tight but justified by the immediate danger of continued driving without braking. One consideration: the safe state description says "Motor torque = 0 (fail-safe), H-bridge disabled" but does not mention brake application -- since the brake servo has failed (that is the triggering fault), the safe state cannot include brake application. This should be explicitly noted in the safe state description to avoid confusion with SS-MOTOR-OFF for SG-001 which does include brake application.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG5 -->
 
 #### SG-005: Prevent Unintended Braking
 
@@ -132,6 +160,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **FTTI**: 200 ms
 - **Rationale**: Unintended braking causes an unexpected deceleration that may surprise following traffic (S1-S2, depending on deceleration magnitude). Both hardware-caused unintended braking (HE-006, brake servo fault) and software-caused unintended braking (HE-010, lidar false positive triggering emergency brake) are grouped here. The safe state releases the erroneous brake command and allows controlled deceleration. The ASIL A rating reflects lower severity with moderate controllability by following drivers.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-005 groups unintended braking from two sources: hardware (HE-006, brake servo fault) and software (HE-010, lidar false positive). Both are ASIL A, so the grouping does not require ASIL inheritance escalation. The 200 ms FTTI is reasonable for a nuisance scenario rather than an immediately life-threatening one. The safe state (release brake command, controlled stop) is appropriate.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG6 -->
+
 #### SG-006: Ensure Motor Protection
 
 - **Safety Goal**: The system shall ensure motor protection against overcurrent, overtemperature, and supply voltage excursion.
@@ -140,6 +172,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **Safe State**: SS-MOTOR-OFF -- Motor torque = 0, H-bridge disabled.
 - **FTTI**: 500 ms
 - **Rationale**: These three hazardous events are grouped because they all relate to motor and power subsystem protection. Undetected overcurrent (HE-007) can lead to H-bridge damage, cable heating, or fire, with ASIL A severity. Overtemperature (HE-008) and battery voltage excursion (HE-015) are QM-rated events whose consequences are primarily property damage. The safety goal inherits ASIL A from HE-007. The 500 ms FTTI reflects the thermal time constants of the motor and wiring -- overcurrent damage does not occur instantaneously due to the thermal mass of conductors.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-006 groups three motor/power protection events with the ASIL inherited from HE-007 (ASIL A). The grouping is logical since all three relate to motor subsystem protection. The 500 ms FTTI is well-justified by thermal time constants -- this is the longest FTTI in the system and appropriately reflects the gradual nature of thermal hazards. The safe state (motor off, H-bridge disabled) is correct for protection against overcurrent and thermal damage.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG7 -->
 
 #### SG-007: Ensure Obstacle Detection
 
@@ -150,6 +186,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **FTTI**: 200 ms
 - **Rationale**: A lidar false negative means an obstacle is present but not detected, and the vehicle does not brake. At moderate speed, this can result in a collision with an obstacle or pedestrian (S3, E3, C2). The safe state initiates a controlled stop when the lidar sensor is determined to be unreliable (stuck value, timeout, or diagnostic failure). The 200 ms FTTI accounts for the time needed to confirm a sensor fault versus a genuine clear path, plus the time to initiate braking.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-007 addresses the lidar false negative scenario (ASIL C). The safe state (controlled stop on sensor failure) is appropriate -- when the sensor is unreliable, the system cannot rely on obstacle detection and must initiate a precautionary stop. The 200 ms FTTI includes time for fault confirmation (distinguishing sensor failure from a genuinely clear path), which is a necessary design consideration to avoid false-positive controlled stops.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG8 -->
+
 #### SG-008: Ensure Independent Safety Monitoring Availability
 
 - **Safety Goal**: The system shall ensure availability of independent safety monitoring, emergency stop, and protection against unintended motor reversal.
@@ -158,6 +198,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - **Safe State**: SS-SYSTEM-SHUTDOWN -- Kill relay opens, all outputs disabled, system de-energized.
 - **FTTI**: 100 ms
 - **Rationale**: These four hazardous events are grouped because they all relate to the availability and integrity of the independent safety monitoring layer. CAN bus total failure (HE-011) means the Safety Controller loses visibility of zone ECU health. Safety Controller failure (HE-012) removes the independent watchdog layer. E-stop failure (HE-013) removes the operator's last-resort intervention. Unintended motor reversal (HE-014) is a system-level failure that the Safety Controller should detect via plausibility checking (torque request direction vs. motor current direction). The safe state is full system shutdown via the kill relay -- this is the most conservative response, appropriate when the integrity of the safety monitoring chain itself is compromised. The 100 ms FTTI reflects the need for rapid de-energization when the safety monitoring function is lost.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SG-008 is a broad safety goal grouping 4 hazardous events across different failure domains (CAN bus, Safety Controller, E-stop, motor direction). While the grouping is justified by the shared theme of "safety monitoring layer integrity," the breadth of this SG may complicate downstream FSR derivation since each source event requires distinct safety mechanisms. The ASIL C assignment (inherited from HE-011 and HE-014) is correct. The safe state (SS-SYSTEM-SHUTDOWN with kill relay) is the most conservative and appropriate response when the monitoring layer itself is compromised. One concern: the inclusion of "unintended motor reversal" (HE-014) in this monitoring-focused SG is somewhat awkward -- motor direction reversal is an actuator-level fault, not a monitoring-layer fault. Consider whether HE-014 would be better assigned to a dedicated SG or to SG-001 (unintended acceleration domain).
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG9 -->
 
 ## 6. Safe State Definitions
 
@@ -243,6 +287,10 @@ The following hazardous events were identified in the HARA. They are grouped int
 - System enters INIT mode before transitioning to RUN.
 
 **Verification**: Kill relay must open within 100 ms of SC fault detection. Kill relay de-energization must be tested at every system startup (relay test during INIT mode).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The safe state definitions are precise, with detailed entry sequences, exit conditions, and verification criteria for each of the three safe states. SS-MOTOR-OFF includes a 6-step sequence from torque request zeroing to DTC storage. SS-CONTROLLED-STOP specifies a 500 ms ramp-down which is important for preventing rear-end collisions. SS-SYSTEM-SHUTDOWN correctly uses the energize-to-run relay pattern where de-energization = safe state. The dedicated SS-MOTOR-OFF description for steering faults (SG-003) with explicit rationale for why SAFE_STOP is required instead of DEGRADED is excellent engineering documentation. One observation: the exit conditions for all three safe states require an ignition cycle and full self-test, which prevents the system from inadvertently returning to normal operation after a fault. This is correct for ASIL D.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG10 -->
 
 ## 7. FTTI Justification
 
@@ -370,6 +418,10 @@ Where:
 | SG-007 | 200 ms | 50 ms | 10 ms | 100 ms | 40 ms | 10 ms (Swc_Lidar) |
 | SG-008 | 100 ms | 50 ms | 5 ms | 10 ms | 35 ms | 50 ms (SC heartbeat) |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG11 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The FTTI justifications are comprehensive, with each safety goal having a detailed timing budget breakdown (T_detect + T_react + T_safe_state + T_margin) and a physical justification relating the FTTI to real-world consequences (speed, distance, acceleration). The budgets are credible: SG-001 and SG-004 at 50 ms are the tightest, reflecting the critical nature of acceleration and braking faults. The physical justifications use correct physics calculations (e.g., v*t for distance, kinematic equations for speed change). The FTTI budget summary table (Section 7.3) provides a quick reference and identifies the diagnostic cycle time for each SG. One concern: SG-008 FTTI = 100 ms, but the FSC timing analysis (Section 7) shows SM-019 (heartbeat monitoring) at 205 ms, which exceeds this FTTI. This inconsistency is acknowledged in the FSC but should also be noted here with a reference to the compensating mechanisms.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG11 -->
+
 ## 8. Traceability
 
 ### 8.1 Hazardous Event to Safety Goal Mapping
@@ -447,6 +499,10 @@ The following table shows the intended downstream traceability from safety goals
 | **Total** | | **8** |
 
 The presence of 3 ASIL D safety goals confirms that the Taktflow Zonal Vehicle Platform requires the highest level of functional safety integrity for its drive-by-wire (acceleration and braking) and steering functions. This is consistent with production automotive systems where the powertrain and steering domains carry ASIL D requirements.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SG12 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability section (8.1) provides complete bidirectional mapping for HE-001 through HE-015, with correct ASIL inheritance documented for grouped events. The traceability completeness check (Section 8.4) confirms all 15 hazardous events are traced -- but this should say "all 20 hazardous events" to include HE-016 through HE-020. The safety goal to safe state mapping (Section 8.2) with priority numbers is a useful addition for resolving concurrent safety goal violations. The priority rule (SS-SYSTEM-SHUTDOWN overrides all) is correct. The ASIL distribution summary (3 ASIL D, 2 ASIL C, 1 ASIL B, 2 ASIL A) is consistent with production automotive expectations. The downstream traceability preview (Section 8.3) correctly identifies the intended FSR topics for each SG, providing useful guidance for the FSC. Overall, the traceability is strong within its scope but must be extended to cover all 20 HARA hazardous events.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SG12 -->
 
 ## 10. Revision History
 

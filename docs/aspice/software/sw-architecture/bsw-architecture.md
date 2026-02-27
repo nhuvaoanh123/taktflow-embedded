@@ -21,6 +21,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every BSW element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per BSW element. File naming: `BSW-ARCH-<element>.md`.
+
 
 # BSW Architecture — Taktflow Zonal Vehicle Platform
 
@@ -40,6 +44,10 @@ The same BSW source code compiles for three platform targets:
 - **STM32** (production): STM32 HAL wrappers in MCAL
 - **TMS570** (SC CAN only): DCAN register-level driver (limited use)
 - **POSIX** (simulation): SocketCAN stubs for Docker/SIL testing
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The purpose correctly scopes the BSW architecture to the three STM32-based zone controllers and explicitly excludes the SC (TMS570), which is consistent with the diverse redundancy requirement from ISO 26262 Part 9. The six bullet points accurately enumerate the BSW layer responsibilities. The three-platform compilation strategy (STM32/TMS570/POSIX) enables SIL testing on host, which is a strong architectural decision. One observation: the TMS570 entry says "SC CAN only: DCAN register-level driver (limited use)" but the SC does not use the shared BSW stack at all according to sw-architecture.md -- this may cause confusion. The TMS570 platform target in BSW context is for the Can module only, used as a standalone driver in the SC's bare-metal firmware, not as part of the BSW layered stack.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC1 -->
 
 ## 2. BSW Module Dependency Graph
 
@@ -129,6 +137,10 @@ Legend:
 | BswM | Dem, Com, WdgM | main.c (mode transitions) |
 | E2E | — (pure computation) | Com (wraps/checks signals) |
 | Rte | Com, IoHwAb, Dem | SWCs (all port access) |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The dependency graph is well-drawn with clear layer boundaries and call direction. The dependency summary table correctly identifies all 16 modules with their dependencies and callers. The layering discipline is maintained: no module calls upward except through callback/notification patterns (e.g., CanIf_RxIndication). The E2E module is correctly shown as "pure computation" with no dependencies, called by Com for signal protection. One observation: Dio is listed as called by "Swc_EStop (via RTE)" which is technically correct but could be misleading -- Swc_EStop reads a GPIO via the ISR mechanism (EXTI), which is a hardware interrupt rather than a polled Dio read. The dependency table should clarify whether the E-stop path uses Dio_ReadChannel or a direct EXTI ISR handler.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC2 -->
 
 ## 3. Module Specifications
 
@@ -1204,6 +1216,10 @@ Per-ECU RTE configuration files:
 
 RTE is fully platform-independent (no hardware access). The same RTE code compiles for STM32 and POSIX targets.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 3 provides comprehensive module specifications for all 16 BSW modules (6 MCAL, 3 EcuAL, 6 Services, 1 RTE). Each module includes purpose, AUTOSAR reference, API functions, dependencies (up/down), and configuration. The API function signatures follow AUTOSAR naming conventions correctly. The dependency direction is strictly enforced: MCAL modules only depend downward on HAL/hardware, Services only call through EcuAL/MCAL. The RTE section correctly shows per-ECU configuration tables with runnable scheduling parameters (period, priority). The Rte module specification shows compile-time port binding which avoids runtime overhead -- appropriate for resource-constrained ASIL D targets. One gap: the Gpt module specification is not shown in Section 3, though Gpt appears in the dependency graph as providing the time base for all modules. Gpt should have its own specification block in Section 3.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC3 -->
+
 ## 4. MCAL Layer Detail
 
 ### 4.1 Can Module — Platform Variants
@@ -1345,6 +1361,10 @@ FZC: Standard hobby servos
   - Angle range: -45 to +45 degrees (steering), 0 to 100% (brake)
 ```
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The MCAL Layer Detail section provides concrete platform-specific implementation code for Can (STM32 FDCAN, TMS570 DCAN, POSIX SocketCAN), Spi (AS5048A communication protocol), Adc (ACS723 current sensor and NTC temperature with conversion formulas), and Pwm (BTS7960 motor driver and servo control). The three Can platform variants share the same API (Can_Init, Can_Write) with different implementations, which validates the portability claim. The TMS570 Can_Init correctly sets TEST.Silent bit for listen-only mode, consistent with the SC requirements. The ADC conversion formulas for ACS723 and NTC include units and ranges which aids verification. One concern: the Pwm section specifies 20 kHz for motor PWM (above audible) and 50 Hz for servo PWM, but does not mention the dead-time or anti-shoot-through protection for the BTS7960 H-bridge. At ASIL D, simultaneous high-side and low-side switching must be explicitly prevented either in hardware or software.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC4 -->
+
 ## 5. ECU Abstraction Layer Detail
 
 ### 5.1 CanIf — CAN Interface Routing
@@ -1439,6 +1459,10 @@ Std_ReturnType IoHwAb_SetPwmDuty(uint8 ChannelId, uint16 DutyCycle_001Pct) {
     return E_OK;
 }
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The ECU Abstraction Layer detail covers CanIf (routing CAN IDs to PDU IDs), PduR (static PDU routing table between CanIf and Com/Dcm), and IoHwAb (sensor/actuator abstraction bridging SWCs to MCAL). The CanIf routing example correctly shows bidirectional mapping (RX: CAN ID to PDU, TX: PDU to CAN ID) with bus-off recovery notification to BswM. The PduR routing table code snippet for CVC shows all expected message mappings consistent with the CAN message matrix. The IoHwAb code examples demonstrate proper input validation (SensorId range check, DutyCycle range check) and error propagation (return E_NOT_OK on invalid input), which aligns with ASIL D defensive programming requirements. The IoHwAb_ReadPedalAngle function correctly extracts the 14-bit angle from the AS5048A SPI response and checks the error flag bit -- this is a good example of sensor data validation at the abstraction boundary.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC5 -->
 
 ## 6. Services Layer Detail
 
@@ -1599,6 +1623,10 @@ RX side (E2E_Check):
   7. If all OK → E2E_STATUS_OK, update last received counter
 ```
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The Services Layer Detail covers all six service modules (Com, Dcm, Dem, WdgM, BswM, E2E) with implementation-level detail. The Com signal packing example for PDU 0x120 shows exact byte layout with E2E CRC and alive counter placement. The Dcm UDS service table covers the essential diagnostic services (0x10, 0x14, 0x19, 0x22, 0x2E, 0x27, 0x3E) with session management. The Dem DTC lifecycle correctly shows the debounce-to-confirmation-to-clear flow with freeze frame capture. The WdgM alive supervision flow correctly demonstrates the checkpoint-based monitoring with TPS3823 external watchdog. The BswM state machine (STARTUP/RUN/DEGRADED/SAFE_STOP/SHUTDOWN) with mode-dependent actions is consistent with the sw-architecture.md state machine design. The E2E protection detail covers CRC-8, alive counter, and Data ID with all seven fault detection types. One concern: the BswM DEGRADED state allows "reduced" Com TX but does not specify which messages are suppressed versus retained -- this should be defined to ensure safety-critical heartbeat and E-stop messages are never suppressed.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC6 -->
+
 ## 7. RTE Detail
 
 ### 7.1 Port-Based Communication
@@ -1674,6 +1702,10 @@ void Rte_MainFunction(void) {
     }
 }
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The RTE Detail section shows the port-based communication model (Sender-Receiver for data flow, Client-Server for function calls) with concrete code examples. The Rte_MainFunction scheduling code demonstrates tick-driven runnable dispatch at 10 ms, 50 ms, and 100 ms periods with WdgM checkpoint instrumentation around each safety-critical runnable. The scheduling approach is deterministic and avoids dynamic task creation. One concern: the Rte_MainFunction runs all runnables of the same period sequentially in a single tick context. If a runnable overruns its budget, subsequent runnables in the same period group are delayed. For ASIL D, consider documenting the execution order guarantee and the consequence of a single runnable overrun on the group's overall WCET budget. Additionally, 100 ms tasks call Dem_MainFunction and BswM_MainFunction in the same tick -- if NVM write operations in Dem_MainFunction are slow, this could delay BswM mode transitions.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC7 -->
 
 ## 8. Configuration Strategy
 
@@ -1761,6 +1793,10 @@ Key configuration tables used at compile time:
 | `Dcm_DidTable[]` | Dcm | DID to read function mapping | Yes |
 | `Rte_Runnables[]` | Rte | Runnable function pointers and periods | Yes |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The Configuration Strategy section documents the per-ECU configuration files (Section 8.1), compile-time defines (Section 8.2), and configuration tables (Section 8.3). The approach of using per-ECU cfg/ directories with compile-time headers is clean and avoids runtime configuration overhead. The Ecu_Cfg.h master header with ECU_TYPE, CAN_NODE_ID, HEARTBEAT_CAN_ID, and DCM addressing provides clear per-build identity. The configuration tables summary (Section 8.3) lists 14 key tables with their module, content, and per-ECU status. All configuration is static and compile-time, which is correct for ASIL D (no dynamic configuration changes at runtime). One observation: the configuration table list does not include NVM configuration (persistence of DTC data across power cycles) -- if Dem DTCs are only stored in RAM, they will be lost on reset, which may be acceptable for SIL but not for production.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC8 -->
+
 ## 9. Platform Abstraction
 
 ### 9.1 Three Platform Targets
@@ -1811,6 +1847,10 @@ The architecture guarantees that all code above MCAL is pure C99 with no platfor
 - SIL testing on developer PC without hardware
 - CI/CD pipeline using POSIX builds on Linux
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The Platform Abstraction section cleanly demonstrates the three-target build strategy (STM32, TMS570, POSIX) with Makefile platform selection. The Layer Portability table confirms that only the MCAL layer changes between platforms -- ECU Abstraction, Services, RTE, and Application SWCs are all common. The "pure C99 with no platform-specific headers" guarantee above MCAL is a strong architectural constraint that enables SIL testing and CI/CD pipelines on Linux. The build system uses standard compiler selection (arm-none-eabi-gcc for STM32, armcl for TMS570, gcc for POSIX) with platform-specific MCAL source file lists. This is well-designed for maintainability and consistent with vendor-independence principles. No significant concerns.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC9 -->
+
 ## 10. Traceability and Revision History
 
 ### 10.1 BSW Module to SSR Traceability
@@ -1833,6 +1873,10 @@ The architecture guarantees that all code above MCAL is pure C99 with no platfor
 | BswM | SSR-CVC-023 | CVC, FZC, RZC |
 | E2E | SSR-CVC-019/020, SSR-FZC-022, SSR-RZC-015/016 | CVC, FZC, RZC |
 | Rte | All SWC communication SSRs | CVC, FZC, RZC |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BSWARCH-SEC10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The BSW Module to SSR Traceability table maps all 16 BSW modules to the SSRs they serve across all ECUs. This provides the reverse traceability direction required by ASPICE SWE.2 BP5. The Can module correctly maps to SSRs across all four ECUs (including SC), while IoHwAb maps only to CVC/FZC/RZC (SC has no IoHwAb). The Com module has the largest SSR footprint, which is expected since it handles all signal-based CAN communication. The traceability is consistent with the SSR allocation tables in sw-architecture.md Section 11. One observation: the Gpt module is not listed in the traceability table but provides the time base for all scheduling-related SSRs -- it should be included for completeness.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BSWARCH-SEC10 -->
 
 ### 10.2 Revision History
 

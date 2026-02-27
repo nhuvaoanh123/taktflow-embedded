@@ -6,6 +6,11 @@ iso_26262_part: "3, 4, 5, 6"
 generated: "2026-02-25 22:48 UTC"
 ---
 
+## Lessons Learned Rule
+
+Every traceability gap in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/lessons-learned/`](../lessons-learned/). File naming: `TRACE-<topic>.md`.
+
+
 # Full V-Model Traceability Matrix
 
 > **Auto-generated** by `scripts/trace-gen.py`

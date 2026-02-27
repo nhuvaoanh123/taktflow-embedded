@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (SWR-SC-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per requirement (SWR-SC-NNN). File naming: `SWR-SC-NNN-<short-title>.md`.
+
 
 # Software Requirements — Safety Controller (SC)
 
@@ -101,6 +105,10 @@ All other CAN IDs shall be filtered out at the hardware level to reduce processi
 
 The SC software shall validate all received safety-critical CAN messages using E2E check: (a) extract alive counter and Data ID from byte 0, (b) recompute CRC-8 (polynomial 0x1D, init 0xFF) over bytes 2-7 plus Data ID and compare with byte 1, (c) verify the alive counter has incremented by exactly 1 from the previously received value. The SC shall maintain independent E2E state (expected alive counters) for each monitored message type: CVC torque request (0x100), RZC motor current (0x301), CVC heartbeat (0x010), FZC heartbeat (0x011), RZC heartbeat (0x012). On E2E failure, the message shall be discarded and a per-message-type E2E failure counter incremented. If the E2E failure counter for any message type exceeds 3 consecutive failures, the SC shall treat it as equivalent to a heartbeat timeout for that ECU.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-001-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN listen-only requirements SWR-SC-001 through SWR-SC-003 establish the SC's fundamental communication architecture. SWR-SC-001 (ASIL C) correctly specifies DCAN1 silent mode via TEST register bit 3, ensuring the SC can never transmit -- this is critical for the SC's independent safety monitor role. SWR-SC-002 (ASIL D) specifies exact-match acceptance filters for 6 CAN IDs with specific mailbox assignments, which eliminates spurious message processing and reduces the attack surface. SWR-SC-003 (ASIL D) provides a detailed E2E check implementation including byte-level field extraction, which is more explicit than the CVC/FZC/RZC E2E specs. The 3-consecutive-failure escalation to heartbeat timeout is a good bridging mechanism between E2E and heartbeat monitoring. The explicit "SC shall never call any CAN transmit function" in SWR-SC-001 is a strong design constraint that should be verified via static analysis. Traces to SYS-025/032 and TSR-022/024 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-001-003 -->
+
 ---
 
 ## 5. Heartbeat Monitoring Requirements
@@ -141,6 +149,10 @@ Upon heartbeat timeout detection for a specific ECU, the SC software shall drive
 - **Status**: draft
 
 After detecting a heartbeat timeout (SWR-SC-004), the SC software shall start a confirmation timer of 50 ms. During the confirmation period, the SC shall continue monitoring for the missing heartbeat. If the heartbeat is not received by the end of the confirmation period (total elapsed: 150 ms timeout + 50 ms confirmation = 200 ms), the software shall call the kill relay de-energize function (SWR-SC-008). If a valid heartbeat is received during the confirmation period, the software shall cancel the confirmation timer and clear the timeout condition.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-004-006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Heartbeat monitoring requirements SWR-SC-004 through SWR-SC-006 establish the SC's primary ECU health monitoring mechanism. SWR-SC-004 (ASIL C) specifies per-ECU timeout counters with a 150 ms threshold (3 missed heartbeats at 50 ms period), which is correct. SWR-SC-005 (QM) provides visual fault indication via dedicated per-ECU LEDs -- this is a good operator observability feature. SWR-SC-006 (ASIL D) adds a 50 ms confirmation period before relay de-energize, making the total detection-to-action time 200 ms. This confirmation timer is important for avoiding false positives from CAN bus transients while keeping the total reaction time well within the system FTTI. The cancellation of the confirmation timer on heartbeat recovery is correct behavior for transient bus errors. The escalation from ASIL C (detection) to ASIL D (relay action) correctly reflects the safety criticality of the kill relay control. Traces to SYS-022/024/046 and TSR-027/028 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-004-006 -->
 
 ---
 
@@ -183,6 +195,10 @@ The SC software shall compare the expected current (from lookup, SWR-SC-007) wit
 
 Upon cross-plausibility fault detection, the SC software shall: (a) drive GIO_A4 HIGH (system fault LED), (b) call the kill relay de-energize function (SWR-SC-010), (c) set the de-energize latch flag. The fault LED shall remain ON permanently (until power cycle).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-007-009 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Cross-plausibility requirements SWR-SC-007 through SWR-SC-009 implement the SC's independent torque-current monitoring function. All three are correctly ASIL C. SWR-SC-007 specifies a 16-entry const lookup table for torque-to-current mapping with linear interpolation between entries -- the table approach is simple, deterministic, and appropriate for the ~400 LOC bare-metal design. SWR-SC-008 specifies a 20% relative threshold (or 2000 mA absolute near zero) with a 50 ms debounce -- the absolute threshold prevents division-by-zero issues at low torque and the debounce prevents false positives during motor transients. SWR-SC-009 correctly escalates to relay de-energize with a permanent fault LED (until power cycle). The cross-plausibility check compares data from two independent ECUs (CVC torque command vs RZC current measurement), providing true independent monitoring. One note: the lookup table values are listed as "default: linear mapping 0-25000 mA" and will need hardware calibration -- this is correctly captured in open item SWR-SC-O-001. Traces to SYS-023, TSR-041/042, and SSR-SC-010/011/012 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-007-009 -->
+
 ---
 
 ## 7. Kill Relay Control Requirements
@@ -224,6 +240,10 @@ The SC software shall de-energize the kill relay when any of the following condi
 
 The SC software shall verify the kill relay GPIO state every 10 ms (once per main loop) by reading the GIO_A0 data-in register and comparing with the commanded state. If the readback does not match the commanded state for 2 consecutive checks (20 ms), the software shall declare a relay GPIO fault and invoke the de-energize sequence (SWR-SC-011 condition f). This detects GPIO driver failures, stuck-at faults, and wiring faults.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-010-012 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Kill relay control requirements SWR-SC-010 through SWR-SC-012 are all correctly ASIL D as they directly control the system's primary safety mechanism. SWR-SC-010 specifies GIO_A0 control with readback verification for both energize and de-energize, plus a de-energize latch that can only be cleared by power cycle -- this is the correct energize-to-run pattern where the safe state (relay open = motor de-energized) is maintained by default. The 5 ms de-energize timing requirement is well within the FTTI. SWR-SC-011 enumerates 6 trigger conditions (heartbeat timeout, cross-plausibility, startup failure, runtime failure, lockstep ESM, GPIO readback mismatch) which is comprehensive. The immediate lockstep ESM response (no confirmation delay) is correct since lockstep errors indicate fundamental CPU integrity loss. SWR-SC-012 specifies 10 ms GPIO readback verification with a 2-cycle debounce, detecting stuck-at and wiring faults. These three requirements together form a robust kill relay control architecture. Traces to SYS-024, TSR-029/030, and SSR-SC-006/007 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-010-012 -->
+
 ---
 
 ## 8. Fault LED Requirements
@@ -247,6 +267,10 @@ The SC software shall update fault LED states every 10 ms based on the monitorin
 | GIO_A4 | System | No fault | — | Cross-plausibility or self-test failure |
 
 The blinking state shall be generated by toggling the GPIO with a 500 ms period software timer (25 main loop iterations on, 25 off). LED state changes shall occur within one main loop iteration (10 ms) of the triggering event.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-013 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Fault LED requirement SWR-SC-013 is correctly QM since the LEDs are operator-visible indicators with no safety function. The LED state table with 3 states per LED (Off / Blink 500 ms / Steady On) for 4 GPIOs provides clear visual feedback for fault diagnosis. The addition of a "degraded" blink state (when heartbeat shows degraded mode) is useful for distinguishing between degraded operation and complete heartbeat loss. The 10 ms LED update latency from triggering event is achievable within the main loop. The 500 ms blink period via software timer (25 iterations on/off at 10 ms) is a simple, deterministic approach consistent with the bare-metal ~400 LOC design philosophy. Traces to SYS-046, TSR-045, and SSR-SC-013 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-013 -->
 
 ---
 
@@ -275,6 +299,10 @@ The SC software shall enable the TMS570LC43x Error Signaling Module (ESM) for lo
 - **Status**: draft
 
 The SC ESM high-level interrupt handler shall: (a) read the ESM status register to identify the error source, (b) if lockstep compare error (group 1, channel 2): immediately write GIO_A0 = LOW (de-energize relay), set the de-energize latch, set GIO_A4 = HIGH (system fault LED), (c) clear the ESM error flag, (d) enter an infinite loop (the TPS3823 watchdog will reset the MCU since the main loop is halted). The handler shall execute in fewer than 100 clock cycles to ensure relay de-energize is immediate.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-014-015 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Lockstep CPU requirements SWR-SC-014 and SWR-SC-015 are correctly ASIL D. SWR-SC-014 specifies ESM group 1 channel 2 configuration for lockstep compare error detection with readback verification of ESM enable registers -- this leverages the TMS570's built-in dual-core lockstep hardware, which is one of the strongest processor fault detection mechanisms available. SWR-SC-015 specifies the ESM interrupt handler with immediate relay de-energize (no confirmation delay), system fault LED, ESM flag clear, and infinite loop (relying on TPS3823 for reset). The 100-clock-cycle execution budget for the handler is tight but achievable for the simple sequence (GPIO write + flag set + LED write + loop). The infinite loop approach is correct for a lockstep error since the CPU cannot be trusted after such a failure -- the external watchdog provides the recovery mechanism. Traces to SYS-026 and TSR-030 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-014-015 -->
 
 ---
 
@@ -340,6 +368,10 @@ The SC software shall execute the following self-test sequence at power-on befor
 
 If all tests pass, energize the kill relay (GIO_A0 = HIGH) and verify readback. If any test fails, do NOT energize the relay, set GIO_A4 to the failure blink pattern, and halt (watchdog will eventually reset for retry on next power cycle).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-016-019 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Startup self-test requirements SWR-SC-016 through SWR-SC-019 establish the SC's comprehensive power-on validation. SWR-SC-016 (ASIL D) uses the TMS570's built-in lockstep CPU BIST. SWR-SC-017 (ASIL D) uses the TMS570's PBIST with March 13N algorithm for full RAM fault coverage -- this is a standard automotive-grade memory test. SWR-SC-018 (ASIL C) computes CRC-32 over application flash to detect flash corruption. The coordinating requirement SWR-SC-019 (ASIL D) sequences all 7 steps with unique blink patterns per failure step (1-7 blinks), providing visual diagnostic capability without any CAN communication. The fault LED lamp test (step 6, 500 ms all-on) is a good operator-visible confirmation. The watchdog-based retry on failure (halt and let TPS3823 reset) is correct since the SC has no recovery path from self-test failure. One note: step 6 is a lamp test (not a pass/fail test) but is included in the sequence numbering -- this is acceptable since it occurs after all diagnostic tests and before the watchdog test. Traces to SYS-024/026/027, TSR-050, and SSR-SC-016 are consistent across all four requirements.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-016-019 -->
+
 ---
 
 ## 11. Runtime Self-Test Requirements
@@ -375,6 +407,10 @@ If any runtime self-test fails, invoke relay de-energize (SWR-SC-011 condition d
 
 The SC software shall write a 32-bit canary value (0xDEADBEEF) at the bottom of the stack during initialization. Every main loop iteration, the software shall read the canary location and compare with the expected value. If the canary is corrupted (stack overflow), the software shall immediately de-energize the kill relay and halt. The stack canary check shall execute before the watchdog feed to ensure the watchdog is not fed if the stack is corrupted.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-020-021 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Runtime self-test requirements SWR-SC-020 and SWR-SC-021 are correctly ASIL D. SWR-SC-020 specifies a comprehensive 4-part runtime self-test every 60 seconds: flash CRC (spread over 6 seconds to avoid blocking), RAM pattern test, CAN status check, and GPIO readback. The flash CRC spreading strategy (1/600th per iteration) is well-designed for the cooperative main loop architecture -- it maintains the 10 ms loop timing while achieving full flash verification in 6 seconds. SWR-SC-021 specifies stack canary verification before watchdog feed, which is the correct ordering -- if the stack is corrupted, the watchdog is starved and forces a reset. The immediate relay de-energize on canary corruption (no debounce) is appropriate since stack overflow indicates memory corruption that could affect any safety function. Traces to TSR-031/051 and SSR-SC-017 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-020-021 -->
+
 ---
 
 ## 12. Watchdog Requirements
@@ -389,6 +425,10 @@ The SC software shall write a 32-bit canary value (0xDEADBEEF) at the bottom of 
 - **Status**: draft
 
 The SC software shall toggle the TPS3823 WDI pin once per main loop iteration, conditioned on: (a) main loop complete (all monitoring functions executed -- heartbeat check, plausibility check, relay trigger evaluation, LED update, self-test increment), (b) RAM test pattern intact (32-byte 0xAA/0x55 at reserved address), (c) DCAN1 not in bus-off state, (d) lockstep ESM error flag not asserted, (e) stack canary intact. If any condition fails, the watchdog shall not be toggled, and the TPS3823 shall reset the MCU after the 1.6 second timeout.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-022 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Watchdog requirement SWR-SC-022 is correctly ASIL D. The SC watchdog has 5 conditions (vs 4 for the STM32 zone controllers) because it adds the lockstep ESM error flag check -- this is appropriate since the TMS570 has lockstep capability that the STM32s lack. The explicit enumeration of all monitoring functions in condition (a) ensures the watchdog proves that the entire monitoring pipeline executed, not just that the main loop ran. The 1.6 second TPS3823 timeout is specified, providing a concrete worst-case recovery time. The SC watchdog approach is consistent with the other ECUs while being adapted for the TMS570-specific hardware. Traces to SYS-027, TSR-031, and SSR-SC-008 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-022 -->
 
 ---
 
@@ -405,6 +445,10 @@ The SC software shall toggle the TPS3823 WDI pin once per main loop iteration, c
 
 The SC software shall detect CAN bus loss by monitoring the DCAN1 error status register and the message reception timestamp. If no CAN messages are received for 200 ms, the SC shall treat this as equivalent to all heartbeats timing out simultaneously and initiate the confirmation-and-relay sequence (SWR-SC-006) for all three zone ECUs. The SC shall also detect CAN bus-off via the DCAN error passive/bus-off status bits and suppress the watchdog feed if bus-off is detected.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-023 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN bus loss requirement SWR-SC-023 is correctly ASIL C. The 200 ms silence threshold for treating CAN loss as a simultaneous heartbeat timeout for all ECUs is appropriate -- it is longer than individual heartbeat timeout (150 ms) but shorter than the confirmation-and-relay total (200 ms), ensuring CAN bus loss is detected before individual timeouts could cascade. The bus-off detection via DCAN error status registers and the watchdog feed suppression on bus-off provides a dual detection mechanism. The decision to suppress the watchdog on bus-off (rather than immediately de-energize) allows the TPS3823 to provide the recovery mechanism, which is consistent with the SC's approach to unrecoverable errors. Traces to SYS-034, TSR-038, and SSR-SC-009 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-023 -->
+
 ---
 
 ## 14. Backup Motor Cutoff Requirements
@@ -419,6 +463,10 @@ The SC software shall detect CAN bus loss by monitoring the DCAN1 error status r
 - **Status**: draft
 
 The SC software shall monitor for the brake-fault-motor-cutoff scenario: if the FZC heartbeat fault bitmask indicates a brake fault (bit 1), and the RZC motor current (from CAN ID 0x301) remains above 1000 mA for 100 ms after the brake fault is reported, the SC shall conclude that the CVC-RZC motor cutoff chain has failed and shall de-energize the kill relay (SWR-SC-011). This provides a hardware-enforced backup for the software motor cutoff path.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-024 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Backup motor cutoff requirement SWR-SC-024 is correctly ASIL D. This requirement implements a critical safety concept: the SC independently monitors for the failure of the CVC-RZC software motor cutoff chain. The logic is well-specified: FZC brake fault (from heartbeat bitmask) AND RZC motor current still above 1000 mA for 100 ms means the software cutoff path has failed. The 1000 mA threshold provides margin above noise while detecting meaningful motor current. The 100 ms monitoring window gives the software cutoff chain time to act before the SC intervenes with the hardware kill relay. This is a textbook defense-in-depth pattern: software safety mechanism (CVC motor cutoff) backed up by independent hardware safety mechanism (SC kill relay). Traces to TSR-049 and SSR-SC-015 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-024 -->
 
 ---
 
@@ -446,6 +494,10 @@ The SC main loop shall execute at a 10 ms period using a hardware timer interrup
 
 The total loop execution time shall not exceed 2 ms to maintain the 10 ms cycle with adequate margin. The SC shall use a hardware timer to measure loop execution time. If any iteration exceeds 5 ms, a loop overrun shall be flagged internally (no DTC system on SC -- the overrun flag suppresses the watchdog feed, causing a reset).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-025 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Main loop requirement SWR-SC-025 is correctly ASIL D. The 8-step main loop structure is precisely sequenced: CAN receive, heartbeat monitor, plausibility check, relay trigger evaluation, LED update, runtime self-test, stack canary check, and watchdog feed. This ordering is critical -- the watchdog feed is last and only executes if all preceding steps complete. The 2 ms WCET budget within a 10 ms period provides 80% margin, which is conservative and appropriate for ASIL D. The 5 ms overrun detection with watchdog suppression provides a second timing safety net. The fact that the SC has no DTC system (bare-metal ~400 LOC) is acknowledged with the correct recovery mechanism: overrun flag suppresses watchdog feed, causing TPS3823 reset. The hardware timer for WCET measurement enables PIL timing verification. Traces to SYS-053, TSR-046, and SSR-SC-014 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-025 -->
+
 ---
 
 ## 16. SC Initialization Requirements
@@ -472,6 +524,10 @@ The SC software shall execute the following initialization sequence at power-on:
 9. If self-test fails: blink failure pattern on GIO_A4, halt (watchdog resets).
 
 The total initialization time (including self-test) shall not exceed 5 seconds. The watchdog must be fed during initialization to prevent premature reset.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-026 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SC initialization requirement SWR-SC-026 is correctly ASIL D. The 9-step initialization sequence covers clock setup, GPIO configuration, timer initialization, stack canary, RAM test pattern, startup self-test, and conditional relay energize. The explicit initialization of GIO_A0 to LOW (relay safe state) at step 2 is correct -- the relay starts de-energized and only energizes after successful self-test. The 5-second initialization budget (including self-test) is reasonable for the TMS570 PBIST and lockstep BIST. The requirement to feed the watchdog during initialization prevents premature reset during the potentially long self-test sequence. The conditional relay energize (step 8, only if self-test passes) with fallback to blink pattern and halt (step 9) is the correct fail-safe approach. Traces to SYS-024/025/026/027 cover all major SC subsystems initialized in this sequence.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-026 -->
 
 ---
 
@@ -527,6 +583,10 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 | Hardware test | 6 |
 | Fault injection | 8 |
 | Analysis (WCET) | 1 |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-SC-TRACE -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability summary is comprehensive with all 26 requirements mapped to SYS, TSR, and SSR-SC upstream traces. The ASIL distribution shows 14 ASIL D, 7 ASIL C, and 5 QM -- however, the ASIL D count in the table lists 15 IDs (SWR-SC-002, 003, 006, 010, 011, 012, 014, 015, 016, 017, 019, 021, 022, 025, 026) which is 15, not 14. The ASIL C count lists 8 IDs (SWR-SC-001, 004, 007, 008, 009, 018, 023, 024) which is 8, not 7. The QM count lists 3 IDs (SWR-SC-005, 013, 020) which is 3, not 5. The total should be 15+8+3=26 which matches, but the individual counts are incorrect -- 14+7+5=26 does not match the listed IDs. This discrepancy should be corrected. Notably, SWR-SC-020 (Runtime Self-Test) is listed as QM but traces to TSR-051 and SSR-SC-017, which suggests it should carry an ASIL rating -- this should be reviewed. Verification method coverage is strong with 12 PIL tests (highest among all ECUs), reflecting the SC's critical safety role requiring extensive hardware-level validation.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-SC-TRACE -->
 
 ---
 

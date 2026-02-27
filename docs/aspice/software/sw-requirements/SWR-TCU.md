@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (SWR-TCU-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per requirement (SWR-TCU-NNN). File naming: `SWR-TCU-NNN-<short-title>.md`.
+
 
 # Software Requirements — Telematics Control Unit (TCU)
 
@@ -81,6 +85,10 @@ The TCU runs as a Docker container (Linux/POSIX) and accesses the CAN bus via So
 
 The TCU software shall initialize a SocketCAN interface on startup by: (a) creating a raw CAN socket (AF_CAN, SOCK_RAW, CAN_RAW), (b) binding the socket to the vcan0 interface, (c) configuring CAN filters to accept: functional diagnostic requests (0x7DF), physical diagnostic requests (0x604), vehicle status messages (0x100, 0x301, 0x302, 0x303), heartbeat messages (0x010, 0x011, 0x012), DTC notification messages (0x400), and E-stop (0x001). If initialization fails, the TCU shall log an error and retry every 1 second up to 10 attempts.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Traces to SYS-031 and SYS-037 are correct. The CAN filter set is comprehensive for a diagnostic gateway node. The filter includes both functional (0x7DF) and physical (0x604) UDS addressing, vehicle data messages for DID/PID serving, and ECU heartbeats. Note: the filter should also include physical addresses for ECU routing (0x600-0x603 per SWR-TCU-012) -- these appear to be missing from the filter list.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-001 -->
+
 ---
 
 ### SWR-TCU-002: UDS Diagnostic Session Control (0x10)
@@ -105,6 +113,10 @@ The TCU shall maintain a session timer (P2_server = 50 ms, P2_star_server = 5000
 - 0x12 (subFunctionNotSupported): Sub-function other than 0x01, 0x02, 0x03.
 - 0x22 (conditionsNotCorrect): Attempt to enter Programming Session while vehicle state is RUN.
 - 0x33 (securityAccessDenied): Attempt to enter restricted session without prior Security Access.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-037 is correct. The session types (Default, Programming, Extended) follow ISO 14229 convention. The P2/P2* timing parameters are specified. The session timeout (5s for non-default) prevents stuck sessions. The NRC list covers the key failure modes. The restriction on Programming Session while RUN is a good safety precaution. One note: the requirement does not specify behavior for concurrent session requests from multiple testers -- consider if this is relevant for the simulated environment.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-002 -->
 
 ---
 
@@ -131,6 +143,10 @@ On successful clearing, the TCU shall: (a) reset the fault status byte of matchi
 - 0x31 (requestOutOfRange): DTC group identifier not recognized.
 - 0x33 (securityAccessDenied): Security Access level 1 not granted.
 - 0x72 (generalProgrammingFailure): NVM write failure during DTC clear.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-038 is correct. The clear DTC service follows ISO 14229 conventions properly. The group clearing (0xFFFFFF for all, specific group for selective) is standard. The four-step clearing process (reset status, reset counters, remove freeze-frames, positive response) is complete. The NRC list covers all relevant failure modes including NVM write failure. The requirement for Extended Diagnostic Session + Security Access is properly gatekeeping destructive operations. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-003 -->
 
 ---
 
@@ -161,6 +177,10 @@ For sub-function 0x04, the response shall contain: DTC number (3 bytes), status 
 - 0x12 (subFunctionNotSupported): Sub-function not in {0x01, 0x02, 0x04, 0x06}.
 - 0x13 (incorrectMessageLengthOrInvalidFormat): Invalid request length for the sub-function.
 - 0x31 (requestOutOfRange): DTC number not found (for sub-functions 0x04, 0x06).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-038 is correct. The four supported sub-functions (0x01, 0x02, 0x04, 0x06) cover the most commonly used DTC reporting services. The response formats for each sub-function are well-specified with byte-level detail. The snapshot data fields in sub-function 0x04 align with the freeze-frame content defined in SWR-TCU-009. The NRC list is complete for the supported sub-functions. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-004 -->
 
 ---
 
@@ -193,6 +213,10 @@ Multiple DIDs may be requested in a single 0x22 request (multi-DID read). The re
 - 0x14 (responseTooLong): Total response exceeds maximum CAN frame capacity (use multi-frame if needed).
 - 0x31 (requestOutOfRange): DID not in the supported list.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-039 is correct. The DID table is comprehensive with clear source mappings to CAN message IDs. The multi-DID read support is a useful feature. The "data not available" handling with 0xFF fill bytes is a reasonable default. Note: DID 0xF1A0 (Torque Request) is an addition beyond the standard VIN/version DIDs -- ensure this is documented in the DID catalog (open item TCU-O-004). The NRC list includes 0x14 (responseTooLong) which shows awareness of multi-frame transport limits. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-005 -->
+
 ---
 
 ### SWR-TCU-006: UDS Write Data By Identifier (0x2E)
@@ -222,6 +246,10 @@ Write operations shall require: (a) Extended Diagnostic Session (0x03) active, (
 - 0x31 (requestOutOfRange): DID not writable or unknown.
 - 0x33 (securityAccessDenied): Security Access not granted.
 - 0x72 (generalProgrammingFailure): NVM write failure.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-039 is correct. The writable DID table includes both standard (VIN) and project-specific calibration parameters (pedal threshold, overcurrent threshold, lidar distances). The triple-gating (Extended Session + Security Access + vehicle not RUN) is appropriately restrictive for calibration writes. NVM persistence via file I/O in Docker is a practical simulation approach. The NRC list is complete. The lidar distance DIDs (0xF1B2-0xF1B4) provide runtime-configurable obstacle detection thresholds, which is a good design choice.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-006 -->
 
 ---
 
@@ -254,6 +282,10 @@ The TCU software shall implement UDS Security Access (service ID 0x27) per ISO 1
 - 0x36 (exceededNumberOfAttempts): 3 consecutive failures.
 - 0x37 (requiredTimeDelayNotExpired): Lockout period not elapsed.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-007 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-040 is correct. The two-level security access (Level 1 for calibration, Level 3 for programming) follows ISO 14229 sub-function conventions. The XOR-based key computation is clearly documented as a simplified demo algorithm (TCU-A-005 assumption). The lockout mechanism (3 failures, 10 seconds) provides basic brute-force protection. The NRC list is comprehensive and covers the full seed-key handshake failure modes. The zero seed indicating "already unlocked" is per ISO 14229 convention. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-007 -->
+
 ---
 
 ### SWR-TCU-008: DTC Storage and Management
@@ -285,6 +317,10 @@ The TCU shall receive DTC events from physical ECUs via CAN message (CAN ID 0x40
 
 **Aging**: If a confirmed DTC is not detected for 40 consecutive drive cycles, the DTC shall be aged out (status byte set to 0x00, entry marked as available for reuse).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-008 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-041 is correct. The DTC database structure is well-defined with 64-entry capacity and complete field descriptions. The DTC status management follows ISO 14229 conventions (testFailed, confirmedDTC, testNotCompletedSinceLastClear). The maturation count of 3 drive cycles and aging count of 40 drive cycles are reasonable values. File-based persistence in Docker is practical. One consideration: define how "drive cycle" is detected in the simulated environment (e.g., INIT-to-RUN transition).
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-008 -->
+
 ---
 
 ### SWR-TCU-009: DTC Freeze-Frame Capture
@@ -308,6 +344,10 @@ The TCU software shall capture a freeze-frame snapshot at the moment a DTC is fi
 | Reserved | - | 10 | 6 bytes |
 
 The freeze-frame shall not be overwritten on subsequent occurrences of the same DTC (first occurrence snapshot is retained until the DTC is cleared).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-009 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-041 is correct. The freeze-frame data layout is detailed with byte offsets and sizes, totaling 16 bytes (10 data + 6 reserved). The field set (vehicle state, speed, temp, voltage, current, torque) captures the essential operating conditions at fault time. The "first occurrence only" retention policy is standard practice. The freeze-frame layout is consistent with the snapshot data described in SWR-TCU-004 sub-function 0x04. The 6 reserved bytes provide room for future expansion. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-009 -->
 
 ---
 
@@ -335,6 +375,10 @@ The TCU software shall respond to OBD-II PID requests (ISO 15031-5 / SAE J1979) 
 
 OBD-II responses shall use CAN ID 0x644 (TCU response). Mode 0x01 PID 0x00 shall report the supported PID bitmask. Unsupported PIDs shall be silently ignored (no negative response per OBD-II convention).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-010 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-038 is correct. The PID table covers essential Mode 01 vehicle parameters plus Modes 03, 04, and 09 for DTC and VIN access. The OBD-II formulas (e.g., temp + 40, rpm * 4) follow SAE J1979 standard scaling. The silent ignore for unsupported PIDs is per OBD-II convention. One note: Mode 04 (Clear DTCs) via OBD-II does not appear to require Security Access, unlike UDS service 0x14 (SWR-TCU-003) -- clarify if OBD-II clearing should also require security gating or if it follows the less restrictive OBD-II convention.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-010 -->
+
 ---
 
 ### SWR-TCU-011: UDS Transport Layer (ISO-TP)
@@ -353,6 +397,10 @@ The TCU software shall implement ISO 15765-2 (ISO-TP) for multi-frame UDS messag
 - **Flow Control (FC)**: Sent by receiver to control transmission rate (block size, separation time).
 
 The TCU shall support a maximum message length of 4095 bytes (ISO-TP maximum). The block size shall be set to 0 (unlimited consecutive frames) and the separation time shall be set to 0 ms (fastest transmission) for simplicity in the simulated environment. A receive timeout of 1000 ms shall be applied between consecutive frames; if exceeded, the multi-frame reception shall be aborted.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-011 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Traces to SYS-037 and SYS-038 are correct. The ISO-TP implementation covers all four frame types (SF, FF, CF, FC). The simplified block size (0) and separation time (0 ms) are appropriate for a simulated vcan0 environment where bus load is not a concern. The 1000 ms consecutive frame timeout is standard. The 4095-byte maximum follows ISO 15765-2. No gaps identified; this provides the transport foundation for all multi-frame UDS services.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-011 -->
 
 ---
 
@@ -376,6 +424,10 @@ The TCU software shall route incoming UDS diagnostic requests based on the CAN I
 | 0x603 | Physical (SC) | Not supported (SC is listen-only); return NRC 0x11 |
 
 For requests addressed to the TCU (0x604 or 0x7DF), the TCU shall process the request locally using its UDS service handlers. For requests addressed to physical ECUs (0x600-0x603), the TCU shall act as a diagnostic gateway and forward the request on the CAN bus, then relay the response back to the tester.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-012 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-037 is correct. The routing table clearly defines all CAN IDs and their dispatch actions. The NRC 0x11 for SC (0x603) is correct since SC is listen-only. The gateway forwarding for CVC/FZC/RZC depends on open item TCU-O-003 (whether physical ECUs support local UDS). This is a critical architectural decision. The routing reinforces the earlier note that SWR-TCU-001 should include CAN IDs 0x600-0x603 in its filter list.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-012 -->
 
 ---
 
@@ -406,6 +458,10 @@ The TCU software shall send UDS Negative Response messages (SID 0x7F) when a ser
 
 For SID 0x7F responses on functionally addressed requests (0x7DF), the TCU shall only send a negative response for NRC 0x12 and 0x13. All other NRCs on functional requests shall be suppressed (no response sent) per ISO 14229 convention.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-013 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-037 is correct. The NRC table is comprehensive and covers all ISO 14229 NRCs used across the TCU's UDS services. The functional addressing NRC suppression rule (only respond with 0x12 and 0x13 on 0x7DF) is per ISO 14229 convention and correctly specified. The 0x7F response format is standard. This requirement properly centralizes all NRC definitions, which aids consistency. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-013 -->
+
 ---
 
 ### SWR-TCU-014: CAN Data Aggregation for DIDs
@@ -428,6 +484,10 @@ The TCU software shall continuously receive and cache the latest values from the
 
 Each cached value shall include a timestamp of last reception. When a DID or PID is requested and the cached value is older than its cache timeout, the TCU shall return the stale value but include a "data not current" indication in the DID response (if applicable) or log a warning.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-014 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Traces to SYS-037 and SYS-039 are correct. The cache timeout values are appropriate: 500 ms for fast-changing data (vehicle state, motor), 2000 ms for slow-changing data (temperature, voltage), 200 ms for heartbeats. The stale data handling (return with warning) is a pragmatic approach for a diagnostic gateway. This requirement properly decouples CAN reception from UDS response timing. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-014 -->
+
 ---
 
 ### SWR-TCU-015: TCU Main Loop Execution
@@ -439,6 +499,10 @@ Each cached value shall include a timestamp of last reception. When a DID or PID
 - **Status**: draft
 
 The TCU software shall execute a main loop at a 10 ms cycle time (100 Hz) using a POSIX timer or equivalent scheduling mechanism. Each loop iteration shall: (a) read all pending CAN messages from the SocketCAN socket (non-blocking read), (b) update cached data values (SWR-TCU-014), (c) process any pending UDS/OBD-II requests (SWR-TCU-002 through SWR-TCU-013), (d) process ISO-TP multi-frame state machine (SWR-TCU-011), (e) manage session timeout timers (SWR-TCU-002), (f) manage security access lockout timers (SWR-TCU-007), (g) manage DTC aging counters (SWR-TCU-008). The main loop shall log a warning if any iteration exceeds 5 ms execution time.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-TCU-015 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Trace to SYS-037 is correct. The 10 ms cycle time matches the BCM's main loop for consistency. The execution order is well-structured: CAN read, then cache update, then request processing, then timer management. All subordinate requirements are cross-referenced. The 5 ms WCET threshold at 50% of the cycle is consistent across all simulated ECUs. The DTC aging counter management in the main loop is correctly included. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-TCU-015 -->
 
 ---
 

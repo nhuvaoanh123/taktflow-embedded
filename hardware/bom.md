@@ -20,6 +20,9 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every BOM item in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`hardware/lessons-learned/`](lessons-learned/). One file per BOM item. File naming: `BOM-<item>.md`.
 
 # Bill of Materials
 
@@ -52,6 +55,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 5 | RPi 4 USB-C Power Supply (5V/3A) | 1 | $8.00 | $8.00 | Adafruit / Amazon | CanaKit 3.5A | Not ordered | Phase 2 |
 | | **Subtotal: MCU Boards** | | | **$160.00** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The MCU board selection is appropriate: STM32G474RE Nucleo-64 x3 for CVC/FZC/RZC provides FDCAN, adequate timers, and ADC channels. TMS570LC43x LaunchPad for SC provides lockstep CPU and DCAN. The Raspberry Pi 4 as edge gateway is a standard choice. Pricing appears realistic at $160 subtotal. The Phase 1/Phase 2 prioritization is correct -- boards and RPi are properly sequenced. No safety-critical concerns with the board selections.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC1 -->
+
 ### 3.2 CAN Bus Components
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
@@ -65,6 +72,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 12 | 22 AWG Twisted Pair Wire (5 m) | 1 | $5.00 | $5.00 | Amazon | Stranded, yellow+green | Not ordered | Phase 1 |
 | | **Subtotal: CAN Bus** | | | **$89.60** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN bus components are well-selected. TJA1051T/3 (3.3V) for STM32 ECUs and SN65HVD230 for TMS570 SC are both appropriate 3.3V CAN transceivers. Two CANable 2.0 USB-CAN adapters provide adequate bus analysis capability (one per bus segment or monitoring + injection). The 120-ohm terminators, common-mode chokes, and PESD1CAN TVS diodes demonstrate proper CAN bus design with EMC and ESD protection. The twisted pair wire selection is appropriate. All items correctly marked Phase 1.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC2 -->
+
 ### 3.3 Sensors
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
@@ -77,6 +88,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 18 | Quadrature Encoder (11 PPR, for DC motor shaft) | 1 | $5.00 | $5.00 | Amazon / AliExpress | Incremental encoder | Not ordered | Phase 2 |
 | | **Subtotal: Sensors** | | | **$86.00** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Sensor selection is appropriate for the system architecture. Three AS5048A modules cover CVC dual-pedal (x2) and FZC steering angle (x1), with diametric magnets for each. The TFMini-S lidar (0.1-12m, 100Hz UART) matches the system requirements for obstacle detection. The ACS723 Hall-effect current sensor (+/-20A) is suitable for motor current monitoring. NTC thermistors (x3) for motor, board, and ambient temperature are standard. The quadrature encoder for motor speed feedback is correct. All sensors have alternatives listed in section 6. Phase 2 prioritization is appropriate.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC3 -->
+
 ### 3.4 Actuators
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
@@ -85,6 +100,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 20 | BTS7960 H-Bridge Motor Driver Module (43A) | 1 | $12.00 | $12.00 | Amazon / AliExpress | BTS7960 module | Not ordered | Phase 2 |
 | 21 | MG996R Metal Gear Servo (180 degree, 50Hz) | 2 | $8.00 | $16.00 | Amazon | MG996R (TowerPro or equiv.) | Not ordered | Phase 2 |
 | | **Subtotal: Actuators** | | | **$43.00** | | | | |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Actuator selection is appropriate. The 12V DC brushed motor (775 type, 12000 RPM) is a standard bench motor. The BTS7960 H-bridge (43A rating) provides significant headroom for the motor. Two MG996R servos for steering and braking are adequate for a demonstration platform. All actuators correctly in Phase 2. One consideration: the 775 motor at 12000 RPM may need a gear reduction for realistic vehicle speed simulation -- ensure this is addressed in the mechanical design.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC4 -->
 
 ### 3.5 Safety Hardware
 
@@ -98,6 +117,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 27 | E-Stop Button (NC, mushroom head, red, panel mount) | 1 | $5.00 | $5.00 | Amazon / AliExpress | 22mm NC emergency stop | Not ordered | Phase 1 |
 | | **Subtotal: Safety HW** | | | **$18.70** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Safety hardware selection is critical and well-considered. Four TPS3823DBVR external watchdog ICs (one per physical ECU) implement independent watchdog supervision -- this is a key ASIL D requirement. The SOT-23-5 breakout boards for hand-soldering the TPS3823 are practical for prototyping. The automotive relay (30A SPST-NO) with IRLZ44N MOSFET driver implements the energize-to-run kill relay (SYS-024). The 1N4007 flyback diodes protect the MOSFET. The NC mushroom-head E-stop button is safety-standard compliant. All safety hardware correctly in Phase 1. This is the highest-priority BOM section from a safety perspective.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC5 -->
+
 ### 3.6 User Interface
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
@@ -109,6 +132,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 32 | Active Piezo Buzzer (3.3V/5V, 85dB+) | 1 | $1.50 | $1.50 | Amazon | 5V active buzzer module | Not ordered | Phase 2 |
 | 33 | 2N7002 N-MOSFET (SOT-23, for buzzer driver) | 1 | $0.30 | $0.30 | Amazon / Mouser | 2N7002 | Not ordered | Phase 2 |
 | | **Subtotal: UI** | | | **$8.00** | | | | |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** UI components are modest and appropriate for a development/demo platform. The SSD1306 OLED (128x64, I2C) on CVC provides sufficient resolution for basic status display. LEDs (red, green, amber) cover status and fault indication needs per the pin mapping. The active piezo buzzer with 2N7002 MOSFET driver matches the FZC pin mapping. The $8 subtotal is minimal. All items are correctly prioritized (LEDs in Phase 1 for early status feedback, display/buzzer in Phase 2).
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC6 -->
 
 ### 3.7 Power Supply
 
@@ -124,6 +151,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 41 | Glass Tube Fuse Holder (inline, 5x20mm) | 2 | $1.00 | $2.00 | Amazon | Inline fuse holder | Not ordered | Phase 2 |
 | 42 | 6V Voltage Regulator Module (LM7806 or buck) | 2 | $2.50 | $5.00 | Amazon / AliExpress | 6V step-down module | Not ordered | Phase 2 |
 | | **Subtotal: Power Supply** | | | **$45.70** | | | | |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Power supply design is practical. The 12V 10A bench PSU provides adequate power for the motor and all ECUs. Two LM2596 buck converters (for 5V and potentially 3.3V rails) are standard. The SB560 Schottky diode for reverse polarity protection is essential. Inline fuse holders with 10A and 30A fuses provide branch protection. The 6V regulators for servo power (separate from logic) is good practice. The glass tube fuses for per-ECU protection are appropriate. One concern: verify that the LM2596 output ripple is acceptable for the ADC reference on the RZC -- a low-noise LDO post-regulator may be needed for analog-sensitive circuits.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC7 -->
 
 ### 3.8 Passive Components
 
@@ -143,6 +174,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 54 | 1 uF Ceramic Capacitor (50V) | 5 | $0.10 | $0.50 | Amazon / Mouser | MLCC 1uF | Not ordered | Phase 1 |
 | | **Subtotal: Passives** | | | **$5.55** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Passive component selection is comprehensive. The quantities are generous (e.g., 30x 100nF bypass caps, 20x 10k resistors) which is good for prototyping with spares. The 10k resistors serve as pull-ups (SPI CS, I2C), voltage divider references (NTC), and pull-downs (MOSFET gates). The 47k resistors are for the battery voltage divider (47k/10k = ~5.7x ratio for 12V to ADC range). The 4.7k resistors are for I2C pull-ups. The 330-ohm LED current limiters are standard. All passives correctly in Phase 1. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC8 -->
+
 ### 3.9 Protection Components
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
@@ -152,6 +187,10 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 57 | 1N5819 Schottky Diode (1A, 40V, flyback) | 4 | $0.15 | $0.60 | Amazon / Mouser | 1N5819 | Not ordered | Phase 1 |
 | 58 | Resettable PTC Fuse (polyfuse, 3A, 6V) | 2 | $0.50 | $1.00 | Amazon / Mouser | MF-R300 | Not ordered | Phase 2 |
 | | **Subtotal: Protection** | | | **$4.15** | | | | |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Protection components are essential for hardware safety. The BZX84C3V3 Zener diodes clamp ADC inputs to 3.3V (protecting against overvoltage from the voltage divider or sensor faults). The 3.3V bidirectional TVS diodes protect digital inputs (E-stop, encoder, lidar RX). The 1N5819 Schottky diodes provide additional flyback protection. The resettable PTC fuses (polyfuses) add self-recovering overcurrent protection. Quantities match the pin mapping requirements. All protection components should be verified against the specific circuit in the schematic design phase.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC9 -->
 
 ### 3.10 Infrastructure and Mounting
 
@@ -174,12 +213,20 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 | 73 | Breadboard (830 tie-point, full size) | 2 | $4.00 | $8.00 | Amazon | BB-830 breadboard | Not ordered | Phase 1 |
 | | **Subtotal: Infrastructure** | | | **$76.40** | | | | |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Infrastructure and mounting is the largest non-board BOM section at $76.40, which is expected for a 4-ECU bench platform. The base plate (plywood/acrylic), M3 nylon standoffs, and proto boards provide a practical mounting solution. Screw terminal blocks (2P and 3P) are appropriate for power and signal distribution. The wire selection covers three gauges: 22 AWG for signals, 18 AWG for power distribution, and 16 AWG for motor/relay power -- this is correctly sized. JST-XH connectors provide reliable sensor/actuator connections. Two full-size breadboards support prototyping. The relay socket for the automotive relay is a good detail. Cable ties and heat shrink complete the assembly materials. All items correctly in Phase 1 since the physical platform must be built before sensors/actuators can be mounted.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC10 -->
+
 ### 3.11 Test Equipment
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 74 | Rigol DS1054Z Digital Oscilloscope (50 MHz, 4 ch) | 1 | $400.00 | $400.00 | Amazon / Tequipment | DS1054Z | Not ordered | Phase 3 (optional) |
 | | **Subtotal: Test Equipment** | | | **$400.00** | | | | |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC11 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The Rigol DS1054Z is a well-known 50 MHz 4-channel oscilloscope that is standard for hobbyist and educational use. At $400 it represents 42% of the total BOM with test equipment included. The 4-channel capability is important for simultaneously monitoring CAN-H, CAN-L, chip select, and data lines during SPI/CAN debugging. Being Phase 3 (optional) is correct -- firmware development and basic CAN bus testing can proceed with the CANable USB adapters. However, for timing verification (WCET measurement, interrupt latency, PWM duty cycle accuracy) and analog signal integrity (ADC input noise, sensor waveforms), an oscilloscope is strongly recommended before hardware validation sign-off. Consider also whether a logic analyzer (e.g., Saleae Logic 8 at ~$200) might be a cost-effective complement or alternative for digital protocol debugging.
+<!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC11 -->
 
 ---
 

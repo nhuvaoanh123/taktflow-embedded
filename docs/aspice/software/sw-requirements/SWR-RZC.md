@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (SWR-RZC-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per requirement (SWR-RZC-NNN). File naming: `SWR-RZC-NNN-<short-title>.md`.
+
 
 # Software Requirements — Rear Zone Controller (RZC)
 
@@ -101,6 +105,10 @@ The RZC software shall convert the received torque request percentage (0-100%) t
 
 The RZC software shall configure TIM1 for motor PWM output: channel 1 (RPWM) and channel 2 (LPWM) in PWM mode 1, frequency 20 kHz (ARR = SystemCoreClock / 20000 - 1), with complementary dead-time insertion of 10 us minimum. The R_EN and L_EN GPIO pins shall be configured as push-pull outputs, initialized to LOW (motor disabled). The PWM resolution shall be at least 10 bits (0.1% duty cycle granularity). The TIM1 configuration shall be verified at startup by reading back the prescaler, ARR, and dead-time registers.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-001-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Motor control requirements SWR-RZC-001 through SWR-RZC-004 are all correctly ASIL D, consistent with the motor being a safety-critical actuator. SWR-RZC-001 specifies a comprehensive 4-step disable sequence (RPWM=0, LPWM=0, R_EN LOW, L_EN LOW) with a 5 ms timing requirement, which is well within the FTTI budget. SWR-RZC-002 adds a state validation gate before motor enable with 4 preconditions (vehicle state, no faults, valid E2E, temperature derating) -- this is defense-in-depth. SWR-RZC-003 correctly implements mode-specific torque limiting (RUN=100%, DEGRADED=75%, LIMP=30%) and the 95% max duty cycle to avoid BTS7960 bootstrap issues is a practical hardware consideration. SWR-RZC-004 specifies 20 kHz PWM with 10-bit resolution and 10 us dead-time, which is appropriate for the BTS7960 H-bridge. Startup readback verification of TIM1 registers is a good defensive measure. Traces to SYS-004/050 and TSR-005 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-001-004 -->
+
 ---
 
 ## 5. Current Monitoring Requirements
@@ -155,6 +163,10 @@ The RZC software shall transmit motor current data on CAN ID 0x301 every 10 ms w
 
 The RZC software shall perform zero-current calibration during the startup self-test phase (before motor is enabled). The software shall: (a) verify the motor driver enable pins are LOW (motor disabled), (b) sample the ACS723 ADC channel 64 times over 64 ms, (c) compute the average as the zero-current offset, (d) compare the offset against the expected mid-rail value (2048 +/- 200 counts). If the offset is outside this range, log a DTC for current sensor fault and set the overcurrent threshold to 0 (motor disabled permanently until recalibration). The calibrated offset shall be stored in RAM (not NVM) and recalibrated on every startup.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-005-008 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Current monitoring requirements SWR-RZC-005 through SWR-RZC-008 cover ADC sampling, overcurrent detection, CAN broadcast, and zero-current calibration. SWR-RZC-005/006/008 are correctly ASIL A (current monitoring supports motor overcurrent protection), while SWR-RZC-007 is ASIL C (CAN broadcast feeds the SC cross-plausibility check). The ADC-to-milliamp conversion formula in SWR-RZC-005 is explicit and calibratable. The 10 ms overcurrent debounce (SWR-RZC-006) with the BTS7960 43A hardware backup provides dual-layer overcurrent protection. The zero-current calibration approach (SWR-RZC-008) with 64 samples, mid-rail validation, and RAM-only storage is correct -- recalibrating every startup avoids NVM drift issues. The decision to permanently disable the motor on calibration failure is appropriately conservative. SWR-RZC-007 correctly continues broadcasting even when motor is disabled (0 mA) to maintain SC data stream. Traces are consistent across the current monitoring chain.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-005-008 -->
+
 ---
 
 ## 6. Temperature Monitoring Requirements
@@ -206,6 +218,10 @@ The PWM duty cycle shall be clamped such that the resulting motor current does n
 
 The RZC software shall include motor temperature (8-bit, degrees C, clamped 0-200) and derating percentage (8-bit) in the motor status CAN message (CAN ID 0x301). This enables the CVC to display temperature on OLED and the gateway to log temperature for cloud telemetry. The temperature data shall be updated every 100 ms (matching the ADC sample rate).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-009-011 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Temperature monitoring requirements SWR-RZC-009 through SWR-RZC-011 cover NTC ADC sampling, derating logic, and CAN broadcast. SWR-RZC-009/010 are correctly ASIL A (thermal protection) while SWR-RZC-011 is QM (informational broadcast). The Steinhart-Hart equation with beta parameter (SWR-RZC-009) is the correct approach for NTC thermistors, and the explicit open/short circuit detection ranges (-30 C / 150 C) are good boundary checks. The derating table in SWR-RZC-010 provides a graduated response (100% / 75% / 50% / 0%) with clear temperature thresholds and 10 C hysteresis on recovery from 100 C shutdown -- this prevents oscillation near the cutoff threshold. The vehicle state transition requests at each derating level (RUN / DEGRADED / LIMP / SAFE_STOP) integrate correctly with the CVC state machine. The sensor fault safe default of 0% (motor disabled) is fail-closed. Traces are consistent with the temperature monitoring chain.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-009-011 -->
+
 ---
 
 ## 7. Encoder Requirements
@@ -247,6 +263,10 @@ The RZC software shall detect motor stall by monitoring the encoder output while
 
 The RZC software shall verify motor direction by comparing the commanded direction (positive torque = RPWM active = forward, negative torque = LPWM active = reverse) against the encoder direction (TIM3 count direction: up = forward, down = reverse). If a direction mismatch persists for 50 ms (5 consecutive 10 ms checks with encoder showing wrong direction), the software shall disable the motor and log a DTC. The check shall not apply during the first 100 ms after a direction change (motor inertia settling time).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-012-014 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Encoder requirements SWR-RZC-012 through SWR-RZC-014 cover speed measurement, stall detection, and direction plausibility. All three are correctly ASIL C, consistent with encoder monitoring being a supporting safety function for motor control. The speed calculation formula in SWR-RZC-012 is explicit and uses a calibratable PPR (default 360). The stall detection logic (SWR-RZC-013) with 500 ms threshold and 200 ms direction-change blanking is reasonable for avoiding false positives during transient motor behavior. The direction plausibility check (SWR-RZC-014) with 50 ms debounce and 100 ms settling time provides a cross-check against unintended motor direction -- this is important for detecting H-bridge faults. The inertia settling exclusion times (200 ms for stall, 100 ms for direction) should be validated on target hardware during integration. Traces to SYS-007/009 and TSR-040 / SSR-RZC-015 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-012-014 -->
+
 ---
 
 ## 8. Motor Protection Requirements
@@ -274,6 +294,10 @@ The RZC software shall prevent simultaneous non-zero PWM on both RPWM and LPWM b
 - **Status**: draft
 
 The RZC software shall maintain a timestamp of the last valid torque command CAN message reception (CAN ID 0x100, passing E2E check). If the elapsed time since the last valid message exceeds 100 ms, the software shall disable the motor driver (SWR-RZC-001 disable sequence) and maintain the disabled state until valid CAN communication resumes with 5 consecutive valid torque commands. This provides fail-safe motor behavior independent of CAN communication.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-015-016 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Motor protection requirements SWR-RZC-015 and SWR-RZC-016 cover shoot-through protection and CAN command timeout respectively. SWR-RZC-015 is correctly ASIL C (H-bridge protection) and SWR-RZC-016 is correctly ASIL D (motor safety on CAN loss). The three-layer shoot-through protection in SWR-RZC-015 (software channel check, 10 us dead-time sequence, TIM1 hardware dead-time, runtime dual-register check) provides excellent defense-in-depth against H-bridge shoot-through which could damage hardware and cause uncontrolled motor behavior. The CAN command timeout (SWR-RZC-016) with 100 ms threshold and 5-consecutive-valid-messages recovery is consistent with the FZC timeout patterns, ensuring uniform behavior across zone controllers. Traces to SYS-004/007/034 and TSR-040 / SSR-RZC-016 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-015-016 -->
 
 ---
 
@@ -313,6 +337,10 @@ The RZC software shall monitor battery voltage against configurable thresholds:
 
 Voltage thresholds shall have 0.5 V hysteresis on recovery. Battery voltage shall be included in the motor status CAN message for CVC display and cloud telemetry.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-017-018 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Battery monitoring requirements SWR-RZC-017 and SWR-RZC-018 are correctly QM as battery monitoring is a functional (non-safety) requirement. The ADC-to-voltage conversion formula (SWR-RZC-017) with explicit voltage divider compensation and 4-sample moving average is well-specified. The 5-level threshold table in SWR-RZC-018 (critical undervoltage, undervoltage warning, normal, overvoltage warning, critical overvoltage) provides comprehensive voltage monitoring with appropriate actions (motor disable at critical levels). The 0.5 V hysteresis on recovery prevents threshold oscillation. Both critical voltage conditions (below 8.0 V and above 17.0 V) correctly disable the motor, which protects both the motor driver and the battery. Traces to SYS-008/049 are appropriate for functional battery monitoring.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-017-018 -->
+
 ---
 
 ## 10. E2E Protection Requirements
@@ -340,6 +368,10 @@ The RZC software shall implement the E2E protection transmit function identicall
 - **Status**: draft
 
 The RZC software shall implement the E2E protection receive function identically to SWR-CVC-015. On 3 consecutive E2E failures for the torque command (CAN ID 0x100), the safe default shall be zero torque (motor disabled).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-019-020 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** E2E protection requirements SWR-RZC-019 and SWR-RZC-020 are correctly ASIL D as they protect safety-critical torque command communication. The specification correctly references the same CRC-8 polynomial (0x1D, init 0xFF) and Data ID scheme as the CVC and FZC E2E implementations, ensuring cross-ECU protocol consistency. The safe default of zero torque (motor disabled) on 3 consecutive E2E failures for the torque command is the correct fail-safe action for the motor controller. The unique Data ID requirement for RZC messages distinct from CVC and FZC prevents message masquerade across ECUs. Traces to SYS-032, TSR-022/023/024, and SSR-RZC-008/009/010 are consistent with the E2E safety chain.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-019-020 -->
 
 ---
 
@@ -369,6 +401,10 @@ The RZC software shall transmit a heartbeat CAN message on CAN ID 0x012 every 50
 
 The RZC software shall suppress heartbeat transmission under the same conditions as SWR-CVC-021: main loop stalled, stack canary corrupted, or CAN bus-off.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-021-022 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Heartbeat requirements SWR-RZC-021 and SWR-RZC-022 are correctly ASIL C, consistent with the heartbeat-based SC monitoring chain. The 50 ms period with +/- 5 ms tolerance (SWR-RZC-021) matches the SC heartbeat timeout of 150 ms (3 missed heartbeats). The RZC fault bitmask has 6 bits (overcurrent, overtemp, direction fault, CAN fault, battery fault, stall fault) which is RZC-specific and more comprehensive than the CVC/FZC bitmasks -- this provides the SC with full observability of RZC fault conditions. The heartbeat conditioning logic in SWR-RZC-022 correctly mirrors the CVC/FZC approach. Traces to SYS-021, TSR-025/026, and SSR-RZC-011/012 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-021-022 -->
+
 ---
 
 ## 12. Watchdog Requirements
@@ -384,6 +420,10 @@ The RZC software shall suppress heartbeat transmission under the same conditions
 
 The RZC software shall toggle the TPS3823 WDI pin under the same four-condition check as SWR-CVC-023: main loop complete, stack canary intact, RAM test passed, CAN not bus-off.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-023 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Watchdog requirement SWR-RZC-023 is correctly ASIL D, consistent with the external watchdog being a last-resort safety mechanism. The four-condition check before TPS3823 WDI toggle is identical to the CVC and FZC watchdog requirements, ensuring uniform watchdog behavior across all STM32 zone controllers. Traces to SYS-027, TSR-031, and SSR-RZC-013 are consistent with the watchdog safety chain.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-023 -->
+
 ---
 
 ## 13. CAN Recovery Requirements
@@ -398,6 +438,10 @@ The RZC software shall toggle the TPS3823 WDI pin under the same four-condition 
 - **Status**: draft
 
 The RZC software shall detect CAN bus loss using the same criteria as SWR-CVC-024 (bus-off, 200 ms silence, error warning sustained 500 ms). On CAN bus loss, the RZC shall disable the motor driver (R_EN LOW, L_EN LOW, both PWM = 0) and maintain the disabled state until power cycle. The RZC shall not attempt CAN recovery.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-024 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN recovery requirement SWR-RZC-024 is correctly ASIL C. The safe reaction on CAN bus loss (motor driver disable with explicit R_EN/L_EN/PWM zeroing) is the correct fail-safe for the motor controller. The decision not to attempt CAN recovery and require a power cycle is consistent with the FZC approach and is appropriate for a safety-critical actuator -- recovery attempts could cause unpredictable motor behavior. The explicit listing of all disable actions (R_EN LOW, L_EN LOW, both PWM=0) rather than just referencing SWR-RZC-001 is good for clarity. Traces to SYS-034, TSR-038, and SSR-RZC-014 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-024 -->
 
 ---
 
@@ -424,6 +468,10 @@ The RZC software shall execute the following self-test sequence at power-on befo
 8. **RAM test pattern**: Write/read/compare 32-byte 0xAA/0x55 at reserved address. Failure: remain in INIT.
 
 If all safety-relevant tests pass, the RZC shall enter operational mode. Motor enable requires all of: self-test pass, valid CVC command, and no active faults.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-025 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Startup self-test requirement SWR-RZC-025 is correctly ASIL D. The 8-step test sequence is RZC-specific and comprehensive: BTS7960 enable GPIO test, ACS723 zero-current calibration, NTC range check, encoder check, CAN loopback, MPU verify, stack canary, and RAM test. The BTS7960 enable test (step 1) with GPIO toggle and readback verification is important for detecting stuck GPIO faults. The NTC range check (step 3) verifying ambient temperature at startup (10-40 C expected) is a practical plausibility check. The encoder check (step 4) is correctly listed as non-blocking (degraded mode) since the encoder is ASIL C while the overall startup is ASIL D. The triple requirement for motor enable (self-test pass + valid CVC command + no active faults) is a correct defense-in-depth gate. Traces to SYS-027/029 are consistent; no TSR/SSR traces listed, which is acceptable for a startup procedure.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-025 -->
 
 ---
 
@@ -465,6 +513,10 @@ The RZC software shall transmit the following CAN messages:
 | 0x012 | RZC heartbeat | 50 ms | 4 | Yes |
 | 0x301 | Motor status (current, temp, speed, battery) | 10 ms | 8 | Yes |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-026-027 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN message configuration requirements SWR-RZC-026 and SWR-RZC-027 are correctly ASIL D. The RX table (SWR-RZC-026) is simpler than the FZC's since the RZC only receives 2 CAN IDs (E-stop and vehicle state/torque) -- this is correct because the RZC is a command receiver, not a sensor data consumer. Safe defaults (motor disable on E-stop, zero torque on timeout) are appropriate. The TX table (SWR-RZC-027) shows 2 CAN IDs: heartbeat (0x012) at 50 ms and motor status (0x301) at 10 ms with 8-byte DLC and E2E protection. The motor status message at 10 ms is critical for SC cross-plausibility monitoring. Traces to SYS-004/005/031 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-026-027 -->
+
 ---
 
 ## 16. WCET and Scheduling Requirements
@@ -492,6 +544,10 @@ The RZC RTOS (FreeRTOS) scheduler shall configure the following runnables:
 | Swc_WatchdogFeed | 100 ms | Medium (3) | 100 us | D |
 
 The 1 kHz current monitor at highest priority ensures 10 ms overcurrent detection. Total worst-case CPU utilization shall not exceed 80%.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-028 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** WCET and scheduling requirement SWR-RZC-028 is correctly ASIL D. The runnable table is RZC-specific with 8 runnables, notably including a 1 kHz (1 ms period) current monitor at the highest priority -- this is a key differentiator from the CVC/FZC scheduling and correctly ensures the 10 ms overcurrent detection budget in SWR-RZC-006. The priority assignment (Highest=1 for current, High=2 for motor/direction/CAN, Medium=3 for temp/battery/heartbeat/watchdog) provides correct temporal FFI. Total WCET budgets sum to 1800 us per 10 ms (plus additional 100 us per 1 ms from current monitor), giving approximately 28% worst-case utilization which is well within the 80% limit. ASIL assignments per runnable are consistent with the individual requirement ASIL levels. Traces to SYS-053, TSR-046/047, and SSR-RZC-017 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-028 -->
 
 ---
 
@@ -533,6 +589,10 @@ The RZC software shall respond to UDS diagnostic requests on CAN ID 0x7E2 (RZC p
 - **Status**: draft
 
 The RZC software shall persist DTCs in a dedicated flash sector. Each entry shall contain: DTC number, fault status byte, occurrence counter, first/last occurrence timestamp, and freeze-frame data (motor current, temperature, speed, battery voltage, torque request, vehicle state). The NVM shall support a minimum of 20 concurrent DTCs with CRC-16 protection per entry. DTCs shall survive power cycles.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-029-030 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Diagnostic and NVM requirements SWR-RZC-029 and SWR-RZC-030 are correctly QM. UDS support (SWR-RZC-029) provides the standard service set (0x10, 0x22, 0x19, 0x14, 0x27, 0x3E) with RZC-specific DIDs covering motor current, temperature, speed, battery voltage, torque request, derating, and ACS723 zero offset. The RZC physical address (0x7E2) and response address (0x7EA) follow the sequential UDS addressing scheme (CVC=0x7E0, FZC=0x7E1, RZC=0x7E2). DTC persistence (SWR-RZC-030) with RZC-specific freeze-frame data (motor current, temperature, speed, battery, torque, vehicle state) provides comprehensive diagnostic context for post-mortem analysis. The 20 DTC capacity with CRC-16 protection is consistent with the CVC and FZC NVM designs. Traces to SYS-037/038/039/041 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-029-030 -->
 
 ---
 
@@ -594,6 +654,10 @@ The RZC software shall persist DTCs in a dedicated flash sector. Each entry shal
 | Fault injection | 6 |
 | Hardware test | 4 |
 | Analysis (WCET) | 1 |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-RZC-TRACE -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability summary is comprehensive with all 30 requirements mapped to SYS, TSR, and SSR-RZC upstream traces. The ASIL distribution (10 ASIL D, 7 ASIL C, 5 ASIL A, 8 QM) reflects the RZC's role as a motor controller with graduated safety levels: motor control at ASIL D, current/temperature monitoring at ASIL A (decomposed from higher ASIL via ASIL decomposition), encoder monitoring at ASIL C. One discrepancy: the ASIL C count states 7 but lists 8 IDs (SWR-RZC-007, 012, 013, 014, 015, 021, 022, 024) -- this should be verified. The QM count states 8 but lists only 7 IDs (SWR-RZC-011, 017, 018, 026, 027, 029, 030) -- this is 7, not 8, and needs correction. Verification method coverage includes 4 hardware tests, which is appropriate for the motor actuator and sensor hardware. The RZC has more PIL tests (10) than the FZC (8), reflecting the need for more hardware-level validation of motor control.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-RZC-TRACE -->
 
 ---
 

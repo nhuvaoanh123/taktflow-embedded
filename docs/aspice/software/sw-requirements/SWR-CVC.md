@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (SWR-CVC-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per requirement (SWR-CVC-NNN). File naming: `SWR-CVC-NNN-<short-title>.md`.
+
 
 # Software Requirements — Central Vehicle Computer (CVC)
 
@@ -170,6 +174,10 @@ The CVC software shall convert a validated pedal position (average of both senso
 
 The CVC software shall transmit the torque request on CAN ID 0x100 every 10 ms with E2E protection. The payload shall contain: vehicle state (4-bit), active fault bitmask (16-bit), torque limit percentage (8-bit), speed limit percentage (8-bit), alive counter (4-bit), and CRC-8 (8-bit). When the pedal fault flag is active, the torque request field shall be forced to 0%. The E2E alive counter shall continue to increment normally during fault conditions to enable the receiver (RZC) to distinguish between a valid zero-torque command and CAN communication loss.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-001-008 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Pedal processing requirements SWR-CVC-001 through SWR-CVC-008 are well-specified with concrete values (SPI1 @ 1 MHz CPOL=0 CPHA=1, 500 us timeout, 819-count plausibility threshold, 100-cycle stuck detection). All 8 requirements correctly inherit ASIL D from parent SSR-CVC-001/002. Traceability to SYS, TSR, and SSR documents is complete. SWR-CVC-002 correctly specifies the AS5048A SPI read sequence with parity validation. SWR-CVC-003 through SWR-CVC-005 cover the plausibility, single-sensor fallback, and stuck-sensor detection with measurable thresholds and timing. SWR-CVC-008 correctly notes that E2E alive counters continue incrementing during fault to prevent false timeout detection. One concern: SWR-CVC-006 references the pedal-to-torque mapping table but the lookup table size (16 entries) is only mentioned in SWR-CVC-031 (NVM calibration) -- the pedal mapping requirement itself should reference or specify the table dimensioning.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-001-008 -->
+
 ---
 
 ## 5. State Machine Requirements
@@ -261,6 +269,10 @@ The CVC software shall write the current vehicle state and active fault bitmask 
 
 On startup, the CVC software shall read the persisted vehicle state from NVM. If the persisted state is SAFE_STOP or SHUTDOWN with a non-zero fault bitmask, the CVC shall remain in INIT and shall not transition to RUN until: (a) the operator performs a manual reset sequence (E-stop cycle), and (b) the startup self-test passes. If the persisted state is RUN or DEGRADED (indicating an unexpected power loss during operation), the CVC shall log a DTC for unexpected restart and start in INIT state with all faults cleared. This prevents "reset-washing" of fault conditions.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-009-013 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** State machine requirements SWR-CVC-009 through SWR-CVC-013 define the CVC vehicle state machine comprehensively. SWR-CVC-009 covers the transition logic for all five states (INIT/RUN/DEGRADED/LIMP/SAFE_STOP) with explicit trigger conditions and actions. SWR-CVC-010 defines degraded mode behavior with torque capping and hazard indication. SWR-CVC-011 specifies SAFE_STOP as torque=0 + brake=100% + E-stop broadcast, which is the correct fail-safe action. The LIMP mode (SWR-CVC-012) with 25% torque cap and 5 km/h speed limit provides a middle ground between degraded and stopped states. SWR-CVC-013 correctly prevents "reset-washing" by persisting fault state through power cycles. ASIL is correctly D for all five requirements. One gap: the transition from LIMP to SAFE_STOP timeout is not specified -- how long can the vehicle remain in LIMP before forcing SAFE_STOP?
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-009-013 -->
+
 ---
 
 ## 6. CAN Master Requirements
@@ -336,6 +348,10 @@ The CVC software shall transmit the following CAN messages on schedule:
 
 All messages shall be transmitted within their specified period with a jitter tolerance of +/- 1 ms. The CAN transmit function shall return an error if the CAN hardware transmit mailbox is full, and the error shall be counted. If transmit errors exceed 10 within 1 second, a CAN fault shall be declared.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-014-017 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN master requirements SWR-CVC-014 through SWR-CVC-017 cover E2E protection (TX and RX), CAN message prioritization, and CAN bus configuration. SWR-CVC-014 correctly specifies CRC-8/SAE-J1850, 4-bit alive counter, and per-message Data ID for E2E TX. SWR-CVC-015 defines the RX E2E check with specific error counters and MaxDeltaCounter=3 tolerance. The message priority table in SWR-CVC-016 correctly assigns E-stop as highest priority and display data as lowest. SWR-CVC-017 specifies 500 kbps CAN bus rate with jitter tolerance and transmit error counting. ASIL D for 014/015 (E2E) and QM for 016/017 is reasonable, though the CAN bus configuration (017) could be argued as ASIL D since CAN communication loss affects safety. The transmit error threshold (10 errors/second = CAN fault) should specify the recovery action.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-014-017 -->
+
 ---
 
 ## 7. E-Stop Requirements
@@ -363,6 +379,10 @@ The CVC software shall configure GPIO PC13 as an external interrupt input (falli
 - **Status**: draft
 
 Upon confirmed E-stop detection, the CVC software shall: (a) transition the vehicle state machine to SAFE_STOP, (b) transmit an E-stop CAN message on CAN ID 0x001 with E2E protection, containing the E-stop status (1 = active), alive counter, and CRC-8, (c) continue transmitting the E-stop message every 10 ms until the E-stop button is released (GPIO PC13 returns HIGH). The state machine shall remain in SAFE_STOP until the E-stop is released AND the operator performs a full restart sequence (power cycle or E-stop toggle cycle).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-018-019 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** E-stop requirements SWR-CVC-018 and SWR-CVC-019 are well-specified. SWR-CVC-018 correctly requires 20 ms debounce with double-read verification on GPIO PC13 to prevent false triggering from electrical noise. The ISR latency requirement (ISR within 1 ms of edge) is achievable on STM32 and correctly bounds the fault detection time. SWR-CVC-019 defines the full E-stop response chain: state machine transition + CAN broadcast + continued periodic transmission until release. The requirement for a full restart sequence (not just E-stop release) to exit SAFE_STOP is a good safety practice that prevents accidental re-engagement. Both requirements are correctly ASIL D.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-018-019 -->
 
 ---
 
@@ -405,6 +425,10 @@ The CVC software shall suppress heartbeat transmission if any of the following c
 
 The CVC software shall monitor heartbeat messages from FZC (CAN ID 0x011) and RZC (CAN ID 0x012). The software shall maintain independent timeout counters for each peer ECU. If no valid heartbeat (passing E2E check) is received from a peer ECU within 200 ms (4 heartbeat periods), the CVC shall: (a) log a DTC for the peer ECU timeout, (b) transition to DEGRADED if currently in RUN, (c) set the torque limit for the affected zone. If the FZC heartbeat times out, the CVC shall command auto-brake via CAN (in case the FZC auto-brake is not independently triggered). If the RZC heartbeat times out, the CVC shall set torque to 0.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-020-022 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Heartbeat requirements SWR-CVC-020 through SWR-CVC-022 cover CVC heartbeat TX (50 ms), heartbeat content (alive counter, vehicle state, fault bitmask), and peer heartbeat monitoring with independent timeout counters. The 200 ms timeout (4 missed periods) provides a balance between false-positive avoidance and timely fault detection. The differentiated response to FZC vs RZC timeout (FZC timeout triggers CVC-initiated auto-brake, RZC timeout sets torque to 0) shows domain-appropriate fault handling. ASIL levels are correctly D for TX/monitoring (020, 022) and C for content formatting (021). One note: the 200 ms timeout plus CAN latency should be verified against the FTTI to ensure the total detection-to-reaction time meets safety requirements.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-020-022 -->
+
 ---
 
 ## 9. Watchdog Requirements
@@ -419,6 +443,10 @@ The CVC software shall monitor heartbeat messages from FZC (CAN ID 0x011) and RZ
 - **Status**: draft
 
 The CVC software shall toggle the TPS3823 WDI pin (configured GPIO) once per main loop iteration. The toggle shall only execute when all four conditions are satisfied: (a) main loop completed one full iteration (all runnables returned), (b) stack canary (0xDEADBEEF) intact at the bottom of the main task stack, (c) RAM test pattern (32-byte alternating 0xAA/0x55 pattern at reserved address) matches expected values after write-read-compare, (d) CAN controller not in bus-off state. The toggle shall alternate between HIGH and LOW on each invocation. If any condition fails, the watchdog shall not be toggled, and the TPS3823 shall reset the MCU after the 1.6 second timeout expires.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-023 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SWR-CVC-023 defines the external watchdog feed with four qualifying conditions: full loop iteration, stack canary integrity, RAM test pattern verification, and CAN controller not in bus-off. This is excellent defensive programming -- the watchdog is not just a simple toggle but verifies multiple system health indicators before feeding. The specific 0xDEADBEEF stack canary and 0xAA/0x55 alternating RAM test pattern are industry-standard memory integrity checks. The 1.6 second TPS3823 timeout provides a hard upper bound for fault reaction time independent of software. Correctly ASIL D. No concerns.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-023 -->
 
 ---
 
@@ -447,6 +475,10 @@ The CVC software shall monitor CAN bus health by: (a) checking the CAN controlle
 - **Status**: draft
 
 The CVC software shall attempt CAN bus recovery after bus-off by enabling automatic retransmission per the CAN 2.0B protocol. The software shall count recovery attempts: if 3 recovery attempts fail within 10 seconds, the software shall disable the CAN controller and transition to SHUTDOWN. During recovery, the vehicle state shall remain SAFE_STOP (motor disabled, brakes applied via last valid command to FZC).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-024-025 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** CAN recovery requirements SWR-CVC-024 and SWR-CVC-025 cover bus loss detection and bus-off recovery. SWR-CVC-024 correctly defines bus loss as no valid CAN RX for 500 ms across all messages, which distinguishes it from single-message timeout. SWR-CVC-025 limits recovery attempts to 3 within 10 seconds before transitioning to SHUTDOWN, preventing infinite recovery loops. The SAFE_STOP state during recovery ensures motor is disabled. ASIL D for both is correct since CAN loss affects all safety functions. One question: the 500 ms threshold in SWR-CVC-024 is conservative -- by that time, peer ECU heartbeat timeouts (200 ms) would already have triggered degraded operation. Consider whether the bus loss detection adds value beyond what heartbeat monitoring already provides, or whether it serves as a belt-and-suspenders diagnostic.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-024-025 -->
 
 ---
 
@@ -498,6 +530,10 @@ The display update shall be triggered within 200 ms of any vehicle state transit
 
 When in RUN state, the CVC software shall display on the OLED: current motor speed in RPM (received from RZC via CAN), current torque request percentage, battery voltage (received from RZC via CAN), and CVC uptime in seconds. The display shall format numeric values with appropriate units ("RPM", "%", "V", "s"). If any CAN data source is unavailable (E2E failure), the display shall show "---" for the affected field.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-026-028 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Display requirements SWR-CVC-026 through SWR-CVC-028 are correctly classified as QM since the OLED display does not contribute to any safety goal. SWR-CVC-026 specifies SSD1306 I2C initialization at 400 kHz with graceful fallback on failure. SWR-CVC-027 defines the fault display page with vehicle state, active fault enumeration, and DTC count. SWR-CVC-028 covers the operational display with speed, torque, voltage, and uptime. The "---" placeholder for unavailable CAN data is a good user-facing degradation pattern. No safety concerns with QM classification.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-026-028 -->
+
 ---
 
 ## 12. Startup Self-Test Requirements
@@ -522,6 +558,10 @@ The CVC software shall execute the following self-test sequence at power-on befo
 7. **RAM test pattern**: Write 32 bytes of alternating 0xAA/0x55 to the reserved test address and verify readback. Failure: remain in INIT.
 
 If all tests pass, fire the SELF_TEST_PASSED event to the state machine. If any safety-relevant test fails, fire the SELF_TEST_FAILED event (transitions to SAFE_STOP).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-029 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SWR-CVC-029 defines a comprehensive 7-step startup self-test sequence covering clock verification, SPI peripheral test, CAN loopback, RAM integrity, stack canary, MPU configuration, and RAM test pattern. This directly satisfies ISO 26262 Part 5 requirements for power-on self-test of safety mechanisms. The test sequence is ordered correctly (clock before peripherals, peripherals before communication). The CAN loopback test verifies the full TX-RX path before entering normal operation. The SELF_TEST_FAILED event correctly prevents transition to RUN and forces SAFE_STOP. ASIL D is correct. One note: the startup test sequence duration is not bounded -- a total timeout for the entire sequence should be specified to prevent the system from hanging in INIT indefinitely.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-029 -->
 
 ---
 
@@ -551,6 +591,10 @@ The CVC software shall persist diagnostic trouble codes in a dedicated flash sec
 
 The CVC software shall store calibratable parameters in a dedicated NVM region with CRC-16 protection. Calibratable parameters shall include: pedal plausibility threshold (default: 819 counts), pedal stuck threshold (default: 10 counts), pedal stuck timeout (default: 100 cycles), torque ramp rate limit (default: 0.5% per cycle), pedal-to-torque lookup table (16 entries), and display brightness (default: 128). On startup, the software shall load calibration data from NVM; if the CRC is invalid, the software shall use compile-time default values and log a DTC. Calibration data writes shall require UDS Security Access.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-030-031 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** NVM requirements SWR-CVC-030 and SWR-CVC-031 cover DTC persistence and calibration parameter storage. SWR-CVC-030 correctly specifies CRC-16 protection for DTC data, incremental write on status change, and full NVM load on startup with fallback to empty DTC table on CRC failure. SWR-CVC-031 defines calibratable parameters with CRC-16 protection, compile-time defaults as fallback, and UDS Security Access requirement for writes. The specific default values (plausibility threshold 819, stuck threshold 10, ramp rate 0.5%) are consistent with the pedal processing requirements. ASIL B for 030 and QM for 031 are reasonable -- DTC persistence is not safety-critical in real-time but supports post-incident analysis, while calibration parameters are protected by the UDS security gate.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-030-031 -->
+
 ---
 
 ## 14. WCET and Scheduling Requirements
@@ -578,6 +622,10 @@ The CVC RTOS (FreeRTOS) scheduler shall configure the following runnables with f
 | Swc_DisplayUpdate | 200 ms | Low (4) | 2000 us | QM |
 
 Safety runnables (priority 2) shall preempt QM runnables (priority 4). Total worst-case CPU utilization shall not exceed 80% of the 10 ms cycle. Priority inheritance shall be enabled on all shared mutexes to prevent priority inversion.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-032 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** SWR-CVC-032 defines the RTOS task configuration with a concrete task table including period, priority, WCET budget, and ASIL for each runnable. The total CPU utilization cap at 80% provides 20% margin for interrupt overhead and jitter, which is appropriate for ASIL D. Priority inheritance on shared mutexes correctly addresses priority inversion risk. The E-stop ISR at 50 us budget and highest priority ensures the fastest possible response. One concern: the task table shows Swc_PedalRead and Swc_StateMachine both at 10 ms with priority 2, but with different WCET budgets (200 us vs 300 us). The sum of all 10 ms runnables (200+300+100+100+100 = 800 us) should be verified against the 10 ms period with margin. The WCET values are budgets at the requirements phase and must be verified by measurement at SWE.4.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-032 -->
 
 ---
 
@@ -634,6 +682,10 @@ The CVC software shall support the following UDS Data Identifiers for ReadDataBy
 | 0xF016 | Uptime (seconds) | 4 bytes | Read |
 
 Write access to DIDs 0xF190 and calibration DIDs shall require UDS Security Access (service 0x27).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-033-035 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Diagnostic requirements SWR-CVC-033 through SWR-CVC-035 cover UDS service routing, DTC management, and DIDs. SWR-CVC-033 correctly specifies UDS physical/functional addressing (0x7E0/0x7DF) with session management and S3 server timer. SWR-CVC-034 defines the DTC event table with 12 fault types, including correct DTC codes, debounce thresholds, and freeze frame snapshots. SWR-CVC-035 lists 11 DIDs with appropriate read/write access control via UDS Security Access for sensitive parameters. All three are correctly QM since diagnostics support maintenance, not real-time safety. The DTC numbering (0xC00100 through 0xC50200) is consistent with the DTC mapping in sw-architecture.md. The UDS Security Access gate for calibration writes is a good security practice.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-033-035 -->
 
 ---
 
@@ -700,6 +752,10 @@ Write access to DIDs 0xF190 and calibration DIDs shall require UDS Security Acce
 | Fault injection | 8 |
 | Demonstration | 2 |
 | Analysis (WCET) | 1 |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWR-CVC-TRACE -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability summary shows complete upstream mapping for all 35 SWR-CVC requirements to SYS, TSR, and SSR documents. Some requirements (SWR-CVC-016, 017, 026-028, 030, 031, 033-035) trace only to SYS without TSR/SSR -- this is correct because these are functional or QM requirements that do not derive from safety requirements. The ASIL distribution (18 D, 6 C, 2 B, 9 QM) reflects the CVC's role as the safety-critical vehicle brain. The verification method summary (22 unit tests, 16 SIL, 8 PIL, 8 fault injection) demonstrates multiple verification levels per ASPICE SWE.4-6 practices. One observation: SWR-CVC-018 and SWR-CVC-019 (E-stop) are listed as ASIL B in the distribution table but the requirement text says ASIL D -- this discrepancy should be resolved.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWR-CVC-TRACE -->
 
 ---
 

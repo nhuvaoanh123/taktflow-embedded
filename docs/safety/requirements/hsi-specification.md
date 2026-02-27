@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every interface specification element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per interface specification element. File naming: `HSI-<interface>.md`.
+
 
 # Hardware-Software Interface Specification
 
@@ -115,6 +119,10 @@ All three zone ECUs (CVC, FZC, RZC) use the STM32G474RE Nucleo-64 board. This se
 | 7 | (ECU-specific) | (varies) | (varies) | -- | ECU-specific isolation |
 
 Region 6 provides stack overflow detection. Any access to this 256-byte guard zone at the bottom of the main task stack triggers a MemManage fault, which the handler translates into an immediate watchdog suppress (MCU reset via TPS3823).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 3 defines the common STM32G474RE platform specifications shared across CVC, FZC, and RZC. The MCU specs (170 MHz, 512 KB flash, 128 KB SRAM, 32 KB CCMRAM) are correct per the STM32G474RE datasheet. The clock configuration (8 MHz HSE -> PLL -> 170 MHz SYSCLK) is standard for the Nucleo-64 board. The memory map correctly places safety-critical variables in CCMRAM (non-DMA-accessible, reducing corruption risk). The MPU configuration with 7 regions is well-designed: Region 0 (background no-access) catches wild pointers, Region 6 (stack guard) detects overflow. The BOR Level 4 (2.7V) is appropriate for preventing execution at brownout voltages. The PVD at 2.9V provides early warning for graceful degradation. No gaps identified in the common platform specification.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC3 -->
 
 ### 3.5 Startup Sequence (Common)
 
@@ -329,6 +337,10 @@ Total self-test time: < 120 ms.
 | SRAM parity | Parity check on SRAM1 and SRAM2 | ~90% (single-bit error detection) |
 | FDCAN error counters | TEC/REC monitoring, bus-off detection | 90% (CAN bus fault detection) |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4 (CVC HSI) is comprehensive. Pin mapping is clear with net names and external component references. The SPI1 configuration (CPOL=0, CPHA=1, MSB first, 16-bit) matches the AS5048A datasheet requirements. The FDCAN1 bit timing (5 MHz TQ clock, 10 TQ per bit = 500 kbps) is correct. The note about PA5 dual-use (SPI1_SCK vs onboard LED) is an important implementation detail for Nucleo-64 boards. The CVC memory layout provides adequate reserves (~60 KB SRAM1, ~30 KB SRAM2, ~31 KB CCMRAM). The NVM dual-copy scheme for DTC and vehicle state provides corruption protection. The startup self-test sequence (7 steps, < 120 ms) covers all critical subsystems. Timing constraints sum to < 8 ms within the 10 ms main loop. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC4 -->
+
 ## 5. FZC -- Front Zone Controller
 
 ### 5.1 Pin Mapping Table
@@ -448,6 +460,10 @@ Total self-test time: < 560 ms.
 | MPU | Stack guard, peripheral isolation | Spatial FFI |
 | USART2 + DMA | Autonomous lidar reception | 80% (checksum + timeout) |
 | Brown-out detection | Reset at VDD < 2.7 V | Prevents low-voltage operation |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 5 (FZC HSI) correctly specifies the steering and brake servo PWM, lidar UART, and steering angle sensor interfaces. The TIM2 PWM configuration (50 Hz, 1-2 ms pulse) matches standard hobby servo protocol. The USART2 DMA circular buffer (18 bytes = 2 lidar frames) enables autonomous reception without CPU intervention. The SPI2 for steering sensor reuses the CVC SPI1 configuration, which is appropriate given the same AS5048A part. The FZC startup self-test is the longest at 560 ms due to the lidar handshake (500 ms for 3 valid frames). The pin mapping correctly uses PA0/PA1 for steering/brake PWM, which avoids conflicts with FDCAN1 on PA11/PA12. The 3-level PWM disable documented in HSR-FZC-006 is reflected in the TIM2 CCER configuration. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC5 -->
 
 ## 6. RZC -- Rear Zone Controller
 
@@ -591,6 +607,10 @@ Total self-test time: < 90 ms.
 | MPU | Stack guard, peripheral isolation | Spatial FFI |
 | TIM4 encoder mode | Zero-CPU-overhead speed/direction measurement | 75% (with SW plausibility) |
 | Brown-out detection | Reset at VDD < 2.7 V | Prevents low-voltage operation |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 6 (RZC HSI) correctly specifies the motor driver (BTS7960), current sensor (ACS723), temperature sensor (NTC), encoder (TIM4), and battery monitoring interfaces. The TIM1 PWM at 20 kHz is appropriate for DC motor drive (above audible range). The ADC scan at 1 kHz with DMA provides continuous 4-channel monitoring without CPU intervention. The note that all 4 ADC channels are scanned at 1 kHz but software processes temperature/battery at 10 Hz is an important implementation detail. The pin mapping correctly uses separate pins for motor PWM (PA8/PA9) and motor enable (PB0/PB1) with pull-downs documented. The encoder interface on TIM4 (PB6/PB7) with encoder mode 3 (both edges) provides maximum resolution. The RZC startup self-test includes ACS723 zero-current calibration (64 samples over 64 ms), which is critical for accurate current measurement. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC6 -->
 
 ## 7. SC -- Safety Controller
 
@@ -793,6 +813,10 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 | Safety HW | External WDT only | Lockstep + ESM + PBIST + ECC + external WDT |
 | Dev tool | STM32CubeIDE + CubeMX | Code Composer Studio + HALCoGen |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 7 (SC HSI) is the most detailed and critical section, covering the TMS570LC43x lockstep platform. The DCAN1 configuration correctly shows 7 mailboxes with exact-match acceptance masks for the monitored CAN IDs. The mailbox list includes 0x101 (torque request) which is separate from 0x100 (vehicle state) -- this should be verified against the CAN matrix to confirm these are indeed separate CAN IDs. The GIO configuration note about GIO_A[4] being WDT (not status LED) and GIO_B[1] being system fault LED is an important deviation from the initial pin mapping that must be kept in sync. The RTI configuration for 10 ms tick (75 MHz / 7500 = 10 kHz, then compare at 100 = 10 ms) is correct. The RAM usage detail shows only ~3 KB of 512 KB used, which is expected for a bare-metal safety monitor. The diverse redundancy summary (Section 7.9) is valuable -- it clearly demonstrates diversity across 8 dimensions (vendor, CPU, compiler, BSW, CAN mode, OS, safety HW, dev tool). The startup sequence with blink-count error indication is consistent with SSR-SC-016. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC7 -->
+
 ## 8. Cross-ECU Interface Summary
 
 ### 8.1 Interrupt Priority Assignment
@@ -830,6 +854,10 @@ Note: GIO_A[4] is used for the TPS3823 WDI (watchdog feed), and GIO_B[1] is used
 | Brake servo | 12V actuator rail | **Gated** | Loses power (mechanical hold) |
 | BTS7960 | 12V actuator rail | **Gated** | Loses power (motor stops) |
 | Relay coil | 12V main rail | SC GIO_A[0] | De-energized = contacts open |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSI-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 8 provides critical cross-ECU integration information. The interrupt priority assignment table correctly places E-stop at highest priority (0) on CVC, with SysTick at priority 2 (required for FreeRTOS). The SC uses FIQ (highest) for ESM lockstep error, ensuring immediate relay de-energize. The power domain dependency table (Section 8.2) is the most critical cross-ECU information: it clearly shows that all ECU compute boards remain powered when the kill relay opens, but actuators (steering servo, brake servo, BTS7960) lose power. This is correct -- ECUs must continue operating to log DTCs and maintain safe state monitoring. The SC's independent power path (not gated by kill relay) is correctly documented. One observation: the CVC, FZC, and RZC are powered via "Nucleo LDO" which is the Nucleo-64 board's onboard 3.3V regulator powered from 12V -- this should be verified for adequate current capacity when all peripherals are active.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSI-SEC8 -->
 
 ## 9. Traceability
 

@@ -21,12 +21,20 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every vECU element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per vECU element. File naming: `VECU-ARCH-<element>.md`.
+
 
 # Virtual ECU Architecture
 
 ## 1. Purpose
 
 This document defines the architecture for the simulated ECU platform (vECU) used in the Taktflow Zonal Vehicle Platform. The vECU platform enables three ECUs (BCM, ICU, TCU) to run as Docker containers on a development PC or CI/CD server, using the same C source code as physical ECUs with a POSIX-based MCAL backend. This enables Software-in-the-Loop (SIL) testing and continuous integration without physical hardware.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The purpose clearly defines the vECU platform as a SIL testing enabler, not a safety-critical component. The key value proposition (same C source code, different MCAL backend) is correctly stated. The scope is appropriate for an SWE.2 companion document.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC1 -->
 
 ## 2. Referenced Documents
 
@@ -58,6 +66,10 @@ This document defines the architecture for the simulated ECU platform (vECU) use
 ### 3.3 ASIL Classification
 
 All simulated ECUs are classified as QM (Quality Management). They do not contribute to any safety goal. Safety-critical functions (pedal sensing, motor control, steering, braking, safety monitoring) are exclusively implemented on the physical ECUs.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The scope correctly identifies what is in-scope (three vECUs, POSIX MCAL, Docker, CAN bridge) and what is out-of-scope (physical plant simulation, timing accuracy, safety-critical execution). The QM classification for all simulated ECUs is correct and explicitly stated. The out-of-scope items are honest about the SIL limitations -- particularly that Linux timers are not RTOS-precise, which is important context for interpreting SIL test results. The SOME/IP note as "supplementary demo feature" correctly positions it outside the primary architecture.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC3 -->
 
 ---
 
@@ -113,6 +125,10 @@ This enables:
 1. Application code developed and tested on Linux (fast iteration)
 2. Same binary logic validated on physical hardware (confidence)
 3. SIL tests that exercise the full BSW stack without hardware
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The platform abstraction stack diagram clearly shows the identical layers between physical and simulated ECUs, with only the MCAL and Hardware/OS layers differing. The key design principle ("same application code, different MCAL") is the architectural foundation of the SIL strategy and is well-justified. This enables the CI/CD pipeline to validate functional correctness without hardware, which is critical for development velocity. The three benefits listed (fast iteration, hardware validation, full BSW stack SIL) are accurate and well-ordered.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC4 -->
 
 ---
 
@@ -302,6 +318,10 @@ void Adc_Posix_InjectValue(Adc_GroupType Channel, Adc_ValueGroupType Value) {
 
 These are minimal stubs that log PWM duty cycle changes and SPI transactions to stdout/syslog. Simulated ECUs (BCM, ICU, TCU) do not use PWM or SPI in their application logic, so these stubs exist only for API completeness.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The POSIX MCAL implementations are well-detailed with complete code for Can_Posix.c (SocketCAN), Gpt_Posix.c (POSIX timer), Dio_Posix.c (memory-mapped GPIO stub), and Adc_Posix.c (configurable ADC stub with test injection). The Can_Posix implementation correctly uses non-blocking recv (MSG_DONTWAIT) for polling mode, consistent with the scheduling model. The Adc_Posix test injection function (Adc_SetSimulatedValue) enables external test scripts to inject sensor data, which is good for SIL test controllability. The Pwm and Spi stubs are correctly minimal since BCM/ICU/TCU do not use these peripherals. One concern: the Can_Posix Can_MainFunction_Read only reads one frame per call -- if multiple frames are queued in the SocketCAN buffer, they will be processed one per tick rather than draining the buffer, which could cause message buildup under high bus load.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC5 -->
+
 ---
 
 ## 6. Docker Container Structure
@@ -422,6 +442,10 @@ services:
     restart: unless-stopped
 ```
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The Docker container structure is well-defined with a base image (Debian slim), per-ECU Dockerfiles, and docker-compose orchestration. The network configuration using host networking with vcan0 is appropriate for SIL testing. The vcan-setup init container that creates and configures the virtual CAN interface before ECU containers start is a clean approach. The container design follows infrastructure best practices: non-root user, minimal base image, volume mounts for configuration. One observation: the docker-compose uses "restart: unless-stopped" which is good for development but should be documented as not suitable for production deployment where container health checks and orchestration (Kubernetes) would be needed.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC6 -->
+
 ---
 
 ## 7. CAN Bridge Configuration
@@ -485,6 +509,10 @@ ip link show can0
 sudo ip link set can0 type can bitrate 500000
 sudo ip link set can0 up
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The CAN bridge configuration covers both virtual CAN (vcan0 for pure SIL) and physical CAN bridge (CANable 2.0 via slcand for mixed physical+simulated testing). The vcan setup commands are standard Linux SocketCAN practice. The physical CAN bridge section correctly identifies the CANable 2.0 USB-to-CAN adapter and the slcand daemon configuration for 500 kbps. This enables progressive testing from pure simulation to mixed hardware integration, which is a strong verification strategy.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC7 -->
 
 ---
 
@@ -568,6 +596,10 @@ The `PLATFORM_POSIX` / `PLATFORM_STM32` defines allow platform-specific code pat
 
 The goal is to minimize `#ifdef` blocks. Platform differences should be isolated to the MCAL layer. Application SWCs and BSW services should compile without any `#ifdef PLATFORM_*` directives.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The build system section documents platform selection via Makefile variables (PLATFORM=posix vs stm32), POSIX-specific compiler flags, and the ifdef minimization principle. The goal of zero `#ifdef PLATFORM_*` in application and BSW code is excellent and consistent with the portability architecture. The POSIX-specific flags (-lpthread, -lrt for POSIX timers) are correctly identified. This section provides clear instructions for building vECU binaries.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC8 -->
+
 ---
 
 ## 9. CI/CD Integration
@@ -647,6 +679,10 @@ jobs:
 | State machine | Verify vehicle state transitions via CAN | Inject state change triggers, verify broadcast |
 | DTC flow | Verify DTC storage and retrieval chain | Trigger fault, verify DTC in Dem, read via UDS |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The CI/CD integration section outlines a GitHub Actions workflow concept with vcan0 setup, POSIX build, unit tests, and SIL test execution. The SIL test scenarios table covers the critical paths (heartbeat, E-stop, pedal fault, CAN timeout, E2E, state machine, DTC flow). This section correctly positions SIL testing as automated CI validation that runs on every push/PR. One gap: the CI workflow does not mention MISRA checking on POSIX builds -- since the BSW code is identical across platforms, running cppcheck MISRA analysis on the POSIX build in CI would catch coding standard violations early.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC9 -->
+
 ---
 
 ## 10. Limitations
@@ -678,6 +714,10 @@ jobs:
 4. EMC/electrical testing
 5. Power consumption measurement
 6. Watchdog timing verification
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The limitations section honestly documents what SIL testing cannot cover (timing accuracy, interrupt behavior, hardware-specific faults, EMC, power consumption, watchdog timing). The mitigation column correctly identifies PIL and HIL testing as the resolution path for these gaps. This transparency is valuable for safety case argumentation -- it clearly delineates the SIL test boundary and prevents over-reliance on simulation results.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC10 -->
 
 ---
 
@@ -731,6 +771,10 @@ while True:
     time.sleep(0.050)  # 50 ms cycle
 ```
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC11 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The runtime modes section defines three operational modes (pure SIL with vcan0, mixed with CANable bridge, and standalone development) with clear CAN interface and Docker configuration for each. The Python test injection script example demonstrates how external test harnesses can stimulate the vECU system via SocketCAN, which enables automated SIL test scenarios. This multi-mode approach supports progressive integration testing from pure simulation to mixed physical/simulated environments.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC11 -->
+
 ---
 
 ## 12. Directory Structure
@@ -768,6 +812,10 @@ docker/
   Dockerfile.tcu    -- TCU container
   docker-compose.yml -- Orchestration for all 3 vECUs + vcan setup
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-VECUARCH-SEC12 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The directory structure clearly shows the file organization for vECU firmware sources, POSIX MCAL implementations, Docker configuration, and test scripts. The layout is consistent with the project's overall firmware directory structure described in CLAUDE.md. No concerns.
+<!-- HITL-LOCK END:COMMENT-BLOCK-VECUARCH-SEC12 -->
 
 ---
 

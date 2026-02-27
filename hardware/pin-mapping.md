@@ -20,6 +20,9 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every pin mapping topic in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`hardware/lessons-learned/`](lessons-learned/). One file per pin mapping topic. File naming: `PIN-<topic>.md`.
 
 # Pin Mapping
 
@@ -70,6 +73,10 @@ Complete pin assignment for all physical ECUs (CVC, FZC, RZC, SC). This document
 
 **Total pins used: 13** (out of 51 available GPIO on STM32G474RE Nucleo-64)
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-CVC-ASSIGN -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The CVC pin assignment table is comprehensive with 13 pins clearly documented. All critical fields (AF, direction, voltage, ASIL, net name) are present. The dual pedal sensors on SPI1 with separate chip selects (PA4, PA15) support the redundant pedal sensing required by SYS-001. The I2C1 OLED on PB8/PB9 is correctly rated ASIL B (status display, not safety-critical actuation). The E-stop on PC13 (EXTI) enables interrupt-driven detection. The WDT feed on PB0 aligns with the TPS3823 hardware watchdog architecture. The total of 13 out of 51 pins leaves ample room for expansion.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-CVC-ASSIGN -->
+
 ### 4.2 Pin Conflict Check
 
 | Check | Result |
@@ -78,6 +85,10 @@ Complete pin assignment for all physical ECUs (CVC, FZC, RZC, SC). This document
 | PA11/PA12 used for both FDCAN1 and USB? | No conflict -- USB D+/D- are on PA11/PA12 but FDCAN1 uses the same pins with AF9. USB is not used simultaneously with CAN. Nucleo ST-LINK uses a separate USB connection. |
 | PC13 used for both E-stop and onboard button (B1)? | SHARED -- PC13 is the Nucleo user button B1. For the CVC, B1 doubles as the E-stop input in bench testing. For final integration, an external NC button replaces B1. |
 | I2C1 on PB8/PB9 vs PB6/PB7? | Using PB8/PB9 (AF4). PB6/PB7 are reserved for potential TIM4 encoder (not used on CVC). |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-CVC-CONFLICT -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The pin conflict analysis is thorough. The PA5/SPI1_SCK vs onboard LED LD2 conflict is correctly identified with a practical resolution (SB21 removal or accept LED blinking). The PA11/PA12 FDCAN1 vs USB clarification is important for developers. The PC13 dual-use as E-stop and user button B1 is a pragmatic bench-testing approach. All conflicts have documented resolutions. No unidentified conflicts found.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-CVC-CONFLICT -->
 
 ### 4.3 Unused Pin Handling
 
@@ -108,6 +119,10 @@ All unused GPIO pins on the CVC shall be configured as GPIO output LOW at initia
 
 **Total pins used: 14** (out of 51 available GPIO)
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-FZC-ASSIGN -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The FZC pin assignment is well-organized with 14 pins. The steering and brake servos on TIM2 CH1/CH2 (PA0/PA1) provide synchronized 50 Hz PWM, which is correct for standard hobby servos. The lidar UART on USART2 (PA2/PA3) requires solder bridge removal (documented in section 9). The steering angle sensor on SPI2 (PB13-PB15) avoids the SPI1/LD2 conflict present on CVC. The buzzer driver through a 2N7002 MOSFET (PB4) is appropriate for a 3.3V GPIO driving an active buzzer. ASIL ratings are correct: D for steering/CAN, C for lidar, B for buzzer, QM for LEDs.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-FZC-ASSIGN -->
+
 ### 5.2 Pin Conflict Check
 
 | Check | Result |
@@ -115,6 +130,10 @@ All unused GPIO pins on the CVC shall be configured as GPIO output LOW at initia
 | FZC SPI2 on PB13-PB15 conflict? | No conflict -- SPI2 pins (PB13-PB15) have no onboard peripheral. SPI2 avoids SB21 solder bridge conflict (PA5/LD2) on Nucleo-64. |
 | PA2/PA3 used for both USART2 and Nucleo ST-LINK VCP? | CONFLICT -- PA2/PA3 are the Nucleo ST-LINK virtual COM port USART2. Resolved: disconnect SB63/SB65 solder bridges on Nucleo to free PA2/PA3 for lidar UART. Debug printf can use LPUART1 or SWO instead. |
 | TIM2_CH1 (PA0) and TIM2_CH2 (PA1) on same timer? | By design -- both servo PWMs on TIM2 for synchronized 50 Hz update. |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-FZC-CONFLICT -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The PA2/PA3 conflict with ST-LINK VCP is correctly identified as the most significant FZC conflict. The SB63/SB65 removal resolution is documented with the debug alternative (LPUART1 or SWO). The TIM2 CH1/CH2 on same timer is correctly noted as by design. No unidentified conflicts found. The SPI2 pin choice avoids the PA5/LD2 issue, which is a good lesson-learned application from the CVC.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-FZC-CONFLICT -->
 
 ### 5.3 Unused Pin Handling
 
@@ -150,6 +169,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 > **Note**: PB3 (RZC LED Red, pin #17) is shared with SWO (Serial Wire Output) debug trace. If SB63/SB65 are removed to free PA2/PA3, SWO on PB3 becomes the recommended alternative debug output. If SWO debug is needed on RZC, relocate LED Red to another available pin (e.g., PC10).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-RZC-ASSIGN -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The RZC has the most pins (17) of any ECU, reflecting its motor control and sensing complexity. The motor PWM on TIM1 CH1/CH2 (PA8/PA9) with separate enable pins (PB0/PB1) for the BTS7960 H-bridge is correctly configured. The comprehensive ADC inputs (6 channels: current, motor temp, board temp, battery voltage, BTS7960 IS_R, IS_L) provide thorough motor monitoring. The encoder on TIM4 (PB6/PB7) in encoder mode is correct. Note: PB0 is used for motor R_EN on RZC (not WDT as on CVC/FZC), with WDT moved to PB4 -- this cross-ECU pin role difference is correctly documented in section 8.2.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-RZC-ASSIGN -->
+
 ### 6.2 Pin Conflict Check
 
 | Check | Result |
@@ -159,6 +182,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 | PB6/PB7 for encoder (TIM4) vs I2C1? | By design -- RZC uses TIM4 encoder mode on PB6/PB7. I2C1 is not used on RZC (no OLED on RZC). |
 | PA2/PA3 Nucleo ST-LINK VCP conflict? | PA2/PA3 used for ADC on RZC. SB63/SB65 solder bridges must be removed (same as FZC). Debug via SWO or LPUART1. |
 | TIM1 for motor PWM vs TIM4 for encoder? | No conflict -- different timers on different pins. |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-RZC-CONFLICT -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The conflict checks are thorough. The PA0-PA3 ADC-only usage is confirmed with no digital function conflicts. The PB0 cross-ECU difference is correctly noted as separate physical boards. The PB6/PB7 TIM4 encoder vs I2C1 trade-off is documented (no OLED on RZC). The PA2/PA3 SB63/SB65 removal is shared with FZC. The PB3/SWO conflict for LED Red is noted with PC10 as an alternative -- this should be resolved before final assembly. No unidentified conflicts found.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-RZC-CONFLICT -->
 
 ### 6.3 Unused Pin Handling
 
@@ -184,6 +211,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 **Total pins used: 9** (DCAN1: 2 pins, GIO_A: 6 pins, GIO_B: 1 pin)
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-SC-ASSIGN -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The SC pin assignment is minimal (9 pins) reflecting its focused role as a safety monitor. The DCAN1 for CAN communication, GIO_A0 for kill relay control (ASIL D), and GIO_A1-A4 for per-ECU fault LEDs (ASIL B) are correctly prioritized. The TPS3823 WDT on GIO_A5 is consistent with the other ECUs. Using the onboard LED1 (GIO_B1) for heartbeat blink is practical for a demo. The kill relay on GIO_A0 with IRLZ44N MOSFET + 100R gate resistor + 10k pulldown follows safe default logic (relay de-energized on reset = motor power cut).
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-SC-ASSIGN -->
+
 ### 7.2 TMS570LC43x LaunchPad Connector Reference
 
 | Connector | Pins Available | Used By |
@@ -201,6 +232,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 | GIO_A pins: any conflict with onboard peripherals? | J3 header provides direct access to GIO_A0-A7. No conflict with onboard components (onboard LEDs are on GIO_B). |
 | GIO_B1 (LED1) used for heartbeat vs other function? | GIO_B1 is the onboard LED1. Used only for heartbeat blink (QM). No conflict. |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-SC-CONFLICT -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The conflict checks are straightforward given the SC's simple pin usage. Using DCAN1 (not DCAN4) due to the HALCoGen mailbox bug is a critical note -- ensure this is also documented in the lessons-learned. No conflicts between GIO_A and onboard peripherals. The GIO_B1 heartbeat LED has no conflict. No unidentified issues found.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-SC-CONFLICT -->
+
 ### 7.4 DCAN1 Configuration Notes
 
 1. **DCAN1 module**: Enabled via HALCoGen configuration tool.
@@ -208,6 +243,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 3. **Bit timing**: Configured for 500 kbps with 80% sample point (see HW Design section 6.3).
 4. **Mailboxes**: Configure message objects 1-15 for reception of heartbeat (0x010-0x012), vehicle state (0x100), torque request (0x101), motor current (0x301).
 5. **Edge connector wiring**: DCAN1TX and DCAN1RX available on edge connector J5. Wire to SN65HVD230 breakout board.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-SC-DCAN -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The DCAN1 configuration notes are essential for the SC setup. The silent mode (listen-only) is critical for the safety controller's passive monitoring architecture -- it must not interfere with CAN bus traffic. The 500 kbps with 80% sample point matches the STM32 ECUs' CAN configuration. The mailbox configuration (objects 1-15 for specific CAN IDs) is appropriately selective. The note about HALCoGen and the edge connector wiring provides practical build guidance. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-SC-DCAN -->
 
 ---
 
@@ -250,6 +289,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 **Note**: PB0 serves different functions on different ECUs. On CVC and FZC, it feeds the watchdog. On RZC, it controls the motor R_EN (watchdog moved to PB4).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-AF-SUMMARY -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The alternate function summary and cross-ECU pin commonality tables are excellent reference material. Section 8.1 clearly shows all AF numbers in use, which helps identify potential conflicts at a glance. Section 8.2 is particularly valuable for the BSW team -- it shows which pins serve different functions across ECUs, requiring per-ECU GPIO initialization configuration. The PB0 and PB4 role swap between CVC/FZC and RZC is clearly documented. The AN (ADC1) row confirms PA0-PA4 and PB15 are analog-only on RZC. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-AF-SUMMARY -->
+
 ---
 
 ## 9. Nucleo-64 Solder Bridge Modifications
@@ -265,6 +308,10 @@ The following solder bridge changes are required on the Nucleo-64 boards:
 | CVC | SB21 | REMOVE (optional) | Disconnect PA5 from onboard LED LD2 (SPI1_SCK interference). Alternatively, accept LED blinking with SPI clock. |
 
 **Note**: After removing SB63/SB65, printf debug output must use LPUART1 (PG7/PG8 on morpho) or SWO (PB3) instead of the default USART2 VCP.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-PIN-SOLDER-BRIDGE -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The solder bridge modification table is critical for build reproducibility. All required modifications are clearly identified per ECU with reasons. The optional SB21 on CVC (PA5/LD2) is appropriately marked as optional. The debug output alternative (LPUART1 or SWO) after SB63/SB65 removal is important practical guidance. Consider adding photos or Nucleo board diagrams showing solder bridge locations in the schematics folder for build documentation. This section should be one of the first references when setting up new boards.
+<!-- HITL-LOCK END:COMMENT-BLOCK-PIN-SOLDER-BRIDGE -->
 
 ---
 

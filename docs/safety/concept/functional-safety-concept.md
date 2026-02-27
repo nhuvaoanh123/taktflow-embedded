@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every safety concept element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per safety concept element. File naming: `FSC-<topic>.md`.
+
 
 # Functional Safety Concept
 
@@ -59,6 +63,10 @@ The following safety goals were derived from the HARA and form the basis for thi
 | SG-006 | Ensure motor protection (overcurrent/overtemp) | A | Motor off | 500 ms |
 | SG-007 | Ensure obstacle detection | C | Controlled stop | 200 ms |
 | SG-008 | Ensure independent safety monitoring | C | System shutdown | 100 ms |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Sections 1-3 establish the FSC context correctly. The purpose statement accurately describes the FSC's role as bridging "what must be prevented" (safety goals) to "how the system prevents it" (safety mechanisms). The safety goals summary table is consistent with the SG document. The referenced documents include ITEM-DEF, HARA, SG, FSR, SP, and DFA, which is the correct set for a functional safety concept. Note: the HARA and SG reference versions should be kept synchronized as those documents evolve.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC1 -->
 
 ## 4. Safety Mechanisms per Safety Goal
 
@@ -116,6 +124,10 @@ Unintended acceleration is the highest-severity hazard. Multiple independent saf
 - **FTTI compliance**: Relay de-energize time < 5 ms (relay dropout time). Total: detection time + 5 ms.
 - **Traces to**: FSR-016
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.1 defines 5 safety mechanisms for SG-001 (ASIL D), providing defense-in-depth: SM-001 (dual pedal plausibility, primary), SM-002 (motor overcurrent cutoff, secondary), SM-003 (cross-plausibility torque/current, tertiary), SM-004 (CAN E2E protection), and SM-005 (kill relay). This layered approach is appropriate for ASIL D. SM-001 achieves 99% diagnostic coverage with 30 ms total time, well within the 50 ms FTTI. SM-003 is acknowledged to exceed the 50 ms FTTI at 61 ms, but this is acceptable as a tertiary mechanism. The kill relay (SM-005) with energize-to-run pattern is a strong hardware fail-safe. One concern: SM-001 describes the dual sensors sharing SPI1 bus with separate chip-select lines -- this is a potential common cause failure path (shared SPI peripheral) that should be analyzed in the DFA. The E2E protection (SM-004) specification of CRC-8 with polynomial 0x1D, 4-bit alive counter, and data ID is well-specified and aligns with AUTOSAR E2E Profile P01.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC2 -->
+
 ### 4.2 SG-002: Prevent Unintended Loss of Drive Torque (ASIL B)
 
 Loss of drive torque is a lower-severity hazard (ASIL B) because the platform is a bench demo with limited kinetic energy. The primary risk is unexpected motor shutdown during a demonstration.
@@ -139,6 +151,10 @@ Loss of drive torque is a lower-severity hazard (ASIL B) because the platform is
 - **Diagnostic coverage**: 95%
 - **FTTI compliance**: Detection within 100 ms (heartbeat timeout), reaction within 10 ms. Total: 110 ms < 200 ms FTTI.
 - **Traces to**: FSR-014, FSR-020
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.2 provides 2 safety mechanisms for SG-002 (ASIL B): SM-006 (motor controller health monitoring) and SM-007 (CAN alive monitoring for RZC). The ASIL B rating appropriately requires fewer independent mechanisms than ASIL D. SM-006 at 80% diagnostic coverage is adequate for ASIL B. The ASIL B characterization as "lower-severity hazard because the platform is a bench demo" in the introductory text is inconsistent with assumption A-001 (ratings assume real vehicle) -- the ASIL B rating comes from the S/E/C assessment, not from the bench demo nature.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC3 -->
 
 ### 4.3 SG-003: Prevent Unintended Steering Movement (ASIL D)
 
@@ -174,6 +190,10 @@ Unintended steering movement at any speed can cause loss of vehicle control. Thi
 - **FTTI compliance**: Applied every control cycle (10 ms). Inherently within FTTI.
 - **Traces to**: FSR-008
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.3 provides 3 safety mechanisms for SG-003 (ASIL D): SM-008 (steering angle feedback), SM-009 (steering rate limiting), and SM-010 (steering angle limits). SM-008 is the primary detection mechanism with 95% diagnostic coverage. The updated fault reaction (steer fault leads to SAFE_STOP, not DEGRADED) per v1.1 is correct for a platform without mechanical fallback steering. SM-009 rate limiting at 30 degrees/second prevents sudden steering inputs but has only 60% diagnostic coverage, correctly noting its limitation for slow drift faults. SM-010 provides software angle limits with 99% coverage for out-of-range commands. One gap: there is no diverse/independent sensor for steering position feedback -- the system relies on a single AS5048A sensor. For ASIL D, this is a residual risk that should be documented and addressed in the DFA, potentially requiring a secondary feedback mechanism or acceptance as a residual risk with additional compensating measures.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC4 -->
+
 ### 4.4 SG-004: Prevent Unintended Loss of Braking (ASIL D)
 
 Loss of braking is a critical hazard (ASIL D) as the platform cannot decelerate without the brake actuator. The fail-safe strategy combines brake redundancy with motor cutoff.
@@ -208,6 +228,10 @@ Loss of braking is a critical hazard (ASIL D) as the platform cannot decelerate 
 - **FTTI compliance**: Within 50 ms when initiated by CVC command.
 - **Traces to**: FSR-025
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.4 provides 3 safety mechanisms for SG-004 (ASIL D): SM-011 (brake command monitoring), SM-012 (auto-brake on CAN timeout), and SM-013 (motor cutoff as backup deceleration). The defense-in-depth strategy is sound: SM-011 detects brake actuator faults (30 ms, within FTTI), SM-012 handles CAN communication loss (110 ms, exceeds 50 ms FTTI -- acknowledged as a design tradeoff), and SM-013 provides backup deceleration via motor cutoff. The auto-brake on CAN timeout (SM-012) is a critical autonomous action by the FZC -- it operates independently of the CVC, which is important when the CVC itself may have failed. The motor cutoff backup (SM-013) correctly acknowledges that motor back-EMF provides limited deceleration compared to active braking. The 100 ms CAN timeout for SM-012 exceeding the 50 ms FTTI is a legitimate design tradeoff to avoid false triggers.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC5 -->
+
 ### 4.5 SG-005: Prevent Unintended Braking (ASIL A)
 
 Unintended braking on a bench demo is a low-severity hazard (ASIL A). The primary risk is unexpected mechanical stress or demonstration disruption.
@@ -221,6 +245,10 @@ Unintended braking on a bench demo is a low-severity hazard (ASIL A). The primar
 - **Diagnostic coverage**: 80%
 - **FTTI compliance**: Detection within 10 ms, reaction within 10 ms. Total: 20 ms < 200 ms FTTI.
 - **Traces to**: FSR-009
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.5 provides 1 safety mechanism for SG-005 (ASIL A): SM-014 (brake command plausibility). At ASIL A, a single mechanism with 80% diagnostic coverage is sufficient. The mechanism validates brake commands against the current vehicle state and range-checks the brake command value. The characterization as "low-severity hazard" referencing "bench demo" is again inconsistent with assumption A-001 and should reference the S/E/C ratings instead.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC6 -->
 
 ### 4.6 SG-006: Ensure Motor Protection — Overcurrent/Overtemp (ASIL A)
 
@@ -250,6 +278,10 @@ Motor protection prevents hardware damage and secondary hazards (fire, fumes). A
 - **Diagnostic coverage**: 95%
 - **FTTI compliance**: Control loop response within 1 ms. Total: well within 500 ms FTTI.
 - **Traces to**: FSR-004
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.6 provides 2 safety mechanisms for SG-006 (ASIL A): SM-015 (motor temperature monitoring with derating) and SM-016 (motor current limiting). The multi-point derating curve in SM-015 is a well-designed progressive response that reduces motor stress before reaching the shutdown threshold. The hysteresis (10C below activation threshold) prevents oscillation between derating levels. SM-016 implements a 1 kHz current control loop with BTS7960 hardware backup at 43A as a diverse secondary protection. Both mechanisms operate well within the 500 ms FTTI. The dual NTC sensors with plausibility check (SM-015) provide appropriate diagnostic coverage for ASIL A.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC7 -->
 
 ### 4.7 SG-007: Ensure Obstacle Detection (ASIL C)
 
@@ -281,6 +313,10 @@ Obstacle detection enables emergency braking to prevent collisions. ASIL C requi
 - **Diagnostic coverage**: 90%
 - **FTTI compliance**: Detection within 100 ms (timeout) or 500 ms (stuck detection). Total: within 200 ms FTTI for timeout scenarios; stuck detection at 500 ms exceeds FTTI but is a slow-developing fault not requiring emergency response.
 - **Traces to**: FSR-012
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.7 provides 2 safety mechanisms for SG-007 (ASIL C): SM-017 (lidar distance monitoring with graduated thresholds) and SM-018 (lidar signal plausibility check). The three-tier graduated response (warning at 100 cm, braking at 50 cm, emergency at 20 cm) is a well-designed approach. SM-018 implements four plausibility checks: range check, stuck sensor detection, signal strength check, and timeout monitoring. The safe default distance of 0 cm (obstacle present) on plausibility failure is the correct fail-safe approach. Note that the stuck sensor detection at 500 ms exceeds the 200 ms FTTI, but this is correctly characterized as a slow-developing fault not requiring emergency response. For ASIL C, the single lidar sensor without diverse redundancy is a limitation that should be documented as a residual risk.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC8 -->
 
 ### 4.8 SG-008: Ensure Independent Safety Monitoring (ASIL C)
 
@@ -315,6 +351,10 @@ The Safety Controller provides an independent, diverse monitoring layer. Its fai
 - **Diagnostic coverage**: 99% (lockstep cores provide the highest achievable hardware diagnostic coverage for computation errors)
 - **FTTI compliance**: Lockstep comparison is immediate (every clock cycle). Self-test runs at startup and periodically (every 60 seconds for runtime checks).
 - **Traces to**: FSR-017
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.8 provides 3 safety mechanisms for SG-008 (ASIL C): SM-019 (heartbeat monitoring), SM-020 (external watchdog per ECU), and SM-021 (SC self-test and lockstep). SM-019 heartbeat monitoring at 205 ms total exceeds the 100 ms FTTI -- this is a known gap documented in the timing analysis. The mitigation via faster local mechanisms (SM-020, SM-021) is acknowledged. SM-020 (TPS3823 external watchdog) with 1.6 second timeout is explicitly characterized as a last-resort mechanism, not FTTI-compliant, which is honest and appropriate. SM-021 (TMS570 lockstep cores + ESM) provides the strongest hardware diagnostic at 99% coverage -- the lockstep comparison at every clock cycle is the gold standard for CPU fault detection. The diverse vendor approach (TI TMS570 vs. ST STM32) for the Safety Controller is a strong architectural decision for common cause failure mitigation. One concern: if all three mechanisms (SM-019, SM-020, SM-021) have timing that exceeds the 100 ms FTTI when considered individually, the composite timing argument must be made explicit in the safety case.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC9 -->
 
 ### 4.9 CVC State Machine (Cross-Cutting Safety Mechanism)
 
@@ -370,6 +410,10 @@ The Safety Controller provides an independent, diverse monitoring layer. Its fai
 - **Diagnostic coverage**: 99% (hardwired button with hardware debounce — independent of software)
 - **FTTI compliance**: Detection within 1 ms (interrupt latency), CAN transmission within 1 ms, reaction within 10 ms. Total: 12 ms < 50 ms FTTI.
 - **Traces to**: FSR-018
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.9 defines the cross-cutting mechanisms SM-022 (vehicle state machine) and SM-023 (E-stop broadcast). The state machine diagram is clear and shows all valid state transitions with entry conditions. SM-022 correctly defines operational limits per state (RUN, DEGRADED, LIMP, SAFE_STOP, SHUTDOWN). SM-023 (E-stop) achieves 12 ms total response time with a high-priority CAN ID (0x001), well within the 50 ms FTTI. The E-stop being hardware interrupt-driven (GPIO PC13 with hardware debounce) provides the lowest latency detection path. The state machine coordinates with BswM on all ECUs for synchronized degradation response (described in Section 5.3), which is an important AUTOSAR-like design pattern. One observation: the state machine allows DEGRADED to transition back to NORMAL after fault clearance and a 5-second recovery timer, but LIMP cannot transition directly to NORMAL -- this asymmetry is appropriate and conservative.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC10 -->
 
 ## 5. Warning and Degradation Concept
 
@@ -435,6 +479,10 @@ The BSW Mode Manager (BswM) on each ECU synchronizes the degradation response ac
 4. Each ECU acknowledges the mode transition via its heartbeat message (mode field).
 5. The CVC verifies all ECUs have transitioned within 100 ms. If any ECU fails to acknowledge, the CVC escalates to the next degradation level.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC11 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The warning and degradation concept (Section 5) is comprehensive. The multi-channel warning strategy covers visual (OLED, fault LEDs, status LEDs, ICU dashboard), audible (5 distinct buzzer patterns), and notes the absence of haptic warnings for the bench platform. The 5 degradation levels (NORMAL through SHUTDOWN) with specific operational limits per level (motor torque %, speed %, steering range, braking authority) provide precise guidance for implementation. The degradation transition rules are conservative and correct: forward-only transitions (except DEGRADED to NORMAL), no skip-back, irreversible shutdown, E-stop override from any state, and SC authority to force SHUTDOWN. The BswM coordination mechanism (Section 5.3) ensures all ECUs transition synchronously with a 100 ms acknowledgment timeout and escalation on failure. One observation: the degradation table shows "Full authority" for braking in all states except SHUTDOWN -- this means braking is never reduced, which is the correct approach since braking is always needed for safety.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC11 -->
+
 ## 6. Safety Mechanism Allocation Matrix
 
 The following matrix shows which safety mechanisms are allocated to which ECU. "P" = Primary implementer, "S" = Secondary/backup, "M" = Monitor.
@@ -464,6 +512,10 @@ The following matrix shows which safety mechanisms are allocated to which ECU. "
 | SM-021: SC self-test and lockstep | — | — | — | P | SG-008 |
 | SM-022: Vehicle state machine | P | S | S | M | SG-001 to SG-008 |
 | SM-023: E-stop broadcast | P | S | S | M | SG-001, SG-008 |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC12 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The safety mechanism allocation matrix (Section 6) provides a clear P/S/M assignment for all 23 safety mechanisms across the 4 ECUs. Key observations: SM-004 (CAN E2E) is correctly assigned as P to all physical ECUs and M to SC. SM-005 (kill relay) is P to SC only, which is correct for the energize-to-run pattern. SM-020 (external watchdog) is P to all physical ECUs, reflecting its per-ECU implementation. The "Safety Goals Addressed" column provides quick traceability. One observation: SM-022 (vehicle state machine) and SM-023 (E-stop) address "SG-001 to SG-008" and "SG-001, SG-008" respectively, which confirms these are cross-cutting mechanisms. The matrix correctly shows the SC as the only ECU with hardware-enforced independent safety authority (SM-005 kill relay).
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC12 -->
 
 ## 7. Safety Mechanism Timing Analysis
 
@@ -505,6 +557,10 @@ The following table verifies that each safety mechanism achieves its safe state 
 
 **Note 4 — SM-020 (External watchdog)**: The TPS3823 timeout (1.6 seconds) is intentionally long to avoid false resets during normal operation. It is not intended to provide FTTI-compliant response. It is a last-resort mechanism that prevents permanent firmware hang. Faster software-level diagnostics (SM-001 through SM-019) provide FTTI-compliant coverage for all safety goals.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC13 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The timing analysis table (Section 7) is a critical verification artifact. Of the 23 safety mechanisms, 4 are flagged as non-compliant with their FTTI: SM-003 (marginal, -6 ms), SM-012 (-60 ms), SM-019 (-105 ms), and SM-020 (-1550 ms). Each non-compliance is documented with a timing note explaining the mitigation strategy. The key argument is that these are secondary/tertiary mechanisms complemented by faster primary mechanisms. This argument is valid for SM-003 (backed by SM-001 at 30 ms) and SM-012 (backed by SM-011 at 30 ms). For SM-019 and SM-020, the argument is weaker since they are the primary mechanisms for SG-008 -- the composite timing argument must demonstrate that at least one mechanism can achieve safe state within 100 ms for any SG-008 fault scenario. SM-021 (lockstep, near-zero latency) covers CPU faults but not all SG-008 fault types (e.g., CAN bus total failure). SM-008 timing is noted as "boundary" at exactly 100 ms with 0 ms margin -- this should be validated on target hardware.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC13 -->
+
 ## 8. Freedom from Interference (FFI) Summary
 
 Per ISO 26262-4, elements of different ASIL levels sharing resources must demonstrate freedom from interference. The following FFI mechanisms are employed:
@@ -517,6 +573,10 @@ Per ISO 26262-4, elements of different ASIL levels sharing resources must demons
 | RZC MCU (motor + current + temp) | D + A | MPU-enforced partitioning, independent ADC channels, separate interrupt priorities |
 | 12V power rail | All | Independent voltage regulators per ECU, brown-out detection, SC power-independent (separate supply path from kill relay to SC) |
 | SC (independent monitor) | ASIL C (inherits) | Diverse vendor (TI vs. ST), diverse architecture (lockstep vs. single core), CAN listen-only (cannot corrupt bus), independent power path |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC14 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The FFI summary (Section 8) identifies the key shared resources and their FFI mechanisms: CAN bus (E2E + priority + SC listen-only), MCU partitioning (MPU-enforced memory isolation), 12V power rail (independent voltage regulators + brown-out detection), and SC independence (diverse vendor TI vs. ST, diverse architecture lockstep vs. single core, CAN listen-only). The FFI mechanisms are appropriate for the identified interference types (spatial, temporal, communication). One critical assumption: "MPU-enforced memory partitioning" is listed for CVC, FZC, and RZC -- this requires the STM32G474RE MPU to be correctly configured, which is documented as assumption FSC-A-001. The MPU configuration must be verified through testing (fault injection) as part of the FFI evidence. The SC's "independent power path from kill relay to SC" is important -- the SC must remain powered even when it opens the kill relay to continue monitoring and displaying fault status.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC14 -->
 
 ## 9. Assumptions and Open Items
 
@@ -539,6 +599,10 @@ Per ISO 26262-4, elements of different ASIL levels sharing resources must demons
 | FSC-O-003 | Determine if SM-012 auto-brake timeout should be reduced from 100 ms | TSC phase — CAN bus jitter analysis |
 | FSC-O-004 | Verify kill relay dropout time on actual hardware | Hardware integration testing |
 | FSC-O-005 | Define detailed CAN message schedule (IDs, priorities, cycle times) | TSC phase |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC15 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The assumptions (Section 9.1) and open items (Section 9.2) are transparently documented. FSC-A-001 (MPU configuration) is the highest-impact assumption since FFI between ASIL D and QM tasks depends on it. FSC-A-004 (relay contact welding) identifies the most significant residual risk in the kill relay design -- relay stuck-closed is the single failure that defeats the hardware fail-safe. The 5 open items are all targeted for TSC phase or hardware integration testing, which is appropriate at the FSC stage. FSC-O-001 (reduce SM-003 cross-plausibility timing to meet 50 ms FTTI) and FSC-O-003 (reduce SM-012 auto-brake timeout) are the most important open items for FTTI compliance. Overall, the FSC is a thorough and well-structured document that covers all 8 safety goals with 23 safety mechanisms, appropriate diagnostic coverage levels, timing analysis with honest non-compliance documentation, and clear FFI considerations.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC15 -->
 
 ## 10. Revision History
 

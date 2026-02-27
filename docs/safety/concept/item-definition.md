@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every item definition element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per item definition element. File naming: `ITEM-DEF-<topic>.md`.
+
 
 # Item Definition
 
@@ -53,6 +57,10 @@ The platform serves as a functional safety portfolio demonstrating ISO 26262 ASI
 | LIMP | Minimal function, speed/torque limited | Dual sensor fault, repeated errors |
 | SAFE_STOP | Controlled shutdown, motor off, brakes applied | Critical fault, safety goal violation |
 | SHUTDOWN | Orderly power-down, DTC persistence, relay open | Operator command, E-stop release |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 1 provides a clear item description including system name, purpose, intended use, and operational modes. The disclosure that this is a portfolio demonstration platform with safety analysis performed as-if real vehicle is appropriately stated and consistent with HARA assumption A-001. The operational modes table is well-defined with clear triggers for each transition; however, the transition rules between modes (e.g., which modes can transition to which) are not specified here -- this is addressed in the FSC state machine (SM-022) but a forward reference would strengthen this section. Operational modes align with the FSC degradation concept (Section 5.2).
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC1 -->
 
 ## 2. Functional Description
 
@@ -121,6 +129,10 @@ The Instrument Cluster Unit (simulated) displays vehicle status and warnings. Th
 - **Output**: UDS responses, cloud MQTT telemetry, Grafana dashboards
 - **Safety**: QM rated — diagnostic function, no direct safety impact
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The functional description covers all 7 item-level functions (F-DBW through F-DIAG) with consistent structure: input, processing, output, and safety classification. The safety classifications are appropriate -- F-DBW, F-STR, F-BRK, F-DIST, and F-SAF are correctly identified as safety-relevant while F-BODY and F-DIAG are QM. One observation: F-SAF describes the Safety Controller as operating in "silent mode (does not transmit, cannot corrupt bus)" which is a strong architectural claim that must be verified in the DFA -- the SC's CAN listen-only mode configuration is a safety-critical assumption. The dual pedal sensor description (F-DBW) aligns with the HARA malfunctioning behavior MB-001/MB-002/MB-003 analysis.
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC2 -->
+
 ## 3. System Boundary
 
 ### 3.1 What Is In Scope (The Item)
@@ -177,6 +189,10 @@ The Instrument Cluster Unit (simulated) displays vehicle status and warnings. Th
 | SC → Vehicle | Output | GPIO (relay) | Power kill relay (safety) |
 | Pi → Cloud | Output | MQTT/TLS | Telemetry data |
 | Cloud → Pi | Input | MQTT/TLS | Configuration, commands |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The system boundary is well-defined with a clear ASCII diagram and explicit in-scope/out-of-scope tables. The boundary interactions table correctly identifies all external interfaces and their directions. The exclusion of the Raspberry Pi gateway, AWS cloud, SAP QM mock, and vehicle chassis from the safety scope is justified with appropriate rationale. One potential gap: the interaction between the Pi gateway and the CAN bus is not listed in the boundary interactions table (Section 3.3) even though the Pi is noted as a CAN bus node in Section 4.1. Since the Pi is out of scope, this interface should be documented as a boundary crossing with a note on FFI (the Pi must not corrupt safety-critical CAN traffic).
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC3 -->
 
 ## 4. Complete Interface List
 
@@ -253,6 +269,10 @@ The Instrument Cluster Unit (simulated) displays vehicle status and warnings. Th
 | Publish rate | 1 message / 5 seconds (batched) |
 | Topics | `vehicle/telemetry`, `vehicle/dtc/new`, `vehicle/dtc/soft`, `vehicle/alerts` |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The interface list is comprehensive, covering CAN, SPI, UART, ADC, PWM, GPIO, I2C, and cloud interfaces with specific pin assignments, speeds, and data formats. This level of detail supports the Hardware-Software Interface (HSI) specification required by ISO 26262 Part 4. The E2E protection specification (CRC-8, alive counter, data ID) on safety-critical CAN messages is noted in Section 4.1 which aligns with the FSC's SM-004. The SPI interface table correctly shows separate chip-select lines for the dual pedal sensors (PA4 and PA15), confirming the diversity claim in F-DBW. Minor observation: the ADC interface table lists 4 channels on the RZC but no ADC channels are listed for the CVC or FZC, which should be confirmed as correct (i.e., FZC lidar is UART-based, not ADC).
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC4 -->
+
 ## 5. Operating Environment
 
 ### 5.1 Environmental Conditions
@@ -280,6 +300,10 @@ The Instrument Cluster Unit (simulated) displays vehicle status and warnings. Th
 
 The platform is designed to demonstrate 16 scenarios (12 safety + 3 simulated ECU + 1 SAP QM) as defined in the master plan. All scenarios are performed on a stationary bench with a motor driving a flywheel (or free-spinning), servos moving without load, and lidar pointing at a movable target.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The operating environment section correctly documents laboratory/bench conditions for temperature, humidity, vibration, and EMC. This is consistent with the demo platform nature of the item. The power supply section identifies all voltage rails with tolerances, which is important for the RZC battery voltage monitoring (HARA MB-027). The operational scenarios section references 16 demo scenarios from the master plan but does not enumerate them here -- a cross-reference to the master plan section where they are listed would improve traceability. The bench power supply assumption (A-005) is correctly reflected in the 12V specification.
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC5 -->
+
 ## 6. Legal and Regulatory Requirements
 
 | Standard | Requirement | Application |
@@ -292,6 +316,10 @@ The platform is designed to demonstrate 16 scenarios (12 safety + 3 simulated EC
 | ISO 15031 | OBD-II | TCU on-board diagnostics |
 
 **Note**: As a portfolio demonstration project, formal certification by a notified body (TUV, SGS) is not pursued. However, all work products are structured to be assessor-ready, following the same format and completeness expected in a production ASIL D project.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The legal and regulatory requirements table correctly identifies ISO 26262 as the primary standard with ASIL D applied to safety-critical functions and QM for non-safety functions. The inclusion of MISRA C:2012/2023, ASPICE 4.0, ISO/SAE 21434, ISO 14229, and ISO 15031 demonstrates a comprehensive regulatory awareness. The note about portfolio demonstration status is transparent and appropriate. One observation: ASPICE Level 3 is stated as a target for ASIL D processes, which aligns with OEM expectations for safety-critical projects. The cybersecurity standard (ISO/SAE 21434) is listed but should be further addressed in a separate cybersecurity analysis, particularly for the CAN bus (no authentication) and cloud interface (MQTT/TLS).
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC6 -->
 
 ## 7. Known Limitations and Assumptions
 
@@ -318,6 +346,10 @@ The platform is designed to demonstrate 16 scenarios (12 safety + 3 simulated EC
 | L-005 | No physical vehicle dynamics (no chassis, no wheels) | MIL plant models simulate dynamics; motor/servos demonstrate actuator response |
 | L-006 | Single CAN bus for all ASIL levels (no ASIL/QM bus separation) | E2E protection on safety messages; SC monitors bus independently |
 | L-007 | No secure boot or hardware security module (HSM) | Out of scope for portfolio demo; documented as gap |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-ITEMDEF-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The assumptions and limitations are thorough and transparently documented. Assumption A-001 (real-vehicle ratings for a bench demo) is the foundational assumption for the entire HARA and is correctly cross-referenced. Assumption A-002 (STM32G474RE treated as ASIL D capable) is a significant claim -- the mitigation through diverse SC architecture is sound but should be explicitly referenced in the DFA. Assumption A-007 (generic Cortex-M4 failure rates for FMEDA) is a known gap that will affect hardware metric calculations. Limitation L-002 (no redundant CAN bus) and L-006 (single CAN bus for all ASIL levels) are the most significant architectural limitations and are correctly identified as DFA/FFI concerns. Limitation L-007 (no HSM/secure boot) should be cross-referenced to ISO/SAE 21434 requirements listed in Section 6.
+<!-- HITL-LOCK END:COMMENT-BLOCK-ITEMDEF-SEC7 -->
 
 ## 8. Revision History
 

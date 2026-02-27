@@ -21,6 +21,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every architecture element in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/aspice/software/lessons-learned/`](../lessons-learned/). One file per architecture element. File naming: `SWARCH-<element>.md`.
+
 
 # Software Architecture — Taktflow Zonal Vehicle Platform
 
@@ -39,6 +43,10 @@ This document defines the software architectural design for the Taktflow Zonal V
 - SSR-to-module allocation for bidirectional traceability
 
 The Safety Controller (SC) uses a deliberately separate, flat bare-metal architecture with no BSW stack. This architectural diversity is an ISO 26262 principle — the independent safety monitor must not share software with the systems it monitors.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The purpose section accurately captures the SWE.2 scope and correctly establishes what this document covers. The statement about the SC using a deliberately flat architecture for diversity is well-motivated from an ISO 26262 Part 9 perspective. One gap: the purpose does not explicitly mention conformance to ISO 26262 Part 6 Section 7 architectural design principles (hierarchical structure, restricted coupling, spatial isolation) which are ++ at ASIL D and should be referenced as governing constraints.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC1 -->
 
 ## 2. Referenced Documents
 
@@ -156,6 +164,10 @@ Simulated ECUs run identical BSW stack compiled for Linux (POSIX) with SocketCAN
 |                                                            (vcan0/can0)   |
 +===========================================================================+
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The three-tier architecture overview (layered physical ECUs, flat SC, simulated vECUs) is technically sound. The AUTOSAR-inspired layering for CVC/FZC/RZC correctly shows SWC-to-RTE-to-BSW separation with no direct hardware access from application code. The SC flat architecture with ~400 LOC and no shared code provides genuine architectural diversity per ISO 26262 Part 9. The simulated ECU diagram correctly identifies only the CAN MCAL as the portability boundary. One concern: the diagram for Section 3.1 shows 6 MCAL modules but does not mention the I2C peripheral used by CVC for the SSD1306 OLED -- this is referenced later in Section 4.1 but absent from the MCAL block diagram, which could be misleading.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC3 -->
 
 ## 4. Per-ECU Module Decomposition
 
@@ -417,6 +429,10 @@ TIM4 (encoder) --> IoHwAb --> Rte --> Swc_Encoder --> Rte --> Com --> CAN TX (Mo
 | led_panel.c | Drive 4 bi-color LED pairs (red/green) via GIO: one pair per monitored ECU (CVC, FZC, RZC) + one for SC self-status. Green = healthy, Red = fault | QM | Every main loop iteration |
 | watchdog.c | Toggle TPS3823 WDI pin via GIO. Only toggle if: all heartbeats valid, no plausibility faults, no E-stop, relay energized. If any check fails, stop toggling — TPS3823 times out in 1.6 s and resets SC | D | Every main loop iteration |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The per-ECU decomposition is thorough and well-structured. Component diagrams clearly show the data flow from sensor to actuator through the BSW stack. Module responsibility tables correctly assign ASIL levels (D for safety-critical SWCs, QM for Swc_Display, Swc_Buzzer, Swc_Encoder). The SC module table correctly shows all modules except led_panel.c as ASIL D, and the ~400 LOC budget is appropriate for a bare-metal safety monitor. The inter-module data flow diagrams for all four ECUs are complete and consistent with the CAN message matrix. One observation: The FZC lidar UART (USART1 DMA) is noted as "not in shared BSW" which is correct, but the rationale for keeping it ECU-specific rather than integrating into the BSW Spi/IoHwAb pattern should be documented -- likely because UART/DMA is FZC-only and does not justify a generic BSW module.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC4 -->
+
 ## 5. Static View — Component Interfaces
 
 ### 5.1 CVC Software Component Interfaces
@@ -571,6 +587,10 @@ Thresholds:
 | Required (Read) | RpVehicleState | VehicleState | uint8 | enum | 0..4 |
 
 **Runnable: Swc_Buzzer_100ms** — Trigger: 100 ms periodic
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The static view provides well-defined SWC interfaces with typed RTE ports, signal names, units, and ranges for all CVC, FZC, and RZC components. The Swc_Pedal_10ms code snippet demonstrates the dual-sensor plausibility check correctly (|S1-S2| against threshold). The state transition table for Swc_StateMachine is comprehensive, covering all fault-to-state mappings with explicit safe-state actions. The E-stop ISR latency requirement (< 1 ms GPIO to CAN TX) is properly specified. One gap: the Swc_CanMaster interface shows heartbeat monitoring ports but does not specify the E2E check result as an input -- the alive counter is shown, but there is no port for E2E_Status which would be needed to reject heartbeats with CRC errors before incrementing the alive counter.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC5 -->
 
 ---
 
@@ -812,6 +832,10 @@ CVC        FZC        RZC        CAN Bus       SC:heartbeat    SC:relay    Kill 
 
 SC heartbeat timeout to relay open: < 102 ms (100 ms timeout + 1 ms confirmation + 1 ms relay actuation). TPS3823 backup: if SC itself hangs, watchdog resets SC in 1.6 s.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The five sequence diagrams cover the critical operational and safety scenarios: normal drive cycle, pedal fault detection, E-stop, CAN timeout auto-brake, and SC kill relay activation. Timing budgets are explicitly stated and realistic (pedal-to-motor < 12 ms, E-stop to motor stop < 12 ms, fault detection to motor stop < 22 ms, SC timeout to relay open < 102 ms). These are consistent with the FTTI values that would be expected for a low-speed vehicle platform. The SC kill relay sequence correctly shows a confirmation cycle before de-energizing, which prevents spurious relay trips from single-sample CAN glitches. One concern: no sequence diagram is provided for the CAN bus-off recovery scenario, which is an ASIL D safety mechanism and should be illustrated to show the recovery timing and fallback behavior.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC6 -->
+
 ## 7. Task Scheduling
 
 ### 7.1 CVC Task Table
@@ -867,6 +891,10 @@ SC heartbeat timeout to relay open: < 102 ms (100 ms timeout + 1 ms confirmation
 
 **Stack: 1024 B (single stack, no RTOS)**
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Task scheduling tables for all four ECUs are complete with period, priority, runnables, WCET budgets, and stack sizes. The priority assignment follows correct safety practice: safety-critical 10 ms control tasks at high priority, heartbeat/watchdog at medium, display/diagnostics at low. The SC super-loop budget (115 us per 1 ms tick, < 12% CPU) provides massive margin on the 300 MHz TMS570. WCET budgets are reasonable estimates but are marked as budgets, not measured values -- this is appropriate for the architecture phase, but actual WCET measurement/analysis is required at SWE.3/SWE.4. One concern: the CVC Task_10ms_Control bundles Swc_Pedal, Swc_StateMachine, and all Com/E2E/CAN runnables into a single 2 ms WCET budget. If any of these runnables overruns, all of them are affected. Consider documenting per-runnable WCET sub-budgets.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC7 -->
+
 ## 8. Resource Estimates
 
 ### 8.1 Per-ECU Resource Table
@@ -921,6 +949,10 @@ SC heartbeat timeout to relay open: < 102 ms (100 ms timeout + 1 ms confirmation
 | SC | ~8 KB | 4 MB | 99% free | ~2 KB | 512 KB | 99% free |
 
 All ECUs have substantial margin. ISO 26262 Part 6 recommends maintaining > 50% margin for safety-critical systems to accommodate bug fixes and safety patches.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Resource estimates are well-structured with per-ECU Flash, RAM, and CPU load. The CVC Flash breakdown (Section 8.2) and RAM breakdown (Section 8.3) are detailed to component level, which is good practice for SWE.2. All ECUs show > 84% free margins, which exceeds the ISO 26262 > 50% recommendation. The SC at ~8 KB Flash and ~2 KB RAM on a 4 MB/512 KB chip is deliberately oversized for the safety monitor role, which provides ample room for future safety mechanisms. The explicit "Heap: 0 B (No dynamic allocation - ASIL D)" note correctly enforces the ASIL D prohibition. These are estimates at the architecture phase; they should be verified against actual compiled binaries during SWE.3 implementation.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC8 -->
 
 ## 9. Memory Layout
 
@@ -1026,6 +1058,10 @@ RAM (512 KB): 0x0800_0000 - 0x0807_FFFF
 
 The TMS570 hardware lockstep cores provide error detection without software MPU configuration — the CPU itself detects execution divergence and triggers ESM (Error Signaling Module).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The memory layout section is excellent for an SWE.2 deliverable. The STM32G474RE memory map shows explicit MPU regions with access permissions (privileged-only for BSW, unprivileged for SWC, DMA-only for transfer buffers). This correctly implements ASIL D spatial isolation per ISO 26262 Part 6 Section 7. The separation of ISR stack from task stacks prevents stack corruption cascading between interrupt and task context. The TMS570 memory map is minimal (~8 KB code, ~1 KB data), consistent with the ~400 LOC bare-metal design. The note about TMS570 lockstep providing error detection without software MPU is correct -- the hardware lockstep is a stronger mechanism than software partitioning for the SC role. One gap: the MPU configuration table does not specify the background region behavior (what happens when access falls outside all defined regions) -- this should be defined as "default deny" for ASIL D.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC9 -->
+
 ## 10. Error Handling Strategy
 
 ### 10.1 Return Type Convention
@@ -1121,6 +1157,10 @@ Dem: DTC stored in RAM array, status byte updated
     |
     +--> Gateway (Pi): receives DTC via CAN, publishes to cloud, triggers SAP QM
 ```
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC10 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The error handling strategy is comprehensive. The Std_ReturnType convention follows AUTOSAR practice, and the DTC mapping table (Section 10.2) covers 18 fault types across all ECUs with correct ASIL assignments and explicit safe-state actions for each. The defensive programming practices list (Section 10.3) directly maps to ISO 26262 Part 6 Table 1 requirements for ASIL D, including range checks, null pointer checks, redundant storage, inverse redundancy, and control flow monitoring via WdgM. The error propagation path (Section 10.4) correctly shows the fault flow from detection through Dem debouncing, DTC storage, BswM mode transition, and finally to cloud/SAP QM reporting. One concern: the DTC numbers appear to be custom-assigned (0xCxxxxx format) -- this is acceptable for a portfolio project, but for production the DTC assignment should follow SAE J2012 UDS fault code structure with proper Powertrain/Chassis/Body/Network prefixes.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC10 -->
 
 ## 11. SSR to Module Allocation
 
@@ -1225,6 +1265,10 @@ Dem: DTC stored in RAM array, status byte updated
 | SSR-SC-016 | Lockstep CPU error detection via ESM | main.c (HALCoGen ESM handler) | D |
 | SSR-SC-017 | Confirmation cycle before kill relay actuation | relay.c | D |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC11 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The SSR-to-module allocation is complete at 81/81 (100%) coverage across all four ECUs. Each SSR is mapped to specific SWC and BSW modules, enabling bidirectional traceability between safety requirements and implementation. The ASIL assignments are consistent: CVC has 18 ASIL D SSRs out of 23 (QM only for display), FZC has 21 ASIL D out of 24 (QM for buzzer), RZC has 14 ASIL D out of 17 (QM for encoder), and SC has 15 ASIL D out of 17 (QM for LED panel). This allocation is consistent with the module responsibility tables in Section 4. The SC allocation correctly assigns all safety-critical functions (CAN monitoring, heartbeat, plausibility, relay, watchdog) to ASIL D.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC11 -->
+
 ## 12. Traceability and Revision History
 
 ### 12.1 Traceability Summary
@@ -1238,6 +1282,10 @@ Dem: DTC stored in RAM array, status byte updated
 | **Total** | **All SSRs allocated** | **81/81 (100%)** |
 
 Reverse traceability (module to SSR) is maintained in the traceability matrix: [docs/aspice/traceability/traceability-matrix.md](../../traceability/traceability-matrix.md).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-SWARCH-SEC12 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability summary confirms 100% SSR allocation coverage (81 SSRs across 4 ECUs), which satisfies ASPICE SWE.2 BP5 (establish bidirectional traceability). The reference to the external traceability matrix for reverse traceability (module-to-SSR) is correct practice. For full ASPICE compliance, this section should also confirm traceability upward to SWR (software requirements) documents and downward to SWE.3 detailed design, not just the SSR-to-module link. The revision history shows a jump from 0.1 stub to 1.0 complete, which is fine for initial creation but should be updated as review comments are addressed.
+<!-- HITL-LOCK END:COMMENT-BLOCK-SWARCH-SEC12 -->
 
 ### 12.2 Revision History
 

@@ -22,6 +22,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (HSR-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per requirement (HSR-NNN). File naming: `HSR-NNN-<short-title>.md`.
+
 
 # Hardware Safety Requirements
 
@@ -99,6 +103,10 @@ The CVC hardware shall provide two AS5048A 14-bit magnetic angle sensors on the 
 
 **Rationale**: Dual redundant sensors with independent chip-selects provide 99% SPFM for pedal position sensing at ASIL D. The pull-up resistors ensure sensors are deselected during MCU startup/reset, preventing spurious SPI traffic.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies dual AS5048A sensors on SPI1 with independent chip-selects, pull-ups, decoupling, and trace separation. ASIL D is correct per TSR-001/TSR-002. The 99% SPFM claim is reasonable given dual redundancy with mutual plausibility. The 2 mm trace separation between sensor data paths and the separate PCB layers reduce common-cause coupling. The shared diametric magnet is a potential single point of failure for both sensors -- the range check on both sensors addresses this partially, but this should be explicitly listed in the FMEA as a common-cause item. Traces to TSR-001 and TSR-002 are consistent. No critical gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-001 -->
+
 ---
 
 ### HSR-CVC-002: CVC External Watchdog (TPS3823)
@@ -118,6 +126,10 @@ The CVC hardware shall include a TPS3823DBVR external watchdog IC with the follo
 6. **Independence**: The TPS3823 internal oscillator is independent of the MCU clock, providing timing diversity.
 
 **Rationale**: The TPS3823 is a separate IC with its own oscillator, providing true clock-domain independence from the STM32. The open-drain RESET output can be wire-ORed with other reset sources.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TPS3823 external watchdog with 1.6s timeout, independent oscillator, and open-drain reset. ASIL D is correct per TSR-032. The 85% DC is appropriate -- the TPS3823 detects hang/clock faults but not incorrect-but-timely computation. The 200 ms POR pulse meets STM32G474 minimum reset pulse requirement. HSR-A-002 correctly flags the +/-20% timeout tolerance -- worst case 1.92s should be validated against system timing requirements. The clock independence from the MCU eliminates a common-cause failure mode. Traces to TSR-032 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-002 -->
 
 ---
 
@@ -139,6 +151,10 @@ The CVC hardware shall provide an E-stop button input circuit on GPIO PC13 with 
 
 **Rationale**: Normally-closed fail-safe wiring ensures any wire break or disconnection results in E-stop activation rather than E-stop unavailability. The RC debounce removes contact bounce before it reaches the GPIO, reducing software debounce load.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies NC fail-safe E-stop wiring with hardware RC debounce, pull-up, ESD protection, and shielded cable. ASIL B is correct per TSR-033. The 99% DC claim is justified by the NC fail-safe wiring (wire break = E-stop activated) plus hardware debounce plus software confirmation. The TVS diode on PC13 is important given that the E-stop button may be externally mounted with long wiring exposed to ESD. The 1 ms RC time constant is appropriate for switch debounce. The note on polarity (rising edge for NC button press) is important for implementation clarity. Traces to TSR-033 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-003 -->
+
 ---
 
 ### HSR-CVC-004: CVC CAN Transceiver
@@ -159,6 +175,10 @@ The CVC hardware shall include a CAN transceiver (TJA1051T/3 or equivalent ISO 1
 
 **Rationale**: A compliant CAN transceiver provides the physical layer for all safety-critical CAN communication. Common-mode filtering and ESD protection ensure reliable operation in the automotive EMI environment.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies ISO 11898-2 compliant CAN transceiver with termination, common-mode filtering, ESD protection, and bus fault tolerance. ASIL D is correct per TSR-022/TSR-038. The 90% DC is appropriate -- error counters detect bus-level faults, but message-level corruption is handled by E2E in software. The standby pin (STB) control enables power management. The bus fault tolerance requirement (CANH/CANL short to GND or VBAT) is important for automotive robustness. HSR-A-004 correctly flags the need for EMC testing. Traces to TSR-022 and TSR-038 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-004 -->
+
 ---
 
 ### HSR-CVC-005: CVC OLED Display Interface
@@ -176,6 +196,10 @@ The CVC hardware shall include an SSD1306 128x64 OLED display connected via I2C1
 4. **Reset pin**: SSD1306 RST connected to a GPIO for hardware reset capability.
 
 **Rationale**: The OLED provides the primary visual warning channel for the operator. I2C acknowledge checking provides basic disconnection detection but not display content verification (which would require a camera-based readback not feasible on this platform).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies SSD1306 OLED display on I2C1 with pull-ups, bulk capacitor, and hardware reset. ASIL B is correct per TSR-043. The 60% DC is honest -- I2C ACK only detects disconnection, not display content faults. The rationale correctly acknowledges the camera-based readback limitation. The hardware reset pin enables recovery from SSD1306 lockup without MCU reset. The 10 uF bulk capacitor addresses OLED inrush current. This is a secondary warning channel alongside the SC fault LEDs (HSR-SC-003). Traces to TSR-043 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-005 -->
 
 ---
 
@@ -198,6 +222,10 @@ The FZC hardware shall provide one AS5048A 14-bit magnetic angle sensor on SPI1 
 
 **Rationale**: A single steering angle sensor relies on command-vs-feedback comparison (software diagnostic) to detect servo faults. The 95% diagnostic coverage accounts for the residual risk of simultaneous servo and sensor fault (addressed by SC cross-plausibility as a system-level backup).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies single AS5048A on SPI1 for steering angle with SPI CRC, pull-up, and EMI routing separation from servo power. ASIL D is correct per TSR-010. The 95% DC is appropriate for a single sensor with SPI CRC and rate-of-change check, but below the 99% SPFM target for ASIL D. The rationale correctly acknowledges this gap and delegates it to command-vs-feedback comparison plus SC cross-plausibility. The 10 mm separation from servo power lines is important for EMI resilience. Consider whether a second sensor would be more appropriate for ASIL D -- the current single-sensor design relies heavily on software diagnostics. Traces to TSR-010 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-001 -->
+
 ---
 
 ### HSR-FZC-002: FZC Brake Servo PWM Circuit
@@ -216,6 +244,10 @@ The FZC hardware shall provide a PWM output for the brake servo actuator:
 5. **Signal level**: PWM output at 3.3V logic level (compatible with standard servo signal input).
 
 **Rationale**: Timer capture feedback enables software verification that the PWM peripheral is producing the commanded output. Separate power rails for servo and MCU prevent servo faults from affecting MCU operation.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies brake servo PWM on TIM2 with timer capture feedback, separate 6V power rail (2A), fuse, and flyback protection. ASIL D is correct per TSR-015. The 85% DC is appropriate -- timer capture verifies PWM output but not servo mechanical response. The separate 6V power rail prevents servo faults from affecting MCU operation (spatial FFI for power). The 3A fuse provides overcurrent protection for servo short circuit. The resistor divider for capture feedback is a practical solution for PWM output verification. Traces to TSR-015 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-002 -->
 
 ---
 
@@ -237,6 +269,10 @@ The FZC hardware shall provide a UART interface for the TFMini-S lidar sensor:
 
 **Rationale**: The TFMini-S native 3.3V logic eliminates the need for level shifting, simplifying the interface. The 5V power rail must be clean and adequately decoupled to prevent lidar measurement errors from power supply noise.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TFMini-S UART interface at 115200 baud with 5V power, bulk capacitor, keyed connector, and ESD protection. ASIL C is correct per TSR-018. The 80% DC is appropriate -- UART checksum detects data corruption and timeout detects disconnection, but there is no physical-layer signal quality measurement. The keyed 4-pin connector prevents reverse polarity connection, which is a good practice. The 470 uF bulk capacitor for startup inrush is important given the TFMini-S current draw. The 1-meter cable length limit is appropriate for 115200 baud without shielding. Traces to TSR-018 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-003 -->
+
 ---
 
 ### HSR-FZC-004: FZC External Watchdog (TPS3823)
@@ -250,6 +286,10 @@ The FZC hardware shall include a TPS3823DBVR external watchdog IC with the same 
 
 **Rationale**: Each ECU requires an independent external watchdog for ASIL D compliance. The identical configuration across ECUs simplifies BOM and schematic review.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TPS3823 external watchdog matching HSR-CVC-002. ASIL D is correct per TSR-032. The identical configuration across all ECUs is a good design decision for BOM simplification and consistent behavior. The 85% DC is consistent with the CVC watchdog. No unique FZC-specific concerns beyond the CVC review. Traces to TSR-032 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-004 -->
+
 ---
 
 ### HSR-FZC-005: FZC CAN Transceiver
@@ -262,6 +302,10 @@ The FZC hardware shall include a TPS3823DBVR external watchdog IC with the same 
 The FZC hardware shall include a CAN transceiver identical in specification to HSR-CVC-004, connecting FDCAN1 to the CAN bus. The FZC shall not be a bus termination node (no 120 ohm termination resistor on FZC) unless FZC is physically at one end of the bus topology.
 
 **Rationale**: Identical CAN transceiver specification across all ECUs ensures bus compatibility and simplifies system-level EMC testing.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies CAN transceiver matching HSR-CVC-004, with a note that FZC should not have termination unless at bus end. ASIL D is correct per TSR-022/TSR-038. The 90% DC is consistent with the CVC CAN transceiver. The termination note is important for correct bus topology -- the bus should only have two termination resistors at the physical endpoints. Traces to TSR-022 and TSR-038 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-005 -->
 
 ---
 
@@ -282,6 +326,10 @@ The FZC hardware shall provide a PWM output for the steering servo actuator:
 
 **Rationale**: Three-level PWM disable (duty, timer, GPIO) provides defense-in-depth for the most critical actuator safety function (steering). Separate servo power rail prevents servo faults from corrupting MCU power.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies steering servo PWM on TIM1 with three-level disable (duty, timer output, GPIO force), separate 6V power, fuse, and flyback. ASIL D is correct per TSR-012/TSR-013. The 80% DC is lower than ideal for ASIL D -- it reflects the lack of servo position feedback at the hardware level (software reads AS5048A). The three-level PWM disable is excellent defense-in-depth: even if one disable mechanism fails, two others remain. The separate 6V power rail is critical for steering servo independence. Traces to TSR-012 and TSR-013 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-006 -->
+
 ---
 
 ### HSR-FZC-007: FZC Buzzer Circuit
@@ -298,6 +346,10 @@ The FZC hardware shall provide a piezo buzzer driven by a GPIO pin:
 3. **Flyback diode**: Schottky diode across the buzzer terminals for inductive kickback protection.
 
 **Rationale**: Active buzzer simplifies the drive circuit (no PWM tone generation required). The MOSFET driver with pulldown ensures the buzzer defaults to OFF on MCU reset or power-up, preventing nuisance alarms during initialization.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-FZC-007 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies active piezo buzzer with MOSFET driver, gate pulldown (OFF on reset), and flyback protection. ASIL B is correct per TSR-044. The 60% DC is honest -- GPIO readback confirms output state but cannot verify acoustic output. The 10k ohm gate pulldown ensuring OFF during MCU reset prevents nuisance alarms. The active buzzer design avoids software PWM tone generation complexity. The 85 dB minimum at 10 cm is sufficient for operator warning in a lab/workshop environment. Traces to TSR-044 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-FZC-007 -->
 
 ---
 
@@ -321,6 +373,10 @@ The RZC hardware shall include an ACS723LLCTR-20AB-T Hall-effect current sensor 
 
 **Rationale**: Galvanic isolation between the high-current motor path and the MCU ADC input protects the MCU from motor faults. The ACS723 + BTS7960 combination provides diverse hardware for current monitoring.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies ACS723 Hall-effect current sensor in the motor supply path with ADC connection, decoupling, PCB layout constraints, and BTS7960 IS pins as diverse backup. ASIL A is correct per TSR-006. The 95% DC is well-justified by galvanic isolation plus diverse BTS7960 backup. The PCB layout requirement (2 mm trace width for 25A, signal on separate layer from power) is important for noise immunity. HSR-A-003 correctly flags ACS723 temperature drift vs. the 20% cross-plausibility threshold. HSR-O-002 addresses the need to measure the actual sensitivity vs. temperature curve. The 1 nF output capacitor maintains 80 kHz bandwidth which is more than adequate for 1 kHz sampling. Traces to TSR-006 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-001 -->
+
 ---
 
 ### HSR-RZC-002: RZC NTC Temperature Sensing Circuit
@@ -340,6 +396,10 @@ The RZC hardware shall include an NTC thermistor circuit for motor temperature m
 
 **Rationale**: The voltage divider topology with a fixed precision resistor provides a simple, reliable temperature measurement. Both open and short circuit failure modes produce out-of-range readings detectable by software, achieving 90% diagnostic coverage.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies NTC thermistor circuit with voltage divider (10k/10k), filtering, and open/short circuit failure mode analysis. ASIL A is correct per TSR-008. The 90% DC is appropriate -- both open-circuit (reads very cold) and short-circuit (reads very hot) failure modes are detectable by software range check (SSR-RZC-006). The 1% tolerance precision resistor ensures accurate temperature conversion. HSR-O-003 (NTC beta calibration) is correctly referenced as an open item. The thermal coupling requirement (adhesive/clip) is important for measurement accuracy. Traces to TSR-008 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-002 -->
+
 ---
 
 ### HSR-RZC-003: RZC External Watchdog (TPS3823)
@@ -352,6 +412,10 @@ The RZC hardware shall include an NTC thermistor circuit for motor temperature m
 The RZC hardware shall include a TPS3823DBVR external watchdog IC with the same configuration as HSR-CVC-002: CT capacitor for 1.6 second timeout, WDI connected to dedicated MCU GPIO, RESET connected to STM32G474RE NRST with 100 nF debounce capacitor, VDD on 3.3V rail with 100 nF decoupling.
 
 **Rationale**: Independent external watchdog per ECU for ASIL D compliance.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TPS3823 external watchdog matching HSR-CVC-002. ASIL D is correct per TSR-032. Identical configuration across all ECUs for BOM simplification and consistent behavior. The 85% DC is consistent with the CVC watchdog. For the RZC specifically, the watchdog timeout (1.6s) is significantly longer than the motor overcurrent detection requirement (10 ms debounce from SSR-RZC-004) -- the watchdog is a last-resort safety mechanism, not the primary motor protection. Traces to TSR-032 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-003 -->
 
 ---
 
@@ -373,6 +437,10 @@ The RZC hardware shall interface with the BTS7960 H-bridge motor driver:
 
 **Rationale**: Pull-down resistors on enable lines ensure the motor driver defaults to disabled on any MCU fault (reset, hang, GPIO floating). This is the most critical fail-safe hardware feature for SG-001 (prevent unintended acceleration).
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies BTS7960 H-bridge interface with PWM dead-time, enable line pull-downs (fail-safe disabled), diagnostic IS outputs, and power path via kill relay. ASIL C is correct per TSR-005/TSR-040. The 88% DC is appropriate given the multiple diagnostic paths (enable line control, PWM disable, BTS7960 built-in overcurrent/thermal). The 10k ohm pull-down resistors on R_EN and L_EN are the most critical hardware safety feature -- they ensure the motor driver defaults to OFF on any MCU fault. The residual risk (driver stuck-on) is correctly identified and covered by the kill relay. The BTS7960 IS pins on separate ADC channels provide diverse current measurement independent of the ACS723. Traces to TSR-005 and TSR-040 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-004 -->
+
 ---
 
 ### HSR-RZC-005: RZC CAN Transceiver
@@ -385,6 +453,10 @@ The RZC hardware shall interface with the BTS7960 H-bridge motor driver:
 The RZC hardware shall include a CAN transceiver identical in specification to HSR-CVC-004, connecting FDCAN1 to the CAN bus. If the RZC is at a physical end of the bus, it shall include a 120 ohm termination resistor.
 
 **Rationale**: Identical CAN transceiver specification across all ECUs ensures bus compatibility.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies CAN transceiver matching HSR-CVC-004, with conditional termination if RZC is at bus endpoint. ASIL D is correct per TSR-022/TSR-038. The 90% DC is consistent with other ECU CAN transceivers. The conditional termination note is important for correct bus topology. No unique RZC-specific CAN concerns. Traces to TSR-022 and TSR-038 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-005 -->
 
 ---
 
@@ -405,6 +477,10 @@ The RZC hardware shall provide a quadrature encoder interface for motor speed an
 
 **Rationale**: Hardware encoder mode in TIM3 provides zero-CPU-overhead direction and speed measurement. Input filtering prevents false counts from electrical noise near the motor.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies quadrature encoder interface on TIM3 with hardware input filtering, pull-ups, and ESD protection. ASIL C is correct per TSR-040. The 75% DC is appropriate -- quadrature decoding detects direction and count rate validates speed, but encoder failure (disconnection, stuck) is detected only by the software direction mismatch timeout in SSR-RZC-015. The maximum hardware input filter (ICF=0x0F) rejects noise from the motor, which is critical given the physical proximity of encoder to motor. Pull-ups on both inputs handle open-collector encoder outputs. Traces to TSR-040 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-006 -->
+
 ---
 
 ### HSR-RZC-007: RZC Battery Voltage Monitoring
@@ -421,6 +497,10 @@ The RZC hardware shall provide battery voltage measurement:
 3. **Overvoltage protection**: Zener diode (3.3V) across the ADC input to clamp voltage spikes.
 
 **Rationale**: Battery voltage monitoring enables detection of overvoltage (above 14.4V) and undervoltage (below 10V) conditions that may affect motor driver and servo operation.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-RZC-007 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies battery voltage monitoring with resistor divider (47k/10k), filtering, and zener overvoltage clamp. ASIL QM is correct -- battery voltage monitoring supports motor protection context but is not itself a safety function. The 70% DC is appropriate for a QM requirement. The 47k/10k divider provides approximately 2.1V at 12V input, well within the 3.3V ADC range. The zener clamp protects the ADC input from voltage transients. Traces to TSR-009 (motor protection context) are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-RZC-007 -->
 
 ---
 
@@ -445,6 +525,10 @@ The SC hardware shall provide a kill relay circuit controlled by GIO_A0 with the
 
 **Rationale**: The energize-to-run pattern is the gold standard for safety-critical power relays. Any failure of the SC (power loss, firmware hang, GPIO fault, MOSFET failure) results in the relay opening (safe state). The 10k ohm gate pulldown ensures the MOSFET is OFF during power-up sequencing before the SC firmware initializes GIO_A0.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies the kill relay circuit with energize-to-run design, MOSFET driver with gate pulldown, flyback diode, contact monitoring, and 30A rating. ASIL D is correct per TSR-029. The 99% DC is well-justified by the energize-to-run design (any SC failure = relay opens) plus GPIO readback. The residual risk (relay contacts welded closed) is correctly identified and documented in HSR-A-001 with FMEA reference. The 10k ohm gate pulldown is critical for power-up safety. The optional contact monitoring (item 6) should be made mandatory given ASIL D -- HSR-O-006 tracks this. The 10 ms relay dropout time should be verified on actual hardware (HSR-O-001). Traces to TSR-029 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-001 -->
+
 ---
 
 ### HSR-SC-002: SC External Watchdog (TPS3823)
@@ -463,6 +547,10 @@ The SC hardware shall include a TPS3823DBVR external watchdog IC with the follow
 5. **Independence from lockstep**: The TPS3823 provides an independent reset mechanism for faults not detected by the TMS570 lockstep CPU (e.g., clock failure affecting both cores simultaneously, or an oscillator fault that causes both cores to fail identically).
 
 **Rationale**: The external watchdog complements the TMS570 lockstep. Lockstep detects computation errors (cycle-by-cycle comparison). The TPS3823 detects hang conditions (no toggle within timeout). Together they cover complementary fault classes.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TPS3823 external watchdog for the TMS570LC43x with the same timeout and configuration as other ECUs. ASIL D is correct per TSR-032. The 85% DC is consistent with other ECU watchdogs. The rationale correctly explains the complementary fault coverage: lockstep detects computation errors, TPS3823 detects hang/clock faults. Item 5 is important -- the TPS3823 catches faults that affect both lockstep cores simultaneously (e.g., common clock failure). The TMS570 nRST connection should be verified against TI reference design for compatibility with the lockstep reset behavior. Traces to TSR-032 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-002 -->
 
 ---
 
@@ -483,6 +571,10 @@ The SC hardware shall provide 4 fault indicator LEDs with the following configur
 
 **Rationale**: Direct GPIO-driven LEDs ensure the operator receives visual fault indication even during total CAN bus failure. This is the only warning channel that operates independently of the CAN bus.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies 4 fault LEDs on dedicated GIO pins with current-limiting resistors and default OFF state. ASIL B is correct per TSR-045. The 60% DC is honest -- GPIO readback confirms output state but LED burnout is undetectable without hardware current sensing on the LED path. The CAN-independent warning channel is architecturally important -- this is the only operator indication that works during total CAN bus failure. The direct GPIO drive (no MOSFET) is appropriate for 10 mA LED current within TMS570 GIO pin capabilities. Traces to TSR-045 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-003 -->
+
 ---
 
 ### HSR-SC-004: SC DCAN1 Listen-Only Mode Configuration
@@ -501,6 +593,10 @@ The SC hardware shall configure DCAN1 for listen-only (silent) mode:
 5. **Independence**: The SC CAN interface is electrically independent from the zone ECU CAN interfaces (no shared components other than the bus wires and termination).
 
 **Rationale**: Listen-only mode is critical for SC independence: the SC monitors the bus without the ability to corrupt it. This is a key architectural feature for ASIL D independent monitoring. Using DCAN1 (not DCAN4) avoids the known HALCoGen mailbox bug.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies DCAN1 in listen-only (silent) mode with CAN transceiver, bus connection, and independence from zone ECU CAN interfaces. ASIL D is correct per TSR-022/TSR-038. The 95% DC is appropriate -- listen-only mode prevents bus corruption, error counters detect bus faults, and E2E covers message-level faults. The note about using DCAN1 (not DCAN4) due to the HALCoGen mailbox bug is critical project knowledge. The electrical independence (no shared components except bus wires/termination) is a key FFI argument. The TX line still connected to the transceiver TXD is correct -- DCAN drives TX recessive in silent mode, so the transceiver is needed for proper bus electrical behavior. Traces to TSR-022 and TSR-038 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-004 -->
 
 ---
 
@@ -522,6 +618,10 @@ The SC hardware shall utilize the TMS570LC43x lockstep CPU safety features:
 
 **Rationale**: The TMS570LC43x lockstep architecture is specifically designed for ISO 26262 ASIL D safety applications. The cycle-by-cycle comparison provides the highest achievable hardware diagnostic coverage for computation errors (99% per ISO 26262-5 Table D.7). This is the primary justification for using the TMS570 as the Safety Controller.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TMS570LC43x lockstep CPU with ESM, PBIST, ECC, and power/clock per TI reference design. ASIL D is correct per TSR-050/TSR-051. The 99% DC is the highest in the system and correctly references ISO 26262-5 Table D.7 for lockstep CPU coverage. The lockstep mode being enabled by default (hardware feature) eliminates the risk of misconfiguration. The ESM-to-NMI configuration ensures immediate response to lockstep comparison errors. PBIST with March13N algorithm provides comprehensive RAM testing at startup. ECC on flash and RAM provides runtime memory protection with single-bit correction and double-bit detection. Traces to TSR-050 and TSR-051 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-005 -->
+
 ---
 
 ### HSR-SC-006: SC Power Supply Independence
@@ -540,6 +640,10 @@ The SC hardware shall have a power supply path that is independent of the kill r
 5. **Kill relay isolation**: The kill relay shall only control power to the motor driver and servo circuits, never to the SC. The SC shall be powered as long as the 12V battery is connected.
 
 **Rationale**: SC power independence is essential: the SC must remain operational to log DTCs and indicate faults via LEDs after it has opened the kill relay. If the SC lost power when the relay opened, it could not maintain the safe state or provide post-fault diagnostics.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HSR-SC-006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies SC power supply independence from the kill relay, with dedicated 3.3V regulator, brown-out detection, reverse polarity protection, and kill relay isolation. ASIL D is correct per TSR-029/TSR-030. The 90% DC is appropriate -- independent power with brown-out detection provides high coverage, with the residual being complete battery disconnection (which is outside the system boundary). The key architectural insight is that the SC must remain powered after opening the kill relay -- otherwise it could not maintain fault indication or log DTCs. The reverse polarity protection (Schottky or MOSFET) prevents damage from incorrect battery connection during initial hardware assembly. Traces to TSR-029 and TSR-030 are consistent. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HSR-SC-006 -->
 
 ---
 

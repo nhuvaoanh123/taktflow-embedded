@@ -23,6 +23,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every hazard in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per hazard. File naming: `HARA-<hazard>.md`.
+
 
 # Hazard Analysis and Risk Assessment
 
@@ -86,6 +90,10 @@ The HARA was conducted in a cross-functional workshop format per ISO 26262-3, 7.
 | ISO 26262-3 Table B.2 | -- | Exposure classification guidance |
 | ISO 26262-3 Table B.3 | -- | Controllability classification guidance |
 | ISO 26262-3 Table 4 | -- | ASIL determination matrix |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE0 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Sections 1-3 establish a solid foundation for the HARA. The purpose, scope, and methodology are clearly stated and aligned with ISO 26262-3 Clause 7. The cross-functional workshop format (Section 3.2) follows best practice. The explicit acknowledgment that S/E/C ratings assume real-vehicle operation (Section 2.2, referencing A-001) is essential context for all subsequent ratings. The reference table is complete with the correct ISO 26262-3 tables cited.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE0 -->
 
 ## 4. Operational Situations
 
@@ -168,6 +176,10 @@ The following operational situations represent the driving/usage scenarios under
 | Traffic density | None (controlled environment) |
 
 **Rationale**: During diagnostic sessions, unexpected vehicle motion (motor activation, servo movement) poses risk to service technicians who are not expecting motion. The vehicle is assumed to be on a lift or with wheels blocked, reducing but not eliminating risk.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE1 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The 7 operational situations provide good coverage of the vehicle usage profile. OS-1 (moderate speed), OS-3 (turning), OS-4 (braking), and OS-7 (high speed) cover the primary driving scenarios. OS-2 (stationary), OS-5 (reversing), and OS-6 (diagnostic mode) cover non-driving situations where hazards can still occur. Each OS includes relevant parameters (speed, direction, road type, driver attention, environment, traffic density) which supports consistent S/E/C rating. One potential gap: there is no operational situation for "driving on a slope/gradient" which could affect braking and acceleration hazard analysis. For a portfolio demonstration this is acceptable, but in a production HARA an incline scenario would typically be included.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE1 -->
 
 ### OS-7: Driving Forward at High Speed
 
@@ -258,6 +270,10 @@ The following malfunctioning behaviors are systematically derived from each item
 |-------|-------------|----------|-----|-----------|
 | MB-027 | Battery overvoltage (>16V) or undervoltage (<9V) | F-DBW | RZC | Bench supply regulator fault, load dump, or supply failure |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE2 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The malfunctioning behaviors are systematically derived from each item-level function with 27 distinct malfunctions covering F-DBW (10), F-STR (3), F-BRK (3), F-DIST (3), F-SAF (3), CAN bus (3), E-stop (1), and power supply (1). Each malfunction identifies the specific mechanism which supports downstream FMEA. Notably, MB-016 (brake force insufficient / partial application) is identified but not carried forward into the hazardous events table -- this should either generate a hazardous event or be documented as not generating one with rationale. Similarly, MB-013 (steering angle sensor failure) and MB-019 (lidar stuck at last value) are identified but not directly mapped to hazardous events. The traceability in Section 10.1 should confirm that every MB maps to at least one HE or is explicitly dispositioned.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE2 -->
+
 ## 6. Hazardous Events
 
 ### 6.1 Hazardous Event Table
@@ -282,6 +298,10 @@ Each hazardous event is the combination of a malfunctioning behavior occurring d
 | HE-014 | OS-1: Driving forward at moderate speed | MB-009: Motor direction reversal | Unintended motor reversal during forward driving — sudden reverse torque causing loss of control, mechanical stress, occupant injury | S3 | E3 | C3 | **C** |
 | HE-015 | OS-1: Driving forward at moderate speed | MB-027: Battery overvoltage or undervoltage | Battery voltage out of range — electronics may malfunction or reset, motor performance affected, gradual degradation | S1 | E3 | C1 | **QM** |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE3 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The primary hazardous events table (HE-001 to HE-015) covers the most critical combinations of malfunctions and operational situations. ASIL verification against the ISO 26262-3 Table 4 matrix: HE-001 (S3/E4/C3 = D) is correct. HE-002 (S2/E4/C2 = B) is correct. HE-003 (S3/E3/C3 = C) is correct. HE-004 (S3/E4/C3 = D) is correct. HE-005 (S3/E4/C3 = D) is correct. HE-006 (S2/E3/C2 = A) is correct. HE-007 (S2/E3/C2 = A) is correct. HE-008 (S2/E2/C2 = QM) is correct. HE-009 (S3/E3/C3 = C) is correct. HE-010 (S2/E3/C2 = A) is correct. HE-011 (S3/E3/C3 = C) is correct. HE-012 (S3/E2/C3 = B) is correct. HE-013 (S3/E2/C3 = B) is correct. HE-014 (S3/E3/C3 = C) is correct. HE-015 (S1/E3/C1 = QM) is correct. All ASIL assignments are consistent with the determination matrix.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE3 -->
+
 ### 6.2 Additional Hazardous Events
 
 The following events extend the analysis to cover additional operational situations and malfunctions that could lead to harm.
@@ -293,6 +313,10 @@ The following events extend the analysis to cover additional operational situati
 | HE-018 | OS-5: Reversing | MB-009: Motor direction reversal | Unintended forward motion during reversing — vehicle moves forward when reverse is expected, strikes objects in front | S2 | E3 | C2 | **A** |
 | HE-019 | OS-1: Driving forward at moderate speed | MB-010: Motor cannot be stopped | Motor enable stuck — motor continues to run despite torque request of zero, vehicle does not decelerate | S3 | E3 | C3 | **C** |
 | HE-020 | OS-1: Driving forward at moderate speed | MB-025: CAN bus babbling node | CAN bus flooding — safety-critical messages blocked by babbling node, loss of coordination between ECUs | S3 | E2 | C3 | **B** |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE4 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The additional hazardous events (HE-016 to HE-020) extend the analysis to cover additional operational situations and malfunctions. ASIL verification: HE-016 (S3/E3/C3 = C) is correct. HE-017 (S3/E4/C3 = D) is correct -- this is a critical finding as unintended vehicle motion from rest with pedestrians present warrants the highest ASIL. HE-018 (S2/E3/C2 = A) is correct. HE-019 (S3/E3/C3 = C) is correct. HE-020 (S3/E2/C3 = B) is correct. Note that HE-016 through HE-020 are NOT traced in the Safety Goals document (SG) Section 4, which only lists HE-001 through HE-015. This is a traceability gap -- the SG document must account for all 20 hazardous events, not just the first 15. The HARA Section 9.3 safety goals preview does reference HE-016 and HE-017 but not HE-018, HE-019, or HE-020 explicitly.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE4 -->
 
 ## 7. S/E/C Rating Justifications
 
@@ -416,6 +440,10 @@ The following events extend the analysis to cover additional operational situati
 
 **Controllability C1**: The driver notices reduced vehicle performance and can stop the vehicle voluntarily. The voltage monitoring system on the RZC provides warnings before the voltage reaches dangerous levels. The situation is simply controllable with minimal driver action.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE5 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The S/E/C justifications for HE-001 through HE-015 are detailed and well-reasoned, each providing multi-paragraph rationale for the assigned ratings. The justifications reference real-world analogies (e.g., Toyota 2009-2010 unintended acceleration for HE-001), physical calculations (kinetic energy, stopping distance), and ISO 26262 Table B.1/B.2/B.3 criteria. HE-005 (loss of braking) correctly identifies that this drive-by-wire platform has no mechanical fallback brake, which is a critical architectural constraint that elevates C to C3. HE-012 (SC failure) is correctly identified as a latent fault with S3 rating based on the consequence of the unmitigated subsequent fault. The thermal time constant arguments for HE-007 and HE-008 are physically sound. One observation: HE-009 (lidar false negative) assigns C3 based on the driver relying on the lidar as a safety net, but the lidar function is listed as ASIL C (not D), suggesting the driver is the primary obstacle detection path. This tension in the controllability argument should be documented.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE5 -->
+
 ### 7.16 HE-016: Unintended Acceleration at High Speed
 
 **Severity S3**: Unintended acceleration at highway speeds (80-130 km/h) is life-threatening. The vehicle may exceed safe speed for road conditions, other traffic, or road geometry. Collision energy increases with the square of velocity.
@@ -455,6 +483,10 @@ The following events extend the analysis to cover additional operational situati
 **Exposure E2**: A babbling node requires a specific software or hardware fault in one ECU (e.g., interrupt storm, CAN controller fault, infinite loop in CAN TX). This is a low-probability event, especially with proper software watchdog and CAN error handling.
 
 **Controllability C3**: The driver experiences the same loss of vehicle coordination as in HE-011. The babbling may not be immediately obvious to the driver (no physical symptom until vehicle control is lost). The driver cannot restore CAN communication. The E-stop (hardwired) and the Safety Controller (independent CAN monitor that can detect abnormal bus activity) are the only mitigation paths.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE6 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The S/E/C justifications for HE-016 through HE-020 maintain the same quality and depth as the primary events. HE-017 (unintended vehicle motion from rest) correctly identifies the pedestrian risk scenario and the driver's likely unpreparedness when stationary, justifying S3/E4/C3 = ASIL D. HE-019 (motor enable stuck) provides a clear explanation of why the BTS7960 enable pin fault creates a scenario where the motor "fights the brakes," which is distinct from simple unintended acceleration. HE-020 (babbling node) correctly notes that the SC can detect abnormal CAN bus activity, which links to SM-019 in the FSC.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE6 -->
 
 ## 8. ASIL Determination Matrix
 
@@ -507,6 +539,10 @@ The following matrix is the ISO 26262-3 Table 4 ASIL determination table, used t
 | **S3** | **E3** | A | B | C |
 | **S3** | **E4** | B | C | **D** |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE7 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The ASIL determination matrix in Section 8 correctly reproduces ISO 26262-3 Table 4. The classification scales for S, E, and C are accurately described with injury examples (AIS scale for severity), probability ranges for exposure, and driver capability percentages for controllability. This section serves as a self-contained reference for verifying all ASIL assignments in the hazardous event tables. Cross-checked: all 20 hazardous events in Sections 6.1 and 6.2 produce correct ASIL results when applied to this matrix.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE7 -->
+
 ## 9. HARA Summary
 
 ### 9.1 Hazardous Events per ASIL Level
@@ -552,6 +588,10 @@ The following safety goals are derived from the HARA results. Full safety goal s
 | SG-012 | The system shall prevent unintended motor direction reversal during driving | C | HE-014 |
 | SG-013 | The system shall ensure motor enable can always be deactivated by the control system | C | HE-019 |
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE8 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The HARA summary correctly counts 4 ASIL D, 6 ASIL C, 4 ASIL B, 4 ASIL A, and 2 QM hazardous events across the 20 total. The highest ASIL per function table is accurate and consistent with the hazardous event assignments. However, there is a significant discrepancy between the safety goals preview in Section 9.3 (13 safety goals, SG-001 through SG-013) and the Safety Goals document (SG) which defines only 8 safety goals (SG-001 through SG-008) by grouping related hazardous events. This discrepancy should be resolved -- either the HARA preview should be updated to reflect the final 8 SG grouping, or the SG document should be updated to include all 13. The current state creates confusion about the intended number of safety goals. Additionally, SG-004 in the preview ("prevent unintended vehicle motion from stationary state") maps to HE-017, but in the SG document SG-004 is "prevent unintended loss of braking" (from HE-005), and HE-017 is not explicitly mapped.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE8 -->
+
 ## 10. Traceability
 
 ### 10.1 Function-to-Hazardous-Event Traceability
@@ -577,6 +617,10 @@ The following safety goals are derived from the HARA results. Full safety goal s
 | ASIL assignments | HW Safety Requirements | HSR |
 | Hazardous events | FMEA (failure mode analysis) | FMEA |
 | Hazardous events | DFA (dependent failure analysis) | DFA |
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-HARA-HE9 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** The traceability section provides bidirectional mapping from functions to malfunctions to hazardous events (upstream) and from HARA outputs to downstream documents (SG, FSC, FSR, TSR, SSR, HSR, FMEA, DFA). The function-to-HE traceability table (Section 10.1) is complete for the functions listed. However, F-BODY and F-DIAG are not listed in the traceability table -- even though they are QM-rated with no safety-critical hazardous events, they should appear in the table with "None" or "QM" notation for completeness. The downstream traceability table (Section 10.2) correctly identifies all expected ISO 26262 work products that consume the HARA output.
+<!-- HITL-LOCK END:COMMENT-BLOCK-HARA-HE9 -->
 
 ## 11. Revision History
 

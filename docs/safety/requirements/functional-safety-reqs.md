@@ -22,6 +22,10 @@ date: 2026-02-21
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
+## Lessons Learned Rule
+
+Every requirement (FSR-NNN) in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`docs/safety/lessons-learned/`](../lessons-learned/). One file per requirement (FSR-NNN). File naming: `FSR-NNN-<short-title>.md`.
+
 
 # Functional Safety Requirements
 
@@ -82,6 +86,10 @@ The system shall continuously compare the readings from both pedal position sens
 
 **Rationale**: Dual redundant pedal sensors are the primary means of detecting pedal position sensor faults. A single sensor failure (drift, stuck, offset) must be detected before it can cause unintended acceleration. The debounce of 2 cycles (20 ms) prevents false detection from transient noise while remaining within the 50 ms FTTI of SG-001.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR001 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-specified, verifiable, and unambiguous with a clear threshold (5% full-scale, 2-cycle debounce). ASIL D is correct given trace to SG-001 (unintended acceleration, S3/E4/C3). Traces down to TSR-001 and TSR-002 are consistent. Note: the "Traces down" line has a formatting issue — missing space before "**Safety mechanism**" which should be verified in the source. Consider whether common-cause failure of the shared diametric magnet is adequately addressed by range checks alone, or if a diverse sensing principle is needed for ASIL D pedal position.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR001 -->
+
 ---
 
 ### FSR-002: Pedal Sensor Fault Detection Within 20 ms
@@ -95,6 +103,10 @@ The system shall continuously compare the readings from both pedal position sens
 The system shall detect a pedal sensor plausibility fault within 20 ms of the fault occurrence. Detection shall include both the dual-sensor comparison (FSR-001) and individual sensor range checks (each sensor reading within 0.5V to 4.5V equivalent).
 
 **Rationale**: The 20 ms detection time is derived from the SG-001 FTTI of 50 ms. With 20 ms detection + 10 ms reaction (CAN transmission + motor cutoff) + 20 ms margin, the system meets the FTTI with sufficient margin for timing jitter and worst-case scheduling.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR002 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with a clear 20 ms detection deadline and explicit timing budget breakdown (20+10+20=50 ms). ASIL D is appropriate for SG-001 trace. The dual-sensor comparison from FSR-001 plus individual range checks (0.5V-4.5V) provide comprehensive coverage. Traces down to TSR-003 is consistent. The timing budget in the rationale correctly demonstrates FTTI compliance with margin. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR002 -->
 
 ---
 
@@ -110,6 +122,10 @@ The system shall reduce the motor torque request to zero within 10 ms of detecti
 
 **Rationale**: Zero-torque latching prevents unintended acceleration from an intermittent sensor fault that repeatedly toggles between faulty and apparently-normal readings. Manual reset ensures the operator is aware of the fault before resuming operation.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR003 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-structured with clear reaction time (10 ms) and explicit latching conditions (a, b, c). ASIL D is correct for SG-001. The allocation split between CVC (command) and RZC (execution) is appropriate for the zonal architecture. Traces down to TSR-004 and TSR-005 with SM-001 and SM-002 are consistent. The manual reset requirement (condition c) is a strong safety measure preventing automated recovery from intermittent faults. Formatting issue on "Traces down" line (missing space) should be corrected.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR003 -->
+
 ---
 
 ### FSR-004: Motor Current Monitoring and Overcurrent Cutoff
@@ -123,6 +139,10 @@ The system shall reduce the motor torque request to zero within 10 ms of detecti
 The system shall continuously monitor motor current via the ACS723 current sensor and disable the motor driver (both BTS7960 enable lines set to LOW) within 10 ms of detecting that motor current exceeds the maximum rated threshold (calibratable, default: 25A) for a continuous debounce period of 10 ms.
 
 **Rationale**: Overcurrent can cause motor winding damage, overheating, fire, or BTS7960 driver failure. The ACS723 provides galvanically isolated current measurement. The BTS7960 built-in overcurrent protection provides a hardware-diverse backup. The 10 ms debounce prevents false triggers from inrush current during motor startup.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR004 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear threshold (25A), debounce (10 ms), and specific hardware references (ACS723, BTS7960). ASIL A is appropriate for SG-006 (motor protection) trace. The dual mechanism (ACS723 + BTS7960 built-in protection) provides hardware diversity which is good practice. Traces down to TSR-006 and TSR-007 are consistent. The 10 ms debounce to handle inrush current is well-reasoned. Consider documenting the BTS7960 hardware overcurrent trip point (43A per datasheet) relative to the 25A software threshold to confirm adequate layered protection.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR004 -->
 
 ---
 
@@ -145,6 +165,10 @@ The system shall continuously monitor motor temperature via NTC thermistors and 
 The derating shall include a 10 degree C hysteresis on recovery (motor re-enable requires temperature 10 degrees C below the activation threshold).
 
 **Rationale**: Progressive derating extends the thermal operating envelope by reducing heat generation before reaching critical temperatures. The hysteresis prevents oscillation between derating levels at boundary temperatures. Sensor range checks detect open-circuit (reads very high) and short-circuit (reads very low) NTC faults.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR005 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-specified with a clear graduated derating curve, explicit temperature thresholds, hysteresis (10 degrees C), and sensor fault detection ranges. ASIL A is appropriate for SG-006 trace. The progressive approach (100%/75%/50%/0%) with corresponding vehicle state transitions (RUN/DEGRADED/LIMP/SAFE_STOP) is thorough. Traces down to TSR-008 and TSR-009 are consistent. The sensor fault thresholds (-30 to 150 degrees C) correctly cover open-circuit and short-circuit NTC failure modes. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR005 -->
 
 ---
 
@@ -169,6 +193,10 @@ The system shall continuously monitor the steering angle feedback sensor (AS5048
 
 **Rationale**: Steering angle feedback is the primary means of detecting servo runaway, mechanical binding, or sensor failure. The 50 ms debounce prevents false detection from transient servo oscillation during normal position tracking. The 5-degree threshold accounts for servo settling time and mechanical compliance.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR006 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is comprehensive with four distinct fault detection conditions (position error, range, slew rate, SPI comms), each verifiable. ASIL D is correct for SG-003 (unintended steering). The 50 ms debounce and 5-degree threshold are reasonable for servo tracking dynamics. Traces down to TSR-010 and TSR-011 are consistent. Concern: with only a single AS5048A sensor on steering (unlike dual pedal sensors), the diagnostic coverage relies heavily on command-vs-feedback comparison. Consider whether this single-sensor approach meets ASIL D SPFM requirements or if ASIL decomposition should be formally documented.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR006 -->
+
 ---
 
 ### FSR-007: Steering Return-to-Center on Fault
@@ -183,6 +211,10 @@ The system shall command the steering servo to the center position (0 degrees) a
 
 **Rationale**: Return-to-center is the safe state for steering (SG-003). A controlled rate-limited return prevents the correction itself from being a hazard (sudden steering movement). The 200 ms fallback to PWM disable handles the case where the servo is mechanically stuck or the feedback sensor fault prevents position verification.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR007 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear timing (100 ms command, 200 ms fallback to PWM disable) and a defined safe state (center position, 0 degrees). ASIL D is appropriate for SG-003. The two-stage approach (rate-limited return, then PWM disable) provides defense-in-depth. Traces down to TSR-012 and TSR-013 are consistent. The rate limit constraint ("not exceeding the maximum rate limit") should reference FSR-008 explicitly for the 30 deg/s value to avoid ambiguity. The 200 ms fallback correctly handles mechanical binding scenarios.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR007 -->
+
 ---
 
 ### FSR-008: Steering Rate Limiting
@@ -196,6 +228,10 @@ The system shall command the steering servo to the center position (0 degrees) a
 The system shall limit the rate of change of the steering angle command to a maximum of 30 degrees per second. Any steering command that would exceed this rate shall be clamped to the maximum rate. Additionally, the system shall enforce software steering angle limits of -45 to +45 degrees (with a 2-degree margin inside mechanical stops), clamping any command that exceeds these limits.
 
 **Rationale**: Rate limiting prevents sudden steering inputs (from CAN corruption, software faults, or operator error) from causing loss of vehicle control. The rate limit of 30 degrees/second is sufficient for normal steering at the platform's maximum speed while preventing snap steering. The software angle limits prevent the servo from reaching mechanical end stops, which could cause stalling and overheating.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR008 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with specific rate limit (30 deg/s) and angle limits (-45 to +45 with 2-degree margin). ASIL C is appropriate — could arguably be ASIL D since it directly prevents loss of steering control (SG-003 is ASIL D), but ASIL C is defensible as rate limiting is a supplementary protection rather than the primary detection mechanism. Traces down to TSR-014 with SM-009 and SM-010 are consistent. The 2-degree margin from mechanical stops is a good engineering practice to prevent servo stall.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR008 -->
 
 ---
 
@@ -222,6 +258,10 @@ On detection of a brake fault (conditions 1 or 2), the system shall immediately 
 
 **Rationale**: Brake monitoring ensures that the brake actuator responds to commands as expected. PWM feedback and current draw provide independent verification of servo operation. State-based plausibility (condition 3) detects spurious CAN messages. Motor cutoff provides a secondary deceleration path when braking is lost.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR009 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is comprehensive with four distinct fault detection conditions and a clear fallback strategy (motor cutoff on brake failure). ASIL D is correct given dual trace to SG-004 and SG-005. The four monitoring conditions (PWM feedback, current draw, state plausibility, range check) provide good diagnostic coverage. Traces down to TSR-015 and TSR-016 are consistent. The motor cutoff as backup deceleration is well-reasoned. Consider adding a requirement for brake servo position feedback (e.g., potentiometer) to directly verify braking force application, since PWM feedback only confirms electrical command, not mechanical actuation.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR009 -->
+
 ---
 
 ### FSR-010: Auto-Brake on CAN Timeout
@@ -235,6 +275,10 @@ On detection of a brake fault (conditions 1 or 2), the system shall immediately 
 The system shall autonomously apply maximum braking force if no valid brake command CAN message (passing E2E verification) is received from the CVC within a timeout period of 100 ms. The auto-brake shall remain applied until valid CAN communication is restored and the CVC explicitly commands brake release.
 
 **Rationale**: CAN communication loss (bus fault, CVC failure, wiring fault) removes the operator's ability to command braking. The FZC must autonomously apply brakes to bring the vehicle to a stop. The 100 ms timeout balances false-trigger avoidance (normal CAN jitter is under 20 ms) against timely response. The auto-brake is latching — it does not release on a single valid message, requiring explicit CVC confirmation that the fault has been resolved.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR010 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear timeout (100 ms), trigger condition (no valid E2E-verified CAN message), and explicit latching behavior. ASIL D is correct for SG-004 trace. The autonomous FZC behavior (apply brakes without CVC coordination) is essential since CAN loss means no CVC commands. The latching with explicit CVC release prevents premature brake release during intermittent CAN faults. Traces down to TSR-017 are consistent. The 100 ms timeout provides adequate margin over normal 20 ms CAN jitter. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR010 -->
 
 ---
 
@@ -260,6 +304,10 @@ The distance thresholds shall be adjustable at compile time and shall maintain t
 
 **Rationale**: Graduated response provides proportional reaction to obstacle proximity. Warning allows the operator to react. Partial braking provides automated assistance. Emergency braking is the last resort to prevent collision. Compile-time adjustability allows tuning for different demonstration environments.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR011 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with three clearly defined distance thresholds (100/50/20 cm) and corresponding graduated responses. ASIL C is appropriate for SG-007 trace. The invariant constraint (emergency < braking < warning) prevents misconfiguration. Traces down to TSR-018 and TSR-019 are consistent. The compile-time adjustability is reasonable for a demonstration platform. Consider whether runtime-adjustable thresholds would be needed for different operational scenarios, and if so, what validation safeguards would be required.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR011 -->
+
 ---
 
 ### FSR-012: Lidar Sensor Plausibility Check
@@ -280,6 +328,10 @@ The system shall perform the following plausibility checks on every lidar sensor
 On any plausibility failure, the system shall substitute a safe default distance of 0 cm (obstacle present) and log a diagnostic trouble code.
 
 **Rationale**: The safe default of 0 cm (obstacle present) triggers protective braking (FSR-011 emergency zone), which is the fail-safe behavior. This is a fail-closed design: sensor failure is treated as "obstacle detected" rather than "no obstacle," ensuring the system errs on the side of caution.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR012 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-specified with four distinct plausibility checks (range, stuck sensor, signal strength, timeout) and a clear fail-closed safe default (0 cm). ASIL C is appropriate for SG-007. The fail-closed design philosophy (sensor failure = obstacle present) is the correct approach for obstacle detection. Traces down to TSR-020 and TSR-021 are consistent. The stuck sensor detection (50 consecutive samples / 500 ms) is well-reasoned. One concern: a persistent lidar fault with 0 cm safe default will cause permanent emergency braking — FSR-012 should address this escalation path (which it does implicitly through FSR-011 emergency zone, but explicit degradation after sustained fault would be beneficial).
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR012 -->
 
 ---
 
@@ -307,6 +359,10 @@ Safety-critical CAN messages include: pedal position, torque request, torque sta
 
 **Rationale**: CAN 2.0B does not provide application-layer data integrity beyond the CAN CRC (which covers the frame only, not application semantics). E2E protection per AUTOSAR E2E Profile 1 detects corruption, repetition, loss, delay, insertion, and masquerading — all fault models identified in ISO 26262-4 for communication channels.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR013 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is comprehensive and well-specified with explicit E2E header components (CRC-8, alive counter, data ID), failure handling (last valid + safe default after 3 failures), and enumeration of all protected messages. ASIL D is correct given traces to all 8 safety goals. The AUTOSAR E2E Profile 1-style protection covers all communication fault models per ISO 26262-4. Traces down to TSR-022, TSR-023, and TSR-024 are consistent. The 3-consecutive-failure threshold before safe default substitution balances robustness against false triggers. The complete list of safety-critical messages ensures no communication path is unprotected.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR013 -->
+
 ---
 
 ### 4.6 Independent Monitoring (SG-008)
@@ -325,6 +381,10 @@ Each zone ECU (CVC, FZC, RZC) shall transmit a heartbeat CAN message at a fixed 
 
 **Rationale**: Heartbeat messages enable the Safety Controller to detect ECU failures (processor hang, CAN transceiver fault, power loss). The 50 ms interval provides detection within 150 ms (3 missed heartbeats). The operating mode field enables the SC to verify that all ECUs are in the expected state.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR014 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear interval (50 ms +/- 5 ms), message content (ECU ID, alive counter, mode, CRC-8), and allocation to all zone ECUs. ASIL C is appropriate for SG-008 (independent monitoring). The E2E protection on heartbeat messages is correct. Traces down to TSR-025 and TSR-026 are consistent. The 50 ms interval enabling 150 ms detection (3 missed heartbeats) is well-reasoned for the architecture. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR014 -->
+
 ---
 
 ### FSR-015: Heartbeat Timeout Detection by Safety Controller
@@ -342,6 +402,10 @@ The Safety Controller shall independently monitor the heartbeat CAN messages fro
 3. If the heartbeat is still absent after the confirmation period, de-energize the kill relay (open circuit), forcing the system into the safe state.
 
 **Rationale**: The 150 ms timeout (3 missed heartbeats) provides sufficient margin for CAN bus scheduling jitter while enabling timely detection of ECU failure. The 50 ms confirmation period reduces false-positive relay trips caused by transient CAN bus overload. The SC operates in CAN listen-only mode and cannot corrupt the bus.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR015 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear timeout (150 ms), confirmation period (50 ms), and explicit reaction sequence (LED, wait, kill relay). ASIL C is appropriate for SG-008. The two-stage detection (timeout + confirmation) reduces false positives while maintaining timely response. Total detection time is 150+50=200 ms, which should be verified against SG-008 FTTI (100 ms) — this exceeds the FTTI. The rationale acknowledges this and relies on SC self-test and lockstep for faster coverage of SC-internal faults, but this should be explicitly documented in the FTTI compliance analysis. Traces down to TSR-027 and TSR-028 are consistent.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR015 -->
 
 ---
 
@@ -365,6 +429,10 @@ The kill relay shall use an energize-to-run configuration: the relay coil must b
 
 **Rationale**: The kill relay is the ultimate hardware-enforced safety boundary. Its energize-to-run design ensures that any SC failure — including complete power loss — results in the safe state. The 5 ms reaction time is achievable because relay de-energization requires only de-asserting a GPIO pin (the relay dropout time is the limiting factor). The re-energization lockout prevents automated recovery from a potentially dangerous state.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR016 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is comprehensive with five explicit trigger conditions, energize-to-run design philosophy, and power-cycle lockout. ASIL D is correct given traces to SG-001, SG-003, SG-004, and SG-008. The energize-to-run pattern is the gold standard for safety relays — any SC failure inherently results in safe state. The 5 ms reaction time is achievable for GPIO de-assertion. Traces down to TSR-029 and TSR-030 are consistent. The requirement correctly addresses lockstep errors, watchdog timeouts, and self-test failures as trigger conditions. Concern: relay contact welding (stuck closed) is a residual risk that should be addressed in the FMEA with PMHF contribution.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR016 -->
+
 ---
 
 ### FSR-017: External Watchdog Monitoring Per ECU
@@ -385,6 +453,10 @@ If the firmware fails to toggle the WDI pin (processor hang, infinite loop, stac
 Additionally, the Safety Controller (TMS570LC43x) shall rely on its hardware lockstep CPU cores as the primary computation error detection mechanism, with the external watchdog providing backup detection for faults not caught by lockstep (e.g., clock failure affecting both cores simultaneously).
 
 **Rationale**: The external watchdog is a hardware-independent mechanism that detects firmware hangs not caught by software-level monitoring. By conditioning the watchdog toggle on successful self-check completion, the watchdog also detects certain classes of logical faults (data corruption, stack overflow) rather than only detecting complete processor hang. The TPS3823 is a separate IC with its own oscillator, providing true independence from the MCU's clock domain.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR017 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-specified with conditional watchdog feeding (main loop + self-checks), TPS3823 configuration, and SC lockstep complementarity. ASIL D is correct for SG-008 trace. The conditioning of watchdog toggle on self-check completion elevates the watchdog from simple hang detection to broader firmware health monitoring — this is excellent practice. Traces down to TSR-031 and TSR-032 with SM-020 and SM-021 are consistent. The 1.6-second timeout should be validated against actual worst-case main loop execution time during integration testing (noted in open items). The lockstep + external watchdog combination on SC provides complementary fault coverage.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR017 -->
 
 ---
 
@@ -414,6 +486,10 @@ The system shall remain in SAFE_STOP until the E-stop button is released AND a m
 
 **Rationale**: The E-stop is the operator's last resort for immediate system shutdown. Hardware interrupt detection ensures minimum latency. The highest-priority CAN ID (0x001) ensures the E-stop message is transmitted even under high bus load. The latching behavior (requires restart) prevents accidental resumption.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR018 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with precise timing (1 ms detection, 1 ms CAN broadcast, 10 ms ECU reaction) and explicit actions for each receiving ECU. ASIL B is appropriate given the E-stop is a supplementary operator-initiated mechanism, not the primary safety function. The highest-priority CAN ID (0x001) ensures delivery under bus contention. Traces down to TSR-033 and TSR-034 are consistent. The latching behavior requiring ignition cycle restart is correct. Note: the E-stop hardware circuit design (normally-closed wiring) in HSR-CVC-003 uses a different polarity than described here — ensure consistency between the FSR E-stop activation description and the HSR circuit design (NC button with active-HIGH on press).
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR018 -->
+
 ---
 
 ### 4.8 System State Management (SG-001 through SG-008)
@@ -440,6 +516,10 @@ Each state shall define the maximum permitted operational limits (torque, speed,
 
 **Rationale**: A deterministic state machine with restricted transitions prevents the system from entering an undefined or unsafe operating mode. State persistence prevents "reset-washing" of faults. The E-stop and SC overrides provide independent paths to the safe state regardless of the software state.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR019 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is comprehensive, covering all six vehicle states, valid transitions, E-stop/SC overrides, CAN broadcast, and NVM persistence. ASIL D is correct given traces to all 8 safety goals. The explicit transition table with only one reverse transition (DEGRADED to RUN) enforces monotonic progression toward safer states. State persistence preventing "reset-washing" is an important safety feature. Traces down to TSR-035, TSR-036, and TSR-037 are consistent. The 10 ms state broadcast rate with E2E protection ensures timely state synchronization across all ECUs. No gaps identified — this is a well-designed state management requirement.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR019 -->
+
 ---
 
 ### FSR-020: CAN Bus Loss Detection
@@ -461,6 +541,10 @@ Each ECU shall independently handle CAN loss without relying on commands from ot
 
 **Rationale**: CAN bus is a single point of failure in this architecture (no redundant bus). Each ECU must be capable of autonomous safe-state transition when CAN communication is lost. The 200 ms timeout is chosen to be longer than any individual message timeout (avoiding false triggers from single message loss) while still providing timely detection.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR020 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-structured with per-ECU autonomous safe-state actions and three independent detection methods (bus-off, silence, error counter). ASIL C is appropriate for SG-008 trace. The rationale correctly identifies CAN as a single point of failure and mandates independent handling per ECU. Traces down to TSR-038 and TSR-039 with SM-004 and SM-007 are consistent. The 200 ms timeout is reasonably chosen for the aggregate bus silence case. Consider documenting the interaction between this timeout and the SC heartbeat timeout (150 ms + 50 ms confirmation = 200 ms) -- they effectively fire at similar times, which may be intentional but should be explicitly noted as coordinated design, not coincidence.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR020 -->
+
 ---
 
 ### 4.9 Motor Direction Safety (SG-001)
@@ -481,6 +565,10 @@ Additionally, the system shall prevent simultaneous activation of both RPWM and 
 
 **Rationale**: Incorrect motor direction could cause unintended vehicle motion. The shoot-through protection prevents damage to the BTS7960 H-bridge and potential short-circuit conditions. Direction verification using encoder feedback provides independent confirmation of motor behavior.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR021 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is verifiable with clear direction verification (encoder feedback within 50 ms) and shoot-through protection (10 us dead-time). ASIL C is appropriate for SG-001 trace. The dual concern (direction plausibility + shoot-through) is well-combined since both relate to motor direction safety. Traces down to TSR-040 with SM-002 are consistent. The 50 ms direction verification window should be validated against the motor's mechanical response time -- if the motor has high inertia, the encoder may not show the correct direction within 50 ms at low torque commands. Consider adding a minimum torque threshold below which direction checking is suppressed.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR021 -->
+
 ---
 
 ### FSR-022: Cross-Plausibility — Torque Request vs. Actual Current
@@ -496,6 +584,10 @@ The Safety Controller shall continuously compare the torque request (CAN message
 On cross-plausibility fault detection, the SC shall de-energize the kill relay (per FSR-016).
 
 **Rationale**: Cross-plausibility provides an independent, diverse check on the motor control path. It detects faults that are not caught by the CVC's pedal sensor monitoring (SM-001) or the RZC's current monitoring (SM-002), such as: software faults in torque calculation, CAN message corruption that passes E2E checks (extremely unlikely but non-zero probability), or BTS7960 driver faults that cause current without a corresponding torque request. The SC's independence (different vendor, different architecture, listen-only CAN) ensures this check cannot be defeated by a common-cause fault affecting the STM32 ECUs.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR022 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-specified with a calibratable torque-to-current lookup table, 20% threshold, and 50 ms debounce. ASIL C is appropriate for SG-001 trace. The SC's architectural independence (different vendor TI vs ST, different architecture lockstep vs single-core, listen-only CAN) provides strong common-cause failure resistance. Traces down to TSR-041 and TSR-042 with SM-003 are consistent. The 20% threshold should be validated against motor transient dynamics during acceleration/deceleration ramps, and the lookup table accuracy across the operating temperature range of the ACS723 sensor. No significant gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR022 -->
 
 ---
 
@@ -520,6 +612,10 @@ The system shall warn the operator within 200 ms of any transition from NORMAL o
 At least one warning channel (SC fault LEDs) shall be independent of the CAN bus, ensuring the operator is warned even in the event of total CAN bus failure.
 
 **Rationale**: ISO 26262-3 Clause 8.4.5 requires that the driver (operator) be warned of degraded operation so they can adapt their behavior. Two independent channels provide redundancy in the warning path. The SC fault LEDs provide a CAN-independent warning for the worst case (complete bus failure).
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR023 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-designed with three independent warning channels (OLED, buzzer, fault LEDs) and a CAN-independent backup (SC LEDs). ASIL B is appropriate given the warning function is supplementary to the primary safety mechanisms. The 200 ms warning latency meets ISO 26262-3 Clause 8.4.5. Traces down to TSR-043, TSR-044, and TSR-045 with SM-022 are consistent. The distinct buzzer patterns per severity level enable auditory differentiation without visual attention, which is good ergonomic design. The explicit requirement for at least one CAN-independent channel ensures warning availability even during total bus failure. No gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR023 -->
 
 ---
 
@@ -552,6 +648,10 @@ For each safety goal, the total time from fault occurrence to safe state achieve
 
 **Rationale**: FTTI compliance is the fundamental timing requirement for functional safety. The table above demonstrates that each safety goal has at least one primary mechanism that achieves the safe state within the FTTI. Secondary and tertiary mechanisms (which may exceed FTTI) provide defense in depth for faults not caught by the primary mechanism.
 
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR024 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** This is a critical umbrella requirement that consolidates FTTI compliance for all 8 safety goals in a single verifiable table. ASIL D is correct given traces to all safety goals. The timing breakdown (detection + reaction + actuation = total, verified against FTTI) is the right approach for demonstrating compliance. The 10% timing margin target is appropriate for worst-case variability. Traces down to TSR-046 and TSR-047 are consistent. Concern: SG-003 (steering) shows mechanism total time of 100 ms against FTTI of 100 ms, leaving zero margin -- this should be flagged as a risk item requiring WCET validation on target hardware. Also, the SG-008 FTTI of 100 ms may conflict with the 200 ms heartbeat detection time noted in FSR-015 review. This discrepancy should be resolved in the FTTI compliance analysis.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR024 -->
+
 ---
 
 ### 4.12 Loss of Braking (SG-004)
@@ -576,6 +676,10 @@ The system shall detect loss of braking capability (brake servo fault per FSR-00
 The system shall transition to SAFE_STOP and shall not resume normal operation until the brake system is verified functional.
 
 **Rationale**: On a DC motor-driven platform, motor cutoff provides a secondary deceleration path through back-EMF and mechanical friction. While not equivalent to active braking, it prevents continued acceleration when braking is lost. The four-layer response (FZC detection, CVC coordination, RZC execution, SC backup) ensures motor cutoff even if multiple communication paths fail.
+
+<!-- HITL-LOCK START:COMMENT-BLOCK-FSR025 -->
+**HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-structured with a four-layer defense-in-depth response chain (FZC detect, CVC command, RZC execute, SC backup). ASIL D is correct given SG-004 (loss of braking) trace. The 30 ms motor cutoff timing from fault detection is achievable through the CAN chain. Traces down to TSR-048 and TSR-049 with SM-011 and SM-013 are consistent. The SC kill relay backup path correctly handles the case where the CAN chain fails. The requirement correctly identifies motor cutoff as a secondary deceleration mechanism (back-EMF + friction), not a braking replacement. The SAFE_STOP transition with brake verification before resumption is appropriate. No significant gaps identified.
+<!-- HITL-LOCK END:COMMENT-BLOCK-FSR025 -->
 
 ---
 
