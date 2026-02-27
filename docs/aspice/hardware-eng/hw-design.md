@@ -215,7 +215,7 @@ This document describes the hardware design for the Taktflow Zonal Vehicle Platf
                     |           |
   PB0 (GPIO) ----->| WDI  RESET|---[100nF]--- STM32 NRST
                     |           |         |
-                    | CT    GND |       (open-drain, active-low)
+                    | CT    GND |       (push-pull, active-low)
                     +---+-------+
                         |
                      [100nF] (sets timeout = 1.6 sec)
@@ -786,7 +786,7 @@ Peak current (8.5A) is within the 10A PSU rating. The motor stall current (25A) 
 | TJA1051T/3 for STM32 CAN transceivers | ADR-004 | 3.3V native, CAN FD capable, ISO 11898-2 |
 | SN65HVD230 for TMS570 CAN transceiver | ADR-004 | TI vendor consistency, 3.3V, proven with DCAN |
 | DCAN1 (not DCAN4) for TMS570 | ADR-005 | HALCoGen v04.07.01 mailbox bug on DCAN4 |
-| TPS3823 external watchdog | ADR-006 | Independent oscillator, open-drain reset, SOT-23-5 |
+| TPS3823 external watchdog | ADR-006 | Independent oscillator, push-pull reset, SOT-23-5 |
 | AS5048A magnetic angle sensors | ADR-007 | 14-bit, SPI, 10 MHz max, contactless |
 | BTS7960 H-bridge module | ADR-008 | 43A rated, 3.3V logic, built-in current sense |
 

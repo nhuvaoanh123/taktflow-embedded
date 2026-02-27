@@ -120,16 +120,18 @@ The CVC hardware shall include a TPS3823DBVR external watchdog IC with the follo
 
 1. **Timeout**: External capacitor on CT pin to set timeout period of 1.6 seconds (C = 100 nF per TPS3823 datasheet, tolerance +/- 20%).
 2. **WDI connection**: WDI (watchdog input) pin connected to a dedicated MCU GPIO (configured by software).
-3. **RESET connection**: RESET output (active-low, open-drain) connected to the STM32G474RE NRST pin with a 100 nF debounce capacitor.
+3. **RESET connection**: RESET output (active-low, push-pull) connected to the STM32G474RE NRST pin with a 100 nF debounce capacitor.
 4. **Power supply**: VDD connected to the 3.3V rail with a 100 nF decoupling capacitor.
 5. **Power-on reset**: The TPS3823 shall provide a minimum 200 ms power-on reset pulse (per datasheet) to ensure the MCU starts cleanly.
 6. **Independence**: The TPS3823 internal oscillator is independent of the MCU clock, providing timing diversity.
 
-**Rationale**: The TPS3823 is a separate IC with its own oscillator, providing true clock-domain independence from the STM32. The open-drain RESET output can be wire-ORed with other reset sources.
+**Rationale**: The TPS3823 is a separate IC with its own oscillator, providing true clock-domain independence from the STM32. The push-pull RESET output drives the MCU NRST pin directly (1:1 connection per ECU; wire-OR not needed). Note: if wire-OR with multiple reset sources is ever required, use the TPS3824 (open-drain variant) instead.
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-HSR-CVC-002 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies TPS3823 external watchdog with 1.6s timeout, independent oscillator, and open-drain reset. ASIL D is correct per TSR-032. The 85% DC is appropriate -- the TPS3823 detects hang/clock faults but not incorrect-but-timely computation. The 200 ms POR pulse meets STM32G474 minimum reset pulse requirement. HSR-A-002 correctly flags the +/-20% timeout tolerance -- worst case 1.92s should be validated against system timing requirements. The clock independence from the MCU eliminates a common-cause failure mode. Traces to TSR-032 are consistent. No gaps identified.
 <!-- HITL-LOCK END:COMMENT-BLOCK-HSR-CVC-002 -->
+
+> **Correction (2026-02-27):** The HITL comment above references "open-drain reset" — this was corrected to **push-pull** in the requirement text. The TPS3823 has a push-pull RESET output; the TPS3824 is the open-drain variant. No functional impact (1:1 connection per ECU, wire-OR not needed).
 
 ---
 

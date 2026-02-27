@@ -109,13 +109,13 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 22 | TPS3823DBVR External Watchdog IC (SOT-23-5) | 4 | $1.50 | $6.00 | Mouser / Digikey | TPS3823DBVR (TI) | Not ordered | Phase 1 |
+| 22 | TPS3823-33DBVT External Watchdog IC (SOT-23-5) | 5 | €1.60 | €8.00 | Reichelt.de | TPS3823-33DBVT (TI) | **Ordered** 2026-02-27 | Phase 1 |
 | 23 | SOT-23-5 Breakout Board (for TPS3823 soldering) | 4 | $0.50 | $2.00 | Amazon / AliExpress | SOT-23-5 adapter PCB | Not ordered | Phase 1 |
 | 24 | Automotive Relay (12V coil, 30A SPST-NO) | 1 | $4.00 | $4.00 | Amazon / AutoZone | Bosch 0332019150 or equiv. | Not ordered | Phase 1 |
 | 25 | IRLZ44N N-Channel MOSFET (logic-level, TO-220) | 1 | $1.50 | $1.50 | Amazon / Mouser | IRLZ44NPBF | Not ordered | Phase 1 |
 | 26 | 1N4007 Rectifier Diode (flyback protection) | 2 | $0.10 | $0.20 | Amazon / Mouser | 1N4007 | Not ordered | Phase 1 |
 | 27 | E-Stop Button (NC, mushroom head, red, panel mount) | 1 | $5.00 | $5.00 | Amazon / AliExpress | 22mm NC emergency stop | Not ordered | Phase 1 |
-| | **Subtotal: Safety HW** | | | **$18.70** | | | | |
+| | **Subtotal: Safety HW** | | | **~$21.35** | | | | |
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC5 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** Safety hardware selection is critical and well-considered. Four TPS3823DBVR external watchdog ICs (one per physical ECU) implement independent watchdog supervision -- this is a key ASIL D requirement. The SOT-23-5 breakout boards for hand-soldering the TPS3823 are practical for prototyping. The automotive relay (30A SPST-NO) with IRLZ44N MOSFET driver implements the energize-to-run kill relay (SYS-024). The 1N4007 flyback diodes protect the MOSFET. The NC mushroom-head E-stop button is safety-standard compliant. All safety hardware correctly in Phase 1. This is the highest-priority BOM section from a safety perspective.
@@ -342,7 +342,7 @@ For critical components, backup alternatives are identified:
 | 19 | 12V DC motor | -- | -- | -- | |
 | 20 | BTS7960 module | -- | -- | -- | |
 | 21 | MG996R servos (x2) | -- | -- | -- | |
-| 22 | TPS3823DBVR (x4) | -- | -- | -- | |
+| 22 | TPS3823-33DBVT (x5) | 2026-02-27 | -- | -- | Reichelt.de, 5 pcs (4 needed + 1 spare), €8.00 total |
 | 23 | SOT-23-5 breakout (x4) | -- | -- | -- | |
 | 24 | 30A automotive relay | -- | -- | -- | |
 | 25 | IRLZ44N MOSFET | -- | -- | -- | |
@@ -370,4 +370,5 @@ For critical components, backup alternatives are identified:
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub with summary table |
 | 1.0 | 2026-02-21 | System | Complete BOM: 74 line items across 11 categories, per-item part numbers, budget tracking ($537 without scope), procurement priority phasing, alternative components for all critical parts |
+| 1.1 | 2026-02-27 | An Dao | TPS3823-33DBVT ordered from Reichelt.de: 5 pcs × €1.60 = €8.00. Updated part number (DBVR→DBVT), qty (4→5, 1 spare), supplier (Mouser→Reichelt). First component ordered. |
 

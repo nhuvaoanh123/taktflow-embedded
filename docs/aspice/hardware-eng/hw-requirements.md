@@ -593,7 +593,7 @@ Each physical ECU (CVC, FZC, RZC, SC) shall include a TPS3823DBVR external watch
 1. **Part number**: TPS3823DBVR (TI), SOT-23-5 package, available on breakout boards.
 2. **Timeout period**: 1.6 seconds, set by external capacitor CT = 100 nF (per TPS3823 datasheet Table 1). Tolerance: +/-20% (range 1.28s to 1.92s).
 3. **WDI (watchdog input)**: Connected to a dedicated MCU GPIO output. Toggle between HIGH and LOW at a rate faster than the timeout period.
-4. **RESET output**: Active-low, open-drain. Connected to the MCU hardware reset pin (NRST on STM32, nRST on TMS570). 100 nF debounce capacitor from RESET to GND.
+4. **RESET output**: Active-low, push-pull. Connected to the MCU hardware reset pin (NRST on STM32, nRST on TMS570). 100 nF debounce capacitor from RESET to GND. Note: TPS3823 is push-pull; use TPS3824 if open-drain (wire-OR) is needed.
 5. **MR (manual reset) input**: Tied to VDD (no manual reset required).
 6. **VDD**: Connected to 3.3V rail with 100 nF decoupling capacitor.
 7. **Power-on reset**: TPS3823 provides a minimum 200 ms power-on reset pulse, ensuring the MCU starts from a known state.
