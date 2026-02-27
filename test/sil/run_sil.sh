@@ -112,8 +112,15 @@ check_command() {
 }
 
 check_command docker
-check_command docker-compose
 check_command python3
+
+# Verify docker compose plugin is available (v2 syntax, no hyphen)
+if ! docker compose version &>/dev/null; then
+    fail "Required command not found: docker compose (v2 plugin)"
+    info "Install with: apt install docker-compose-plugin"
+    exit 1
+fi
+ok "docker compose found: $(docker compose version --short)"
 
 # Verify Docker daemon is running
 if ! docker info &>/dev/null; then
@@ -188,7 +195,7 @@ info "Results will be saved to: $RUN_RESULTS_DIR"
 header "Starting SIL Platform"
 
 info "Bringing up Docker services from $COMPOSE_FILE"
-docker-compose -f "$COMPOSE_FILE" up --build -d 2>&1 | tee "$RUN_RESULTS_DIR/docker_startup.log"
+docker compose -f "$COMPOSE_FILE" up --build -d 2>&1 | tee "$RUN_RESULTS_DIR/docker_startup.log"
 
 if [ $? -ne 0 ]; then
     fail "Docker compose up failed. Check $RUN_RESULTS_DIR/docker_startup.log"
@@ -253,10 +260,10 @@ fi
 if [ "$HEALTH_OK" = false ]; then
     fail "One or more services failed health checks"
     info "Saving container logs before exit..."
-    docker-compose -f "$COMPOSE_FILE" logs --no-color > "$RUN_RESULTS_DIR/docker_logs.txt" 2>&1
+    docker compose -f "$COMPOSE_FILE" logs --no-color > "$RUN_RESULTS_DIR/docker_logs.txt" 2>&1
     if [ "$KEEP_CONTAINERS" = false ]; then
         info "Tearing down containers..."
-        docker-compose -f "$COMPOSE_FILE" down 2>/dev/null
+        docker compose -f "$COMPOSE_FILE" down 2>/dev/null
     fi
     exit 1
 fi
@@ -298,12 +305,12 @@ echo ""
 header "Collecting Logs"
 
 info "Saving Docker container logs..."
-docker-compose -f "$COMPOSE_FILE" logs --no-color > "$RUN_RESULTS_DIR/docker_logs.txt" 2>&1
+docker compose -f "$COMPOSE_FILE" logs --no-color > "$RUN_RESULTS_DIR/docker_logs.txt" 2>&1
 ok "Container logs saved to $RUN_RESULTS_DIR/docker_logs.txt"
 
 # Save individual container logs
 for container in cvc fzc rzc sc bcm icu tcu plant-sim can-gateway fault-inject mqtt-broker; do
-    docker-compose -f "$COMPOSE_FILE" logs --no-color "$container" \
+    docker compose -f "$COMPOSE_FILE" logs --no-color "$container" \
         > "$RUN_RESULTS_DIR/${container}.log" 2>/dev/null || true
 done
 ok "Individual container logs saved"
@@ -313,10 +320,10 @@ ok "Individual container logs saved"
 # ---------------------------------------------------------------------------
 if [ "$KEEP_CONTAINERS" = true ]; then
     warn "Containers kept running (--keep flag). Tear down manually:"
-    warn "  docker-compose -f $COMPOSE_FILE down"
+    warn "  docker compose -f $COMPOSE_FILE down"
 else
     header "Tearing Down SIL Platform"
-    docker-compose -f "$COMPOSE_FILE" down 2>&1 | tee -a "$RUN_RESULTS_DIR/docker_teardown.log"
+    docker compose -f "$COMPOSE_FILE" down 2>&1 | tee -a "$RUN_RESULTS_DIR/docker_teardown.log"
     ok "All containers stopped and removed"
 fi
 

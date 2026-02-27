@@ -564,13 +564,13 @@ PLATFORM=posix make build-bcm
 make build-cvc build-fzc build-rzc
 
 # Build Docker images
-cd docker && docker-compose build
+cd docker && docker compose build
 
 # Run all simulated ECUs
-cd docker && docker-compose up -d
+cd docker && docker compose up -d
 
 # Stop all simulated ECUs
-cd docker && docker-compose down
+cd docker && docker compose down
 ```
 
 ### 8.3 Conditional Compilation
