@@ -13,6 +13,9 @@
 #   make -f Makefile.posix TARGET=rzc          Build RZC binary
 #   make -f Makefile.posix TARGET=sc           Build SC binary
 #   make -f Makefile.posix TARGET=bcm test     Build and run BCM tests
+#   make -f Makefile.posix TARGET=cvc test-asild  Run only ASIL D tests
+#   make -f Makefile.posix TARGET=cvc test-qm     Run only QM tests
+#   make -f Makefile.posix TARGET=cvc test-safety  Run all safety tests (ASIL A-D)
 #   make -f Makefile.posix TARGET=bcm clean    Remove build artifacts
 #   make -f Makefile.posix misra               Run MISRA C check (all ECUs)
 #   make -f Makefile.posix misra-report        MISRA check → build/misra-report.txt
@@ -141,11 +144,19 @@ TEST_SRCS = $(wildcard $(TARGET)/test/*.c)
 TEST_BINS = $(patsubst $(TARGET)/test/%.c,$(BUILD_DIR)/test/$(TARGET)/%,$(TEST_SRCS))
 UNITY_SRC = $(UNITY_DIR)/unity.c
 
+# --- ASIL-filtered test sets ---
+TEST_ASILD  = $(filter %_asild, $(TEST_BINS))
+TEST_ASILC  = $(filter %_asilc, $(TEST_BINS))
+TEST_ASILB  = $(filter %_asilb, $(TEST_BINS))
+TEST_ASILA  = $(filter %_asila, $(TEST_BINS))
+TEST_QM     = $(filter %_qm,    $(TEST_BINS))
+TEST_SAFETY = $(TEST_ASILD) $(TEST_ASILC) $(TEST_ASILB) $(TEST_ASILA)
+
 # =============================================================================
 # Targets
 # =============================================================================
 
-.PHONY: all test clean coverage
+.PHONY: all test test-asild test-asilc test-asilb test-asila test-qm test-safety clean coverage
 
 all: $(OUTPUT)
 
@@ -184,6 +195,32 @@ $(BUILD_DIR)/test/$(TARGET)/%: $(TARGET)/test/%.c $(UNITY_SRC) | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) -DUNIT_TEST -I$(UNITY_DIR) -I$(TARGET)/src -I$(TARGET)/cfg \
 		$< $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
+
+# --- ASIL-filtered test targets ---
+
+test-asild: $(OUTPUT) $(TEST_ASILD)
+	@echo "=== Running $(TARGET) ASIL D tests ==="
+	@for t in $(TEST_ASILD); do ./$$t || exit 1; done
+
+test-asilc: $(OUTPUT) $(TEST_ASILC)
+	@echo "=== Running $(TARGET) ASIL C tests ==="
+	@for t in $(TEST_ASILC); do ./$$t || exit 1; done
+
+test-asilb: $(OUTPUT) $(TEST_ASILB)
+	@echo "=== Running $(TARGET) ASIL B tests ==="
+	@for t in $(TEST_ASILB); do ./$$t || exit 1; done
+
+test-asila: $(OUTPUT) $(TEST_ASILA)
+	@echo "=== Running $(TARGET) ASIL A tests ==="
+	@for t in $(TEST_ASILA); do ./$$t || exit 1; done
+
+test-qm: $(OUTPUT) $(TEST_QM)
+	@echo "=== Running $(TARGET) QM tests ==="
+	@for t in $(TEST_QM); do ./$$t || exit 1; done
+
+test-safety: $(OUTPUT) $(TEST_SAFETY)
+	@echo "=== Running $(TARGET) safety tests (ASIL A-D) ==="
+	@for t in $(TEST_SAFETY); do ./$$t || exit 1; done
 
 # --- Clean ---
 clean:

@@ -3,14 +3,18 @@
 #
 # Usage:
 #   make test           - Build and run all unit tests
-#   make test-Can       - Build and run a specific test (e.g., test_Can.c)
+#   make test-Can_asild - Build and run a specific test (e.g., test_Can_asild.c)
+#   make test-asild     - Build and run all ASIL D tests
+#   make test-qm        - Build and run all QM tests
+#   make test-safety     - Build and run all safety tests (ASIL A-D)
 #   make coverage       - Build with coverage, run tests, generate lcov report
 #   make clean          - Remove build artifacts
 #
 # Convention:
-#   Test file:   test/<test_name>.c     (e.g., test/test_Can.c)
-#   Source file:  <layer>/<module>.c     (e.g., mcal/Can.c)
+#   Test file:   test/test_<Module>_<asil>.c  (e.g., test/test_Can_asild.c)
+#   Source file:  <layer>/<module>.c           (e.g., mcal/Can.c)
 #   The Makefile auto-discovers source files across BSW layers.
+#   ASIL suffix (_asild, _asilc, _asilb, _asila, _qm) is stripped to find source.
 # =============================================================================
 
 CC = gcc
@@ -37,8 +41,16 @@ TEST_BINS = $(TEST_SRCS:$(TEST_DIR)/%.c=$(TEST_DIR)/build/%)
 COV_CFLAGS  =
 COV_LDFLAGS =
 
+# ASIL-filtered test sets
+TEST_ASILD  = $(filter %_asild, $(TEST_BINS))
+TEST_ASILC  = $(filter %_asilc, $(TEST_BINS))
+TEST_ASILB  = $(filter %_asilb, $(TEST_BINS))
+TEST_ASILA  = $(filter %_asila, $(TEST_BINS))
+TEST_QM     = $(filter %_qm,    $(TEST_BINS))
+TEST_SAFETY = $(TEST_ASILD) $(TEST_ASILC) $(TEST_ASILB) $(TEST_ASILA)
+
 # Default: run all tests
-.PHONY: test clean coverage coverage-report
+.PHONY: test test-asild test-asilc test-asilb test-asila test-qm test-safety clean coverage coverage-report
 
 test: $(TEST_BINS)
 	@echo "=== Running all BSW unit tests ==="
@@ -55,15 +67,45 @@ test: $(TEST_BINS)
 	echo "=== Results: $$passed/$$total passed, $$failed failed ==="; \
 	if [ $$failed -ne 0 ]; then exit 1; fi
 
+# --- ASIL-filtered test targets ---
+
+test-asild: $(TEST_ASILD)
+	@echo "=== Running ASIL D BSW tests ==="
+	@for t in $^; do ./$$t || exit 1; done
+
+test-asilc: $(TEST_ASILC)
+	@echo "=== Running ASIL C BSW tests ==="
+	@for t in $^; do ./$$t || exit 1; done
+
+test-asilb: $(TEST_ASILB)
+	@echo "=== Running ASIL B BSW tests ==="
+	@for t in $^; do ./$$t || exit 1; done
+
+test-asila: $(TEST_ASILA)
+	@echo "=== Running ASIL A BSW tests ==="
+	@for t in $^; do ./$$t || exit 1; done
+
+test-qm: $(TEST_QM)
+	@echo "=== Running QM BSW tests ==="
+	@for t in $^; do ./$$t || exit 1; done
+
+test-safety: $(TEST_SAFETY)
+	@echo "=== Running all safety BSW tests (ASIL A-D) ==="
+	@for t in $^; do ./$$t || exit 1; done
+
 # Build directory
 $(TEST_DIR)/build:
 	mkdir -p $(TEST_DIR)/build
 
 # Pattern rule: compile test + matching source + unity
-# Each test_<module>.c links with <module>.c from the appropriate BSW layer
+# Each test_<Module>_<asil>.c links with <Module>.c from the appropriate BSW layer.
+# strip_asil removes the ASIL suffix before calling find_source.
 $(TEST_DIR)/build/test_%: $(TEST_DIR)/test_%.c $(UNITY_SRC) | $(TEST_DIR)/build
 	$(CC) $(CFLAGS) $(COV_CFLAGS) -I$(MCAL_DIR) -I$(ECUAL_DIR) -I$(SERVICES_DIR) -I$(RTE_DIR) -I$(TEST_DIR)/mocks \
-		$< $(call find_source,$*) $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
+		$< $(call find_source,$(call strip_asil,$*)) $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
+
+# Helper: strip ASIL suffix from module name (e.g., Can_asild -> Can)
+strip_asil = $(patsubst %_asild,%,$(patsubst %_asilc,%,$(patsubst %_asilb,%,$(patsubst %_asila,%,$(patsubst %_qm,%,$(1))))))
 
 # Helper: find the source file for a module across BSW layers
 define find_source
