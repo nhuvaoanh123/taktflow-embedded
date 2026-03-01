@@ -130,11 +130,11 @@ void Swc_Battery_Init(void)
 {
     uint8 i;
 
-    Batt_Voltage_mV    = 0u;
+    Batt_Voltage_mV    = RZC_BATT_NOMINAL_MV;
     Batt_Status        = RZC_BATT_STATUS_NORMAL;
     Batt_AvgIndex      = 0u;
     for (i = 0u; i < RZC_BATT_AVG_WINDOW; i++) {
-        Batt_AvgBuffer[i] = 0u;
+        Batt_AvgBuffer[i] = RZC_BATT_NOMINAL_MV;
     }
 
     Batt_Initialized = TRUE;

@@ -232,6 +232,10 @@
 #define RZC_BATT_DIVIDER_RH       47000u   /* High-side resistor ohms */
 #define RZC_BATT_DIVIDER_RL       10000u   /* Low-side resistor ohms */
 
+/** Nominal battery voltage (mV) — used to seed the average buffer so
+ *  the first few samples don't produce a false undervoltage fault. */
+#define RZC_BATT_NOMINAL_MV       12600u
+
 /** Moving average window */
 #define RZC_BATT_AVG_WINDOW           4u
 
