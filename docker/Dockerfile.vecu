@@ -26,7 +26,7 @@ COPY firmware/ /build/firmware/
 WORKDIR /build/firmware
 
 # Clean stale build artifacts, then build all 7 simulated ECU binaries
-RUN make -f Makefile.posix clean && \
+RUN rm -rf build && \
     make -f Makefile.posix TARGET=bcm && \
     make -f Makefile.posix TARGET=icu && \
     make -f Makefile.posix TARGET=tcu && \
