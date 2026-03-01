@@ -16,27 +16,28 @@
  * Mock: SPI (used by pedal angle, steering angle sensors)
  * ================================================================== */
 
-static uint8          mock_spi_tx_buf[8];
-static uint8          mock_spi_rx_buf[8];
+static uint16         mock_spi_tx_buf[4];
+static uint16         mock_spi_rx_buf[4];
 static Std_ReturnType mock_spi_result;
 static uint8          mock_spi_sync_count;
 
-Std_ReturnType Spi_WriteIB(uint8 Channel, const uint8* DataBufferPtr)
+Std_ReturnType Spi_WriteIB(uint8 Channel, const uint16* DataBufferPtr)
 {
     (void)Channel;
     if (DataBufferPtr != NULL_PTR) {
         mock_spi_tx_buf[0] = DataBufferPtr[0];
-        mock_spi_tx_buf[1] = DataBufferPtr[1];
     }
     return E_OK;
 }
 
-Std_ReturnType Spi_ReadIB(uint8 Channel, uint8* DataBufferPtr)
+Std_ReturnType Spi_ReadIB(uint8 Channel, uint16* DataBufferPtr)
 {
     (void)Channel;
     if (DataBufferPtr != NULL_PTR) {
         DataBufferPtr[0] = mock_spi_rx_buf[0];
         DataBufferPtr[1] = mock_spi_rx_buf[1];
+        DataBufferPtr[2] = mock_spi_rx_buf[2];
+        DataBufferPtr[3] = mock_spi_rx_buf[3];
     }
     return E_OK;
 }
@@ -134,9 +135,11 @@ void setUp(void)
     mock_pwm_idle_count  = 0u;
     mock_dio_write_count = 0u;
 
-    for (i = 0u; i < 8u; i++) {
+    for (i = 0u; i < 4u; i++) {
         mock_spi_tx_buf[i]  = 0u;
         mock_spi_rx_buf[i]  = 0u;
+    }
+    for (i = 0u; i < 8u; i++) {
         mock_adc_values[i]  = 0u;
     }
     for (i = 0u; i < 16u; i++) {
@@ -173,9 +176,8 @@ void tearDown(void) { }
 /** @verifies SWR-BSW-014 — read pedal angle via SPI */
 void test_IoHwAb_ReadPedalAngle_returns_value(void)
 {
-    /* AS5048A returns 14-bit angle in upper bits of 16-bit SPI word */
-    mock_spi_rx_buf[0] = 0x10u;  /* MSB */
-    mock_spi_rx_buf[1] = 0x00u;  /* LSB */
+    /* AS5048A returns 14-bit angle in bits [13:0] of uint16 word */
+    mock_spi_rx_buf[0] = 0x1000u;  /* angle = 4096 */
 
     uint16 angle = 0u;
     Std_ReturnType ret = IoHwAb_ReadPedalAngle(0u, &angle);
@@ -211,8 +213,7 @@ void test_IoHwAb_ReadPedalAngle_spi_fail(void)
 /** @verifies SWR-BSW-014 — read steering angle via SPI */
 void test_IoHwAb_ReadSteeringAngle_returns_value(void)
 {
-    mock_spi_rx_buf[0] = 0x20u;
-    mock_spi_rx_buf[1] = 0x00u;
+    mock_spi_rx_buf[0] = 0x2000u;  /* angle = 8192 */
 
     uint16 angle = 0u;
     Std_ReturnType ret = IoHwAb_ReadSteeringAngle(&angle);
@@ -370,8 +371,7 @@ void test_IoHwAb_ReadBatteryVoltage_adc_fail(void)
 /** @verifies SWR-BSW-014 — read pedal angle sensor 1 (second redundant) */
 void test_IoHwAb_ReadPedalAngle_sensor1_valid(void)
 {
-    mock_spi_rx_buf[0] = 0x20u;
-    mock_spi_rx_buf[1] = 0x00u;
+    mock_spi_rx_buf[0] = 0x2000u;  /* angle = 8192 */
 
     uint16 angle = 0u;
     Std_ReturnType ret = IoHwAb_ReadPedalAngle(1u, &angle);
@@ -441,8 +441,7 @@ void test_IoHwAb_ReadMotorCurrent_adc_max(void)
 void test_IoHwAb_ReadPedalAngle_14bit_mask(void)
 {
     /* Set SPI response with upper bits set beyond 14-bit range */
-    mock_spi_rx_buf[0] = 0xFFu;   /* MSB: all bits high */
-    mock_spi_rx_buf[1] = 0xFFu;   /* LSB: all bits high */
+    mock_spi_rx_buf[0] = 0xFFFFu;  /* all 16 bits high */
 
     uint16 angle = 0u;
     Std_ReturnType ret = IoHwAb_ReadPedalAngle(0u, &angle);

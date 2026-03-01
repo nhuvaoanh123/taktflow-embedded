@@ -79,9 +79,9 @@ typedef struct {
 
 /* ---- External MCAL Dependencies ---- */
 
-/* SPI driver */
-extern Std_ReturnType Spi_WriteIB(uint8 Channel, const uint8* DataBufferPtr);
-extern Std_ReturnType Spi_ReadIB(uint8 Channel, uint8* DataBufferPtr);
+/* SPI driver (signatures must match Spi.h — uint16 word buffers) */
+extern Std_ReturnType Spi_WriteIB(uint8 Channel, const uint16* DataBufferPtr);
+extern Std_ReturnType Spi_ReadIB(uint8 Channel, uint16* DataBufferPtr);
 extern Std_ReturnType Spi_SyncTransmit(uint8 Sequence);
 
 /* ADC driver */

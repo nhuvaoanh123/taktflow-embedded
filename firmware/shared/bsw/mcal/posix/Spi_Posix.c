@@ -55,14 +55,9 @@ Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
 
     if ((RxBuf != NULL_PTR) && (Length > 0u))
     {
-        uint16 angle = spi_sim_angle & 0x3FFFu;
-
-        /* Byte-swap for big-endian SPI protocol (AS5048A sends MSB first,
-         * but Spi_ReadIB copies uint16 to uint8[2] which IoHwAb reads
-         * as rx_data[0]<<8 | rx_data[1] — on little-endian host the
-         * low byte of the uint16 becomes rx_data[0] = MSB of angle) */
-        RxBuf[0] = (uint16)(((angle >> 8u) & 0xFFu) |
-                             ((angle & 0xFFu) << 8u));
+        /* Store simulated angle directly as uint16 — IoHwAb reads
+         * rx_data[0] & 0x3FFF from the uint16 word buffer */
+        RxBuf[0] = spi_sim_angle & 0x3FFFu;
 
         /* Advance simulated angle — oscillate within safe bounds */
         if (spi_sim_up != 0u)

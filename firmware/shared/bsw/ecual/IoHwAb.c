@@ -34,13 +34,15 @@ static Std_ReturnType iohwab_read_spi_angle(uint8 spiChannel,
                                              uint8 csChannel,
                                              uint16* angle)
 {
-    uint8 rx_data[2];
-    uint8 tx_data[2];
+    uint16 rx_data[4];
+    uint16 tx_data[4];
     Std_ReturnType ret;
 
     /* AS5048A: send NOP command to read angle register */
-    tx_data[0] = 0xFFu;
-    tx_data[1] = 0xFFu;
+    tx_data[0] = 0xFFFFu;
+    tx_data[1] = 0u;
+    tx_data[2] = 0u;
+    tx_data[3] = 0u;
 
     /* Assert chip select (active low) */
     Dio_WriteChannel(csChannel, STD_LOW);
@@ -69,8 +71,8 @@ static Std_ReturnType iohwab_read_spi_angle(uint8 spiChannel,
         return E_NOT_OK;
     }
 
-    /* AS5048A: 14-bit angle in bits [13:0], bit 14 = error flag, bit 15 = parity */
-    *angle = (uint16)(((uint16)rx_data[0] << 8u) | (uint16)rx_data[1]) & 0x3FFFu;
+    /* AS5048A: 14-bit angle in bits [13:0] of first word */
+    *angle = rx_data[0] & 0x3FFFu;
 
     return E_OK;
 }
