@@ -23,6 +23,7 @@
 #include "Can.h"
 #include "CanIf.h"
 #include "Com.h"
+#include "PduR.h"
 #include "E2E.h"
 #include "Dem.h"
 #include "WdgM.h"
@@ -108,6 +109,23 @@ static const CanIf_ConfigType canif_config = {
     .txPduCount  = (uint8)(sizeof(canif_tx_config) / sizeof(canif_tx_config[0])),
     .rxPduConfig = canif_rx_config,
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
+};
+
+/** PduR RX routing: CanIf RX PDU ID → Com or Dcm */
+static const PduR_RoutingTableType cvc_pdur_routing[] = {
+    { CVC_COM_RX_FZC_HB,        PDUR_DEST_COM, CVC_COM_RX_FZC_HB        },
+    { CVC_COM_RX_RZC_HB,        PDUR_DEST_COM, CVC_COM_RX_RZC_HB        },
+    { CVC_COM_RX_BRAKE_FAULT,   PDUR_DEST_COM, CVC_COM_RX_BRAKE_FAULT   },
+    { CVC_COM_RX_MOTOR_CUTOFF,  PDUR_DEST_COM, CVC_COM_RX_MOTOR_CUTOFF  },
+    { CVC_COM_RX_LIDAR,         PDUR_DEST_COM, CVC_COM_RX_LIDAR         },
+    { CVC_COM_RX_MOTOR_CURRENT, PDUR_DEST_COM, CVC_COM_RX_MOTOR_CURRENT },
+    { 0xFFu,                    PDUR_DEST_DCM, 0u                        },
+    { 0xFEu,                    PDUR_DEST_DCM, 1u                        },
+};
+
+static const PduR_ConfigType cvc_pdur_config = {
+    .routingTable = cvc_pdur_routing,
+    .routingCount = (uint8)(sizeof(cvc_pdur_routing) / sizeof(cvc_pdur_routing[0])),
 };
 
 /** IoHwAb channel mapping for CVC */
@@ -262,6 +280,7 @@ int main(void)
     /* ---- Step 2: BSW module initialization (order matters) ---- */
     Can_Init(&can_config);
     CanIf_Init(&canif_config);
+    PduR_Init(&cvc_pdur_config);
     Com_Init(&cvc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);

@@ -33,6 +33,7 @@
 #include "Can.h"
 #include "CanIf.h"
 #include "Com.h"
+#include "PduR.h"
 #include "E2E.h"
 #include "Dem.h"
 #include "WdgM.h"
@@ -115,6 +116,19 @@ static const CanIf_ConfigType canif_config = {
     .txPduCount  = (uint8)(sizeof(canif_tx_config) / sizeof(canif_tx_config[0])),
     .rxPduConfig = canif_rx_config,
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
+};
+
+/** PduR RX routing: CanIf RX PDU ID → Com */
+static const PduR_RoutingTableType fzc_pdur_routing[] = {
+    { FZC_COM_RX_ESTOP,          PDUR_DEST_COM, FZC_COM_RX_ESTOP          },
+    { FZC_COM_RX_VEHICLE_STATE,  PDUR_DEST_COM, FZC_COM_RX_VEHICLE_STATE  },
+    { FZC_COM_RX_STEER_CMD,      PDUR_DEST_COM, FZC_COM_RX_STEER_CMD      },
+    { FZC_COM_RX_BRAKE_CMD,      PDUR_DEST_COM, FZC_COM_RX_BRAKE_CMD      },
+};
+
+static const PduR_ConfigType fzc_pdur_config = {
+    .routingTable = fzc_pdur_routing,
+    .routingCount = (uint8)(sizeof(fzc_pdur_routing) / sizeof(fzc_pdur_routing[0])),
 };
 
 /** IoHwAb channel mapping for FZC */
@@ -307,6 +321,7 @@ int main(void)
     /* ---- Step 2: BSW module initialization (order matters) ---- */
     Can_Init(&can_config);
     CanIf_Init(&canif_config);
+    PduR_Init(&fzc_pdur_config);
     Com_Init(&fzc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);

@@ -85,6 +85,18 @@ static const CanIf_ConfigType canif_config = {
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
 };
 
+/** PduR RX routing: CanIf RX PDU ID → Com */
+static const PduR_RoutingTableType bcm_pdur_routing[] = {
+    { BCM_COM_RX_VEHICLE_STATE,  PDUR_DEST_COM, BCM_COM_RX_VEHICLE_STATE },
+    { BCM_COM_RX_MOTOR_CURRENT,  PDUR_DEST_COM, BCM_COM_RX_MOTOR_CURRENT },
+    { BCM_COM_RX_BODY_CMD,       PDUR_DEST_COM, BCM_COM_RX_BODY_CMD      },
+};
+
+static const PduR_ConfigType bcm_pdur_config = {
+    .routingTable = bcm_pdur_routing,
+    .routingCount = (uint8)(sizeof(bcm_pdur_routing) / sizeof(bcm_pdur_routing[0])),
+};
+
 /* ==================================================================
  * Graceful Shutdown
  * ================================================================== */
@@ -118,7 +130,7 @@ int main(void)
     /* ---- Step 2: BSW module initialization (order matters) ---- */
     Can_Init(&can_config);
     CanIf_Init(&canif_config);
-    PduR_Init(NULL_PTR);
+    PduR_Init(&bcm_pdur_config);
     Com_Init(&bcm_com_config);
     Dem_Init(NULL_PTR);
     Rte_Init(&bcm_rte_config);
