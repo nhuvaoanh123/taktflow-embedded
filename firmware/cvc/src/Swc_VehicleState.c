@@ -173,6 +173,12 @@ static uint8 initialized;
 /** @brief  Pending self-test pass flag — held until heartbeats validated */
 static uint8 self_test_pass_pending;
 
+/** @brief  SAFE_STOP recovery counter — counts all-clear cycles before recovery */
+static uint16 safe_stop_clear_count;
+
+/** @brief  Cycles required with all faults clear before SAFE_STOP recovery (500ms) */
+#define CVC_SAFE_STOP_RECOVERY_CYCLES   50u
+
 /* ==================================================================
  * Public API
  * ================================================================== */
@@ -183,9 +189,10 @@ static uint8 self_test_pass_pending;
  */
 void Swc_VehicleState_Init(void)
 {
-    current_state        = CVC_STATE_INIT;
-    initialized          = TRUE;
+    current_state          = CVC_STATE_INIT;
+    initialized            = TRUE;
     self_test_pass_pending = FALSE;
+    safe_stop_clear_count  = 0u;
 }
 
 /**
@@ -361,10 +368,36 @@ void Swc_VehicleState_MainFunction(void)
         Swc_VehicleState_OnEvent(CVC_EVT_STEERING_FAULT);
     }
 
-    /* ---- Step 5: Write current state to RTE ---- */
+    /* ---- Step 5: SAFE_STOP recovery when all faults clear ---- */
+    if (current_state == CVC_STATE_SAFE_STOP)
+    {
+        if ((estop_active == 0u) &&
+            (motor_cutoff == 0u) &&
+            (brake_fault == 0u) &&
+            (steering_fault == 0u) &&
+            (pedal_fault == 0u) &&
+            (fzc_comm == CVC_COMM_OK) &&
+            (rzc_comm == CVC_COMM_OK))
+        {
+            safe_stop_clear_count++;
+            if (safe_stop_clear_count >= CVC_SAFE_STOP_RECOVERY_CYCLES)
+            {
+                safe_stop_clear_count  = 0u;
+                current_state          = CVC_STATE_INIT;
+                self_test_pass_pending = TRUE;
+                (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_STARTUP);
+            }
+        }
+        else
+        {
+            safe_stop_clear_count = 0u;
+        }
+    }
+
+    /* ---- Step 6: Write current state to RTE ---- */
     (void)Rte_Write(CVC_SIG_VEHICLE_STATE, (uint32)current_state);
 
-    /* ---- Step 6: Publish vehicle state to Com -> CAN 0x100 ---- */
+    /* ---- Step 7: Publish vehicle state to Com -> CAN 0x100 ---- */
     {
         uint8 tx_state = current_state;
         (void)Com_SendSignal(4u, &tx_state);  /* Signal 4 = vehicle_state */

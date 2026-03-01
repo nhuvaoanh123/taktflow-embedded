@@ -131,8 +131,8 @@ class TelemetryState:
     def to_snapshot(self) -> dict:
         """Build the JSON snapshot for WebSocket broadcast."""
         now = time.time()
-        # Heartbeats are alive if seen within last 200ms
-        hb_timeout = 0.2
+        # Heartbeats are alive if seen within last 500ms (tolerant of Docker CAN jitter)
+        hb_timeout = 0.5
         speed_kmh = round(self.motor_rpm * self._SPEED_FACTOR, 1)
         return {
             "ts": now,

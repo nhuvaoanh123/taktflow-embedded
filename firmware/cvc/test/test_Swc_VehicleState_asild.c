@@ -853,6 +853,115 @@ void test_DEGRADED_to_SAFE_STOP_on_motor_cutoff(void)
 }
 
 /* ==================================================================
+ * SWR-CVC-013: SAFE_STOP Recovery
+ * ================================================================== */
+
+/** @verifies SWR-CVC-013 — SAFE_STOP recovery after all faults clear for 50 cycles */
+void test_SAFE_STOP_recovery_when_all_faults_clear(void)
+{
+    uint16 i;
+
+    /* Get to SAFE_STOP via dual CAN timeout */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* All faults clear, heartbeats restored */
+    mock_rte_signals[CVC_SIG_ESTOP_ACTIVE]    = 0u;
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF]    = 0u;
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT]     = 0u;
+    mock_rte_signals[CVC_SIG_STEERING_FAULT]  = 0u;
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT]     = 0u;
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+
+    /* Run 49 cycles — should NOT recover yet */
+    for (i = 0u; i < 49u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* 50th cycle — recovery triggers, transitions to INIT */
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+
+    /* self_test_pass_pending should be set — next MF with heartbeats OK → RUN */
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-013 — SAFE_STOP NO recovery when fault persists */
+void test_SAFE_STOP_no_recovery_when_fault_persists(void)
+{
+    uint16 i;
+
+    /* Get to SAFE_STOP */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* Motor cutoff still active — recovery blocked */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+
+    /* Run 100 cycles — should NOT recover */
+    for (i = 0u; i < 100u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-013 — SAFE_STOP recovery counter resets on intermittent fault */
+void test_SAFE_STOP_recovery_counter_resets_on_fault(void)
+{
+    uint16 i;
+
+    /* Get to SAFE_STOP */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* All clear for 40 cycles */
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    for (i = 0u; i < 40u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* Fault appears briefly — resets counter */
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
+    Swc_VehicleState_MainFunction();
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 0u;
+
+    /* Need another 50 clear cycles from scratch */
+    for (i = 0u; i < 49u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* 50th cycle — NOW it recovers */
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -928,6 +1037,11 @@ int main(void)
     RUN_TEST(test_RUN_to_SAFE_STOP_on_brake_fault);
     RUN_TEST(test_RUN_to_SAFE_STOP_on_steering_fault);
     RUN_TEST(test_DEGRADED_to_SAFE_STOP_on_motor_cutoff);
+
+    /* SWR-CVC-013: SAFE_STOP recovery */
+    RUN_TEST(test_SAFE_STOP_recovery_when_all_faults_clear);
+    RUN_TEST(test_SAFE_STOP_no_recovery_when_fault_persists);
+    RUN_TEST(test_SAFE_STOP_recovery_counter_resets_on_fault);
 
     return UNITY_END();
 }
