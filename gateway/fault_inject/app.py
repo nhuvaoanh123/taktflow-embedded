@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .scenarios import SCENARIOS, reset as reset_scenario, set_mqtt_client
+from .test_runner import DashboardTestRunner
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +53,14 @@ _lock_mu = threading.Lock()
 
 class ClientIdBody(BaseModel):
     client_id: str
+
+
+class TestRunBody(BaseModel):
+    tests: list[str] | None = None
+
+
+# Test runner instance (initialized on startup)
+_test_runner: DashboardTestRunner | None = None
 
 
 def _publish_lock_state() -> None:
@@ -126,11 +135,20 @@ app.add_middleware(
 )
 
 
+def _trigger_scenario(name: str):
+    """Trigger a scenario by name (used by test runner)."""
+    entry = SCENARIOS.get(name)
+    if entry:
+        entry["fn"]()
+
+
 @app.on_event("startup")
 def _on_startup():
-    global _mqtt_client
+    global _mqtt_client, _test_runner
     _mqtt_client = _init_mqtt()
     set_mqtt_client(_mqtt_client)
+    # Initialize test runner
+    _test_runner = DashboardTestRunner(_mqtt_client, _trigger_scenario, reset_scenario)
     # Start lock watchdog (daemon thread — dies with process)
     t = threading.Thread(target=_lock_watchdog, daemon=True)
     t.start()
@@ -285,6 +303,39 @@ def health_check():
         "service": "fault_inject",
         "can_channel": os.environ.get("CAN_CHANNEL", "vcan0"),
     }
+
+
+# ---------------------------------------------------------------------------
+# E2E test suite endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/test/run")
+def start_test_run(body: TestRunBody, request: Request):
+    """Start E2E test suite. Requires control lock."""
+    _check_control_lock(request)
+    if _test_runner is None:
+        raise HTTPException(status_code=503, detail="Test runner not initialized")
+    try:
+        run_id = _test_runner.start(body.tests)
+    except RuntimeError:
+        raise HTTPException(status_code=409, detail="Test run already in progress")
+    return {"run_id": run_id, "state": "running"}
+
+
+@app.get("/api/test/status")
+def test_status():
+    """Current test run state."""
+    if _test_runner is None:
+        return {"state": "idle"}
+    return {"state": _test_runner.status, "run_id": _test_runner._run_id or ""}
+
+
+@app.get("/api/test/result")
+def test_result():
+    """Last completed test run result."""
+    if _test_runner is None or _test_runner.last_result is None:
+        return {"state": "idle", "results": []}
+    return _test_runner.last_result
 
 
 def main():

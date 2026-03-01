@@ -116,6 +116,10 @@ class TelemetryState:
         self.control_client_id: str | None = None
         self.control_remaining_sec = 0
 
+        # E2E test runner state (relayed from fault_inject via MQTT)
+        self.test_progress: dict | None = None
+        self.test_result: dict | None = None
+
         # Heartbeat tracking
         self._hb_cvc_ts = 0.0
         self._hb_fzc_ts = 0.0
@@ -200,6 +204,10 @@ class TelemetryState:
                 "locked": self.control_locked,
                 "client_id": self.control_client_id or "",
                 "remaining_sec": self.control_remaining_sec,
+            },
+            "test": {
+                "progress": self.test_progress,
+                "result": self.test_result,
             },
         }
 
@@ -321,6 +329,20 @@ def on_mqtt_message(client, userdata, msg):
             if dtc_num:
                 state._dtc_last_seen[dtc_num] = now
         except json.JSONDecodeError:
+            pass
+
+    # E2E test runner progress (from fault_inject test runner)
+    elif topic == "taktflow/test/progress":
+        try:
+            state.test_progress = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # E2E test runner final result (from fault_inject test runner)
+    elif topic == "taktflow/test/result":
+        try:
+            state.test_result = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
             pass
 
     # SAP QM events
