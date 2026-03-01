@@ -63,7 +63,7 @@ void Swc_Heartbeat_Init(void)
 }
 
 /* ==================================================================
- * API: Swc_Heartbeat_MainFunction (10ms cyclic)
+ * API: Swc_Heartbeat_MainFunction (50ms cyclic)
  * ================================================================== */
 
 void Swc_Heartbeat_MainFunction(void)

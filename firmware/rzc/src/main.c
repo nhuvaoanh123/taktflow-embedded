@@ -262,7 +262,7 @@ static uint8 Main_RunSelfTest(void)
  * Tick Counters
  * ================================================================== */
 
-static volatile uint32 tick_ms;
+static volatile uint32 tick_us;
 
 /* ==================================================================
  * Main Entry Point
@@ -276,9 +276,9 @@ static volatile uint32 tick_ms;
  */
 int main(void)
 {
-    uint32 last_1ms   = 0u;
-    uint32 last_10ms  = 0u;
-    uint32 last_100ms = 0u;
+    uint32 last_1ms_us   = 0u;
+    uint32 last_10ms_us  = 0u;
+    uint32 last_100ms_us = 0u;
     uint8  self_test_result;
 
     /* ---- Step 1: Hardware initialization ---- */
@@ -330,27 +330,28 @@ int main(void)
     {
         Main_Hw_Wfi();
 
-        tick_ms = Main_Hw_GetTick();
+        tick_us = Main_Hw_GetTick();
 
-        /* 1ms task: RTE scheduler (dispatches runnables internally) */
-        if ((tick_ms - last_1ms) >= 1u)
+        /* 1ms task: RTE scheduler (dispatches runnables internally)
+         * Main_Hw_GetTick() returns microseconds; 1ms = 1000us */
+        if ((tick_us - last_1ms_us) >= 1000u)
         {
-            last_1ms = tick_ms;
+            last_1ms_us = tick_us;
             Rte_MainFunction();
         }
 
         /* 10ms tasks: Dcm, BswM */
-        if ((tick_ms - last_10ms) >= 10u)
+        if ((tick_us - last_10ms_us) >= 10000u)
         {
-            last_10ms = tick_ms;
+            last_10ms_us = tick_us;
             Dcm_MainFunction();
             BswM_MainFunction();
         }
 
         /* 100ms tasks: WdgM */
-        if ((tick_ms - last_100ms) >= 100u)
+        if ((tick_us - last_100ms_us) >= 100000u)
         {
-            last_100ms = tick_ms;
+            last_100ms_us = tick_us;
             WdgM_MainFunction();
         }
     }

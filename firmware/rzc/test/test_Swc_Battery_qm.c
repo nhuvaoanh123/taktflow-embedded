@@ -348,28 +348,20 @@ void test_Hysteresis_recovery(void)
  * SWR-RZC-017: CAN Broadcast
  * ================================================================== */
 
-/** @verifies SWR-RZC-017 -- Battery status sent via Com_SendSignal */
+/** @verifies SWR-RZC-017 -- SWC writes to RTE only, CAN TX via Swc_RzcCom */
 void test_CAN_broadcast(void)
 {
-    uint16 voltage_hi;
-    uint16 voltage_lo;
-
     mock_battery_mV = 12000u;
     fill_avg_buffer(12000u);
 
-    /* Verify COM was called with battery status PDU */
-    TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
-    TEST_ASSERT_EQUAL_UINT16(RZC_COM_TX_BATTERY_STATUS,
-                              mock_com_last_signal_id);
+    /* SWC must NOT call Com_SendSignal directly — CAN TX is
+     * Swc_RzcCom's responsibility (reads RTE, sends via Com) */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 
-    /* Verify voltage encoding: [voltage_hi, voltage_lo, status, alive, ...] */
-    voltage_hi = (uint16)mock_com_last_data[0];
-    voltage_lo = (uint16)mock_com_last_data[1];
-
-    TEST_ASSERT_EQUAL_UINT16(12000u,
-                              (uint16)((voltage_hi << 8u) | voltage_lo));
-    TEST_ASSERT_EQUAL_UINT8((uint8)RZC_BATT_STATUS_NORMAL,
-                            mock_com_last_data[2]);
+    /* Voltage and status must be available on RTE */
+    TEST_ASSERT_EQUAL_UINT32(12000u, mock_rte_signals[RZC_SIG_BATTERY_MV]);
+    TEST_ASSERT_EQUAL_UINT32((uint32)RZC_BATT_STATUS_NORMAL,
+                              mock_rte_signals[RZC_SIG_BATTERY_STATUS]);
 }
 
 /* ==================================================================

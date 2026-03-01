@@ -533,7 +533,7 @@ void test_Recovery_resets_on_spike(void)
  * Additional Tests
  * ================================================================== */
 
-/** @verifies SWR-RZC-006 -- CAN broadcast every 10 cycles */
+/** @verifies SWR-RZC-006 -- SWC writes to RTE only, CAN TX via Swc_RzcCom */
 void test_CAN_broadcast(void)
 {
     set_mock_current(5000u);
@@ -541,14 +541,12 @@ void test_CAN_broadcast(void)
     /* Run 10 cycles (10ms at 1ms period) */
     run_cycles(10u);
 
-    /* Exactly one CAN frame should have been sent */
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
-    TEST_ASSERT_EQUAL_UINT16(RZC_COM_TX_MOTOR_CURRENT, mock_com_last_signal_id);
+    /* SWC must NOT call Com_SendSignal directly — CAN TX is
+     * Swc_RzcCom's responsibility (reads RTE, sends via Com) */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 
-    /* Verify current value in payload (big-endian: hi, lo) */
-    uint16 payload_current = ((uint16)mock_com_last_data[0] << 8u)
-                           | (uint16)mock_com_last_data[1];
-    TEST_ASSERT_EQUAL_UINT16(5000u, payload_current);
+    /* Current value must be available on RTE for Swc_RzcCom to read */
+    TEST_ASSERT_EQUAL_UINT32(5000u, mock_rte_signals[RZC_SIG_CURRENT_MA]);
 }
 
 /** @verifies SWR-RZC-005 -- MainFunction without init does not crash */
@@ -565,8 +563,8 @@ void test_MainFunction_without_init_safe(void)
     TEST_ASSERT_EQUAL_UINT8(read_count_before, mock_iohwab_read_count);
 }
 
-/** @verifies SWR-RZC-006 -- Current direction byte included in CAN payload */
-void test_Current_direction_in_CAN(void)
+/** @verifies SWR-RZC-006 -- SWC does not call Com_SendSignal directly */
+void test_no_direct_Com_SendSignal(void)
 {
     /* Set motor direction via RTE */
     mock_rte_signals[RZC_SIG_MOTOR_DIR] = (uint32)RZC_DIR_REVERSE;
@@ -576,14 +574,14 @@ void test_Current_direction_in_CAN(void)
 
     set_mock_current(3000u);
 
-    /* Run 10 cycles to trigger CAN broadcast */
+    /* Run 10 cycles */
     run_cycles(10u);
 
-    /* Byte 2 = direction */
-    TEST_ASSERT_EQUAL_UINT8((uint8)RZC_DIR_REVERSE, mock_com_last_data[2]);
+    /* SWC must NOT call Com_SendSignal — CAN TX handled by Swc_RzcCom */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 
-    /* Byte 3 = enable state */
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_last_data[3]);
+    /* Current value must still be written to RTE */
+    TEST_ASSERT_EQUAL_UINT32(3000u, mock_rte_signals[RZC_SIG_CURRENT_MA]);
 }
 
 /* ==================================================================
@@ -720,7 +718,7 @@ int main(void)
     /* Additional tests */
     RUN_TEST(test_CAN_broadcast);
     RUN_TEST(test_MainFunction_without_init_safe);
-    RUN_TEST(test_Current_direction_in_CAN);
+    RUN_TEST(test_no_direct_Com_SendSignal);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_OC_at_exact_threshold);

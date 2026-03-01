@@ -31,7 +31,6 @@
 
 #include "IoHwAb.h"
 #include "Rte.h"
-#include "Com.h"
 #include "Dem.h"
 
 /* ==================================================================
@@ -43,7 +42,6 @@ static uint16  Batt_Voltage_mV;
 static uint8   Batt_Status;
 static uint16  Batt_AvgBuffer[RZC_BATT_AVG_WINDOW];
 static uint8   Batt_AvgIndex;
-static uint8   Batt_AliveCounter;
 
 /* ==================================================================
  * Internal: Compute average from buffer
@@ -135,8 +133,6 @@ void Swc_Battery_Init(void)
     Batt_Voltage_mV    = 0u;
     Batt_Status        = RZC_BATT_STATUS_NORMAL;
     Batt_AvgIndex      = 0u;
-    Batt_AliveCounter  = 0u;
-
     for (i = 0u; i < RZC_BATT_AVG_WINDOW; i++) {
         Batt_AvgBuffer[i] = 0u;
     }
@@ -152,8 +148,6 @@ void Swc_Battery_MainFunction(void)
 {
     uint16 raw_voltage;
     uint16 avg_voltage;
-    uint8  tx_data[8];
-    uint8  i;
 
     if (Batt_Initialized != TRUE) {
         return;
@@ -193,21 +187,5 @@ void Swc_Battery_MainFunction(void)
     (void)Rte_Write(RZC_SIG_BATTERY_MV, (uint32)Batt_Voltage_mV);
     (void)Rte_Write(RZC_SIG_BATTERY_STATUS, (uint32)Batt_Status);
 
-    /* ----------------------------------------------------------
-     * Step 5: CAN broadcast
-     * [voltage_hi, voltage_lo, status, alive, 0, 0, 0, 0]
-     * ---------------------------------------------------------- */
-    for (i = 0u; i < 8u; i++) {
-        tx_data[i] = 0u;
-    }
-
-    tx_data[0] = (uint8)((Batt_Voltage_mV >> 8u) & 0xFFu);
-    tx_data[1] = (uint8)(Batt_Voltage_mV & 0xFFu);
-    tx_data[2] = Batt_Status;
-    tx_data[3] = Batt_AliveCounter;
-
-    (void)Com_SendSignal(RZC_COM_TX_BATTERY_STATUS, tx_data);
-
-    /* Increment alive counter with wrap at 255 */
-    Batt_AliveCounter++;
+    /* CAN TX handled by Swc_RzcCom (reads RTE signals, sends via Com) */
 }

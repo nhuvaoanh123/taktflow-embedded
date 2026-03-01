@@ -402,22 +402,19 @@ void test_Hysteresis_from_shutdown(void)
  * Additional Tests
  * ================================================================== */
 
-/** @verifies SWR-RZC-009 -- CAN broadcast sent via Com at 100ms rate */
+/** @verifies SWR-RZC-009 -- SWC writes to RTE only, CAN TX via Swc_RzcCom */
 void test_CAN_broadcast(void)
 {
     set_mock_temp(250);   /* 25.0 degC */
 
     run_cycles(1u);
 
-    /* MainFunction is 100ms cyclic, so 1 call = 1 broadcast */
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
-    TEST_ASSERT_EQUAL_UINT16(RZC_COM_TX_MOTOR_TEMP, mock_com_last_signal_id);
+    /* SWC must NOT call Com_SendSignal directly — CAN TX is
+     * Swc_RzcCom's responsibility (reads RTE, sends via Com) */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 
-    /* Verify payload: [temp_hi, temp_lo, derating, alive, 0, 0, 0, 0] */
-    /* 250 ddc = 0x00FA -> hi=0x00, lo=0xFA */
-    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[0]);
-    TEST_ASSERT_EQUAL_UINT8(0xFAu, mock_com_last_data[1]);
-    TEST_ASSERT_EQUAL_UINT8(RZC_TEMP_DERATE_100_PCT, mock_com_last_data[2]);
+    /* Temperature must be available on RTE for Swc_RzcCom to read */
+    TEST_ASSERT_EQUAL_UINT32(250u, mock_rte_signals[RZC_SIG_TEMP1_DC]);
 }
 
 /** @verifies SWR-RZC-009 -- MainFunction without init does not crash */

@@ -32,28 +32,11 @@
 
 #include "IoHwAb.h"
 #include "Rte.h"
-#include "Com.h"
 #include "Dem.h"
 
 /* ==================================================================
  * Constants
  * ================================================================== */
-
-/** CAN TX period in 1ms cycles: 10ms / 1ms = 10 */
-#define CM_CAN_TX_PERIOD_CYCLES  10u
-
-/** CAN payload byte offsets */
-#define CM_CAN_BYTE_CURRENT_HI    0u
-#define CM_CAN_BYTE_CURRENT_LO    1u
-#define CM_CAN_BYTE_DIRECTION     2u
-#define CM_CAN_BYTE_ENABLE        3u
-#define CM_CAN_BYTE_ALIVE         4u
-#define CM_CAN_BYTE_RESERVED1     5u
-#define CM_CAN_BYTE_RESERVED2     6u
-#define CM_CAN_BYTE_CRC           7u
-
-/** CAN payload size */
-#define CM_CAN_PAYLOAD_LEN        8u
 
 /* ==================================================================
  * Module State
@@ -75,9 +58,6 @@ static uint8   CM_OvercurrentActive;
 /** Recovery */
 static uint16  CM_RecoveryCycles;
 
-/** CAN broadcast */
-static uint8   CM_CanTxCounter;
-static uint8   CM_AliveCounter;
 
 /* ==================================================================
  * Internal: Compute moving average
@@ -118,54 +98,6 @@ static void CM_DisableMotor(void)
 }
 
 /* ==================================================================
- * Internal: Build and send CAN frame
- * ================================================================== */
-
-static void CM_SendCanFrame(uint16 current_mA)
-{
-    uint8  tx_data[CM_CAN_PAYLOAD_LEN];
-    uint32 motor_dir;
-    uint32 motor_enable;
-    uint8  i;
-
-    /* Zero the payload */
-    for (i = 0u; i < CM_CAN_PAYLOAD_LEN; i++) {
-        tx_data[i] = 0u;
-    }
-
-    /* Current in milliamps (big-endian) */
-    tx_data[CM_CAN_BYTE_CURRENT_HI] = (uint8)(current_mA >> 8u);
-    tx_data[CM_CAN_BYTE_CURRENT_LO] = (uint8)(current_mA & 0xFFu);
-
-    /* Read motor direction from RTE */
-    motor_dir = 0u;
-    (void)Rte_Read(RZC_SIG_MOTOR_DIR, &motor_dir);
-    tx_data[CM_CAN_BYTE_DIRECTION] = (uint8)motor_dir;
-
-    /* Read motor enable from RTE */
-    motor_enable = 0u;
-    (void)Rte_Read(RZC_SIG_MOTOR_ENABLE, &motor_enable);
-    tx_data[CM_CAN_BYTE_ENABLE] = (uint8)motor_enable;
-
-    /* 4-bit alive counter */
-    tx_data[CM_CAN_BYTE_ALIVE] = CM_AliveCounter;
-
-    /* Reserved bytes already zeroed */
-
-    /* CRC placeholder (byte 7) -- zeroed, to be filled by E2E layer */
-    tx_data[CM_CAN_BYTE_CRC] = 0u;
-
-    /* Send via Com */
-    (void)Com_SendSignal(RZC_COM_TX_MOTOR_CURRENT, tx_data);
-
-    /* Increment alive counter with wrap at 4-bit max */
-    CM_AliveCounter++;
-    if (CM_AliveCounter > RZC_HB_ALIVE_MAX) {
-        CM_AliveCounter = 0u;
-    }
-}
-
-/* ==================================================================
  * API: Swc_CurrentMonitor_Init
  * ================================================================== */
 
@@ -185,8 +117,6 @@ void Swc_CurrentMonitor_Init(void)
     CM_OcDebounceCount   = 0u;
     CM_OvercurrentActive = FALSE;
     CM_RecoveryCycles    = 0u;
-    CM_CanTxCounter      = 0u;
-    CM_AliveCounter      = 0u;
 
     for (i = 0u; i < RZC_CURRENT_AVG_WINDOW; i++) {
         CM_AvgBuffer[i] = 0u;
@@ -318,12 +248,5 @@ void Swc_CurrentMonitor_MainFunction(void)
     (void)Rte_Write(RZC_SIG_OVERCURRENT,
                     (CM_OvercurrentActive == TRUE) ? 1u : 0u);
 
-    /* -------------------------------------------------------
-     * Step 7: CAN broadcast every 10 cycles (10ms)
-     * ------------------------------------------------------- */
-    CM_CanTxCounter++;
-    if (CM_CanTxCounter >= CM_CAN_TX_PERIOD_CYCLES) {
-        CM_CanTxCounter = 0u;
-        CM_SendCanFrame(avg_mA);
-    }
+    /* CAN TX handled by Swc_RzcCom (reads RTE signals, sends via Com) */
 }

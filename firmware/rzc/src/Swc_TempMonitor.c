@@ -32,8 +32,7 @@
  *              - From 50% -> 75%: need temp < 70 degC  ( 80 - 10)
  *              - From 75% ->100%: need temp < 50 degC  ( 60 - 10)
  *
- *           6. Broadcasts [temp_hi, temp_lo, derating, alive, 0,0,0,0]
- *              on CAN via Com_SendSignal every 100ms.
+ *           6. CAN broadcast handled by Swc_RzcCom (reads RTE signals).
  *
  *           All variables are static file-scope. No dynamic memory.
  *
@@ -50,20 +49,7 @@
 
 #include "IoHwAb.h"
 #include "Rte.h"
-#include "Com.h"
 #include "Dem.h"
-
-/** CAN TX payload size (8 bytes) */
-#define TM_CAN_PAYLOAD_LEN   8u
-
-/** Alive counter maximum (4-bit, wraps at 15) */
-#define TM_ALIVE_MAX         15u
-
-/** CAN payload byte offsets */
-#define TM_CAN_BYTE_TEMP_HI  0u
-#define TM_CAN_BYTE_TEMP_LO  1u
-#define TM_CAN_BYTE_DERATE   2u
-#define TM_CAN_BYTE_ALIVE    3u
 
 /* ==================================================================
  * Module State (static file-scope)
@@ -84,8 +70,6 @@ static uint8   TM_PrevDeratingPct;
 /** Temperature sensor fault flag */
 static uint8   TM_TempFault;
 
-/** CAN alive counter (0..15) */
-static uint8   TM_AliveCounter;
 
 /* ==================================================================
  * Private: Compute raw derating from temperature (no hysteresis)
@@ -174,7 +158,6 @@ void Swc_TempMonitor_Init(void)
     TM_DeratingPct     = RZC_TEMP_DERATE_100_PCT;
     TM_PrevDeratingPct = RZC_TEMP_DERATE_100_PCT;
     TM_TempFault       = FALSE;
-    TM_AliveCounter    = 0u;
     TM_Initialized     = TRUE;
 }
 
@@ -188,9 +171,6 @@ void Swc_TempMonitor_MainFunction(void)
     sint16 temp_C;
     uint8  raw_derating;
     uint8  new_derating;
-    uint8  tx_data[TM_CAN_PAYLOAD_LEN];
-    uint16 temp_unsigned;
-    uint8  i;
 
     /* ------------------------------------------------------------ */
     /* 1. Guard: not initialized                                     */
@@ -266,27 +246,5 @@ void Swc_TempMonitor_MainFunction(void)
     (void)Rte_Write(RZC_SIG_DERATING_PCT,  (uint32)TM_DeratingPct);
     (void)Rte_Write(RZC_SIG_TEMP_FAULT,    (uint32)TM_TempFault);
 
-    /* ------------------------------------------------------------ */
-    /* 9. CAN broadcast via Com                                      */
-    /* ------------------------------------------------------------ */
-    for (i = 0u; i < TM_CAN_PAYLOAD_LEN; i++) {
-        tx_data[i] = 0u;
-    }
-
-    /* Temperature as unsigned 16-bit for CAN (big-endian) */
-    temp_unsigned = (uint16)TM_CurrentTemp_dC;
-    tx_data[TM_CAN_BYTE_TEMP_HI] = (uint8)(temp_unsigned >> 8u);
-    tx_data[TM_CAN_BYTE_TEMP_LO] = (uint8)(temp_unsigned & 0xFFu);
-    tx_data[TM_CAN_BYTE_DERATE]  = TM_DeratingPct;
-    tx_data[TM_CAN_BYTE_ALIVE]   = TM_AliveCounter;
-
-    (void)Com_SendSignal((uint16)RZC_COM_TX_MOTOR_TEMP, tx_data);
-
-    /* ------------------------------------------------------------ */
-    /* 10. Increment alive counter (wrap at 15)                      */
-    /* ------------------------------------------------------------ */
-    TM_AliveCounter++;
-    if (TM_AliveCounter > TM_ALIVE_MAX) {
-        TM_AliveCounter = 0u;
-    }
+    /* CAN TX handled by Swc_RzcCom (reads RTE signals, sends via Com) */
 }
