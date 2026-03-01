@@ -14,87 +14,13 @@ This plan is written for someone who is strong on the SW side but less experienc
 
 ---
 
-## Inventory Snapshot (2026-02-27)
+## Inventory & Procurement
 
-### Table A: Confirmed On-Hand
+> **Single source of truth for all procurement status**: [`hardware/bom.md`](../../hardware/bom.md)
+>
+> Check the **Status** column in `bom.md` before starting any phase. Do NOT duplicate delivery status here.
 
-| Item | Qty | BOM # | Notes |
-|------|-----|-------|-------|
-| Rigol DHO804 Oscilloscope (4-ch) | 1 | #74 (better than DS1054Z) | Already have |
-| Raspberry Pi 4 Model B (4GB) | 1 | #3 | Already have |
-| SN65HVD230 CAN transceiver | 1 | #7 | Already have |
-| TJA1051 CAN transceiver modules | 4 | #6 (need 3, have 4 = 1 spare) | Found from old project |
-| USB-to-TTL Serial Adapter | 1 | — | Already have |
-| USB 2.0 Cable (USB-A to Mini-USB) | 3 | — | Already have (for TMS570 LaunchPad) |
-| Jumper Wire Sets (Dupont M/F) | multiple | #64-65 | Already have |
-| TFMini-S LiDAR | 1 | #15 | Already have |
-| NTC Temperature Sensor Kit (5K+10K) | 1 | #17 | Already have |
-| AS5048A Magnetic Rotary Encoder | 3 | #13 | Already have |
-| MG996R Servo Motor | 3 | #21 (need 2, have 3 = 1 spare) | All arrived |
-| BTS7960 Motor Driver | 1 | #20 | Already have |
-| IRLZ44N MOSFETs | 10 | #25 | Already have |
-| E-Stop Button (1NC, lockable) | 1 | #27 | Already have |
-| 12V Relay (30A, 5-pin, NO) | 1 | #24 | Already have |
-| Blade Fuse Assortment (ATO) | 1 set | #38-39 | Already have |
-| Multi-slot Fuse Holder Block | 1 | #37 | Already have |
-| 5x20mm Glass Fuses | some | #40 | Already have |
-| SB560 Schottky diode (5A/60V) | 10 | #4 | **ON HAND** (received 2026-02-27) |
-| 120Ω CAN termination resistors | 2 | #9 | Confirmed — measured 117-118Ω |
-| Pull-up/pull-down resistors | yes | #49-53 | Have |
-| Bulk decoupling caps (≥1µF) | yes | #45-48 | Have |
-| Mean Well RS-15-12 (12V PSU) | 1 | — | From old project — backup 12V source |
-| Solderless breadboards (MB-102 + mini) | 2 | — | From old project |
-| KM100 Multimeter (2000 counts) | 1 | — | From old project |
-| Solder wire spool | 1 | — | From old project |
-| Wire stripper (MRO) | 1 | — | From old project |
-| ESD wrist strap | 1 | — | On hand |
-| Helping hands with magnifier | 1 | — | On hand |
-| Fume extractor | 1 | — | On hand |
-| Jumper wire ribbon set | 1 pack | — | From old project |
-| Header / connector assortment | 1 kit | — | From old project |
-| Brass threaded inserts + screws | assorted | — | From old project — board mounting |
-| Buzzers | 5 | — | On hand — FZC audible warning (Phase 5/7) |
-| SSD1306 OLED display | 1 | — | On hand (received 2026-02-27) — CVC display |
-| AS5048A diametric magnets | 3 | — | On hand — pedal sensor mounting |
-
-### Table B: Arriving Today (2026-02-27)
-
-| Part Number | What | Qty | BOM # |
-|-------------|------|-----|-------|
-| NUCLEUS G474RE | STM32G474RE Nucleo-64 | 3 | #1 |
-| MCP LBN-305 | Lab bench PSU (0-30V, 0-5A) | 1 | #34 |
-| RPI PS 15W BK EU | RPi USB-C PSU | 1 | #5 |
-| DEBO DCDC DOWN 5 | DC-DC buck to 5V | 3 | #35 |
-| GM27 90 12V | 12V DC gearmotor (90:1) — replaces standalone DC motor | 1 | #19 alt |
-| H25PR200 | Quadrature encoder (200 PPR) | 1 | #18 |
-| AH 11.1 | Wire ferrules (1.0mm²) | 10 | Infra |
-| LR-DS-57 | Double-sided perfboard (70×50mm) | 1 | Infra — for CAN transceivers / TPS3823 breakouts |
-
-### Table C: Ordered But NOT Confirmed On-Hand
-
-| Item | Qty Needed | Status | Impact |
-|------|-----------|--------|--------|
-| USB-CAN adapters (Ecktron UCAN + WaveShare) | 2 | **Arriving 2026-03-09 to 03-11** (Eckstein GmbH, WaveShare delayed/no stock) | Blocks PC-side CAN monitoring |
-| TSR 2-2433N (24V→3.3V DC-DC) | 3 | **ON HAND** | 3.3V rail ready — fixed output, no adjustment needed |
-| TPS3823 watchdog ICs | 4 | Confirmed ordered | Blocks Phase 4 watchdog |
-| SOT-23-5 breakout boards | 10 | **Arriving 2026-03-03 to 03-10** | Needed for TPS3823 |
-| SSD1306 OLED display | 1 | **ON HAND** (received 2026-02-27) | OLED test ready |
-| ACS723 current sensor (SparkFun breakout) | 1 | **Arriving 2026-02-27/28** | Current sensing ready once received |
-| MG996R servos | 3 total | **ON HAND** (3 arrived, need 2 = 1 spare) | Servo test ready |
-| AS5048A diametric magnets | 3 | **ON HAND** | Pedal sensor mounting ready |
-| LM7806 6V regulators (×2) | 2 | **Arriving 2026-03-07 to 03-12** | Blocks 6V servo rail. Workaround: 5V DEBO (reduced torque) |
-| 100nF ceramic capacitor bag (50x) | 1 | Ordered (gap closure) | Probably limited loose stock now |
-| Electrolytic capacitor kit | 1 | Ordered (gap closure) | Blocks bulk decoupling |
-| Resistor kit (1350 pcs) | 1 | Ordered (gap closure) | Pull-ups available, kit adds range |
-| BZX84C3V3 Zener diodes (25x) | 25 | **ON HAND** (received 2026-03-01) | ADC overvoltage protection |
-| 1N4007 diodes (30x) | 30 | **Arriving 2026-03-02/03** | Flyback diodes for relay/motor circuits |
-| 16AWG wire (red+black) | 4m | Ordered (gap closure) | Blocks heavy power wiring |
-| Common-mode chokes | 4 | Ordered | Optional for initial bring-up |
-| JST XH2.54mm connector kit | 1 | **Arriving 2026-03-25 to 04-04** | Nice-to-have for clean wiring |
-| HUAZIZ 15A screw terminal strips (6-pos, with covers) | 6 + 6 pre-insulated | **Arriving 2026-02-28** | For power distribution rails |
-| TI TMS570 LaunchPad | 1 | **Arriving in 1-2 weeks** | SC (Safety Controller) board |
-
-### Table D: Other Available (not used in this project)
+### Available but Not Used in This Project
 
 | Item | Qty | Notes |
 |------|-----|-------|
@@ -112,25 +38,27 @@ This plan is written for someone who is strong on the SW side but less experienc
 
 ---
 
-## Phase Readiness (2026-02-27)
+## Phase Readiness
 
-| Phase | Ready? | Blockers |
-|-------|--------|----------|
-| **Phase 0** (inventory + board prep) | **PARTIAL** | Gap closure items ordered but not all received. Can do board labeling + solder bridge removal. |
-| **Phase 1** (power distribution) | **YES** | Mean Well RS-15-12 (12V) ON HAND. Bench PSU arriving today. DEBO DCDC 5V arriving today. SB560 Schottky ON HAND. Terminal strips arriving tomorrow. Can start 12V rail immediately. |
-| **Phase 2** (mount + USB boot) | **PARTIAL** | Nucleos arriving today. TMS570 LaunchPad (SC) NOT on hand — arriving in 1-2 weeks. Can mount+test 3 Nucleos now, SC later. |
-| **Phase 3** (CAN bus) | **PARTIAL** | 4× TJA1051 + 1× SN65HVD230 on hand + 120Ω terminators. Can wire 3-node CAN bus (CVC/FZC/RZC) now. SC node blocked until TMS570 arrives. USB-CAN adapters NOT confirmed — can't monitor from PC, but nodes can talk to each other. |
-| **Phase 4** (safety chain) | **BLOCKED** | Kill relay circuit requires SC (TMS570) to drive GIO_A0. TMS570 arriving in 1-2 weeks. Watchdogs (TPS3823) also NOT confirmed on hand. 1N4007 flyback diodes arriving Mar 2-3. E-stop button wiring (CVC side) can be done now. |
-| **Phase 5** (sensors) | **PARTIAL** | AS5048A ×3 YES (magnets not confirmed). TFMini-S YES. NTC YES. ACS723 arriving 02-27/28. OLED not confirmed. |
-| **Phase 6** (actuators) | **PARTIAL** | Gearmotor + BTS7960 + encoder YES. 1× servo YES (need 2). 6V regulator arriving Mar 7-12. Can use 5V DEBO as workaround (reduced torque). |
-| **Phase 7** (integration) | **BLOCKED** | Depends on phases 1-6 completion |
+> Check [`hardware/bom.md`](../../hardware/bom.md) for current delivery status of all items before starting each phase.
+
+| Phase | Key BOM Items |
+|-------|---------------|
+| **Phase 0** (inventory + board prep) | BOM #43, #45-48, #49-53, #55, #66-68 |
+| **Phase 1** (power distribution) | BOM #34, #35, #36, #37-39 |
+| **Phase 2** (mount + USB boot) | BOM #1, #2, #60 |
+| **Phase 3** (CAN bus) | BOM #6, #7, #8, #9, #12 |
+| **Phase 4** (safety chain) | BOM #2, #22, #23, #24, #25, #26, #27 |
+| **Phase 5** (sensors) | BOM #13, #14, #15, #16, #17, #28 |
+| **Phase 6** (actuators) | BOM #19, #20, #21, #42 |
+| **Phase 7** (integration) | All above |
 
 ---
 
 ## Reference Files
 
 - **`docs/plans/plan-hardware-bringup-workbook.md`** — **Detailed step-by-step assembly workbook** (companion to this plan)
-- `hardware/bom.md` — Full 74-item BOM
+- `hardware/bom.md` — **Full BOM with delivery status (single source of truth)**
 - `hardware/bom-list.md` — Core 29-item quick reference
 - `hardware/procurement-validation.md` — What was actually bought
 - `hardware/pin-mapping.md` — All pin assignments (53 pins, 4 ECUs)
@@ -147,37 +75,13 @@ This plan is written for someone who is strong on the SW side but less experienc
 
 Lay out every component you received. Check against BOM #1-29 using the `procurement-validation.md` snapshot. Physically verify quantity and condition.
 
-### 0.2 Critical Gaps to Resolve
+### 0.2 Critical Gaps
 
-| Priority | Item | Why Critical | Action | Status (2026-02-27) |
-|----------|------|-------------|--------|---------------------|
-| **P0** | **6V regulator modules x2** | Servos rated 4.8-7.2V. Feeding 12V = instant smoke. | Order 2x LM7806 or adjustable buck set to 6V. **Do NOT power servos without this.** | **Arriving 2026-03-07 to 03-12**. Workaround: 5V DEBO (reduced torque) |
-| **P0** | **Fuses: 10A blade + 30A blade + holders** | First short circuit = damaged boards/wiring with no fuse protection | Order inline fuse holders + 10A/30A blade fuses | **ON HAND** — blade fuse assortment + multi-slot holder |
-| **P0** | **100nF ceramic capacitors (bag of 30+)** | Every IC power pin needs one. Missing = noise, random resets, CAN errors | Verify you have these — they may have come in a kit | Ordered (50x bag), not confirmed received. Have some loose stock |
-| **P0** | **SB560 Schottky diode (or equivalent 5A/60V)** | Reverse polarity protection at 12V entry | **Non-negotiable. Install before first power-up.** | **ON HAND** (10x received 2026-02-27) |
-| **P1** | **Electrolytic capacitors: 10uF, 100uF, 220uF, 470uF** | Bulk decoupling for buck converters and servo power | Verify from kit. These are cheap — order a small assortment if unsure | Ordered (kit), not confirmed received. Have some bulk caps |
-| **P1** | **Resistors: 10k, 47k, 330R, 100R, 4.7k** | Pull-ups, pull-downs, voltage dividers, LED current limiting | Verify from LED+resistor kit. Need: 10k (20x), 47k (5x), 330R (10x), 100R (5x), 4.7k (5x) | **ON HAND** (pull-up/pull-down set). Kit ordered adds range |
-| **P1** | **BZX84C3V3 Zener diodes x5** | ADC overvoltage clamp on RZC | Order if not in kit | **Arriving 2026-03-02/03** (25x ordered) |
-| **P2** | **16-18 AWG wire (red+black, 2m each)** | Power distribution paths need heavier gauge than signal wire | Check if included in wiring order | Ordered (4m), not confirmed received. Use available wire as fallback |
-| **P2** | **SOT-23-5 breakout boards x4** | For soldering TPS3823 watchdog ICs | Check if your TPS3823 came pre-mounted on breakout. If bare IC, you need these | Ordered (10x pack), not confirmed received |
-| **P2** | **Common-mode chokes 100uH x4** | CAN bus noise immunity per HWR-018 | Can skip for initial bring-up, add later | Ordered, not confirmed received. Optional for Phase 3 |
-| **P2** | **Quadrature encoder** | Motor speed feedback | Can skip for initial bring-up (open-loop motor test first) | **ARRIVING TODAY** — H25PR200 (200 PPR) |
-
-### 0.3 Gap Items Ordered (Amazon.de, 2026-02-23)
-
-| # | Item | Qty | Product | Status (2026-02-27) |
-|---|------|-----|---------|---------------------|
-| 1 | LM7806 6V regulator module | 2 | Three Terminal Voltage Regulator Module (LM7806 variant) | **Arriving 2026-03-07 to 03-12** |
-| 2 | Fuse box + blade fuses (3A-40A) | 1 | EEFUN 6-way 32V fuse holder box + 10 fuses | Ordered — fuse assortment ON HAND separately |
-| 3 | 100nF ceramic capacitors | 50 | BOJACK 0.1uF 50V ceramic disc capacitors | Ordered — not confirmed received |
-| 4 | SB560 Schottky diode (5A/60V) | 10 | HUABAN SR560 (SB560) DO-201AD | **ON HAND** (received 2026-02-27) |
-| 5 | Electrolytic capacitor kit | 130 (13 values) | POPESQ 1uF-1000uF (includes 10uF, 100uF, 220uF, 470uF) | Ordered — not confirmed received |
-| 6 | Resistor kit | 1350 (50 values) | BOJACK 0Ω-5.6MΩ 1% 1/4W metal film | Ordered — not confirmed received (pull-ups ON HAND) |
-| 7 | BZX84C3V3 Zener diodes (SOT-23) | 25 | BZX84C3V3-DIO64 0.3W 3.3V | **ON HAND** (received 2026-03-01) |
-| 8 | 16AWG silicone wire (red+black) | 2×(1m+1m) = 4m | 16AWG flexible tinned copper stranded | Ordered — not confirmed received |
-| 9 | SOT-23 breakout boards | 10 (pack) | Colcolo SOT23 to DIP adapter (6-pin) | **Arriving 2026-03-05 to 03-10** — needed for BZX84C3V3 Zeners (Phase 4.6) and TPS3823 watchdogs (Phase 4.5) |
-
-**Estimated total: ~€104 (Amazon.de)**
+> All gap items and their delivery status are tracked in [`hardware/bom.md`](../../hardware/bom.md).
+> Before starting Phase 0, verify all P0-priority items show **Delivered** status in the BOM.
+>
+> **Critical items for Phase 0**: BOM #36 (Schottky diode), #37-39 (fuses), #43 (100nF caps)
+> **Critical items for Phase 1**: BOM #42 (6V regulators), #45-48 (electrolytic caps), #49-53 (resistors), #55 (Zener diodes)
 
 ### 0.4 Solder Bridge Modifications (Do Before Mounting)
 
@@ -463,7 +367,7 @@ Pin 6 (MR) → 3.3V (no manual reset)
 
 ## Phase 4.6: Preemptive ADC/GPIO Overvoltage Protection (Do Before Phase 5)
 
-> **Goal**: Protect all MCU analog/digital inputs from accidental overvoltage before connecting any sensor. Uses BZX84C3V3 Zener diodes (BOM #7 gap closure, 25x arriving 2026-03-02/03) and 100R series resistors (on hand).
+> **Goal**: Protect all MCU analog/digital inputs from accidental overvoltage before connecting any sensor. Uses BZX84C3V3 Zener diodes (BOM #55) and 100R series resistors (BOM #52).
 
 **Why now**: A miswired sensor or loose jumper can put 12V on a 3.3V ADC pin. The Zener + resistor clamp costs €0.10 per channel and takes 5 minutes to add. Replacing a dead Nucleo costs €16 and a weekend.
 
@@ -496,7 +400,7 @@ At normal operation (0-3.3V signal), the Zener is reverse-biased and invisible. 
 
 **Verification**: After installing each Zener, measure voltage at the ADC pin with multimeter while applying 5V from bench PSU through the 100R. Should read ≤3.6V (Zener clamping). Then apply 3.3V — should read ~3.2V (Zener inactive, small drop across 100R).
 
-**Parts needed**: 4-6× BZX84C3V3 (from 25x arriving), 4-6× 100R resistors (on hand). Solder onto small perfboard strip near each Nucleo, or use breadboard for initial testing.
+**Parts needed**: 4-6× BZX84C3V3 (BOM #55), 4-6× 100R resistors (BOM #52). Check bom.md for availability. Solder onto small perfboard strip near each Nucleo, or use breadboard for initial testing.
 
 ---
 
@@ -683,7 +587,7 @@ Phase 3: CAN Bus              ← Communication backbone
     ↓
 Phase 4: Safety Chain          ← MUST pass before Phase 6 (actuators)
     ↓
-Phase 4.6: ADC Zener Protection ← Install before ANY sensor (needs BZX84C3V3, arriving Mar 2-3)
+Phase 4.6: ADC Zener Protection ← Install before ANY sensor (needs BZX84C3V3, BOM #55)
     ↓
 Phase 5: Sensors              ← Can run in parallel with Phase 4
     ↓

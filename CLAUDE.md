@@ -23,6 +23,12 @@ Automotive functional safety portfolio project — ISO 26262 ASIL D zonal vehicl
 - **Ask before implementing** — get user approval first
 - Use `/plan-feature` skill for structured planning
 
+## BOM & Procurement
+
+- **Single source of truth**: `hardware/bom.md` — all delivery status lives here
+- When user says "[item] arrived", update the Status column in `bom.md`. No other file tracks delivery status.
+- Other docs reference BOM item numbers (e.g. "BOM #55") but NEVER duplicate status
+
 ## Build & Test
 
 - Build: `make build` (debug: `make build-debug`, release: `make build-release`)
