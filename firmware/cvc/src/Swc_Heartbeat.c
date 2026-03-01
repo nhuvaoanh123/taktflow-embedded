@@ -77,11 +77,11 @@ void Swc_Heartbeat_Init(void)
     fzc_rx_flag     = FALSE;
     rzc_rx_flag     = FALSE;
 
-    fzc_comm_status = CVC_COMM_OK;
-    rzc_comm_status = CVC_COMM_OK;
+    fzc_comm_status = CVC_COMM_TIMEOUT;
+    rzc_comm_status = CVC_COMM_TIMEOUT;
 
-    fzc_last_alive  = 0u;
-    rzc_last_alive  = 0u;
+    fzc_last_alive  = 0xFFu;
+    rzc_last_alive  = 0xFFu;
 
     initialized     = TRUE;
 }

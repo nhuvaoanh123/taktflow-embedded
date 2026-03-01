@@ -56,8 +56,8 @@ static const Rte_SignalConfigType cvc_signal_config[CVC_SIG_COUNT] = {
     { CVC_SIG_VEHICLE_STATE,   CVC_STATE_INIT },  /* 20: Vehicle state      */
     { CVC_SIG_TORQUE_REQUEST,  0u },   /* 21: Torque request 0-1000         */
     { CVC_SIG_ESTOP_ACTIVE,    0u },   /* 22: E-stop active flag            */
-    { CVC_SIG_FZC_COMM_STATUS, CVC_COMM_OK },     /* 23: FZC comm status    */
-    { CVC_SIG_RZC_COMM_STATUS, CVC_COMM_OK },     /* 24: RZC comm status    */
+    { CVC_SIG_FZC_COMM_STATUS, CVC_COMM_TIMEOUT },  /* 23: FZC comm — TIMEOUT until proven OK */
+    { CVC_SIG_RZC_COMM_STATUS, CVC_COMM_TIMEOUT },  /* 24: RZC comm — TIMEOUT until proven OK */
     { CVC_SIG_MOTOR_SPEED,     0u },   /* 25: Motor speed RPM               */
     { CVC_SIG_FAULT_MASK,      0u },   /* 26: Fault bitmask                 */
     { CVC_SIG_MOTOR_CURRENT,   0u },   /* 27: Motor current mA              */

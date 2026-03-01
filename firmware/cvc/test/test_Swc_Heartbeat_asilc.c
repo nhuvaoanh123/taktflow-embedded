@@ -202,8 +202,8 @@ void setUp(void)
 
     mock_com_send_count    = 0u;
     mock_com_send_sig_id   = 0xFFu;
-    mock_com_rx_fzc_alive  = 0u;
-    mock_com_rx_rzc_alive  = 0u;
+    mock_com_rx_fzc_alive  = 0xFFu;  /* Match fzc_last_alive init to avoid false change detect */
+    mock_com_rx_rzc_alive  = 0xFFu;  /* Match rzc_last_alive init to avoid false change detect */
     mock_e2e_protect_count = 0u;
     mock_rte_write_count   = 0u;
     mock_dem_report_count  = 0u;
@@ -229,9 +229,10 @@ void tearDown(void) { }
  * ==================================================================== */
 
 /** @verifies SWR-CVC-021 */
-void test_Heartbeat_Init_comm_status_ok(void)
+void test_Heartbeat_Init_comm_status_timeout(void)
 {
-    /* After init, both FZC and RZC comm status should be OK */
+    /* After init, both FZC and RZC comm status should be TIMEOUT
+     * (safe default — heartbeats must be received before declaring OK) */
     /* Run one cycle to see RTE writes */
     Swc_Heartbeat_MainFunction();
 
@@ -241,11 +242,11 @@ void test_Heartbeat_Init_comm_status_ok(void)
     uint8 i;
     for (i = 0u; i < mock_rte_write_count; i++) {
         if (mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) {
-            TEST_ASSERT_EQUAL(CVC_COMM_OK, mock_rte_write_vals[i]);
+            TEST_ASSERT_EQUAL(CVC_COMM_TIMEOUT, mock_rte_write_vals[i]);
             found_fzc = TRUE;
         }
         if (mock_rte_write_sig_ids[i] == CVC_SIG_RZC_COMM_STATUS) {
-            TEST_ASSERT_EQUAL(CVC_COMM_OK, mock_rte_write_vals[i]);
+            TEST_ASSERT_EQUAL(CVC_COMM_TIMEOUT, mock_rte_write_vals[i]);
             found_rzc = TRUE;
         }
     }
@@ -416,7 +417,14 @@ void test_Heartbeat_RZC_timeout_after_3_misses(void)
 /** @verifies SWR-CVC-022 */
 void test_Heartbeat_FZC_timeout_DTC_reported(void)
 {
-    /* Run 3 check periods without FZC RX */
+    /* First recover FZC from initial TIMEOUT to OK */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
+    run_cycles(5u);
+
+    /* Clear DEM mock state */
+    mock_dem_report_count = 0u;
+
+    /* Now run 3 check periods without FZC RX to trigger timeout */
     run_cycles(5u);
     run_cycles(5u);
     run_cycles(5u);
@@ -435,7 +443,14 @@ void test_Heartbeat_FZC_timeout_DTC_reported(void)
 /** @verifies SWR-CVC-022 */
 void test_Heartbeat_RZC_timeout_DTC_reported(void)
 {
-    /* Run 3 check periods without RZC RX */
+    /* First recover RZC from initial TIMEOUT to OK */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
+    run_cycles(5u);
+
+    /* Clear DEM mock state */
+    mock_dem_report_count = 0u;
+
+    /* Now run 3 check periods without RZC RX to trigger timeout */
     run_cycles(5u);
     run_cycles(5u);
     run_cycles(5u);
@@ -636,11 +651,18 @@ void test_Heartbeat_RxIndication_ecu_id_zero_ignored(void)
  *  Boundary: miss_count = 2 (one below CVC_HB_MAX_MISS = 3) */
 void test_Heartbeat_FZC_no_timeout_at_2_misses(void)
 {
+    /* First recover FZC from initial TIMEOUT to OK */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
+    run_cycles(5u);
+
+    /* Reset RTE mock to only see writes from here */
+    mock_rte_write_count = 0u;
+
     /* 2 check periods without FZC RX */
     run_cycles(5u);
     run_cycles(5u);
 
-    /* FZC should NOT yet be in timeout */
+    /* FZC should NOT yet be in timeout (only 2 misses, need 3) */
     boolean found_timeout = FALSE;
     uint8 i;
     for (i = 0u; i < mock_rte_write_count; i++) {
@@ -753,7 +775,7 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_Heartbeat_Init_comm_status_ok);
+    RUN_TEST(test_Heartbeat_Init_comm_status_timeout);
     RUN_TEST(test_Heartbeat_TX_every_50ms);
     RUN_TEST(test_Heartbeat_Alive_counter_increments);
     RUN_TEST(test_Heartbeat_Alive_counter_wraps_at_15);
