@@ -110,7 +110,7 @@ void WdgM_MainFunction(void)
 
     if (all_ok != FALSE) {
         wdgm_global_status = WDGM_GLOBAL_STATUS_OK;
-        Dio_FlipChannel(wdgm_config->wdtDioChannel);
+        (void)Dio_FlipChannel(wdgm_config->wdtDioChannel);
     } else {
         wdgm_global_status = WDGM_GLOBAL_STATUS_FAILED;
         /* Do NOT feed watchdog — TPS3823 will reset MCU */

@@ -38,10 +38,11 @@ Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
 static uint32 mock_dio_flip_count;
 static uint8  mock_dio_last_channel;
 
-void Dio_FlipChannel(uint8 ChannelId)
+uint8 Dio_FlipChannel(uint8 ChannelId)
 {
     mock_dio_last_channel = ChannelId;
     mock_dio_flip_count++;
+    return STD_HIGH;
 }
 
 /* ====================================================================

@@ -18,10 +18,11 @@
 
 static uint8 mock_dio_flip_count;
 
-void Dio_FlipChannel(uint8 ChannelId)
+uint8 Dio_FlipChannel(uint8 ChannelId)
 {
     (void)ChannelId;
     mock_dio_flip_count++;
+    return STD_HIGH;
 }
 
 /* ==================================================================
