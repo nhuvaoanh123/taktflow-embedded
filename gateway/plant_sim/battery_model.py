@@ -46,9 +46,10 @@ class BatteryModel:
         self.voltage_mv = int(self.V_NOMINAL_MV - drop_mv)
         self.voltage_mv = max(0, min(20000, self.voltage_mv))
 
-        # Simple SOC drain (very slow for demo)
+        # Simple SOC drain — realistic rate for demo stability.
+        # At 30A continuous, 100% → 0% takes ~33 hours (like a real 1Ah pack).
         energy_used = motor_current_ma * dt / 3600000.0  # Ah
-        self.soc -= energy_used * 10.0  # exaggerated for demo
+        self.soc -= energy_used * 0.1
         self.soc = max(0, min(100, self.soc))
 
     @property

@@ -63,8 +63,8 @@ static uint8   Brake_Position;
 /** Current brake fault code */
 static uint8   Brake_Fault;
 
-/** Command timeout counter (increments each cycle if command unchanged) */
-static uint8   Brake_CmdTimeoutCounter;
+/** Command timeout counter (increments each cycle if no fresh RTE data) */
+static uint16  Brake_CmdTimeoutCounter;
 
 /** Fault latch flag (TRUE = brake locked at 100%) */
 static uint8   Brake_FaultLatched;
@@ -146,7 +146,22 @@ void Swc_Brake_MainFunction(void)
     /* ----------------------------------------------------------
      * Step 1: Read brake command from RTE
      * ---------------------------------------------------------- */
-    (void)Rte_Read(FZC_SIG_BRAKE_CMD, &brake_cmd_raw);
+    {
+        Std_ReturnType rte_ret;
+        rte_ret = Rte_Read(FZC_SIG_BRAKE_CMD, &brake_cmd_raw);
+
+        /* Track command freshness for timeout (same pattern as
+         * Swc_Steering — RTE return value, not value-change).
+         * Value-change detection triggers false positives when
+         * the commanded value is legitimately constant (e.g. 0). */
+        if (rte_ret == E_OK) {
+            Brake_CmdTimeoutCounter = 0u;
+        } else {
+            if (Brake_CmdTimeoutCounter < 0xFFFFu) {
+                Brake_CmdTimeoutCounter++;
+            }
+        }
+    }
 
     /* Clamp to 0-100 */
     if (brake_cmd_raw > (uint32)BRAKE_CMD_MAX) {
@@ -170,20 +185,15 @@ void Swc_Brake_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 3: Command timeout detection
-     *         If brake command has not changed for 10 consecutive
-     *         cycles (100 ms at 10 ms/cycle), trigger auto-brake.
+     *         If no fresh RTE data for BRAKE_TIMEOUT_CYCLES
+     *         consecutive cycles, trigger auto-brake.
      * ---------------------------------------------------------- */
     if (Brake_AutoBrakeActive == FALSE) {
-        if (brake_cmd_raw == Brake_PrevBrakeCmd) {
-            Brake_CmdTimeoutCounter++;
-            if (Brake_CmdTimeoutCounter >= BRAKE_TIMEOUT_CYCLES) {
-                new_fault             = FZC_BRAKE_CMD_TIMEOUT;
-                Brake_AutoBrakeActive = TRUE;
-                Brake_FaultLatched    = TRUE;
-                Brake_LatchCounter    = 0u;
-            }
-        } else {
-            Brake_CmdTimeoutCounter = 0u;
+        if (Brake_CmdTimeoutCounter >= BRAKE_TIMEOUT_CYCLES) {
+            new_fault             = FZC_BRAKE_CMD_TIMEOUT;
+            Brake_AutoBrakeActive = TRUE;
+            Brake_FaultLatched    = TRUE;
+            Brake_LatchCounter    = 0u;
         }
     }
 

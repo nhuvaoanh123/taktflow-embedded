@@ -330,7 +330,10 @@ void Swc_FzcCom_TransmitSchedule(void)
 
     /* ---- TX: 0x220 Lidar Warning (event-driven, PduR_Transmit) ---- */
     (void)Rte_Read(FZC_SIG_LIDAR_ZONE, &rteVal);
-    if (rteVal >= (uint32)FZC_LIDAR_ZONE_WARNING) {
+    /* Only broadcast obstacle warnings (WARNING/BRAKING/EMERGENCY),
+     * NOT sensor FAULT — FAULT means invalid data, not an obstacle. */
+    if ((rteVal >= (uint32)FZC_LIDAR_ZONE_WARNING)
+        && (rteVal <= (uint32)FZC_LIDAR_ZONE_EMERGENCY)) {
         FzcCom_TxPendLidarWarn = TRUE;
     }
     if (FzcCom_TxPendLidarWarn == TRUE) {
