@@ -792,9 +792,18 @@ class ScenarioExecutor:
                 "  [STEP] Restarting containers: %s",
                 ", ".join(containers),
             )
+            # Use docker compose restart (service names, not container names)
+            compose_file = (
+                Path(__file__).resolve().parent.parent.parent
+                / "docker" / "docker-compose.yml"
+            )
             for ctr in containers:
                 subprocess.run(
-                    ["docker", "restart", ctr],
+                    [
+                        "docker", "compose",
+                        "-f", str(compose_file),
+                        "restart", ctr,
+                    ],
                     timeout=60,
                     check=True,
                     capture_output=True,
