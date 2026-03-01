@@ -672,11 +672,15 @@ void test_Fault_forces_full_brake(void)
 /** @verifies SWR-FZC-012 -- 50 fault-free cycles required to clear latch */
 void test_Latch_clear_50_cycles(void)
 {
-    /* Force fault via timeout (simulate communication loss) */
+    /* Force fault via timeout (simulate communication loss).
+     * Use exactly 10 E_NOT_OK cycles: fault fires at cycle 9
+     * (counter reaches BRAKE_TIMEOUT_CYCLES=9), cycle 10 adds
+     * 1 latch-counter tick.  Fresh cycles then start at latchCounter=1,
+     * so 49 fresh + 1 = 50 = latchClearCycles → clears on the 49th. */
     run_cycles(30u, 3u);
     mock_rte_brake_cmd_not_ok = 1u;
     uint16 j;
-    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
+    for (j = 0u; j < 10u; j++) { Swc_Brake_MainFunction(); }
     mock_rte_brake_cmd_not_ok = 0u;
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
@@ -705,11 +709,12 @@ void test_Latch_clear_50_cycles(void)
 /** @verifies SWR-FZC-012 -- DTC cleared when fault-free after latch clear */
 void test_DTC_clears_after_latch(void)
 {
-    /* Force timeout fault via communication loss */
+    /* Force timeout fault via communication loss (10 E_NOT_OK cycles,
+     * same reasoning as test_Latch_clear_50_cycles). */
     run_cycles(30u, 3u);
     mock_rte_brake_cmd_not_ok = 1u;
     uint16 j;
-    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
+    for (j = 0u; j < 10u; j++) { Swc_Brake_MainFunction(); }
     mock_rte_brake_cmd_not_ok = 0u;
 
     TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
