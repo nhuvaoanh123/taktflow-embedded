@@ -139,6 +139,7 @@ static uint8  mock_com_rx_available[MOCK_COM_MAX_PDUS];
 static uint8  mock_com_tx_data[MOCK_COM_MAX_PDUS][8];
 static uint8  mock_com_tx_count;
 static uint8  mock_com_tx_last_pdu;
+static uint8  mock_com_tx_hb_count;  /* heartbeat-specific send count */
 
 Std_ReturnType Com_ReceiveSignal(uint8 PduId, uint8* DataPtr)
 {
@@ -167,6 +168,9 @@ Std_ReturnType Com_SendSignal(uint8 PduId, const void* DataPtr)
     }
     mock_com_tx_count++;
     mock_com_tx_last_pdu = PduId;
+    if (PduId == FZC_COM_TX_HEARTBEAT) {
+        mock_com_tx_hb_count++;
+    }
     ptr = (const uint8*)DataPtr;
     if (PduId < MOCK_COM_MAX_PDUS) {
         for (i = 0u; i < 8u; i++) {
@@ -193,6 +197,7 @@ void setUp(void)
 
     mock_com_tx_count    = 0u;
     mock_com_tx_last_pdu = 0xFFu;
+    mock_com_tx_hb_count = 0u;
     for (i = 0u; i < MOCK_COM_MAX_PDUS; i++) {
         mock_com_rx_available[i] = FALSE;
         for (j = 0u; j < 8u; j++) {
@@ -382,16 +387,15 @@ void test_FzcCom_transmit_heartbeat_50ms(void)
 {
     uint8 i;
 
-    /* Run 4 cycles: no heartbeat TX yet */
+    /* Run 4 cycles: no heartbeat TX yet (steering bridge sends are OK) */
     for (i = 0u; i < 4u; i++) {
         Swc_FzcCom_TransmitSchedule();
     }
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_tx_count);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_tx_hb_count);
 
     /* 5th cycle: heartbeat should be transmitted */
     Swc_FzcCom_TransmitSchedule();
-    TEST_ASSERT_TRUE(mock_com_tx_count > 0u);
-    TEST_ASSERT_EQUAL_UINT8(FZC_COM_TX_HEARTBEAT, mock_com_tx_last_pdu);
+    TEST_ASSERT_TRUE(mock_com_tx_hb_count > 0u);
 }
 
 /** @verifies SWR-FZC-027 — Event-driven brake fault TX within 10ms of trigger */
