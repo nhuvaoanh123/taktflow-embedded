@@ -78,14 +78,14 @@ static const Rte_SignalConfigType fzc_signal_config[FZC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType fzc_runnable_config[] = {
     /* func,                           periodMs, priority, seId */
-    { Can_MainFunction_Read,              10u,      7u,     0xFFu },  /* CAN RX first          */
-    { Com_MainFunction_Tx,                10u,      7u,     0xFFu },  /* COM TX                */
-    { Swc_Steering_MainFunction,          10u,      6u,     0u    },  /* Steering highest SWC  */
-    { Swc_Brake_MainFunction,             10u,      5u,     1u    },  /* Brake control         */
-    { Swc_Lidar_MainFunction,             10u,      4u,     2u    },  /* Lidar processing      */
-    { Swc_Heartbeat_MainFunction,         10u,      3u,     3u    },  /* Heartbeat TX/RX       */
-    { Can_MainFunction_BusOff,            10u,      2u,     0xFFu },  /* Bus-off check         */
-    { Swc_Buzzer_MainFunction,            10u,      1u,     4u    },  /* Buzzer (lowest prio)  */
+    { Can_MainFunction_Read,              10u,      8u,     0xFFu },  /* CAN RX first          */
+    { Swc_Steering_MainFunction,          10u,      7u,     0u    },  /* Steering highest SWC  */
+    { Swc_Brake_MainFunction,             10u,      6u,     1u    },  /* Brake control         */
+    { Swc_Lidar_MainFunction,             10u,      5u,     2u    },  /* Lidar processing      */
+    { Swc_Heartbeat_MainFunction,         10u,      4u,     3u    },  /* Heartbeat TX/RX       */
+    { Swc_Buzzer_MainFunction,            10u,      3u,     4u    },  /* Buzzer                */
+    { Com_MainFunction_Tx,                10u,      2u,     0xFFu },  /* COM TX (after all SWCs) */
+    { Can_MainFunction_BusOff,            10u,      1u,     0xFFu },  /* Bus-off check         */
 };
 
 #define FZC_RUNNABLE_COUNT  (sizeof(fzc_runnable_config) / sizeof(fzc_runnable_config[0]))

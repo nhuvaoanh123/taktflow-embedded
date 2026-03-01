@@ -71,11 +71,11 @@ static const Rte_SignalConfigType icu_signal_config[ICU_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType icu_runnable_config[] = {
     /* func,                    periodMs, priority, seId */
-    { Can_MainFunction_Read,       10u,      5u,     0xFFu },  /* CAN RX first        */
-    { Com_MainFunction_Tx,         10u,      4u,     0xFFu },  /* COM TX (no-op, ICU has no TX) */
-    { Swc_Dashboard_50ms,          50u,      3u,     0u    },  /* Dashboard (20 Hz)    */
-    { Swc_DtcDisplay_50ms,         50u,      2u,     1u    },  /* DTC display (20 Hz)  */
-    { Can_MainFunction_BusOff,     50u,      1u,     0xFFu },  /* Bus-off check        */
+    { Can_MainFunction_Read,       10u,      5u,     0xFFu },  /* CAN RX first            */
+    { Swc_Dashboard_50ms,          50u,      4u,     0u    },  /* Dashboard (20 Hz)       */
+    { Swc_DtcDisplay_50ms,         50u,      3u,     1u    },  /* DTC display (20 Hz)     */
+    { Com_MainFunction_Tx,         10u,      2u,     0xFFu },  /* COM TX (after all SWCs) */
+    { Can_MainFunction_BusOff,     50u,      1u,     0xFFu },  /* Bus-off check           */
 };
 
 #define ICU_RUNNABLE_COUNT  (sizeof(icu_runnable_config) / sizeof(icu_runnable_config[0]))

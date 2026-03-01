@@ -73,14 +73,14 @@ static const Rte_SignalConfigType cvc_signal_config[CVC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType cvc_runnable_config[] = {
     /* func,                           periodMs, priority, seId */
-    { Can_MainFunction_Read,              10u,      7u,     0xFFu },  /* CAN RX first */
-    { Com_MainFunction_Tx,                10u,      7u,     0xFFu },  /* COM TX         */
-    { Swc_EStop_MainFunction,             10u,      6u,     2u    },  /* E-stop highest SWC prio */
-    { Swc_Pedal_MainFunction,             10u,      5u,     0u    },  /* Pedal processing */
-    { Swc_VehicleState_MainFunction,      10u,      4u,     1u    },  /* State machine */
-    { Swc_Heartbeat_MainFunction,         10u,      3u,     3u    },  /* Heartbeat TX/RX */
-    { Can_MainFunction_BusOff,            10u,      2u,     0xFFu },  /* Bus-off check */
-    { Swc_Dashboard_MainFunction,         10u,      1u,     4u    },  /* Display (lowest prio) */
+    { Can_MainFunction_Read,              10u,      8u,     0xFFu },  /* CAN RX first            */
+    { Swc_EStop_MainFunction,             10u,      7u,     2u    },  /* E-stop highest SWC prio */
+    { Swc_Pedal_MainFunction,             10u,      6u,     0u    },  /* Pedal processing        */
+    { Swc_VehicleState_MainFunction,      10u,      5u,     1u    },  /* State machine           */
+    { Swc_Heartbeat_MainFunction,         10u,      4u,     3u    },  /* Heartbeat TX/RX         */
+    { Swc_Dashboard_MainFunction,         10u,      3u,     4u    },  /* Display                 */
+    { Com_MainFunction_Tx,                10u,      2u,     0xFFu },  /* COM TX (after all SWCs) */
+    { Can_MainFunction_BusOff,            10u,      1u,     0xFFu },  /* Bus-off check           */
 };
 
 #define CVC_RUNNABLE_COUNT  (sizeof(cvc_runnable_config) / sizeof(cvc_runnable_config[0]))
