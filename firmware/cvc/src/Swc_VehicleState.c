@@ -23,6 +23,7 @@
  */
 
 #include "Swc_VehicleState.h"
+#include "Swc_CvcCom.h"
 #include "Cvc_Cfg.h"
 #include "Rte.h"
 #include "BswM.h"
@@ -180,6 +181,27 @@ static uint16 safe_stop_clear_count;
 #define CVC_SAFE_STOP_RECOVERY_CYCLES   50u
 
 /* ==================================================================
+ * Confirmation-read pattern — ISO 26262 debounce + fresh Com + E2E
+ * ================================================================== */
+
+/** @brief  Per-fault debounce counters: [brake, motor_cutoff, steering] */
+static uint8 fault_confirm_count[3];
+
+#define CVC_FAULT_CONFIRM_THRESHOLD  3u   /**< 3 consecutive 10ms cycles = 30ms */
+#define CVC_FAULT_IDX_BRAKE          0u
+#define CVC_FAULT_IDX_MOTOR_CUTOFF   1u
+#define CVC_FAULT_IDX_STEERING       2u
+#define CVC_FAULT_CONFIRM_COUNT      3u
+
+#define CVC_FAULT_COM_BRAKE         13u   /**< Com signal ID for brake_fault   */
+#define CVC_FAULT_COM_MOTOR_CUTOFF  14u   /**< Com signal ID for motor_cutoff  */
+#define CVC_FAULT_COM_STEERING      0xFFu /**< Not bridged via Com             */
+
+#define CVC_FAULT_E2E_BRAKE          2u   /**< CvcCom RX index for 0x210       */
+#define CVC_FAULT_E2E_MOTOR_CUTOFF   0xFFu /**< 0x211 not in CvcCom RxTable   */
+#define CVC_FAULT_E2E_STEERING       0xFFu
+
+/* ==================================================================
  * Public API
  * ================================================================== */
 
@@ -189,10 +211,17 @@ static uint16 safe_stop_clear_count;
  */
 void Swc_VehicleState_Init(void)
 {
+    uint8 i;
+
     current_state          = CVC_STATE_INIT;
     initialized            = TRUE;
     self_test_pass_pending = FALSE;
     safe_stop_clear_count  = 0u;
+
+    for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
+    {
+        fault_confirm_count[i] = 0u;
+    }
 }
 
 /**
@@ -253,6 +282,76 @@ void Swc_VehicleState_OnEvent(uint8 event)
 
     /* Notify BswM of the new mode */
     (void)BswM_RequestMode(CVC_ECU_ID_CVC, state_to_bswm_mode[current_state]);
+}
+
+/**
+ * @brief  Confirm a fault signal before safety-critical transition
+ * @param  faultIdx     Index into fault_confirm_count array
+ * @param  rte_value    RTE signal value (non-zero = fault active)
+ * @param  comSignalId  Com signal ID for fresh read (0xFF = no Com check)
+ * @param  e2eRxIndex   CvcCom RX index for E2E check (0xFF = no E2E check)
+ * @param  dtcId        DTC event ID for Dem_ReportErrorStatus
+ * @param  eventId      Vehicle state event to fire on confirmed fault
+ *
+ * @details ISO 26262 confirmation-read pattern:
+ *          1. Debounce: fault must persist for CVC_FAULT_CONFIRM_THRESHOLD cycles
+ *          2. Com read: fresh value from Com shadow buffer (bypasses stale RTE)
+ *          3. E2E check: verify message is not degraded (useSafeDefault == FALSE)
+ *          Only if all checks pass is the event fired.
+ */
+static void Swc_VehicleState_ConfirmFault(
+    uint8 faultIdx, uint32 rte_value,
+    uint8 comSignalId, uint8 e2eRxIndex,
+    uint8 dtcId, uint8 eventId)
+{
+    if (rte_value != 0u)
+    {
+        fault_confirm_count[faultIdx]++;
+
+        if (fault_confirm_count[faultIdx] >= CVC_FAULT_CONFIRM_THRESHOLD)
+        {
+            uint8 confirmed = TRUE;
+
+            /* Fresh read from Com (bypass RTE stale cache) */
+            if (comSignalId != 0xFFu)
+            {
+                uint8 fresh_val = 0u;
+                (void)Com_ReceiveSignal(comSignalId, &fresh_val);
+                if (fresh_val == 0u)
+                {
+                    confirmed = FALSE;
+                }
+            }
+
+            /* E2E status check */
+            if ((confirmed == TRUE) && (e2eRxIndex != 0xFFu))
+            {
+                Swc_CvcCom_RxStatusType rx_status;
+                rx_status.failCount     = 0u;
+                rx_status.useSafeDefault = FALSE;
+
+                if (Swc_CvcCom_GetRxStatus(e2eRxIndex, &rx_status) == E_OK)
+                {
+                    if (rx_status.useSafeDefault == TRUE)
+                    {
+                        confirmed = FALSE;
+                    }
+                }
+            }
+
+            if (confirmed == TRUE)
+            {
+                Dem_ReportErrorStatus(dtcId, DEM_EVENT_STATUS_FAILED);
+                Swc_VehicleState_OnEvent(eventId);
+            }
+
+            fault_confirm_count[faultIdx] = 0u;
+        }
+    }
+    else
+    {
+        fault_confirm_count[faultIdx] = 0u;
+    }
 }
 
 /**
@@ -349,24 +448,21 @@ void Swc_VehicleState_MainFunction(void)
         Swc_VehicleState_OnEvent(CVC_EVT_FAULT_CLEARED);
     }
 
-    /* ---- Step 4: Report DTCs and derive events for subsystem faults ---- */
-    if (motor_cutoff != 0u)
-    {
-        Dem_ReportErrorStatus(CVC_DTC_MOTOR_CUTOFF_RX, DEM_EVENT_STATUS_FAILED);
-        Swc_VehicleState_OnEvent(CVC_EVT_MOTOR_CUTOFF);
-    }
+    /* ---- Step 4: Confirmed fault events (ISO 26262 confirmation-read) ---- */
+    Swc_VehicleState_ConfirmFault(
+        CVC_FAULT_IDX_MOTOR_CUTOFF, motor_cutoff,
+        CVC_FAULT_COM_MOTOR_CUTOFF, CVC_FAULT_E2E_MOTOR_CUTOFF,
+        CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
 
-    if (brake_fault != 0u)
-    {
-        Dem_ReportErrorStatus(CVC_DTC_BRAKE_FAULT_RX, DEM_EVENT_STATUS_FAILED);
-        Swc_VehicleState_OnEvent(CVC_EVT_BRAKE_FAULT);
-    }
+    Swc_VehicleState_ConfirmFault(
+        CVC_FAULT_IDX_BRAKE, brake_fault,
+        CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
+        CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
 
-    if (steering_fault != 0u)
-    {
-        Dem_ReportErrorStatus(CVC_DTC_STEERING_FAULT_RX, DEM_EVENT_STATUS_FAILED);
-        Swc_VehicleState_OnEvent(CVC_EVT_STEERING_FAULT);
-    }
+    Swc_VehicleState_ConfirmFault(
+        CVC_FAULT_IDX_STEERING, steering_fault,
+        CVC_FAULT_COM_STEERING, CVC_FAULT_E2E_STEERING,
+        CVC_DTC_STEERING_FAULT_RX, CVC_EVT_STEERING_FAULT);
 
     /* ---- Step 5: SAFE_STOP recovery when all faults clear ---- */
     if (current_state == CVC_STATE_SAFE_STOP)
