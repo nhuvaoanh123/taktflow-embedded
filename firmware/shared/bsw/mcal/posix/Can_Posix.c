@@ -37,6 +37,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
 
 /* Use real syscalls */
 #define CAN_POSIX_SOCKET_FN     socket
@@ -78,6 +79,8 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
     /* Create RAW CAN socket */
     int fd = CAN_POSIX_SOCKET_FN(PF_CAN, SOCK_RAW, CAN_RAW);
     if (fd < 0) {
+        fprintf(stderr, "[CAN] socket(PF_CAN, SOCK_RAW) failed: %s\n",
+                strerror(errno));
         can_posix_fd = -1;
         return E_NOT_OK;
     }
@@ -89,6 +92,8 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1u] = '\0';
 
     if (CAN_POSIX_IOCTL_FN(fd, SIOCGIFINDEX, &ifr) < 0) {
+        fprintf(stderr, "[CAN] ioctl(SIOCGIFINDEX, \"%s\") failed: %s\n",
+                iface, strerror(errno));
         CAN_POSIX_CLOSE_FN(fd);
         can_posix_fd = -1;
         return E_NOT_OK;
@@ -101,6 +106,8 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
     addr.can_ifindex = ifr.ifr_ifindex;
 
     if (CAN_POSIX_BIND_FN(fd, (struct sockaddr *)&addr, (uint32)sizeof(addr)) < 0) {
+        fprintf(stderr, "[CAN] bind(\"%s\") failed: %s\n",
+                iface, strerror(errno));
         CAN_POSIX_CLOSE_FN(fd);
         can_posix_fd = -1;
         return E_NOT_OK;

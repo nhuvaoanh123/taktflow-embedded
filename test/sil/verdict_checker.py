@@ -493,6 +493,11 @@ class ScenarioExecutor:
         self._fault_api_url = fault_api_url
         self._default_timeout_sec = default_timeout_sec
 
+        # Baseline storage for record_baseline / comparison verdicts
+        self._baseline_motor_rpm: Optional[int] = None
+        self._baseline_battery_soc: Optional[int] = None
+        self._baseline_alive_counters: dict[int, int] = {}
+
     def execute_scenario(self, scenario_path: Path) -> ScenarioResult:
         """Execute a single scenario YAML file and return the result.
 
@@ -525,9 +530,12 @@ class ScenarioExecutor:
 
         start_time = time.monotonic()
 
-        # Reset monitors for fresh observation
+        # Reset monitors and baselines for fresh observation
         self._can.reset()
         self._mqtt.reset()
+        self._baseline_motor_rpm = None
+        self._baseline_battery_soc = None
+        self._baseline_alive_counters.clear()
 
         # Execute setup steps
         try:
@@ -714,6 +722,102 @@ class ScenarioExecutor:
                     f"within 3s"
                 )
             log.info("  [STEP] Heartbeat confirmed for %s", ecu)
+
+        elif action == "record_baseline":
+            metric = step.get("metric", "")
+            if metric == "motor_rpm":
+                self._baseline_motor_rpm = self._can.motor_rpm
+                log.info(
+                    "  [STEP] Recorded baseline motor_rpm = %d",
+                    self._baseline_motor_rpm,
+                )
+            elif metric == "battery_soc":
+                latest = self._can.get_latest_message(CAN_BATTERY_STATUS)
+                if latest is not None and len(latest[1].data) >= 3:
+                    self._baseline_battery_soc = latest[1].data[2]
+                else:
+                    self._baseline_battery_soc = None
+                log.info(
+                    "  [STEP] Recorded baseline battery_soc = %s",
+                    self._baseline_battery_soc,
+                )
+            elif metric == "alive_counters":
+                self._baseline_alive_counters.clear()
+                for can_id_val in [
+                    CAN_VEHICLE_STATE, CAN_MOTOR_STATUS, CAN_BATTERY_STATUS,
+                ]:
+                    latest = self._can.get_latest_message(can_id_val)
+                    if latest is not None and len(latest[1].data) >= 1:
+                        counter = (latest[1].data[0] >> 4) & 0x0F
+                        self._baseline_alive_counters[can_id_val] = counter
+                log.info(
+                    "  [STEP] Recorded baseline alive_counters: %s",
+                    {f"0x{k:03X}": v
+                     for k, v in self._baseline_alive_counters.items()},
+                )
+            else:
+                log.warning(
+                    "  [STEP] Unknown baseline metric: %s", metric
+                )
+
+        elif action == "inject_raw_can":
+            can_id = _parse_int(step.get("can_id", 0))
+            data_list = step.get("data", [])
+            data_bytes = bytes(data_list)
+            log.info(
+                "  [STEP] Injecting raw CAN frame: "
+                "ID=0x%03X, data=%s (%d bytes)",
+                can_id, data_bytes.hex(), len(data_bytes),
+            )
+            bus = can.interface.Bus(
+                channel=self._can.channel,
+                interface="socketcan",
+            )
+            try:
+                msg = can.Message(
+                    arbitration_id=can_id,
+                    data=data_bytes,
+                    is_extended_id=False,
+                )
+                bus.send(msg)
+                log.info("  [STEP] Raw CAN frame sent")
+            finally:
+                bus.shutdown()
+
+        elif action == "docker_restart":
+            containers = step.get("containers", [])
+            if isinstance(containers, str):
+                containers = [containers]
+            log.info(
+                "  [STEP] Restarting containers: %s",
+                ", ".join(containers),
+            )
+            for ctr in containers:
+                subprocess.run(
+                    ["docker", "restart", ctr],
+                    timeout=60,
+                    check=True,
+                    capture_output=True,
+                )
+                log.info("  [STEP] Restarted container: %s", ctr)
+
+        elif action == "inject_fault":
+            fault_type = step.get("type", "")
+            value = step.get("value")
+            log.info(
+                "  [STEP] Injecting fault: type=%s, value=%s",
+                fault_type, value,
+            )
+            payload: dict[str, Any] = {}
+            if value is not None:
+                payload["value"] = value
+            resp = requests.post(
+                f"{self._fault_api_url}/api/fault/scenario/{fault_type}",
+                json=payload if payload else None,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            log.info("  [STEP] Fault injected: %s", resp.json())
 
         else:
             raise ValueError(f"Unknown step action: {action}")

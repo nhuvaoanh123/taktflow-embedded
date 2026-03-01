@@ -40,6 +40,7 @@ services:
       "
     cap_add:
       - NET_ADMIN
+      - NET_RAW
       - SYS_MODULE
     volumes:
       - /lib/modules:/lib/modules:ro
@@ -54,6 +55,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -70,6 +72,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -86,6 +89,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -102,6 +106,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -118,6 +123,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -134,6 +140,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -152,6 +159,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -166,6 +174,9 @@ services:
       context: ..
       dockerfile: gateway/plant_sim/Dockerfile
     network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -190,6 +201,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
@@ -267,6 +279,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     depends_on:
       can-setup:
         condition: service_completed_successfully
