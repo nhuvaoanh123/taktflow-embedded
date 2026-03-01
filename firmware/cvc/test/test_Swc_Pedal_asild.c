@@ -189,6 +189,13 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: Com_SendSignal — variable declarations (function at bottom)
+ * ================================================================== */
+
+static uint16  mock_com_last_signal_id;
+static uint8   mock_com_send_count;
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 
@@ -970,9 +977,6 @@ int main(void)
 /* ==================================================================
  * Mock: Com_SendSignal (Swc_Pedal publishes torque to Com)
  * ================================================================== */
-
-static uint16  mock_com_last_signal_id;
-static uint8   mock_com_send_count;
 
 Std_ReturnType Com_SendSignal(uint16 SignalId, const void* SignalDataPtr)
 {
