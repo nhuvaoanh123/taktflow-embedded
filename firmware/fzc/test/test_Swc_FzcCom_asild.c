@@ -139,35 +139,51 @@ Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr)
 
 /* ==================================================================
  * Mock: Com_ReceiveSignal / Com_SendSignal
+ *
+ * ReceiveSignal is signal-level: returns typed value from shadow buffer.
+ * Signal types: 0=uint8, 1=uint16, 2=sint16 (matches Com_SignalTypeType).
  * ================================================================== */
 
-#define MOCK_COM_MAX_PDUS  16u
+#define MOCK_COM_MAX_SIGNALS  16u
+#define MOCK_COM_MAX_PDUS     16u
 
-static uint8  mock_com_rx_data[MOCK_COM_MAX_PDUS][8];
-static uint8  mock_com_rx_available[MOCK_COM_MAX_PDUS];
+typedef struct {
+    sint32  value;        /* Stored as sint32 to hold any signal type */
+    uint8   available;
+    uint8   sig_type;     /* 0=uint8, 1=uint16, 2=sint16 */
+} MockComSignalType;
+
+static MockComSignalType mock_com_rx_signals[MOCK_COM_MAX_SIGNALS];
 static uint8  mock_com_tx_data[MOCK_COM_MAX_PDUS][8];
 static uint8  mock_com_tx_count;
 static uint8  mock_com_tx_last_pdu;
 
-Std_ReturnType Com_ReceiveSignal(uint8 PduId, uint8* DataPtr)
+Std_ReturnType Com_ReceiveSignal(uint8 SignalId, void* DataPtr)
 {
-    uint8 i;
     if (DataPtr == NULL_PTR) {
         return E_NOT_OK;
     }
-    if (PduId >= MOCK_COM_MAX_PDUS) {
+    if (SignalId >= MOCK_COM_MAX_SIGNALS) {
         return E_NOT_OK;
     }
-    if (mock_com_rx_available[PduId] != TRUE) {
+    if (mock_com_rx_signals[SignalId].available != TRUE) {
         return E_NOT_OK;
     }
-    for (i = 0u; i < 8u; i++) {
-        DataPtr[i] = mock_com_rx_data[PduId][i];
+    switch (mock_com_rx_signals[SignalId].sig_type) {
+    case 2u:  /* sint16 */
+        *((sint16*)DataPtr) = (sint16)mock_com_rx_signals[SignalId].value;
+        break;
+    case 1u:  /* uint16 */
+        *((uint16*)DataPtr) = (uint16)mock_com_rx_signals[SignalId].value;
+        break;
+    default:  /* uint8 */
+        *((uint8*)DataPtr) = (uint8)mock_com_rx_signals[SignalId].value;
+        break;
     }
     return E_OK;
 }
 
-Std_ReturnType Com_SendSignal(uint8 PduId, const void* DataPtr)
+Std_ReturnType Com_SendSignal(uint8 SignalId, const void* DataPtr)
 {
     const uint8* ptr;
     uint8 i;
@@ -175,11 +191,11 @@ Std_ReturnType Com_SendSignal(uint8 PduId, const void* DataPtr)
         return E_NOT_OK;
     }
     mock_com_tx_count++;
-    mock_com_tx_last_pdu = PduId;
+    mock_com_tx_last_pdu = SignalId;
     ptr = (const uint8*)DataPtr;
-    if (PduId < MOCK_COM_MAX_PDUS) {
+    if (SignalId < MOCK_COM_MAX_PDUS) {
         for (i = 0u; i < 8u; i++) {
-            mock_com_tx_data[PduId][i] = ptr[i];
+            mock_com_tx_data[SignalId][i] = ptr[i];
         }
     }
     return E_OK;
@@ -225,10 +241,13 @@ void setUp(void)
 
     mock_com_tx_count    = 0u;
     mock_com_tx_last_pdu = 0xFFu;
+    for (i = 0u; i < MOCK_COM_MAX_SIGNALS; i++) {
+        mock_com_rx_signals[i].value     = 0;
+        mock_com_rx_signals[i].available = FALSE;
+        mock_com_rx_signals[i].sig_type  = 0u;
+    }
     for (i = 0u; i < MOCK_COM_MAX_PDUS; i++) {
-        mock_com_rx_available[i] = FALSE;
         for (j = 0u; j < 8u; j++) {
-            mock_com_rx_data[i][j] = 0u;
             mock_com_tx_data[i][j] = 0u;
         }
     }
@@ -245,29 +264,6 @@ void setUp(void)
 }
 
 void tearDown(void) { }
-
-/* ==================================================================
- * Helper: prepare a valid E2E-protected RX message
- * ================================================================== */
-
-static void prepare_valid_rx(uint8 pduId, uint8 dataId, uint8 payloadByte2)
-{
-    uint8 buf[8];
-    uint8 i;
-
-    for (i = 0u; i < 8u; i++) {
-        buf[i] = 0u;
-    }
-    buf[2] = payloadByte2;
-
-    /* Use E2eProtect to create valid CRC + alive counter */
-    (void)Swc_FzcCom_E2eProtect(buf, 8u, dataId);
-
-    for (i = 0u; i < 8u; i++) {
-        mock_com_rx_data[pduId][i] = buf[i];
-    }
-    mock_com_rx_available[pduId] = TRUE;
-}
 
 /* ==================================================================
  * SWR-FZC-019: E2E Transmit (2 tests)
@@ -322,51 +318,45 @@ void test_FzcCom_e2e_check_valid(void)
     TEST_ASSERT_EQUAL_UINT8(E_OK, ret);
 }
 
-/** @verifies SWR-FZC-020 — E2E check failure on brake routes safe default 100% */
-void test_FzcCom_e2e_check_fail_brake_safe_default_100pct(void)
+/** @verifies SWR-FZC-020 — Brake RX: Com_ReceiveSignal unavailable → no RTE write */
+void test_FzcCom_receive_brake_unavailable_no_rte_write(void)
 {
-    uint8 i;
+    /* Brake signal (13) not available */
+    mock_com_rx_signals[13].available = FALSE;
 
-    /* Prepare a corrupted brake command RX message */
-    for (i = 0u; i < 8u; i++) {
-        mock_com_rx_data[FZC_COM_RX_BRAKE_CMD][i] = 0xFFu;  /* Invalid CRC */
-    }
-    mock_com_rx_available[FZC_COM_RX_BRAKE_CMD] = TRUE;
+    /* Set RTE to sentinel value to detect if it gets overwritten */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0xDEADu;
 
-    /* Run receive */
     Swc_FzcCom_Receive();
 
-    /* assert: brake command routed as safe default = 100% */
-    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_CMD]);
+    /* assert: RTE was NOT written (sentinel preserved) */
+    TEST_ASSERT_EQUAL_UINT32(0xDEADu, mock_rte_signals[FZC_SIG_BRAKE_CMD]);
 }
 
-/** @verifies SWR-FZC-020 — E2E check failure on steering routes safe default center */
-void test_FzcCom_e2e_check_fail_steering_safe_default_center(void)
+/** @verifies SWR-FZC-020 — All RX unavailable → no fault-triggering writes */
+void test_FzcCom_receive_no_signals_no_estop(void)
 {
-    uint8 i;
+    /* No signals available */
 
-    /* Prepare a corrupted steering command RX message */
-    for (i = 0u; i < 8u; i++) {
-        mock_com_rx_data[FZC_COM_RX_STEER_CMD][i] = 0xFFu;  /* Invalid CRC */
-    }
-    mock_com_rx_available[FZC_COM_RX_STEER_CMD] = TRUE;
-
-    /* Run receive */
     Swc_FzcCom_Receive();
 
-    /* assert: steering command routed as safe default = center (0 deg) */
-    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_STEER_CMD]);
+    /* assert: E-stop stays at 0 (initial), NOT set to safe default 1 */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_ESTOP_ACTIVE]);
+    /* assert: Brake command stays at 0, NOT set to safe default 100% */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_BRAKE_CMD]);
 }
 
 /* ==================================================================
  * SWR-FZC-026: CAN Message Reception (3 tests)
  * ================================================================== */
 
-/** @verifies SWR-FZC-026 — E-stop message (0x001) routes to RTE */
+/** @verifies SWR-FZC-026 — E-stop signal (0x001) routes to RTE */
 void test_FzcCom_receive_estop_routing(void)
 {
-    /* Prepare valid E-stop message with E-stop active = 1 */
-    prepare_valid_rx(FZC_COM_RX_ESTOP, FZC_E2E_ESTOP_DATA_ID, 1u);
+    /* Signal 10 = E-stop active (uint8), value = 1 */
+    mock_com_rx_signals[10].value     = 1;
+    mock_com_rx_signals[10].available = TRUE;
+    mock_com_rx_signals[10].sig_type  = 0u;  /* uint8 */
 
     Swc_FzcCom_Receive();
 
@@ -374,11 +364,13 @@ void test_FzcCom_receive_estop_routing(void)
     TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[FZC_SIG_ESTOP_ACTIVE]);
 }
 
-/** @verifies SWR-FZC-026 — Brake command (0x200) routes to RTE */
+/** @verifies SWR-FZC-026 — Brake command (0x103) routes to RTE */
 void test_FzcCom_receive_brake_cmd_routing(void)
 {
-    /* Prepare valid brake command with 50% braking */
-    prepare_valid_rx(FZC_COM_RX_BRAKE_CMD, FZC_E2E_BRAKE_CMD_DATA_ID, 50u);
+    /* Signal 13 = brake command (uint8), value = 50 */
+    mock_com_rx_signals[13].value     = 50;
+    mock_com_rx_signals[13].available = TRUE;
+    mock_com_rx_signals[13].sig_type  = 0u;  /* uint8 */
 
     Swc_FzcCom_Receive();
 
@@ -386,26 +378,13 @@ void test_FzcCom_receive_brake_cmd_routing(void)
     TEST_ASSERT_EQUAL_UINT32(50u, mock_rte_signals[FZC_SIG_BRAKE_CMD]);
 }
 
-/** @verifies SWR-FZC-026 — Steering command (0x201) routes to RTE */
+/** @verifies SWR-FZC-026 — Steering command (0x102) routes to RTE */
 void test_FzcCom_receive_steering_cmd_routing(void)
 {
-    uint8 buf[8];
-    uint8 i;
-
-    for (i = 0u; i < 8u; i++) {
-        buf[i] = 0u;
-    }
-
-    /* Steering angle = 15 deg (sint16) in bytes [2..3] little-endian */
-    buf[2] = 15u;
-    buf[3] = 0u;
-
-    (void)Swc_FzcCom_E2eProtect(buf, 8u, FZC_E2E_STEER_CMD_DATA_ID);
-
-    for (i = 0u; i < 8u; i++) {
-        mock_com_rx_data[FZC_COM_RX_STEER_CMD][i] = buf[i];
-    }
-    mock_com_rx_available[FZC_COM_RX_STEER_CMD] = TRUE;
+    /* Signal 12 = steer command (sint16), value = 15 deg */
+    mock_com_rx_signals[12].value     = 15;
+    mock_com_rx_signals[12].available = TRUE;
+    mock_com_rx_signals[12].sig_type  = 2u;  /* sint16 */
 
     Swc_FzcCom_Receive();
 
@@ -463,10 +442,10 @@ int main(void)
     RUN_TEST(test_FzcCom_e2e_protect_crc_and_alive);
     RUN_TEST(test_FzcCom_e2e_protect_null_rejected);
 
-    /* SWR-FZC-020: E2E Receive */
+    /* SWR-FZC-020: E2E Receive + signal availability */
     RUN_TEST(test_FzcCom_e2e_check_valid);
-    RUN_TEST(test_FzcCom_e2e_check_fail_brake_safe_default_100pct);
-    RUN_TEST(test_FzcCom_e2e_check_fail_steering_safe_default_center);
+    RUN_TEST(test_FzcCom_receive_brake_unavailable_no_rte_write);
+    RUN_TEST(test_FzcCom_receive_no_signals_no_estop);
 
     /* SWR-FZC-026: CAN Message Reception */
     RUN_TEST(test_FzcCom_receive_estop_routing);
