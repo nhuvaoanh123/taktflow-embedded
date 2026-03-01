@@ -91,6 +91,8 @@ typedef struct {
 #define FZC_BRAKE_NO_FAULT          0u
 #define FZC_LIDAR_ZONE_CLEAR        0u
 #define FZC_LIDAR_ZONE_WARNING      1u
+#define FZC_LIDAR_ZONE_BRAKING      2u
+#define FZC_LIDAR_ZONE_EMERGENCY    3u
 #define FZC_ECU_ID                0x02u
 #define FZC_STATE_RUN               1u
 

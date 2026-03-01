@@ -124,11 +124,19 @@ void Pwm_SetDutyCycle(uint8 Channel, uint16 DutyCycle)
 
 static uint32  mock_rte_signals[MOCK_RTE_MAX_SIGNALS];
 static uint8   mock_rte_read_count;
+/** When non-zero, Rte_Read for FZC_SIG_BRAKE_CMD returns E_NOT_OK
+ *  (simulates CAN communication loss for timeout testing). */
+static uint8   mock_rte_brake_cmd_not_ok;
 
 Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr)
 {
     mock_rte_read_count++;
     if (DataPtr == NULL_PTR) {
+        return E_NOT_OK;
+    }
+    /* Simulate RTE freshness loss for brake command */
+    if ((SignalId == FZC_SIG_BRAKE_CMD) && (mock_rte_brake_cmd_not_ok != 0u)) {
+        *DataPtr = 0u;
         return E_NOT_OK;
     }
     if (SignalId < MOCK_RTE_MAX_SIGNALS) {
@@ -219,9 +227,10 @@ void setUp(void)
     mock_pwm_call_count   = 0u;
 
     /* Reset RTE mock */
-    mock_rte_read_count    = 0u;
-    mock_rte_write_count   = 0u;
-    mock_rte_last_write_id = 0u;
+    mock_rte_read_count        = 0u;
+    mock_rte_write_count       = 0u;
+    mock_rte_last_write_id     = 0u;
+    mock_rte_brake_cmd_not_ok  = 0u;
     for (i = 0u; i < MOCK_RTE_MAX_SIGNALS; i++) {
         mock_rte_signals[i] = 0u;
     }
@@ -438,24 +447,17 @@ void test_Auto_brake_on_timeout(void)
     /* Send a normal command first */
     run_cycles(30u, 3u);
 
-    /* Now stop sending new commands.  The brake command stays at 30
-     * but the timeout counter increments each cycle with no NEW
-     * command.  In this SWC, timeout means no Rte_Read update, but
-     * since our mock always returns the same value, the SWC detects
-     * "no change" as a new command.  The timeout logic checks for
-     * identical consecutive values as "no new command".
-     * Actually the SWC counts cycles since LAST DIFFERENT command.
-     * For clean testing: just leave the same value -> after 10 cycles
-     * (100ms at 10ms/cycle) the timeout fires.  But the SWC tracks
-     * whether a new command was received, not whether it changed.
-     *
-     * Simplest approach: the SWC increments a timeout counter every
-     * cycle and resets it when a new command value differs from
-     * previous.  If we hold the same value for 10+ cycles, timeout
-     * fires. */
-    run_cycles(30u, 10u);
+    /* Simulate CAN communication loss: Rte_Read returns E_NOT_OK.
+     * The SWC increments the timeout counter each cycle when no
+     * fresh RTE data arrives.  After BRAKE_TIMEOUT_CYCLES (9)
+     * consecutive E_NOT_OK reads, auto-brake activates. */
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 i;
+    for (i = 0u; i < 10u; i++) {
+        Swc_Brake_MainFunction();
+    }
 
-    /* After 10 cycles of same command (100ms), auto-brake should activate */
+    /* After 10 cycles with no fresh data, auto-brake should activate */
     uint32 pos = mock_rte_signals[FZC_SIG_BRAKE_POS];
     TEST_ASSERT_EQUAL_UINT32(100u, pos);
 }
@@ -463,8 +465,12 @@ void test_Auto_brake_on_timeout(void)
 /** @verifies SWR-FZC-011 -- Auto-brake is latched (persists after new cmd) */
 void test_Auto_brake_latched(void)
 {
-    /* Trigger timeout */
-    run_cycles(30u, 12u);
+    /* Trigger timeout via communication loss */
+    run_cycles(30u, 3u);
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 j;
+    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
+    mock_rte_brake_cmd_not_ok = 0u;
 
     /* Verify auto-brake is active */
     uint32 pos1 = mock_rte_signals[FZC_SIG_BRAKE_POS];
@@ -480,30 +486,30 @@ void test_Auto_brake_latched(void)
 /** @verifies SWR-FZC-011 -- DTC reported on command timeout */
 void test_Auto_brake_reports_DTC(void)
 {
-    run_cycles(30u, 12u);
+    run_cycles(30u, 3u);
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 j;
+    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
 
     TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_BRAKE_TIMEOUT]);
     TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
                             mock_dem_event_status[FZC_DTC_BRAKE_TIMEOUT]);
 }
 
-/** @verifies SWR-FZC-011 -- Regular changing commands prevent timeout */
+/** @verifies SWR-FZC-011 -- Fresh RTE data prevents timeout */
 void test_No_timeout_with_commands(void)
 {
-    /* Alternate commands so value changes each cycle */
-    uint16 i;
-    for (i = 0u; i < 20u; i++) {
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = (i % 2u == 0u) ? 30u : 31u;
-        Swc_Brake_MainFunction();
-    }
+    /* Send constant command for 20 cycles — should NOT timeout
+     * because Rte_Read returns E_OK (fresh data each cycle). */
+    run_cycles(30u, 20u);
 
     /* No timeout fault */
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_TRUE(fault != FZC_BRAKE_CMD_TIMEOUT);
 
-    /* Position should track the last command, not 100% */
+    /* Position should track the command, not 100% auto-brake */
     uint32 pos = mock_rte_signals[FZC_SIG_BRAKE_POS];
-    TEST_ASSERT_TRUE(pos <= 31u);
+    TEST_ASSERT_TRUE(pos <= 30u);
 }
 
 /** @verifies SWR-FZC-011 -- E-stop active triggers immediate 100% brake */
@@ -666,17 +672,20 @@ void test_Fault_forces_full_brake(void)
 /** @verifies SWR-FZC-012 -- 50 fault-free cycles required to clear latch */
 void test_Latch_clear_50_cycles(void)
 {
-    /* Force fault via timeout (10 identical cycles triggers timeout on
-     * the 10th call -- no extra fault-free cycles accumulate) */
-    run_cycles(30u, 10u);
+    /* Force fault via timeout (simulate communication loss) */
+    run_cycles(30u, 3u);
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 j;
+    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
+    mock_rte_brake_cmd_not_ok = 0u;
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_TRUE(fault != FZC_BRAKE_NO_FAULT);
 
-    /* Now alternate commands to prevent further timeout, run 49 cycles */
+    /* Now send fresh commands for 49 cycles — still latched */
     uint16 i;
     for (i = 0u; i < 49u; i++) {
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = (i % 2u == 0u) ? 20u : 21u;
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 20u;
         Swc_Brake_MainFunction();
     }
 
@@ -696,16 +705,20 @@ void test_Latch_clear_50_cycles(void)
 /** @verifies SWR-FZC-012 -- DTC cleared when fault-free after latch clear */
 void test_DTC_clears_after_latch(void)
 {
-    /* Force timeout fault */
-    run_cycles(30u, 12u);
+    /* Force timeout fault via communication loss */
+    run_cycles(30u, 3u);
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 j;
+    for (j = 0u; j < 12u; j++) { Swc_Brake_MainFunction(); }
+    mock_rte_brake_cmd_not_ok = 0u;
 
     TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
                             mock_dem_event_status[FZC_DTC_BRAKE_TIMEOUT]);
 
-    /* Alternate commands for 51 cycles to clear latch */
+    /* Send fresh commands for 51 cycles to clear latch */
     uint16 i;
     for (i = 0u; i < 51u; i++) {
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = (i % 2u == 0u) ? 20u : 21u;
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 20u;
         Swc_Brake_MainFunction();
     }
 
@@ -825,20 +838,26 @@ void test_GetPosition_valid_after_init(void)
 }
 
 /** @verifies SWR-FZC-011
- *  Fault injection: command timeout at exact boundary (10 cycles) */
+ *  Fault injection: command timeout at exact boundary (10 cycles of no RTE data) */
 void test_FaultInj_timeout_exact_boundary(void)
 {
-    /* Run 9 cycles with same command — should NOT timeout */
-    run_cycles(50u, 9u);
-    uint32 fault9 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault9);
+    /* Send normal command first */
+    run_cycles(50u, 3u);
 
-    /* 10th cycle with same command — should trigger timeout */
-    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 50u;
+    /* Simulate communication loss */
+    mock_rte_brake_cmd_not_ok = 1u;
+
+    /* Run 8 cycles with E_NOT_OK — should NOT timeout (threshold is 9) */
+    uint16 k;
+    for (k = 0u; k < 8u; k++) { Swc_Brake_MainFunction(); }
+    uint32 fault8 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault8);
+
+    /* 9th cycle E_NOT_OK — counter reaches threshold, timeout fires */
     Swc_Brake_MainFunction();
 
-    uint32 fault10 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_TIMEOUT, fault10);
+    uint32 fault9 = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_TIMEOUT, fault9);
 
     /* Position forced to 100% */
     TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
