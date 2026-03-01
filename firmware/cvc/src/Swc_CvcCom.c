@@ -71,13 +71,6 @@ static Swc_CvcCom_RxStatusType CvcCom_RxStatus[CVCCOM_RX_TABLE_SIZE];
 /* TX last-transmit timestamps */
 static uint32  CvcCom_TxLastTimeMs[CVCCOM_TX_TABLE_SIZE];
 
-/* Heartbeat alive counter tracking (for change-detection, not zero-check) */
-static uint8   CvcCom_FzcLastAlive;
-static uint8   CvcCom_RzcLastAlive;
-static uint8   CvcCom_FzcStaleCount;
-static uint8   CvcCom_RzcStaleCount;
-#define CVCCOM_HB_TIMEOUT_CYCLES  15u  /* 15 × 10ms = 150ms = 3 heartbeat periods */
-
 /* ==================================================================
  * API: Swc_CvcCom_Init
  * ================================================================== */
@@ -107,13 +100,6 @@ void Swc_CvcCom_Init(void)
         CvcCom_RxStatus[i].failCount     = 0u;
         CvcCom_RxStatus[i].useSafeDefault = FALSE;
     }
-
-    /* Initialize heartbeat tracking — start as "stale" so INIT waits for
-     * actual heartbeat CAN frames before transitioning to RUN */
-    CvcCom_FzcLastAlive  = 0u;
-    CvcCom_RzcLastAlive  = 0u;
-    CvcCom_FzcStaleCount = 0u;
-    CvcCom_RzcStaleCount = 0u;
 
     CvcCom_Initialized = TRUE;
 }
@@ -291,8 +277,6 @@ void Swc_CvcCom_BridgeRxToRte(void)
 {
     uint8  brake_fault_val  = 0u;
     uint8  motor_cutoff_val = 0u;
-    uint8  fzc_hb_alive     = 0u;
-    uint8  rzc_hb_alive     = 0u;
 
     if (CvcCom_Initialized != TRUE)
     {
@@ -303,55 +287,11 @@ void Swc_CvcCom_BridgeRxToRte(void)
     (void)Com_ReceiveSignal(13u, &brake_fault_val);   /* sig_rx_brake_fault */
     (void)Com_ReceiveSignal(14u, &motor_cutoff_val);  /* sig_rx_motor_cutoff */
 
-    /* Bridge to RTE for VehicleState to consume */
+    /* Bridge to RTE for VehicleState to consume.
+     * Heartbeat comm status is owned exclusively by Swc_Heartbeat.c
+     * — do NOT write CVC_SIG_FZC/RZC_COMM_STATUS here. */
     (void)Rte_Write(CVC_SIG_BRAKE_FAULT,  (uint32)brake_fault_val);
     (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF, (uint32)motor_cutoff_val);
-
-    /* Bridge FZC/RZC heartbeat alive counters to comm status.
-     * Use change-detection: alive counter is 4-bit (wraps through 0),
-     * so checking != 0 would false-trigger on every wrap.  Instead,
-     * track whether the counter has CHANGED recently. */
-    (void)Com_ReceiveSignal(9u,  &fzc_hb_alive);  /* sig_rx_fzc_hb_alive */
-    (void)Com_ReceiveSignal(11u, &rzc_hb_alive);  /* sig_rx_rzc_hb_alive */
-
-    /* FZC heartbeat change detection */
-    if (fzc_hb_alive != CvcCom_FzcLastAlive)
-    {
-        CvcCom_FzcLastAlive  = fzc_hb_alive;
-        CvcCom_FzcStaleCount = 0u;
-    }
-    else if (CvcCom_FzcStaleCount < 255u)
-    {
-        CvcCom_FzcStaleCount++;
-    }
-    else
-    {
-        /* saturate at 255 */
-    }
-
-    /* RZC heartbeat change detection */
-    if (rzc_hb_alive != CvcCom_RzcLastAlive)
-    {
-        CvcCom_RzcLastAlive  = rzc_hb_alive;
-        CvcCom_RzcStaleCount = 0u;
-    }
-    else if (CvcCom_RzcStaleCount < 255u)
-    {
-        CvcCom_RzcStaleCount++;
-    }
-    else
-    {
-        /* saturate at 255 */
-    }
-
-    (void)Rte_Write(CVC_SIG_FZC_COMM_STATUS,
-                    (CvcCom_FzcStaleCount < CVCCOM_HB_TIMEOUT_CYCLES)
-                        ? (uint32)CVC_COMM_OK
-                        : (uint32)CVC_COMM_TIMEOUT);
-    (void)Rte_Write(CVC_SIG_RZC_COMM_STATUS,
-                    (CvcCom_RzcStaleCount < CVCCOM_HB_TIMEOUT_CYCLES)
-                        ? (uint32)CVC_COMM_OK
-                        : (uint32)CVC_COMM_TIMEOUT);
 }
 
 /* ==================================================================

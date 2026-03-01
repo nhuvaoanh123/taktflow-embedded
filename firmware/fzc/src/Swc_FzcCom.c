@@ -292,6 +292,23 @@ void Swc_FzcCom_TransmitSchedule(void)
         (void)Com_SendSignal(FZC_COM_TX_HEARTBEAT, txBuf);
     }
 
+    /* ---- TX: Steering/Brake status → Com shadow buffers (10ms cyclic) ---- */
+    {
+        uint32 steer_val = 0u;
+        uint32 fault_val = 0u;
+
+        (void)Rte_Read(FZC_SIG_STEER_ANGLE, &steer_val);
+        (void)Rte_Read(FZC_SIG_STEER_FAULT, &fault_val);
+
+        /* Signal 3 = steer_angle (sint16), signal 4 = steer_fault (uint8) */
+        {
+            sint16 angle = (sint16)((uint16)steer_val);
+            uint8  fault = (uint8)fault_val;
+            (void)Com_SendSignal(3u, &angle);
+            (void)Com_SendSignal(4u, &fault);
+        }
+    }
+
     /* ---- TX: 0x210 Brake Fault (event-driven) ---- */
     (void)Rte_Read(FZC_SIG_BRAKE_FAULT, &rteVal);
     if (rteVal != (uint32)FZC_BRAKE_NO_FAULT) {

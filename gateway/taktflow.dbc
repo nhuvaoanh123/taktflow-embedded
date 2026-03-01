@@ -76,8 +76,8 @@ BO_ 512 Steering_Status: 8 FZC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" CVC,SC,ICU
  SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" CVC,SC,ICU
  SG_ E2E_CRC8 : 8|8@1+ (1,0) [0|255] "" CVC,SC,ICU
- SG_ ActualAngle : 16|16@1+ (0.01,-45.0) [-45.0|45.0] "deg" CVC,SC,ICU
- SG_ CommandedAngle : 32|16@1+ (0.01,-45.0) [-45.0|45.0] "deg" CVC,SC,ICU
+ SG_ ActualAngle : 16|16@1- (1,0) [-45|45] "deg" CVC,SC,ICU
+ SG_ CommandedAngle : 32|16@1- (1,0) [-45|45] "deg" CVC,SC,ICU
  SG_ SteerFaultStatus : 48|4@1+ (1,0) [0|15] "" CVC,SC,ICU
  SG_ SteerMode : 52|4@1+ (1,0) [0|3] "" CVC,SC,ICU
  SG_ ServoCurrent_mA : 56|8@1+ (10,0) [0|2550] "mA" CVC,SC,ICU
