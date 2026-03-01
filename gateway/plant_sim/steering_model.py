@@ -89,9 +89,9 @@ class SteeringModel:
 
     @property
     def actual_raw(self) -> int:
-        """Raw 16-bit value for DBC: (angle + 45) / 0.01."""
-        return int((self.actual_angle + 45.0) / 0.01)
+        """Raw 16-bit signed value for DBC: direct degrees (1,0)."""
+        return int(self.actual_angle)
 
     @property
     def commanded_raw(self) -> int:
-        return int((self.commanded_angle + 45.0) / 0.01)
+        return int(self.commanded_angle)

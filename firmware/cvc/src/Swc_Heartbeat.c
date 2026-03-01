@@ -53,6 +53,10 @@ static boolean rzc_rx_flag;
 static uint8   fzc_comm_status;
 static uint8   rzc_comm_status;
 
+/** Last seen alive counter values from Com shadow buffers (poll-based detection) */
+static uint8   fzc_last_alive;
+static uint8   rzc_last_alive;
+
 static boolean initialized;
 
 /* ====================================================================
@@ -75,6 +79,9 @@ void Swc_Heartbeat_Init(void)
 
     fzc_comm_status = CVC_COMM_OK;
     rzc_comm_status = CVC_COMM_OK;
+
+    fzc_last_alive  = 0u;
+    rzc_last_alive  = 0u;
 
     initialized     = TRUE;
 }
@@ -125,6 +132,28 @@ void Swc_Heartbeat_MainFunction(void)
         tx_timer = 0u;
 
         /* --- 2. RX monitoring (checked at TX boundary = 50ms) ----- */
+
+        /* Poll Com shadow buffers for alive counter changes.
+         * Com_RxIndication unpacks heartbeat PDUs into shadow buffers
+         * but does not call Swc_Heartbeat_RxIndication, so we detect
+         * heartbeat reception by checking if the alive counter changed. */
+        {
+            uint8 fzc_alive = 0u;
+            uint8 rzc_alive = 0u;
+
+            (void)Com_ReceiveSignal(9u, &fzc_alive);   /* sig_rx_fzc_hb_alive */
+            (void)Com_ReceiveSignal(11u, &rzc_alive);  /* sig_rx_rzc_hb_alive */
+
+            if (fzc_alive != fzc_last_alive) {
+                fzc_rx_flag    = TRUE;
+                fzc_last_alive = fzc_alive;
+            }
+
+            if (rzc_alive != rzc_last_alive) {
+                rzc_rx_flag    = TRUE;
+                rzc_last_alive = rzc_alive;
+            }
+        }
 
         /* FZC monitoring */
         if (fzc_rx_flag == TRUE) {

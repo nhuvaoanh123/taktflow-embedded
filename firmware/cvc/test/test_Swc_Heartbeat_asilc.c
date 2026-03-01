@@ -82,6 +82,28 @@ Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr)
 }
 
 /* ====================================================================
+ * Mock: Com_ReceiveSignal
+ * ==================================================================== */
+
+static uint8 mock_com_rx_fzc_alive;
+static uint8 mock_com_rx_rzc_alive;
+
+Std_ReturnType Com_ReceiveSignal(uint8 SignalId, void* SignalDataPtr)
+{
+    if (SignalDataPtr == NULL_PTR) {
+        return E_NOT_OK;
+    }
+    if (SignalId == 9u) {
+        *((uint8*)SignalDataPtr) = mock_com_rx_fzc_alive;
+    } else if (SignalId == 11u) {
+        *((uint8*)SignalDataPtr) = mock_com_rx_rzc_alive;
+    } else {
+        *((uint8*)SignalDataPtr) = 0u;
+    }
+    return E_OK;
+}
+
+/* ====================================================================
  * Mock: E2E_Protect
  * ==================================================================== */
 
@@ -180,6 +202,8 @@ void setUp(void)
 
     mock_com_send_count    = 0u;
     mock_com_send_sig_id   = 0xFFu;
+    mock_com_rx_fzc_alive  = 0u;
+    mock_com_rx_rzc_alive  = 0u;
     mock_e2e_protect_count = 0u;
     mock_rte_write_count   = 0u;
     mock_dem_report_count  = 0u;

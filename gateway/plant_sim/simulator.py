@@ -171,8 +171,8 @@ class PlantSimulator:
 
         elif arb_id == RX_STEER_COMMAND:
             if len(data) >= 4 and not self.estop_active:
-                raw = data[2] | (data[3] << 8)
-                angle = max(-45.0, min(45.0, raw * 0.01 - 45.0))
+                raw = struct.unpack_from('<h', data, 2)[0]  # sint16 LE
+                angle = max(-45.0, min(45.0, float(raw)))
                 self.steering.record_command(angle)
 
         elif arb_id == RX_BRAKE_COMMAND:
