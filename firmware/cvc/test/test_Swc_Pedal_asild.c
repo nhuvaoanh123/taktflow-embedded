@@ -213,6 +213,10 @@ void setUp(void)
         mock_rte_signals[i] = 0u;
     }
 
+    /* Reset Com mock */
+    mock_com_last_signal_id = 0u;
+    mock_com_send_count     = 0u;
+
     /* Reset DEM mock */
     mock_dem_call_count    = 0u;
     mock_dem_last_event_id = 0xFFu;
@@ -964,6 +968,21 @@ int main(void)
 }
 
 /* ==================================================================
+ * Mock: Com_SendSignal (Swc_Pedal publishes torque to Com)
+ * ================================================================== */
+
+static uint16  mock_com_last_signal_id;
+static uint8   mock_com_send_count;
+
+Std_ReturnType Com_SendSignal(uint16 SignalId, const void* SignalDataPtr)
+{
+    mock_com_last_signal_id = SignalId;
+    mock_com_send_count++;
+    (void)SignalDataPtr;
+    return E_OK;
+}
+
+/* ==================================================================
  * Source inclusion — link SWC under test directly into test binary
  * ================================================================== */
 
@@ -975,5 +994,6 @@ int main(void)
 #define IOHWAB_H
 #define RTE_H
 #define DEM_H
+#define COM_H
 
 #include "../src/Swc_Pedal.c"

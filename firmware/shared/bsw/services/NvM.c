@@ -41,7 +41,7 @@ static uint8 NvM_U16ToStr(uint16 val, char* buf, uint8 maxLen)
         return 1u;
     }
     while ((val > 0u) && (i < 5u)) {
-        tmp[i] = (char)('0' + (char)(val % 10u));
+        tmp[i] = (char)((uint8)'0' + (uint8)(val % 10u));
         val /= 10u;
         i++;
     }
@@ -103,7 +103,7 @@ Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr)
 
     NvM_BuildPath(BlockId, path);
 
-    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 420);  /* 0644 decimal */
     if (fd < 0) {
         return E_NOT_OK;
     }

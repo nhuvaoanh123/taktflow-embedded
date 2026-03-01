@@ -163,6 +163,21 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: Com_SendSignal (Swc_VehicleState publishes state to Com)
+ * ================================================================== */
+
+static uint16  mock_com_last_signal_id;
+static uint8   mock_com_send_count;
+
+Std_ReturnType Com_SendSignal(uint16 SignalId, const void* SignalDataPtr)
+{
+    mock_com_last_signal_id = SignalId;
+    mock_com_send_count++;
+    (void)SignalDataPtr;
+    return E_OK;
+}
+
+/* ==================================================================
  * SWC Under Test — declarations
  * ================================================================== */
 
@@ -195,6 +210,10 @@ void setUp(void)
     mock_bswm_requested_mode = 0xFFu;
     mock_bswm_call_count     = 0u;
     mock_bswm_return         = E_OK;
+
+    /* Clear Com mock */
+    mock_com_last_signal_id = 0u;
+    mock_com_send_count     = 0u;
 
     /* Clear Dem mock */
     mock_dem_event_id     = 0xFFu;
@@ -925,5 +944,6 @@ int main(void)
 #define RTE_H
 #define BSWM_H
 #define DEM_H
+#define COM_H
 
 #include "../src/Swc_VehicleState.c"
