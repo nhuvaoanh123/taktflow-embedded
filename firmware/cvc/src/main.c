@@ -30,6 +30,10 @@
 #include "BswM.h"
 #include "Dcm.h"
 #include "Rte.h"
+#include "Spi.h"
+#include "Adc.h"
+#include "Pwm.h"
+#include "Dio.h"
 #include "IoHwAb.h"
 
 /* ==================================================================
@@ -127,6 +131,40 @@ static const PduR_RoutingTableType cvc_pdur_routing[] = {
 static const PduR_ConfigType cvc_pdur_config = {
     .routingTable = cvc_pdur_routing,
     .routingCount = (uint8)(sizeof(cvc_pdur_routing) / sizeof(cvc_pdur_routing[0])),
+};
+
+/** SPI driver configuration — AS5048A angle sensors (CPOL=0, CPHA=1, 16-bit) */
+static const Spi_ConfigType spi_config = {
+    .clockSpeed   = 1000000u,   /* 1 MHz SPI clock              */
+    .cpol         = 0u,         /* Clock idle low                */
+    .cpha         = 1u,         /* Sample on trailing edge       */
+    .dataWidth    = 16u,        /* 16-bit transfers              */
+    .numChannels  = 2u,         /* Ch 0: pedal, Ch 1: steering   */
+};
+
+/** ADC group configuration — motor current, motor temp, battery voltage */
+static const Adc_GroupConfigType adc_groups[] = {
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 0: motor current */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 1: motor temp    */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 2: battery volt  */
+};
+
+static const Adc_ConfigType adc_config = {
+    .numGroups  = 3u,
+    .groups     = adc_groups,
+    .resolution = 12u,
+};
+
+/** PWM driver configuration — motor, steering servo, brake servo */
+static const Pwm_ChannelConfigType pwm_channels[] = {
+    { .frequency = 20000u, .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 0: motor     */
+    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 1: steer srv  */
+    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 2: brake srv  */
+};
+
+static const Pwm_ConfigType pwm_config = {
+    .numChannels = 3u,
+    .channels    = pwm_channels,
 };
 
 /** IoHwAb channel mapping for CVC */
@@ -289,6 +327,10 @@ int main(void)
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&cvc_dcm_config);
+    Spi_Init(&spi_config);
+    Adc_Init(&adc_config);
+    Pwm_Init(&pwm_config);
+    Dio_Init();
     IoHwAb_Init(&iohwab_config);
     Rte_Init(&cvc_rte_config);
 
