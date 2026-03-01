@@ -63,6 +63,7 @@ typedef uint8           boolean;
 #define RZC_BATT_WARN_HIGH_MV     15000u
 #define RZC_BATT_DISABLE_HIGH_MV  17000u
 #define RZC_BATT_HYSTERESIS_MV      500u
+#define RZC_BATT_NOMINAL_MV       12600u
 #define RZC_BATT_AVG_WINDOW           4u
 
 /* Battery status codes */
