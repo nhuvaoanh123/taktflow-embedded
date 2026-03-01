@@ -97,6 +97,44 @@ Daisy-chain wiring: main trunk wire runs along base plate edge, continuous throu
 - **Bus termination**: 120 ohm at each physical end (CVC and SC)
 - **CAN GND**: Reference ground wire runs alongside CAN_H/CAN_L twisted pair
 
+## Design Decisions Explained
+
+### Why CAN bus (not SPI, I2C, UART, or Ethernet)?
+
+CAN (Controller Area Network) was invented specifically for vehicles. Key advantages: (1) **Differential signaling** — uses two wires (CAN_H and CAN_L) that mirror each other, making it immune to electrical noise from motors and actuators. (2) **Multi-master** — any ECU can transmit without a central coordinator. (3) **Built-in error handling** — CAN hardware automatically detects and retransmits corrupted messages. (4) **Priority-based** — lower CAN ID = higher priority, so safety-critical messages always get through first. (5) **Industry standard** — every car on the road uses CAN, so using it makes this project directly relevant to real automotive work. SPI/I2C are for short-distance chip-to-chip communication. Ethernet is overkill for our data rates.
+
+### Why TJA1051T/3 for STM32 ECUs and SN65HVD230 for the Safety Controller?
+
+Both are 3.3V CAN transceivers (the chip that converts the MCU's digital TX/RX signals into the differential CAN_H/CAN_L bus signals). The TJA1051T/3 (NXP) is the most common automotive CAN transceiver — it's robust, widely available, and cheap as a breakout module. The SN65HVD230 (Texas Instruments) is used for the SC because it's the same vendor as the TMS570 MCU (TI), ensuring compatibility. Both operate at 3.3V logic level, matching our MCUs. The "STB" pin (standby) is tied to GND on the TJA1051, keeping it always active — we don't need power-saving standby mode.
+
+### Why common-mode chokes (CMC) on every transceiver?
+
+A common-mode choke filters out high-frequency noise that appears on both CAN_H and CAN_L simultaneously (common-mode noise). This noise comes from motor switching, power supply ripple, and external EMI. The choke blocks common-mode noise while passing the differential CAN signal through unchanged. Without CMCs, noise on the bus can cause bit errors and retransmissions, degrading communication reliability. The 100 uH rating is standard for automotive CAN applications.
+
+### Why PESD1CAN TVS diodes?
+
+TVS (Transient Voltage Suppressor) diodes protect the CAN transceiver from voltage spikes — especially ESD (electrostatic discharge) from touching connectors, and transients from the motor or relay switching. The PESD1CAN is specifically designed for CAN bus: it clamps voltage spikes to safe levels in nanoseconds. Without TVS protection, a single static discharge could permanently damage a CAN transceiver.
+
+### Why 3-position screw terminals for CAN connections?
+
+The three wires are CAN_H, CAN_L, and CAN_GND (ground reference). Screw terminals allow easy connect/disconnect during development and debugging. The alternative (soldered connections) would be more reliable but makes it painful to swap ECUs or reconfigure the bus. For a production vehicle, you'd use automotive connectors (Molex, TE Connectivity).
+
+### Why the same bit timing on both STM32 and TMS570?
+
+Both MCUs must agree on exactly how fast bits are transmitted and when to sample them. If the timing doesn't match, they can't communicate. The prescaler values are different (34 for STM32's 170MHz clock vs 15 for TMS570's 75MHz clock) because they divide different input clocks down to the same 5 MHz "time quantum" clock. From there, both use 10 time quanta per bit with 80% sample point — meaning each bit is sampled at 80% of its duration, which is the sweet spot recommended by CAN specifications for noise immunity.
+
+### Why DCAN1 (not DCAN4) on the TMS570?
+
+The TMS570 has multiple CAN modules. DCAN4 has a known bug in HALCoGen (TI's code generation tool) v04.07.01 where the mailbox configuration doesn't work correctly. DCAN1 works reliably with HALCoGen-generated code. This is a practical lesson: always verify tool support for peripheral modules before committing to a design.
+
+### Why is the SC in "silent/listen-only" mode?
+
+The Safety Controller's job is to MONITOR the other ECUs — not participate in normal communication. In silent mode, the SC receives all CAN frames but never transmits or acknowledges them. This means: (1) if the SC has a CAN fault, it can't disrupt the bus for the other ECUs, (2) the SC can independently verify that heartbeat and status messages are being sent correctly. Think of it as a security camera — it watches everything but doesn't interfere.
+
+### Why daisy-chain wiring (not star topology)?
+
+CAN bus requires a linear bus topology — one continuous wire from end to end, with ECUs tapped off it via short stubs (<100mm). A star topology (all ECUs connected to a central hub) causes signal reflections at the junction points, corrupting data. Our bus runs CVC→FZC→RZC→SC in a line along the base plate edge, with 120-ohm termination at each end.
+
 ## Pin References
 
 | ECU | TX Pin | RX Pin | AF | Transceiver |

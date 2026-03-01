@@ -20,9 +20,8 @@ Every hardware topic in this document that undergoes HITL review discussion MUST
 
 ## Files
 
-- `hardware/bom-list.md` - procurement-ready BOM checklist (quick buy/use)
-- `hardware/bom.md` - detailed BOM with alternatives and phased procurement
-- `hardware/pin-mapping.md` - board and signal pin mappings
+- `hardware/bom.md` — consolidated BOM, procurement tracker, and validation chronicle (merged from bom.md + bom-list.md + procurement-validation.md)
+- `hardware/pin-mapping.md` — board and signal pin mappings for all 4 physical ECUs
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-HW-README-SEC1 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** The file listing is clear and complete for the current project state. Each file has a distinct purpose (quick-buy, detailed BOM, pin mapping). Consider adding a reference to the hardware design document (HWDES) and hardware safety requirements (HSR) when those are created, as they are referenced in pin-mapping.md but not yet listed here.
@@ -38,8 +37,8 @@ Every hardware topic in this document that undergoes HITL review discussion MUST
 
 ## Recommended Workflow
 
-1. Buy against `hardware/bom-list.md`.
-2. Track substitutions and alternatives in `hardware/bom.md`.
+1. Buy against `hardware/bom.md` (sections 5 and 7 have procurement priority and status tracker).
+2. Track substitutions in `hardware/bom.md` section 8 (procurement validation).
 3. Update `hardware/pin-mapping.md` if component variants change.
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-HW-README-SEC3 -->

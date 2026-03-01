@@ -122,6 +122,44 @@
   - Peripherals powered from external 3.3V rail
 ```
 
+## Design Decisions Explained
+
+### Why SPI (not I2C) for the AS5048A pedal sensors?
+
+The AS5048A supports both SPI and I2C. We chose SPI because: (1) **Speed** — SPI runs at up to 10 MHz vs I2C's 400 kHz, giving faster angle readings for pedal position (safety-critical, ASIL D). (2) **Full-duplex** — SPI can send and receive simultaneously. (3) **No address conflicts** — each sensor gets its own chip-select line (PA4 and PA15), so there's no risk of address collision. I2C would require configuring different addresses or using a multiplexer. For ASIL D pedal sensing, the simpler and faster interface is the right choice.
+
+### Why two separate chip-select lines (not sharing one)?
+
+Each AS5048A has its own chip-select (CS) pin: PA4 for pedal sensor #1, PA15 for pedal sensor #2. This lets the MCU talk to each sensor independently — read sensor #1, then sensor #2, without any risk of both responding at the same time. If they shared a CS line, their MISO outputs would fight each other on the bus (electrical contention), potentially corrupting data and damaging the output drivers.
+
+### Why 10k pull-up resistors on the CS lines?
+
+The chip-select is active-low: LOW = selected, HIGH = deselected. During MCU reset or before GPIO initialization, the CS pins are floating (high-impedance). Without pull-ups, the sensors might see a LOW CS and start responding, creating bus contention. The 10k pull-ups hold CS HIGH (deselected) until the MCU explicitly pulls them LOW — ensuring sensors stay quiet during boot.
+
+### Why 100nF decoupling capacitors on each sensor's VDD?
+
+Every digital IC needs a decoupling (bypass) capacitor as close as possible to its power pins. When the IC switches internally (every clock cycle), it draws brief current spikes from the power supply. These spikes create voltage dips on the power rail, which can cause glitches in other circuits. The 100nF capacitor acts as a tiny local battery, providing instant current for these spikes without disturbing the main power rail. Rule of thumb: one 100nF cap per IC, placed within 5mm of the VDD pin.
+
+### Why 4.7k pull-ups on I2C (not 2.2k or 10k)?
+
+I2C is an open-drain bus — the pull-up resistors are what actually drive the signal HIGH. The pull-up value is a trade-off: too low (strong pull-up, 2.2k) = faster edges but more current draw and more susceptibility to noise; too high (weak pull-up, 10k) = slower edges and the signal might not reach valid HIGH levels at higher speeds. 4.7k is the standard value for I2C at 400 kHz (Fast Mode) with short wire lengths (<30cm) and low bus capacitance. Since the OLED is right next to the MCU, 4.7k is ideal.
+
+### Why I2C for the OLED display (not SPI)?
+
+The SSD1306 OLED module supports both I2C and SPI. We chose I2C because: (1) the OLED is ASIL B (status display), not safety-critical — speed isn't critical. (2) I2C uses only 2 pins (SCL + SDA) vs SPI's 4 pins (SCK, MOSI, MISO, CS), conserving GPIO. (3) SPI1 is already used for the pedal sensors — using I2C keeps the buses separate, avoiding any timing interference between safety-critical pedal reads and non-critical display updates.
+
+### Why PC13 for the E-stop (the Nucleo user button)?
+
+PC13 is the Nucleo-64 board's built-in user button (B1). For bench testing, this is convenient — you can press the onboard button to simulate an E-stop without wiring anything. For final integration, the external NC mushroom button replaces B1 via the same pin. PC13 also supports EXTI (External Interrupt), which means the E-stop triggers an interrupt immediately — no polling delay.
+
+### Why the TPS3823 external watchdog (not just the STM32's internal watchdog)?
+
+The STM32 has an internal watchdog (IWDG), but it shares the same silicon as the CPU it's monitoring. If the MCU has a hardware fault (latch-up, power glitch, clock failure), the internal watchdog might also be affected. The TPS3823 is a completely independent IC with its own power supply and oscillator. It monitors the MCU from outside — if the MCU stops toggling PB0 for 1.6 seconds, the TPS3823 pulls the reset line LOW, forcing a hard reset. This two-layer watchdog (internal + external) is an ISO 26262 ASIL D requirement for safety-critical systems.
+
+### Why separate MCU power (Nucleo LDO) and peripheral power (external 3.3V rail)?
+
+If a sensor shorts out and drags the 3.3V rail down, the MCU should still be running (powered by its own LDO) so it can detect the fault and enter a safe state. Sharing one power rail for everything means one shorted sensor kills the MCU too — losing all control. The Nucleo's onboard LDO is rated for the MCU's current draw, while the external 3.3V rail is sized for the total peripheral load.
+
 ## Pin Summary
 
 | # | Function | Pin | AF | Direction | Net Name | ASIL |

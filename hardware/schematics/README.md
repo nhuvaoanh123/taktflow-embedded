@@ -35,6 +35,5 @@ ASCII wiring diagrams and circuit references for the physical platform, organize
 ## Cross-References
 
 - **Pin assignments**: `hardware/pin-mapping.md`
-- **Bill of materials (engineering)**: `hardware/bom.md` (74 items, canonical BOM numbers)
-- **Bill of materials (procurement)**: `hardware/bom-list.md` (29-item checklist with BOM Ref column)
+- **Bill of materials**: `hardware/bom.md` (74 items, procurement tracker, validation chronicle)
 - **Hardware design (full)**: `docs/aspice/hardware-eng/hw-design.md`

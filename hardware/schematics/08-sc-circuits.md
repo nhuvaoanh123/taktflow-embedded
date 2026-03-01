@@ -95,6 +95,40 @@ See `04-safety-chain.md` for full schematic. SC GIO_A0 drives IRLZ44N MOSFET gat
     - Continue watchdog feed (if firmware is healthy)
 ```
 
+## Design Decisions Explained
+
+### Why a separate safety controller (not just software monitoring in the CVC)?
+
+ISO 26262 requires **independence** between the function being monitored and the monitor itself. If the CVC's software monitors its own health, a bug or hardware fault in the CVC could affect both the function AND the monitor simultaneously — defeating the purpose. The SC is a physically separate MCU (different chip, different power supply, different code) that watches the other ECUs from the outside. Even if the CVC completely crashes, the SC still sees the missing heartbeat and cuts power.
+
+### Why TMS570 (not another STM32) for the Safety Controller?
+
+The TMS570LC43x has **lockstep** — two CPU cores running the same code in parallel, with hardware comparison of their outputs every clock cycle. If a cosmic ray, power glitch, or silicon defect causes one core to produce a wrong result, the hardware detects the mismatch instantly and triggers a reset. This provides extremely high fault coverage for computation errors. The STM32G474RE doesn't have lockstep. For ASIL D safety monitoring, lockstep is the gold standard. Additionally, the TMS570 is TI's dedicated automotive safety MCU — it's designed and qualified for exactly this use case.
+
+### Why SN65HVD230 (not TJA1051) for the SC?
+
+Both are 3.3V CAN transceivers and both would work. The SN65HVD230 is a Texas Instruments part — same vendor as the TMS570 MCU. Using same-vendor parts simplifies procurement, ensures tested compatibility, and is a common practice in automotive design. The SN65HVD230's "Rs" pin tied to GND sets it to full-speed mode (slope control disabled), matching our 500 kbps requirement. There's no technical disadvantage vs the TJA1051 for our application.
+
+### Why silent/listen-only mode for the SC's CAN?
+
+In listen-only mode, the SC receives all CAN frames but never transmits or acknowledges. Benefits: (1) **Non-interference** — if the SC has a CAN fault (wrong bit timing, software bug), it cannot corrupt the bus for the CVC/FZC/RZC. (2) **Independent monitoring** — the SC passively observes heartbeat messages from each ECU. If an ECU's heartbeat stops arriving, the SC knows that ECU has failed — without relying on the ECU to report its own failure. (3) **Bus load** — the SC adds zero bus load, leaving full bandwidth for the working ECUs.
+
+### Why is SC power independent of the kill relay?
+
+When the SC detects a fault and opens the kill relay, it must remain powered to: (1) **Log Diagnostic Trouble Codes (DTCs)** — recording what went wrong for post-mortem analysis. (2) **Maintain fault LED indication** — the operator needs to see which ECU faulted. (3) **Decide when to re-enable** — in a real vehicle, some faults are transient (brief sensor glitch). The SC needs to stay alive to evaluate whether it's safe to re-enable the relay. If the SC lost power when the relay opened, all fault information would be lost.
+
+### Why TPS3823 external watchdog on the SC (isn't lockstep enough)?
+
+Lockstep detects **computation errors** (both cores produce different results). But lockstep does NOT detect: (1) **firmware hang** — if both cores get stuck in an infinite loop, they produce the same wrong result (no mismatch). (2) **clock failure** — if the clock stops, both cores stop together (no mismatch). (3) **timing faults** — if the firmware runs but misses its deadline, lockstep doesn't notice. The TPS3823 is a timing watchdog — it requires a periodic toggle from the firmware. If the toggle stops for 1.6 seconds (for any reason), it forces a hard reset. Lockstep + external watchdog = comprehensive fault detection.
+
+### Why the SC uses GIO pins (not specialized peripherals) for LEDs and relay?
+
+The SC's functions are simple: read CAN, toggle LEDs, control one relay, feed the watchdog. These only need basic GPIO (General Purpose Input/Output). GIO on the TMS570 provides direct pin control without complex peripheral configuration. Using specialized peripherals (timers for PWM, DMA, etc.) would add unnecessary complexity for what are essentially on/off signals. The simplicity also reduces the firmware attack surface — less code = fewer bugs = higher safety integrity.
+
+### Why per-ECU fault LEDs (not just one system LED)?
+
+When something goes wrong, you need to know WHICH ECU faulted. A single "system fault" LED tells you something is wrong but not where. With per-ECU LEDs (CVC, FZC, RZC), the operator can immediately identify the failing ECU — critical for debugging during bring-up and for vehicle diagnostics in the field. The amber system LED lights up for faults that aren't ECU-specific (CAN bus-off, power fault, watchdog reset).
+
 ## Pin Summary
 
 | # | Function | Pin | Connector | Direction | Net Name | ASIL |

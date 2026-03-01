@@ -1,9 +1,13 @@
-﻿---
+---
 document_id: BOM
-title: "Bill of Materials"
-version: "1.0"
+title: "Bill of Materials and Procurement Chronicle"
+version: "2.0"
 status: draft
-date: 2026-02-21
+date: 2026-03-01
+merged_from:
+  - hardware/bom.md (v1.1)
+  - hardware/bom-list.md (v1.0)
+  - hardware/procurement-validation.md (v2.3)
 ---
 
 ## Human-in-the-Loop (HITL) Comment Lock
@@ -24,11 +28,15 @@ date: 2026-02-21
 
 Every BOM item in this document that undergoes HITL review discussion MUST have its own lessons-learned file in [`hardware/lessons-learned/`](lessons-learned/). One file per BOM item. File naming: `BOM-<item>.md`.
 
-# Bill of Materials
+# Bill of Materials and Procurement Chronicle
 
 ## 1. Purpose
 
 Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All components needed to build the full 4-ECU physical platform with sensors, actuators, safety hardware, power distribution, and edge gateway.
+
+Scope: 7-ECU zonal demo platform (4 physical ECUs + 3 simulated ECUs), Pi gateway, CAN bus, safety chain.
+
+This document consolidates the engineering BOM, procurement checklist, and procurement validation chronicle into a single source of truth.
 
 ## 2. Budget
 
@@ -160,12 +168,12 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 43 | 100 nF Ceramic Capacitor (0.1uF, 50V) | 30 | $0.05 | $1.50 | Amazon / Mouser | MLCC 100nF | Not ordered | Phase 1 |
+| 43 | 100 nF Ceramic Capacitor (0.1uF, 50V) | 30 (100 delivered) | $0.05 | $1.50 | Amazon | ALLECIN 100nF 50V Monolithic | Delivered 2026-03-01 | Phase 1 |
 | 44 | 1 nF Ceramic Capacitor (1000pF, 50V) | 2 | $0.05 | $0.10 | Amazon / Mouser | MLCC 1nF | Not ordered | Phase 1 |
-| 45 | 10 uF Electrolytic Capacitor (25V) | 5 | $0.10 | $0.50 | Amazon | Electrolytic 10uF | Not ordered | Phase 1 |
-| 46 | 100 uF Electrolytic Capacitor (25V) | 5 | $0.15 | $0.75 | Amazon | Electrolytic 100uF | Not ordered | Phase 1 |
-| 47 | 220 uF Electrolytic Capacitor (16V) | 2 | $0.20 | $0.40 | Amazon | Electrolytic 220uF | Not ordered | Phase 1 |
-| 48 | 470 uF Electrolytic Capacitor (16V) | 3 | $0.30 | $0.90 | Amazon | Electrolytic 470uF | Not ordered | Phase 1 |
+| 45 | 10 uF Electrolytic Capacitor (25V) | 5 (from 130pc assortment) | $0.10 | $0.50 | Amazon | Electrolytic assortment 1uF–1000uF | Delivered 2026-03-01 | Phase 1 |
+| 46 | 100 uF Electrolytic Capacitor (25V) | 5 (from 130pc assortment) | $0.15 | $0.75 | Amazon | Electrolytic assortment 1uF–1000uF | Delivered 2026-03-01 | Phase 1 |
+| 47 | 220 uF Electrolytic Capacitor (16V) | 2 (from 130pc assortment) | $0.20 | $0.40 | Amazon | Electrolytic assortment 1uF–1000uF | Delivered 2026-03-01 | Phase 1 |
+| 48 | 470 uF Electrolytic Capacitor (16V) | 3 (from 130pc assortment) | $0.30 | $0.90 | Amazon | Electrolytic assortment 1uF–1000uF | Delivered 2026-03-01 | Phase 1 |
 | 49 | 10k ohm Resistor (1/4W, 1%) | 20 | $0.02 | $0.40 | Amazon | Metal film 10k | Not ordered | Phase 1 |
 | 50 | 47k ohm Resistor (1/4W, 1%) | 5 | $0.02 | $0.10 | Amazon | Metal film 47k | Not ordered | Phase 1 |
 | 51 | 330 ohm Resistor (1/4W, 5%) | 10 | $0.02 | $0.20 | Amazon | Carbon film 330R | Not ordered | Phase 1 |
@@ -228,6 +236,14 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** The Rigol DS1054Z is a well-known 50 MHz 4-channel oscilloscope that is standard for hobbyist and educational use. At $400 it represents 42% of the total BOM with test equipment included. The 4-channel capability is important for simultaneously monitoring CAN-H, CAN-L, chip select, and data lines during SPI/CAN debugging. Being Phase 3 (optional) is correct -- firmware development and basic CAN bus testing can proceed with the CANable USB adapters. However, for timing verification (WCET measurement, interrupt latency, PWM duty cycle accuracy) and analog signal integrity (ADC input noise, sensor waveforms), an oscilloscope is strongly recommended before hardware validation sign-off. Consider also whether a logic analyzer (e.g., Saleae Logic 8 at ~$200) might be a cost-effective complement or alternative for digital protocol debugging.
 <!-- HITL-LOCK END:COMMENT-BLOCK-BOM-SEC11 -->
 
+### 3.12 Optional / Recommended
+
+| # | Item | Qty | Purpose | Est. Total (USD) |
+|---|------|-----|---------|------------------|
+| 75 | Extra transceivers + sensors | 1 set | Spares for bring-up failures | 30 |
+| 76 | Better wiring kit + crimp tools | 1 set | Reliability and maintainability | 40 |
+| | | | **Optional Total** | **~$70** |
+
 ---
 
 ## 4. Cost Summary
@@ -263,6 +279,14 @@ Complete bill of materials for the Taktflow Zonal Vehicle Platform hardware. All
 ---
 
 ## 5. Procurement Priority
+
+### Minimum Bring-Up Order
+
+1. Boards and CAN (#1 to #7, #9)
+2. Safety chain (#22 to #27)
+3. Motor control path (#19 to #21)
+4. Sensors and UI (#13 to #18, #28 to #33)
+5. Power and infrastructure (#34 to #73)
 
 ### Phase 1 -- Core Platform (needed to build the bus and basic framework)
 
@@ -321,54 +345,237 @@ For critical components, backup alternatives are identified:
 
 | # | Component | Ordered | Received | Verified | Notes |
 |---|-----------|---------|----------|----------|-------|
-| 1 | STM32G474RE Nucleo-64 (x3) | -- | -- | -- | |
-| 2 | TMS570LC43x LaunchPad | -- | -- | -- | |
-| 3 | Raspberry Pi 4 4GB | -- | -- | -- | |
-| 4 | 32GB MicroSD | -- | -- | -- | |
-| 5 | RPi USB-C PSU | -- | -- | -- | |
-| 6 | TJA1051T/3 module (x3) | -- | -- | -- | |
-| 7 | SN65HVD230 module | -- | -- | -- | |
-| 8 | CANable 2.0 (x2) | -- | -- | -- | |
-| 9 | 120R resistors | -- | -- | -- | |
+| 1 | STM32G474RE Nucleo-64 (x3) | 2026-02-22 | -- | -- | Conrad + additional order |
+| 2 | TMS570LC43x LaunchPad | 2026-02-22 | -- | -- | Confirmed on the way |
+| 3 | Raspberry Pi 4 4GB | 2026-02-22 | -- | -- | Confirmed done |
+| 4 | 32GB MicroSD | 2026-02-23 | -- | -- | Confirmed done |
+| 5 | RPi USB-C PSU | 2026-02-22 | -- | -- | 5.1V/3A ordered |
+| 6 | TJA1051T/3 module (x3) | 2026-02-22 | -- | -- | Full qty confirmed done (initially x2, then topped up) |
+| 7 | SN65HVD230 module | 2026-02-22 | -- | -- | |
+| 8 | USB-CAN adapters (x2) | 2026-02-22 | -- | -- | Substitutes: Ecktron UCAN x1, Waveshare USB-CAN x1 (not CANable 2.0) |
+| 9 | 120R resistors | 2026-02-23 | -- | -- | Confirmed done |
 | 10 | Common-mode chokes (x4) | -- | -- | -- | |
 | 11 | CAN TVS diodes (x4) | -- | -- | -- | |
 | 12 | CAN twisted pair wire | -- | -- | -- | |
-| 13 | AS5048A modules (x3) | -- | -- | -- | |
-| 14 | Diametric magnets (x3) | -- | -- | -- | |
-| 15 | TFMini-S lidar | -- | -- | -- | |
-| 16 | ACS723 module | -- | -- | -- | |
-| 17 | NTC 10k thermistors (x3) | -- | -- | -- | |
+| 13 | AS5048A modules (x3) | 2026-02-22 | -- | -- | |
+| 14 | Diametric magnets (x3) | 2026-02-23 | -- | -- | 6x2.5mm diametric confirmed |
+| 15 | TFMini-S lidar | 2026-02-22 | -- | -- | |
+| 16 | ACS723 module | 2026-02-23 | -- | -- | Confirmed done (SparkFun order canceled, alternative sourced) |
+| 17 | NTC 10k thermistors (x3) | 2026-02-22 | -- | -- | Mixed 5k+10k pack; NTC requirement confirmed done |
 | 18 | Quadrature encoder | -- | -- | -- | |
-| 19 | 12V DC motor | -- | -- | -- | |
-| 20 | BTS7960 module | -- | -- | -- | |
-| 21 | MG996R servos (x2) | -- | -- | -- | |
+| 19 | 12V DC motor | 2026-02-22 | -- | -- | GM27 gear motor substitute |
+| 20 | BTS7960 module | 2026-02-22 | -- | -- | |
+| 21 | MG996R servos (x2) | 2026-02-23 | -- | -- | Confirmed done (initial order canceled, re-ordered) |
 | 22 | TPS3823-33DBVT (x5) | 2026-02-27 | -- | -- | Reichelt.de, 5 pcs (4 needed + 1 spare), €8.00 total |
 | 23 | SOT-23-5 breakout (x4) | -- | -- | -- | |
-| 24 | 30A automotive relay | -- | -- | -- | |
-| 25 | IRLZ44N MOSFET | -- | -- | -- | |
-| 26 | 1N4007 diodes (x2) | -- | -- | -- | |
-| 27 | E-stop button | -- | -- | -- | |
-| 28 | SSD1306 OLED | -- | -- | -- | |
-| 29-31 | LEDs (red, green, amber) | -- | -- | -- | |
-| 32 | Piezo buzzer | -- | -- | -- | |
+| 24 | 30A automotive relay | 2026-02-22 | -- | -- | |
+| 25 | IRLZ44N MOSFET | 2026-02-22 | -- | -- | Pack ordered |
+| 26 | 1N4007 diodes (x2) | 2026-02-22 | -- | -- | Pack ordered |
+| 27 | E-stop button | 2026-02-22 | -- | -- | 2 variants ordered (spare included) |
+| 28 | SSD1306 OLED | 2026-02-22 | -- | -- | |
+| 29-31 | LEDs (red, green, amber) | 2026-02-22 | -- | -- | LED + resistor kit |
+| 32 | Piezo buzzer | 2026-02-22 | -- | -- | Pack ordered |
 | 33 | 2N7002 MOSFET | -- | -- | -- | |
-| 34 | 12V 10A PSU | -- | -- | -- | |
-| 35 | LM2596 buck modules (x2) | -- | -- | -- | |
+| 34 | 12V 10A PSU | 2026-02-22 | -- | -- | Lab PSU 0-30V/0-5A (better substitute) |
+| 35 | LM2596 buck modules (x2) | 2026-02-22 | -- | -- | DC/DC down converters ordered |
 | 36 | SB560 Schottky | -- | -- | -- | |
-| 37-41 | Fuses and holders | -- | -- | -- | |
+| 37-41 | Fuses and holders | -- | -- | -- | Partial — needs as-built confirmation |
 | 42 | 6V regulator modules (x2) | -- | -- | -- | |
 | 43-54 | Passive components | -- | -- | -- | |
 | 55-58 | Protection components | -- | -- | -- | |
-| 59-73 | Infrastructure | -- | -- | -- | |
-| 74 | Rigol DS1054Z (optional) | -- | -- | -- | |
+| 59-73 | Infrastructure | 2026-02-22 | -- | -- | Partial: perfboards, standoffs, JST-XH kit ordered |
+| 74 | Rigol DS1054Z (optional) | 2026-02-23 | -- | -- | Purchased |
 
 ---
 
-## 8. Revision History
+## 8. Procurement Validation
+
+### 8.1 BOM Validation Snapshot (Core Items)
+
+| BOM # | Requirement | Required | Current | Result |
+|---:|---|---:|---:|---|
+| 1 | NUCLEO-G474RE | 3 | 3 ordered | Matched |
+| 2 | LAUNCHXL2-570LC43 | 1 | 1 confirmed (on the way) | Matched |
+| 3 | Raspberry Pi 4 | 1 | confirmed done | Matched |
+| 4 | TJA1051 modules | 3 | 3 | Matched |
+| 5 | SN65HVD230 module | 1 | 1 | Matched |
+| 6 | USB-CAN (Pi) | 1 | 1 substitute | Matched by substitute |
+| 7 | USB-CAN (PC) | 1 | 1 substitute | Matched by substitute |
+| 8 | AS5048A + diametric magnets | 3 sets | sensors ordered; diametric magnets confirmed | Matched |
+| 9 | TFMini-S | 1 | 1 | Matched |
+| 10 | ACS723 | 1 | confirmed done | Matched |
+| 11 | NTC 10k B3950 | 3 | confirmed done | Matched |
+| 12 | 12V motor | 1 | 1 (GM27 gear motor substitute) | Matched by substitute |
+| 13 | BTS7960 | 1 | 1 | Matched |
+| 14 | Steering servo | 1 | confirmed done | Matched |
+| 15 | Brake servo | 1 | confirmed done | Matched |
+| 16 | TPS3823 watchdog | 4 | confirmed done | Matched |
+| 17 | 12V 30A relay | 1 | 1 | Matched |
+| 18 | IRLZ44N | 1 | pack ordered | Matched |
+| 19 | 1N4007 | 1 | pack ordered | Matched |
+| 20 | NC E-stop | 1 | 2 | Matched (+spare) |
+| 21 | SSD1306 OLED | 1 | 1 | Matched |
+| 22 | LEDs + resistors | set | set ordered | Matched |
+| 23 | Active buzzer | 1 | pack ordered | Matched |
+| 24 | Bench PSU >=12V/5A | 1 | lab PSU 0-30V/0-5A | Matched by better substitute |
+| 25 | Buck converters | 3 | 3 + additional 3.3V modules | Partial (confirm 5V and 6V rails) |
+| 26 | Pi PSU + MicroSD | set | confirmed done | Matched |
+| 27 | CAN cable/wiring/connectors | set | partial | Partial |
+| 28 | Mounting/protoboard/standoffs | set | partial | Partial |
+| 29 | 120 ohm terminators | 2 | confirmed done | Matched |
+
+### 8.2 Hardware Requirement Cross-Check (HWR)
+
+| HWR | Requirement Summary | Procurement Status |
+|---|---|---|
+| HWR-006 | 12V main power rail via bench PSU | Covered (lab PSU ordered). |
+| HWR-007 | Kill relay-gated actuator rail | Covered (relay + MOSFET ordered), integration pending. |
+| HWR-008 | 5V regulated rail | Covered (user confirmed 5V rail available). |
+| HWR-009 | 3.3V regulated rail | Covered (DC/DC + TSR 3.3V modules available). |
+| HWR-014 | CAN topology + 120R terminations | Covered (terminations confirmed done). |
+| HWR-016 | STM32 nodes need TJA1051 x3 | Covered (full qty confirmed done). |
+| HWR-017 | SC node SN65HVD230 x1 | Covered. |
+| HWR-021 | ACS723 current sensor | Covered (confirmed done). |
+| HWR-022 | NTC 10k B3950 | Covered (confirmed done). |
+| HWR-024 | Two servos (steering + brake) | Covered (confirmed done). |
+| HWR-027 | TPS3823 watchdog x4 | Covered (confirmed done). |
+| HWR-028 | Kill relay assembly hardware | Covered (relay, IRLZ44N, 1N4007 ordered). |
+| HWR-029 | NC E-stop button | Covered (2 ordered). |
+| HWR-031 | Fuses and holders | Partial (needs as-built confirmation). |
+
+### 8.3 Open Questions Resolution Log
+
+#### Q-001 (2026-02-22): Which safety launchpad part number is canonical?
+
+- Evidence: `bom-list.md` uses `LAUNCHXL2-570LC43`; older docs had a stale/incorrect TMS570 LaunchPad part number.
+- Resolution: Treat `LAUNCHXL2-570LC43` as active purchase target because that is what was ordered and validated in this procurement cycle.
+- Status: **Fully closed (2026-02-26)**. All documents now use canonical `LAUNCHXL2-570LC43`.
+
+#### Q-002 (2026-02-22): Are USB-CAN substitutes acceptable vs CANable 2.0?
+
+- Evidence: BOM asks CANable 2.0, alternatives allow non-CANable USB-CAN options.
+- Resolution: Accept as `Matched by substitute` if they support required SocketCAN workflow and stable CAN 500 kbps operation.
+- Status: Closed for purchasing; open for bring-up verification.
+
+#### Q-003 (2026-02-22): Is Raspberry Pi 4 procured?
+
+- Evidence conflict: one entry shows arrival, later explicit order cancellation shown.
+- Resolution: user confirmed Raspberry Pi 4 is done; item marked matched.
+- Status: Closed.
+
+#### Q-004 (2026-02-22): Is power architecture fully covered?
+
+- Evidence: generic DC/DC modules + TSR 3.3V modules ordered.
+- Resolution: 3.3V and 5V are covered; 6V rail remains `must-confirm` against HWR-024.
+- Status: Partially closed.
+
+#### Q-005 (2026-02-22): Are AS5048A sensor sets complete?
+
+- Evidence: AS5048A modules ordered, magnets ordered but diametric type not confirmed.
+- Resolution: diametric magnet type confirmed (6 x 2.5 mm diametric).
+- Status: Closed.
+
+#### Q-006 (2026-02-22): Is thermal sensing requirement met?
+
+- Evidence: mixed 5k + 10k pack purchased.
+- Resolution: user confirmed NTC requirement is done.
+- Status: Closed.
+
+#### Q-007 (2026-02-23): Missing safety-critical components?
+
+- Resolution: user confirmed closure for `TPS3823 x4`, `servos x2`, `ACS723`, `120R terminations`, `MicroSD`, and `Raspberry Pi 4`.
+- Status: Closed.
+
+### 8.4 Remaining Actions (Bring-Up Criticality)
+
+1. Confirm explicit 6V rail implementation for servo power path in assembled hardware.
+2. Complete remaining infrastructure completeness check (wiring/connectors/mounting/fuses as-built).
+
+---
+
+## 9. System Requirement Open Items (SYS-O)
+
+| ID | Requirement Open Item | Status | Resolution / Action |
+|---|---|---|---|
+| SYS-O-001 | Derive TSR from SYS | Open (process) | Already has TSR docs in repo; keep as process closure task for formal trace signoff. |
+| SYS-O-002 | Derive SWR per ECU | Open (process) | SWR files exist for ECUs; keep as process closure task for completeness review. |
+| SYS-O-003 | CAN bus scheduling/utilization analysis | Open | Needs formal analysis artifact update during SYS.3. |
+| SYS-O-004 | Complete CAN message matrix | Open | Message matrix exists, but consistency pass still pending. |
+| SYS-O-005 | Characterize calibratable thresholds on target HW | Open | Can only close after full bench bring-up hardware is complete. |
+| SYS-O-006 | Complete ASIL classification review | Open | Formal safety review task; not a procurement blocker. |
+
+---
+
+## 10. Procurement Timeline
+
+### 2026-02-21 (Baseline)
+
+1. System requirements baseline created: 56 SYS requirements.
+2. Hardware requirements baseline created: 33 HWR requirements.
+3. Procurement BOM list created (core items #1..29).
+4. Detailed BOM created (74 entries with alternatives and phases).
+
+### 2026-02-22 (Orders Placed)
+
+1. Safety MCU launchpad `LAUNCHXL2-570LC43` x1: under review.
+2. USB-CAN adapters ordered: Ecktron UCAN x1, Waveshare USB-CAN x1.
+3. SN65HVD230 board ordered x1.
+4. TJA1051 modules ordered x2.
+5. IRLZ44N pack ordered.
+6. 1N4007 pack ordered.
+7. E-stop buttons ordered (2 variants, spare included).
+8. 12V/30A relay ordered.
+9. BTS7960 ordered x1.
+10. TFMini-S ordered x1.
+11. OLED SSD1306 ordered x1.
+12. LED + resistor kit ordered.
+13. NTC set (5K + 10K) ordered.
+14. JST-XH connector kit ordered.
+15. AS5048A modules ordered (qty 3).
+16. SparkFun ACS723 order canceled.
+17. MG996R servo pack order canceled.
+18. Raspberry Pi 4 order conflict appeared (one arrival entry vs one canceled order).
+19. NUCLEO-G474RE x3 ordered (Conrad and another order summary).
+20. Additional order confirms: Pi PSU 5.1V/3A, 12V gear motor, lab PSU, DC/DC down converters, perfboards, standoffs.
+21. TSR 2-2433N (24V->3.3V, 2A) x3 ordered as extra regulator parts.
+
+### 2026-02-23 (Consolidation and Validation)
+
+1. All order data consolidated and cross-checked against BOM and requirement docs.
+2. Open questions resolved where evidence allows; unresolved items tracked with clear action.
+3. User confirmed procurement closure for: Raspberry Pi 4, MicroSD, TJA1051 (full qty), ACS723 current sensor, servos, TPS3823 watchdog ICs, CAN terminations, diametric magnets, and NTC 10k coverage.
+4. User confirmed Safety MCU LaunchPad `LAUNCHXL2-570LC43` is on the way and accepted for project fit.
+5. User confirmed oscilloscope purchased (optional BOM item) and confirmed 5V rail availability.
+
+### 2026-02-27 (TPS3823 Order)
+
+1. TPS3823-33DBVT ordered from Reichelt.de: 5 pcs x €1.60 = €8.00.
+2. All BOM sections received HITL review.
+
+---
+
+## 11. Optional Equipment Status
+
+| Item | Status | Note |
+|---|---|---|
+| Oscilloscope (BOM #74) | Purchased | Use for CAN/PWM/relay/watchdog timing evidence during bring-up. |
+| Extra transceivers + sensors (#75) | Not ordered | Spares for bring-up failures. |
+| Better wiring kit + crimp tools (#76) | Not ordered | Reliability and maintainability. |
+
+---
+
+## 12. References
+
+- `docs/aspice/system/system-requirements.md`
+- `docs/aspice/hardware-eng/hw-requirements.md`
+
+---
+
+## 13. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub with summary table |
 | 1.0 | 2026-02-21 | System | Complete BOM: 74 line items across 11 categories, per-item part numbers, budget tracking ($537 without scope), procurement priority phasing, alternative components for all critical parts |
-| 1.1 | 2026-02-27 | An Dao | TPS3823-33DBVT ordered from Reichelt.de: 5 pcs × €1.60 = €8.00. Updated part number (DBVR→DBVT), qty (4→5, 1 spare), supplier (Mouser→Reichelt). First component ordered. |
-
+| 1.1 | 2026-02-27 | An Dao | TPS3823-33DBVT ordered from Reichelt.de: 5 pcs x €1.60 = €8.00. Updated part number (DBVR->DBVT), qty (4->5, 1 spare), supplier (Mouser->Reichelt). First component ordered. |
+| 2.0 | 2026-03-01 | System | Merged `bom-list.md`, `bom.md`, and `procurement-validation.md` into single document. Added: procurement validation snapshot (sec 8), HWR cross-check, open questions log, procurement timeline, optional items (#75-76), minimum bring-up order. |
