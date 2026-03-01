@@ -17,7 +17,7 @@
 
 /* ---- Constants ---- */
 
-#define RTE_MAX_SIGNALS     32u  /**< Max number of RTE signals */
+#define RTE_MAX_SIGNALS     48u  /**< Max number of RTE signals */
 #define RTE_MAX_RUNNABLES   16u  /**< Max number of scheduled runnables */
 
 /* ---- Well-Known Signal IDs ---- */
