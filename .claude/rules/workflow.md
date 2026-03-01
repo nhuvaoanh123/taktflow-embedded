@@ -1,22 +1,7 @@
-﻿---
+---
 paths:
   - "**/*"
 ---
-
-## Human-in-the-Loop (HITL) Comment Lock
-
-`HITL` means human-reviewer-owned comment content.
-
-**Marker standard (code-friendly):**
-- Markdown: `<!-- HITL-LOCK START:<id> -->` ... `<!-- HITL-LOCK END:<id> -->`
-- C/C++/Java/JS/TS: `// HITL-LOCK START:<id>` ... `// HITL-LOCK END:<id>`
-- Python/Shell/YAML/TOML: `# HITL-LOCK START:<id>` ... `# HITL-LOCK END:<id>`
-
-**Rules:**
-- AI must never edit, reformat, move, or delete text inside any `HITL-LOCK` block.
-- Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
-- If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
-
 
 # Workflow & Planning Discipline
 
@@ -27,6 +12,7 @@ paths:
 - ALWAYS update the plan doc to reflect current state before starting next phase
 - Never start coding without an approved plan — no exceptions
 - If requirements are unclear, ask questions first, then plan
+- **Plans go to the project, not Claude internals** — always write plans to `docs/plans/plan-<description>.md`, never only to Claude's temporary plan file. The project plan file is the source of truth.
 
 ## Phase-Based Execution
 
@@ -112,4 +98,13 @@ main (protected)          ← Production releases only. Tagged vX.Y.Z.
 - [ ] Input validation on all external boundaries
 - [ ] Error handling is fail-closed
 - [ ] Documentation updated if public API changed
+
+## Procurement & BOM
+
+`hardware/bom.md` is the ONLY file that tracks procurement/delivery status.
+
+- When user reports an item arrived: update the Status column in `hardware/bom.md`
+- NEVER write delivery status (Delivered, Arriving, ON HAND, Not ordered) into any other file
+- Other files may reference BOM item numbers (e.g. "BOM #55") but must NOT include delivery dates or status
+- If you see stale procurement status in a non-BOM file, replace it with a BOM reference
 

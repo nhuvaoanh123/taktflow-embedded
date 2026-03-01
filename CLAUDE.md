@@ -105,17 +105,15 @@ All coding standards, security rules, and best practices are in `.claude/rules/`
 - `documentation.md` — Code comments, file headers, architecture docs
 
 ### ISO 26262 / ASIL D / Automotive
-- `iso-compliance.md` — ISO 26262 overview, ASIL matrix, standards index
-- `asil-d-software.md` — ASIL D software constraints (Part 6), MC/DC, defensive programming
-- `asil-d-hardware.md` — Hardware metrics (Part 5), SPFM >= 99%, LFM >= 90%, PMHF < 10 FIT
-- `asil-d-architecture.md` — System architecture (Part 4), FFI, timing, E2E, fail-safe/fail-operational
-- `asil-d-verification.md` — Verification methods, independence (I3), fault injection, formal verification
+- `hitl.md` — HITL comment lock standard (loaded globally)
+- `iso-compliance.md` — ISO 26262 overview, ASIL levels, standards index
+- `asil-d.md` — All ASIL D constraints: software, hardware, architecture, verification, decomposition
 - `misra-c.md` — MISRA C:2012/2023 rules, deviations, enforcement
-- `aspice.md` — Automotive SPICE 4.0 process areas, V-model, capability levels
-- `safety-lifecycle.md` — FSE role, HARA, safety case, safety plan, DFA
-- `tool-qualification.md` — TCL classification, compiler qualification, tool validation
+- `aspice.md` — ASPICE 4.0 process areas
+- `safety-lifecycle.md` — HARA, safety case, safety plan, DFA
+- `tool-qualification.md` — TCL classification, tool validation
 - `traceability.md` — Bidirectional traceability (SG -> FSR -> TSR -> SSR -> code -> tests)
-- `asil-decomposition.md` — Decomposition rules, independence proof, constraints
+- Full reference tables: `docs/reference/asil-d-reference.md`
 
 ## Skills
 

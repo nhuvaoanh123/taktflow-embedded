@@ -35,6 +35,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | [PROCESS-posix-vcan-porting.md](infrastructure/PROCESS-posix-vcan-porting.md) | POSIX/vCAN porting — HAL abstraction, SocketCAN, Docker per ECU | 2026-02-23 | Closed |
 | [PROCESS-sil-demo-integration.md](infrastructure/PROCESS-sil-demo-integration.md) | SIL demo integration — Docker CAN, heartbeat wrap, plant sim tuning | 2026-03-01 | Closed |
 | [PROCESS-fault-injection-demo.md](infrastructure/PROCESS-fault-injection-demo.md) | Fault injection & demo — deterministic faults, DTC, SAP QM, ML anomaly | 2026-03-01 | Closed |
+| [PROCESS-rzc-heartbeat-overtransmit.md](infrastructure/PROCESS-rzc-heartbeat-overtransmit.md) | RZC heartbeat 5x over-transmit — Com_SendSignal signal ID vs PDU ID, timing bugs | 2026-03-01 | Closed |
 
 ### Process
 
@@ -44,6 +45,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | [PROCESS-cross-document-consistency.md](process/PROCESS-cross-document-consistency.md) | Cross-document consistency — CAN IDs, bit timing, sensor specs | 2026-02-26 | Closed |
 | [PROCESS-traceability-automation.md](process/PROCESS-traceability-automation.md) | Traceability automation — trace-gen.py, CI enforcement, suspect links | 2026-02-25 | Closed |
 | [PROCESS-architecture-decisions.md](process/PROCESS-architecture-decisions.md) | Architecture decisions — ADR framework, hybrid ECUs, file-based ALM | 2026-02-28 | Closed |
+| [PROCESS-claude-rules-consolidation.md](process/PROCESS-claude-rules-consolidation.md) | Claude rules consolidation — 30→26 files, 3374→1999 lines, context window optimization | 2026-03-01 | Closed |
 
 ### Hardware
 
