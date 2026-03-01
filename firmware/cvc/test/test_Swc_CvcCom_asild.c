@@ -20,6 +20,10 @@
 typedef unsigned char   uint8;
 typedef unsigned short  uint16;
 typedef unsigned int   uint32;
+typedef signed char     sint8;
+typedef signed short    sint16;
+typedef signed int      sint32;
+typedef unsigned char   boolean;
 typedef uint8           Std_ReturnType;
 
 #define E_OK        0u
@@ -27,6 +31,16 @@ typedef uint8           Std_ReturnType;
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+/* CVC config constants (mirrors Cvc_Cfg.h) needed by new bridge/TX code */
+#define CVC_SIG_BRAKE_FAULT       30u
+#define CVC_SIG_MOTOR_CUTOFF      28u
+#define CVC_SIG_STEERING_FAULT    29u
+#define CVC_SIG_FZC_COMM_STATUS   23u
+#define CVC_SIG_RZC_COMM_STATUS   24u
+#define CVC_SIG_TORQUE_REQUEST    21u
+#define CVC_COMM_OK                0u
+#define CVC_COMM_TIMEOUT           1u
 
 /* ==================================================================
  * E2E Types (mirrors BSW E2E.h)
@@ -97,6 +111,40 @@ extern Std_ReturnType  Swc_CvcCom_Receive(uint16 canId, const uint8* payload,
 extern void            Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs);
 extern Std_ReturnType  Swc_CvcCom_GetRxStatus(uint8 rxIndex,
                                                 Swc_CvcCom_RxStatusType* status);
+
+/* ==================================================================
+ * Mock: Com_SendSignal, Com_ReceiveSignal, Rte_Read, Rte_Write
+ * ================================================================== */
+
+static uint32 mock_rte_signals[48];
+
+Std_ReturnType Com_SendSignal(uint16 SignalId, const void* SignalDataPtr)
+{
+    (void)SignalId;
+    (void)SignalDataPtr;
+    return E_OK;
+}
+
+Std_ReturnType Com_ReceiveSignal(uint16 SignalId, void* SignalDataPtr)
+{
+    (void)SignalId;
+    (void)SignalDataPtr;
+    return E_OK;
+}
+
+void Com_Init(const void* ConfigPtr) { (void)ConfigPtr; }
+
+Std_ReturnType Rte_Write(uint8 SignalId, uint32 Value)
+{
+    if (SignalId < 48u) { mock_rte_signals[SignalId] = Value; }
+    return E_OK;
+}
+
+Std_ReturnType Rte_Read(uint8 SignalId, uint32* Value)
+{
+    if (SignalId < 48u && Value != NULL_PTR) { *Value = mock_rte_signals[SignalId]; }
+    return E_OK;
+}
 
 /* ==================================================================
  * Mock: E2E_Protect and E2E_Check
@@ -413,5 +461,7 @@ int main(void)
 #define SWC_CVCCOM_H
 #define CVC_CFG_H
 #define E2E_H
+#define COM_H
+#define RTE_H
 
 #include "../src/Swc_CvcCom.c"

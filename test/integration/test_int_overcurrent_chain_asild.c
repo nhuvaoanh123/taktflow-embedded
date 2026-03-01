@@ -22,6 +22,15 @@
 #include "BswM.h"
 #include "Dem.h"
 #include "Rte.h"
+#include "ComStack_Types.h"
+
+/* Stub: PduR_Transmit (Dem_MainFunction DTC broadcast dependency) */
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    (void)TxPduId;
+    (void)PduInfoPtr;
+    return E_OK;
+}
 
 /* ====================================================================
  * Mock: Dio_FlipChannel — WdgM toggles external watchdog via DIO

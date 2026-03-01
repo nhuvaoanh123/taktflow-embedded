@@ -21,6 +21,18 @@
 #include "WdgM.h"
 #include "BswM.h"
 #include "Dem.h"
+#include "ComStack_Types.h"
+
+/* ===================================================================
+ * Stub: PduR_Transmit (Dem_MainFunction DTC broadcast dependency)
+ * =================================================================== */
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    (void)TxPduId;
+    (void)PduInfoPtr;
+    return E_OK;
+}
 
 /* ===================================================================
  * Mock: Dio_FlipChannel — captures call count (HW layer mock)

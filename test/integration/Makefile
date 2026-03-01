@@ -54,11 +54,11 @@ UNITY_SRC = $(UNITY_DIR)/unity.c
 # Communication stack: Can -> CanIf -> PduR -> Com
 BSW_COM_STACK = $(ECUAL_DIR)/CanIf.c $(ECUAL_DIR)/PduR.c $(SERVICES_DIR)/Com.c
 
-# Safety services
-BSW_SAFETY = $(SERVICES_DIR)/WdgM.c $(SERVICES_DIR)/BswM.c $(SERVICES_DIR)/Dem.c
+# Safety services (Dem depends on NvM for persistence)
+BSW_SAFETY = $(SERVICES_DIR)/WdgM.c $(SERVICES_DIR)/BswM.c $(SERVICES_DIR)/Dem.c $(SERVICES_DIR)/NvM.c
 
 # Diagnostics
-BSW_DIAG = $(SERVICES_DIR)/Dcm.c $(SERVICES_DIR)/Dem.c
+BSW_DIAG = $(SERVICES_DIR)/Dcm.c $(SERVICES_DIR)/Dem.c $(SERVICES_DIR)/NvM.c
 
 # E2E protection
 BSW_E2E = $(SERVICES_DIR)/E2E.c

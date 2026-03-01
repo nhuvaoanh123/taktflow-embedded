@@ -9,6 +9,7 @@
  */
 #include "unity.h"
 #include "Dem.h"
+#include "NvM.h"
 #include "ComStack_Types.h"
 
 /* ---- Mock stubs for Dem_MainFunction dependencies ---- */
@@ -30,18 +31,32 @@ Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
     return E_OK;
 }
 
-/* NvM stubs (already linked, but declare for mock tracking) */
+/* NvM mock stubs */
 static uint8 mock_nvm_write_called;
+static uint8 mock_nvm_read_called;
 
-/* Override NvM_WriteBlock for tracking (weak symbol pattern) */
-Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr);
-Std_ReturnType NvM_ReadBlock(NvM_BlockIdType BlockId, void* NvM_DstPtr);
+Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr)
+{
+    (void)BlockId;
+    (void)NvM_SrcPtr;
+    mock_nvm_write_called++;
+    return E_OK;
+}
+
+Std_ReturnType NvM_ReadBlock(NvM_BlockIdType BlockId, void* NvM_DstPtr)
+{
+    (void)BlockId;
+    (void)NvM_DstPtr;
+    mock_nvm_read_called++;
+    return E_OK;
+}
 
 void setUp(void)
 {
     mock_pdur_called = 0u;
     mock_pdur_last_id = 0u;
     mock_nvm_write_called = 0u;
+    mock_nvm_read_called = 0u;
     uint8 i;
     for (i = 0u; i < 8u; i++) {
         mock_pdur_last_data[i] = 0u;
