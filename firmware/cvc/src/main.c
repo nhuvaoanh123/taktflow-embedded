@@ -157,9 +157,9 @@ static const Adc_ConfigType adc_config = {
 
 /** PWM driver configuration — motor, steering servo, brake servo */
 static const Pwm_ChannelConfigType pwm_channels[] = {
-    { .frequency = 20000u, .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 0: motor     */
-    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 1: steer srv  */
-    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH },  /* Ch 2: brake srv  */
+    { .frequency = 20000u, .defaultDuty = 0u, .polarity = PWM_HIGH, .idleState = PWM_LOW },  /* Ch 0: motor     */
+    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH, .idleState = PWM_LOW },  /* Ch 1: steer srv  */
+    { .frequency = 50u,    .defaultDuty = 0u, .polarity = PWM_HIGH, .idleState = PWM_LOW },  /* Ch 2: brake srv  */
 };
 
 static const Pwm_ConfigType pwm_config = {

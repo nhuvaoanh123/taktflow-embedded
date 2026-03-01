@@ -95,7 +95,7 @@ extern void Pwm_SetOutputToIdle(uint8 ChannelNumber);
 /* DIO driver */
 extern uint8 Dio_ReadChannel(uint8 ChannelId);
 extern void  Dio_WriteChannel(uint8 ChannelId, uint8 Level);
-extern void  Dio_FlipChannel(uint8 ChannelId);
+extern uint8 Dio_FlipChannel(uint8 ChannelId);
 
 /* ---- API Functions ---- */
 
