@@ -58,7 +58,7 @@ typedef uint8           Com_SignalIdType;
 #define RZC_COM_TX_HEARTBEAT         0u
 #define RZC_ECU_ID                  0x03u
 
-#define RZC_HB_TX_PERIOD_MS         50u
+#define RZC_HB_TX_PERIOD_MS         1u
 #define RZC_HB_ALIVE_MAX            15u
 
 #define RZC_DTC_CAN_BUS_OFF          5u

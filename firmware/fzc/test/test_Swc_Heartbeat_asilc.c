@@ -40,7 +40,7 @@ typedef uint8           Std_ReturnType;
 #define FZC_COM_TX_HEARTBEAT         0u
 #define FZC_ECU_ID                  0x02u
 
-#define FZC_HB_TX_PERIOD_MS         50u
+#define FZC_HB_TX_PERIOD_MS         5u
 #define FZC_HB_ALIVE_MAX            15u
 
 #define FZC_DTC_CAN_BUS_OFF         12u

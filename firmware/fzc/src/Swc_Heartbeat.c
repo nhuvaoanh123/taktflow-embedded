@@ -33,8 +33,8 @@
  * Constants
  * ================================================================== */
 
-/** Heartbeat period in 1ms cycles: 50ms / 1ms = 50 */
-#define HB_PERIOD_CYCLES    50u
+/** Heartbeat period in RTE cycles: 50ms / 10ms = 5 */
+#define HB_PERIOD_CYCLES    5u
 
 /** Heartbeat TX data layout (8 bytes) */
 #define HB_BYTE_ALIVE       0u
