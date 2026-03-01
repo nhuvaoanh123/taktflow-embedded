@@ -166,8 +166,11 @@ class PlantSimulator:
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
-                self.motor.duty_pct = data[2]
-                self.motor.direction = data[3] & 0x03
+                # CVC sends torque as uint16 LE at bytes 2-3 (Com signal 5,
+                # bitPos=16, bitSize=16).  Value 0-100 = duty percent.
+                torque_raw = struct.unpack_from('<H', data, 2)[0]
+                self.motor.duty_pct = min(100.0, float(torque_raw))
+                self.motor.direction = 1 if torque_raw > 0 else 0
 
         elif arb_id == RX_STEER_COMMAND:
             if len(data) >= 4 and not self.estop_active:
@@ -479,16 +482,20 @@ class PlantSimulator:
                 self._tx_motor_current()
                 self._tx_lidar_distance()
 
-                # Every 20ms: motor status, steering status, brake status
+                # Every 20ms: motor status
+                # Note: steering status (0x200) and brake status (0x201) broadcasts
+                # removed — FZC firmware is the sole authority for these CAN IDs.
+                # The plant sim keeps its internal steering/brake models for physics
+                # constraints only.
                 if self._tick % 2 == 0:
                     self._tx_motor_status()
-                    self._tx_steering_status()
-                    self._tx_brake_status()
 
-                # Every 100ms: motor temperature, vehicle state, DTC check
+                # Every 100ms: motor temperature, DTC check
+                # Note: vehicle state broadcast removed — CVC firmware is the
+                # sole authority for CAN 0x100 (Vehicle_State).  The plant sim
+                # keeps its internal state machine for physics constraints only.
                 if self._tick % 10 == 0:
                     self._tx_motor_temp()
-                    self._tx_vehicle_state()
                     self._check_and_send_dtcs()
 
                 # Every 1000ms: battery
