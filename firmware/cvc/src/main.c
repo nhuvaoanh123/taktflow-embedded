@@ -341,6 +341,7 @@ int main(void)
     Swc_EStop_Init();
     Swc_Heartbeat_Init();
     Swc_Dashboard_Init();
+    Swc_CvcCom_Init();
 
     /* ---- Step 4: Self-test sequence ---- */
     self_test_result = Main_RunSelfTest();
@@ -381,13 +382,14 @@ int main(void)
             Rte_MainFunction();
         }
 
-        /* 10ms tasks: Dcm, BswM, Com->RTE bridge */
+        /* 10ms tasks: Dcm, BswM, Com->RTE bridge, CAN TX schedule */
         if ((tick_us - last_10ms_us) >= 10000u)
         {
             last_10ms_us = tick_us;
             Dcm_MainFunction();
             BswM_MainFunction();
             Swc_CvcCom_BridgeRxToRte();
+            Swc_CvcCom_TransmitSchedule(tick_us / 1000u);
         }
 
         /* 100ms tasks: WdgM, Dem (DTC broadcast) */
