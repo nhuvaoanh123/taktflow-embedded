@@ -372,11 +372,13 @@ void Swc_RzcCom_TransmitSchedule(void)
     uint32 motor_fault;
     uint32 current_ma;
     uint32 overcurrent;
+#ifndef PLATFORM_POSIX
     uint32 temp1_ddc;
     uint32 temp2_ddc;
     uint32 derating_pct;
     uint32 battery_mv;
     uint32 battery_status;
+#endif
     uint8  pdu[8];
     uint8  i;
     PduInfoType pdu_info;
@@ -424,8 +426,14 @@ void Swc_RzcCom_TransmitSchedule(void)
     (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, pdu, 8u);
     (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
 
+    /* --- 0x302 Motor Temp / 0x303 Battery Status ---
+     * In SIL (PLATFORM_POSIX), the plant simulator is the sole authority
+     * for sensor-derived CAN messages (temperature, battery voltage).
+     * POSIX ADC stubs return 0, producing wrong values (temp -40°C,
+     * battery 0mV) that conflict with the plant sim's physics model.
+     * On real hardware, the RZC owns these broadcasts via real ADCs. */
+#ifndef PLATFORM_POSIX
     /* --- 0x302 Motor Temp: every 10 cycles (100ms) --- */
-    /* Managed by Com_MainFunction_Tx cycle time (100ms in Com config) */
     temp1_ddc    = 0u;
     temp2_ddc    = 0u;
     derating_pct = 0u;
@@ -454,6 +462,7 @@ void Swc_RzcCom_TransmitSchedule(void)
     pdu[4] = (uint8)battery_status;
     (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
     (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
+#endif /* !PLATFORM_POSIX */
 
     /* Heartbeat TX handled by Swc_Heartbeat_MainFunction (50ms via RTE) */
 }
