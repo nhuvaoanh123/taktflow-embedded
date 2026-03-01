@@ -46,9 +46,9 @@ rsync -avz --delete \
     --exclude 'build/' \
     "$REPO_ROOT/" "$VPS_HOST:$REMOTE_DIR/"
 
-# Step 3: Build containers
+# Step 3: Build containers (--no-cache ensures firmware is recompiled from fresh source)
 echo "[3/5] Building Docker containers on VPS..."
-ssh "$VPS_HOST" "cd $REMOTE_DIR/docker && docker compose build"
+ssh "$VPS_HOST" "cd $REMOTE_DIR/docker && docker compose build --no-cache"
 
 # Step 4: Restart services
 echo "[4/5] Restarting services..."
