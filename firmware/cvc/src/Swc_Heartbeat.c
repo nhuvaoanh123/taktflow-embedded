@@ -80,8 +80,8 @@ void Swc_Heartbeat_Init(void)
     fzc_comm_status = CVC_COMM_TIMEOUT;
     rzc_comm_status = CVC_COMM_TIMEOUT;
 
-    fzc_last_alive  = 0xFFu;
-    rzc_last_alive  = 0xFFu;
+    fzc_last_alive  = 0u;   /* Match Com shadow buffer init (0) — no false positive */
+    rzc_last_alive  = 0u;   /* Real detection starts when alive counter changes     */
 
     initialized     = TRUE;
 }

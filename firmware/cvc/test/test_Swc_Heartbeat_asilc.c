@@ -202,8 +202,8 @@ void setUp(void)
 
     mock_com_send_count    = 0u;
     mock_com_send_sig_id   = 0xFFu;
-    mock_com_rx_fzc_alive  = 0xFFu;  /* Match fzc_last_alive init to avoid false change detect */
-    mock_com_rx_rzc_alive  = 0xFFu;  /* Match rzc_last_alive init to avoid false change detect */
+    mock_com_rx_fzc_alive  = 0u;     /* Match fzc_last_alive init (0) — no false positive */
+    mock_com_rx_rzc_alive  = 0u;     /* Match rzc_last_alive init (0) — no false positive */
     mock_e2e_protect_count = 0u;
     mock_rte_write_count   = 0u;
     mock_dem_report_count  = 0u;
