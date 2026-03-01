@@ -76,8 +76,13 @@ Every lessons-learned file MUST follow this structure:
 - **Auditable**: ASPICE SUP.4 (Joint Review) expects documented review outcomes
 - **Actionable**: Open items have owners and deadlines — nothing gets lost
 
+## Consolidated Location
+
+> **All lessons-learned files are now in [`docs/reference/lessons-learned/`](../../../reference/lessons-learned/README.md).**
+> This folder retains the template and rules. Actual lesson files live in the consolidated folder.
+
 ## Index
 
 | Requirement | File | Date | Status |
 |-------------|------|------|--------|
-| SYS-001 | [SYS-001-dual-pedal-sensing.md](SYS-001-dual-pedal-sensing.md) | 2026-02-27 | Closed |
+| SYS-001 | [SYS-001-dual-pedal-sensing.md](../../../reference/lessons-learned/safety/SYS-001-dual-pedal-sensing.md) | 2026-02-27 | Closed |

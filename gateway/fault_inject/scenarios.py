@@ -322,6 +322,135 @@ def battery_low() -> str:
             "Plant sim restores normal values within ~1 s after scenario ends.")
 
 
+def motor_reversal() -> str:
+    """Inject sudden motor direction reversal while driving forward.
+
+    Sends a Torque_Request with direction=2 (reverse) at 80% duty while
+    the vehicle is moving forward.  The Safety Controller should detect
+    the plausibility violation (direction change at speed) and trigger
+    a safe-stop transition.
+
+    Maps to HE-014 (ASIL C): Motor direction reversal during forward motion.
+    """
+    bus = _get_bus()
+    try:
+        # First establish forward drive
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        time.sleep(0.5)
+        # Reverse at high torque
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(80, 2))
+    finally:
+        bus.shutdown()
+    return ("Motor reversal: direction flipped fwd->rev at 80% torque.  "
+            "SC should detect plausibility violation -> safe-stop.")
+
+
+def unintended_braking() -> str:
+    """Inject unexpected emergency braking while cruising.
+
+    Sends a Brake_Command with 100% force in emergency mode while the
+    vehicle is driving at normal speed.  Simulates a brake actuator
+    fault or spurious brake command.
+
+    Maps to HE-006 (ASIL A): Unintended braking during normal driving.
+    """
+    bus = _get_bus()
+    try:
+        # Establish normal drive first
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+        time.sleep(0.5)
+        # Sudden emergency brake
+        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(100, brake_mode=2))
+    finally:
+        bus.shutdown()
+    return ("Unintended braking: emergency brake at 100% while cruising.  "
+            "Simulates spurious brake actuator activation.")
+
+
+def torque_loss() -> str:
+    """Inject sudden loss of drive torque while driving.
+
+    Sends torque request dropping to 0% with direction=stop while the
+    vehicle is in motion.  Simulates motor controller failure or
+    power stage dropout.
+
+    Maps to HE-002 (ASIL B): Loss of drive torque during driving.
+    """
+    bus = _get_bus()
+    try:
+        # Establish normal drive
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        time.sleep(0.5)
+        # Sudden torque loss
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(0, 0))
+    finally:
+        bus.shutdown()
+    return ("Torque loss: torque dropped to 0% mid-drive.  "
+            "Simulates motor controller failure / power stage dropout.")
+
+
+def runaway_accel() -> str:
+    """Inject runaway acceleration at maximum torque.
+
+    Sends a Torque_Request at 100% duty forward, simulating a stuck
+    throttle or pedal sensor fault at high speed.  The Safety Controller
+    should detect the plausibility violation (no pedal input matches)
+    and intervene.
+
+    Maps to HE-016 (ASIL C): Unintended acceleration at high speed.
+    """
+    bus = _get_bus()
+    try:
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(100, 1))
+    finally:
+        bus.shutdown()
+    return ("Runaway acceleration: 100% torque forward.  "
+            "SC should detect pedal plausibility violation -> limit torque.")
+
+
+def creep_from_stop() -> str:
+    """Inject unintended vehicle motion from stationary state.
+
+    Releases brakes and applies moderate torque while vehicle should be
+    stationary (e.g. parked, waiting at traffic light).  Simulates
+    unintended creep due to motor enable fault.
+
+    Maps to HE-017 (ASIL D): Unintended vehicle motion from stationary.
+    """
+    bus = _get_bus()
+    try:
+        # Release brakes
+        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+        time.sleep(0.1)
+        # Apply unexpected torque
+        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(30, 1))
+    finally:
+        bus.shutdown()
+    return ("Creep from stop: brakes released + 30% torque from stationary.  "
+            "Simulates unintended motion due to motor enable fault.")
+
+
+def babbling_node() -> str:
+    """Flood the CAN bus with rapid frames simulating a babbling node.
+
+    Sends 200 frames at maximum rate on the Torque_Request CAN ID,
+    saturating bus bandwidth.  A babbling node can prevent legitimate
+    messages from being transmitted, starving safety-critical
+    communication.
+
+    Maps to HE-020 (ASIL B): CAN bus babbling node.
+    """
+    bus = _get_bus()
+    try:
+        for _ in range(200):
+            _send(bus, CAN_TORQUE_REQUEST, _torque_frame(0, 0))
+    finally:
+        bus.shutdown()
+    return ("Babbling node: 200 rapid frames flooded on 0x101.  "
+            "Simulates CAN bus saturation from faulty ECU.")
+
+
 def heartbeat_loss() -> str:
     """Document heartbeat loss injection.
 
@@ -444,6 +573,48 @@ SCENARIOS: dict[str, dict] = {
         "description": (
             "Battery drain: injects Battery_Status frames with voltage "
             "dropping from 12.6 V to 8.5 V over 5 s, then fires DTC 0xE401."
+        ),
+    },
+    "motor_reversal": {
+        "fn": motor_reversal,
+        "description": (
+            "Motor reversal: direction flipped fwd->rev at 80% torque.  "
+            "SC detects plausibility violation -> safe-stop."
+        ),
+    },
+    "unintended_braking": {
+        "fn": unintended_braking,
+        "description": (
+            "Unintended braking: emergency brake at 100% while cruising.  "
+            "Simulates spurious brake actuator activation."
+        ),
+    },
+    "torque_loss": {
+        "fn": torque_loss,
+        "description": (
+            "Torque loss: torque dropped to 0% mid-drive.  "
+            "Simulates motor controller failure / power stage dropout."
+        ),
+    },
+    "runaway_accel": {
+        "fn": runaway_accel,
+        "description": (
+            "Runaway acceleration: 100% torque forward.  "
+            "SC detects pedal plausibility violation -> limit torque."
+        ),
+    },
+    "creep_from_stop": {
+        "fn": creep_from_stop,
+        "description": (
+            "Creep from stop: brakes released + 30% torque from stationary.  "
+            "Simulates unintended motion due to motor enable fault."
+        ),
+    },
+    "babbling_node": {
+        "fn": babbling_node,
+        "description": (
+            "Babbling node: 200 rapid frames flooded on 0x101.  "
+            "Simulates CAN bus saturation from faulty ECU."
         ),
     },
     "heartbeat_loss": {

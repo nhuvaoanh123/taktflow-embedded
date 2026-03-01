@@ -1,4 +1,6 @@
-﻿## Human-in-the-Loop (HITL) Comment Lock
+﻿> **Moved**: This file has been consolidated into [`docs/reference/lessons-learned/security/PROCESS-security-hardening.md`](lessons-learned/security/PROCESS-security-hardening.md).
+
+## Human-in-the-Loop (HITL) Comment Lock
 
 `HITL` means human-reviewer-owned comment content.
 
