@@ -28,8 +28,9 @@
 #define AF_CAN          29
 #define PF_CAN          AF_CAN
 #define CAN_RAW         1
-#define SOL_CAN_RAW     101
-#define CAN_RAW_FILTER  1
+#define SOL_CAN_RAW             101
+#define CAN_RAW_FILTER          1
+#define CAN_RAW_RECV_OWN_MSGS   4
 #define SOCK_RAW        3
 #define SIOCGIFINDEX    0x8933
 #define MSG_DONTWAIT    0x40

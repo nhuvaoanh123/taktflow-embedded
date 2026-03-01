@@ -113,6 +113,14 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
         return E_NOT_OK;
     }
 
+    /* Disable receiving own transmitted frames — prevents socket buffer
+     * overflow when multiple ECUs share the same vcan0 interface.
+     * Without this, each ECU receives its own TX frames via loopback,
+     * consuming CAN_MAX_RX_PER_CALL budget and starving real RX. */
+    int recv_own = 0;
+    (void)CAN_POSIX_SETSOCKOPT_FN(fd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS,
+                                   &recv_own, (uint32)sizeof(recv_own));
+
     /* Set non-blocking mode */
     CAN_POSIX_FCNTL_FN(fd, 4, MSG_DONTWAIT); /* F_SETFL = 4 */
 

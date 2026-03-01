@@ -22,7 +22,7 @@
 /* ---- Constants ---- */
 
 #define CAN_MAX_DLC         8u    /**< CAN 2.0B max data length      */
-#define CAN_MAX_RX_PER_CALL 16u   /**< Max RX messages per MainFunc   */
+#define CAN_MAX_RX_PER_CALL 32u   /**< Max RX messages per MainFunc   */
 
 /* ---- Types ---- */
 
