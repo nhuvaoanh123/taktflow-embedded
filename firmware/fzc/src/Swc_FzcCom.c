@@ -34,6 +34,7 @@
 
 #include "Rte.h"
 #include "Com.h"
+#include "PduR.h"
 
 /* ==================================================================
  * Constants
@@ -269,28 +270,16 @@ void Swc_FzcCom_TransmitSchedule(void)
     uint8  txBuf[8];
     uint32 rteVal;
     uint8  i;
+    PduInfoType pdu_info;
 
     if (FzcCom_Initialized != TRUE) {
         return;
     }
 
-    /* ---- TX: 0x011 Heartbeat (50ms periodic) ---- */
-    FzcCom_HbCycleCount++;
-    if (FzcCom_HbCycleCount >= FZC_COM_HB_PERIOD_CYCLES) {
-        FzcCom_HbCycleCount = 0u;
+    pdu_info.SduDataPtr = txBuf;
+    pdu_info.SduLength  = 8u;
 
-        for (i = 0u; i < 8u; i++) {
-            txBuf[i] = 0u;
-        }
-        txBuf[2] = FZC_ECU_ID;
-        (void)Rte_Read(FZC_SIG_VEHICLE_STATE, &rteVal);
-        txBuf[3] = (uint8)rteVal;
-        (void)Rte_Read(FZC_SIG_FAULT_MASK, &rteVal);
-        txBuf[4] = (uint8)rteVal;
-
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_HEARTBEAT_DATA_ID);
-        (void)Com_SendSignal(FZC_COM_TX_HEARTBEAT, txBuf);
-    }
+    /* Heartbeat TX handled by Swc_Heartbeat_MainFunction (50ms via RTE) */
 
     /* ---- TX: Steering/Brake status → Com shadow buffers (10ms cyclic) ---- */
     {
@@ -309,7 +298,7 @@ void Swc_FzcCom_TransmitSchedule(void)
         }
     }
 
-    /* ---- TX: 0x210 Brake Fault (event-driven) ---- */
+    /* ---- TX: 0x210 Brake Fault (event-driven, PduR_Transmit) ---- */
     (void)Rte_Read(FZC_SIG_BRAKE_FAULT, &rteVal);
     if (rteVal != (uint32)FZC_BRAKE_NO_FAULT) {
         FzcCom_TxPendBrakeFault = TRUE;
@@ -320,11 +309,11 @@ void Swc_FzcCom_TransmitSchedule(void)
         }
         txBuf[2] = (uint8)rteVal;
         (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
-        (void)Com_SendSignal(FZC_COM_TX_BRAKE_FAULT, txBuf);
+        (void)PduR_Transmit(FZC_COM_TX_BRAKE_FAULT, &pdu_info);
         FzcCom_TxPendBrakeFault = FALSE;
     }
 
-    /* ---- TX: 0x211 Motor Cutoff (event-driven) ---- */
+    /* ---- TX: 0x211 Motor Cutoff (event-driven, PduR_Transmit) ---- */
     (void)Rte_Read(FZC_SIG_MOTOR_CUTOFF, &rteVal);
     if (rteVal != 0u) {
         FzcCom_TxPendMotorCutoff = TRUE;
@@ -335,11 +324,11 @@ void Swc_FzcCom_TransmitSchedule(void)
         }
         txBuf[2] = (uint8)rteVal;
         (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
-        (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, txBuf);
+        (void)PduR_Transmit(FZC_COM_TX_MOTOR_CUTOFF, &pdu_info);
         FzcCom_TxPendMotorCutoff = FALSE;
     }
 
-    /* ---- TX: 0x220 Lidar Warning (event-driven) ---- */
+    /* ---- TX: 0x220 Lidar Warning (event-driven, PduR_Transmit) ---- */
     (void)Rte_Read(FZC_SIG_LIDAR_ZONE, &rteVal);
     if (rteVal >= (uint32)FZC_LIDAR_ZONE_WARNING) {
         FzcCom_TxPendLidarWarn = TRUE;
@@ -353,7 +342,7 @@ void Swc_FzcCom_TransmitSchedule(void)
         txBuf[3] = (uint8)(rteVal & 0xFFu);
         txBuf[4] = (uint8)((rteVal >> 8u) & 0xFFu);
         (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_LIDAR_DATA_ID);
-        (void)Com_SendSignal(FZC_COM_TX_LIDAR, txBuf);
+        (void)PduR_Transmit(FZC_COM_TX_LIDAR, &pdu_info);
         FzcCom_TxPendLidarWarn = FALSE;
     }
 }

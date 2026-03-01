@@ -89,6 +89,8 @@
 #define RZC_E2E_HEARTBEAT_DATA_ID    0x04u
 #define RZC_E2E_MOTOR_STATUS_DATA_ID 0x0Eu
 #define RZC_E2E_MOTOR_CURRENT_DATA_ID 0x0Fu
+#define RZC_E2E_MOTOR_TEMP_DATA_ID   0x10u
+#define RZC_E2E_BATTERY_DATA_ID      0x11u
 #define RZC_E2E_ESTOP_DATA_ID        0x00u
 
 /* ====================================================================

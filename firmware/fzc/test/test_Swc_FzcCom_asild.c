@@ -10,7 +10,7 @@
  * CAN message reception routing (E-stop, vehicle state, brake, steering),
  * CAN message transmission scheduling (heartbeat 50ms, event-driven).
  *
- * Mocks: Com_ReceiveSignal, Com_SendSignal, Rte_Read, Rte_Write
+ * Mocks: Com_ReceiveSignal, Com_SendSignal, PduR_Transmit, Rte_Read, Rte_Write
  */
 #include "unity.h"
 
@@ -30,6 +30,13 @@ typedef uint8           Std_ReturnType;
 #define TRUE        1u
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
+
+typedef uint16          PduIdType;
+
+typedef struct {
+    uint8* SduDataPtr;
+    uint8  SduLength;
+} PduInfoType;
 
 /* ==================================================================
  * FZC Config Constants (from Fzc_Cfg.h)
@@ -139,7 +146,6 @@ static uint8  mock_com_rx_available[MOCK_COM_MAX_PDUS];
 static uint8  mock_com_tx_data[MOCK_COM_MAX_PDUS][8];
 static uint8  mock_com_tx_count;
 static uint8  mock_com_tx_last_pdu;
-static uint8  mock_com_tx_hb_count;  /* heartbeat-specific send count */
 
 Std_ReturnType Com_ReceiveSignal(uint8 PduId, uint8* DataPtr)
 {
@@ -168,13 +174,33 @@ Std_ReturnType Com_SendSignal(uint8 PduId, const void* DataPtr)
     }
     mock_com_tx_count++;
     mock_com_tx_last_pdu = PduId;
-    if (PduId == FZC_COM_TX_HEARTBEAT) {
-        mock_com_tx_hb_count++;
-    }
     ptr = (const uint8*)DataPtr;
     if (PduId < MOCK_COM_MAX_PDUS) {
         for (i = 0u; i < 8u; i++) {
             mock_com_tx_data[PduId][i] = ptr[i];
+        }
+    }
+    return E_OK;
+}
+
+/* ==================================================================
+ * Mock: PduR_Transmit
+ * ================================================================== */
+
+static uint8   mock_pdur_tx_count;
+static uint16  mock_pdur_last_pdu_id;
+static uint8   mock_pdur_tx_pdu_data[MOCK_COM_MAX_PDUS][8];
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    uint8 i;
+    mock_pdur_tx_count++;
+    mock_pdur_last_pdu_id = TxPduId;
+    if ((PduInfoPtr != NULL_PTR) && (PduInfoPtr->SduDataPtr != NULL_PTR)) {
+        if (TxPduId < MOCK_COM_MAX_PDUS) {
+            for (i = 0u; i < 8u; i++) {
+                mock_pdur_tx_pdu_data[TxPduId][i] = PduInfoPtr->SduDataPtr[i];
+            }
         }
     }
     return E_OK;
@@ -197,12 +223,19 @@ void setUp(void)
 
     mock_com_tx_count    = 0u;
     mock_com_tx_last_pdu = 0xFFu;
-    mock_com_tx_hb_count = 0u;
     for (i = 0u; i < MOCK_COM_MAX_PDUS; i++) {
         mock_com_rx_available[i] = FALSE;
         for (j = 0u; j < 8u; j++) {
             mock_com_rx_data[i][j] = 0u;
             mock_com_tx_data[i][j] = 0u;
+        }
+    }
+
+    mock_pdur_tx_count    = 0u;
+    mock_pdur_last_pdu_id = 0xFFu;
+    for (i = 0u; i < MOCK_COM_MAX_PDUS; i++) {
+        for (j = 0u; j < 8u; j++) {
+            mock_pdur_tx_pdu_data[i][j] = 0u;
         }
     }
 
@@ -382,37 +415,38 @@ void test_FzcCom_receive_steering_cmd_routing(void)
  * SWR-FZC-027: CAN Message Transmission (2 tests)
  * ================================================================== */
 
-/** @verifies SWR-FZC-027 — Heartbeat transmitted every 50ms (5 cycles) */
-void test_FzcCom_transmit_heartbeat_50ms(void)
+/** @verifies SWR-FZC-027 — Steering status sent via Com_SendSignal every cycle */
+void test_FzcCom_transmit_steering_status_10ms(void)
 {
-    uint8 i;
+    /* Set steering angle and fault in RTE */
+    mock_rte_signals[FZC_SIG_STEER_ANGLE] = 45u;
+    mock_rte_signals[FZC_SIG_STEER_FAULT] = 0u;
 
-    /* Run 4 cycles: no heartbeat TX yet (steering bridge sends are OK) */
-    for (i = 0u; i < 4u; i++) {
-        Swc_FzcCom_TransmitSchedule();
-    }
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_tx_hb_count);
+    mock_com_tx_count = 0u;
 
-    /* 5th cycle: heartbeat should be transmitted */
+    /* Single cycle should send steering data via Com_SendSignal */
     Swc_FzcCom_TransmitSchedule();
-    TEST_ASSERT_TRUE(mock_com_tx_hb_count > 0u);
+
+    /* At least 2 Com_SendSignal calls: steer_angle (signal 3) + steer_fault (signal 4) */
+    TEST_ASSERT_TRUE(mock_com_tx_count >= 2u);
 }
 
-/** @verifies SWR-FZC-027 — Event-driven brake fault TX within 10ms of trigger */
-void test_FzcCom_transmit_event_driven_within_10ms(void)
+/** @verifies SWR-FZC-027 — Event-driven brake fault TX via PduR_Transmit */
+void test_FzcCom_transmit_event_driven_brake_fault(void)
 {
     /* Set brake fault active in RTE */
     mock_rte_signals[FZC_SIG_BRAKE_FAULT] = 1u;
 
-    /* Single cycle should trigger event-driven TX */
+    mock_pdur_tx_count = 0u;
+
+    /* Single cycle should trigger event-driven TX via PduR_Transmit */
     Swc_FzcCom_TransmitSchedule();
 
-    /* assert: brake fault PDU was sent */
-    TEST_ASSERT_TRUE(mock_com_tx_count > 0u);
+    /* assert: brake fault PDU was sent via PduR_Transmit */
+    TEST_ASSERT_TRUE(mock_pdur_tx_count >= 1u);
 
-    /* Verify it was the brake fault PDU (among possibly heartbeat too) */
-    /* Check that brake fault data was sent to the correct PDU */
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_tx_data[FZC_COM_TX_BRAKE_FAULT][2]);
+    /* Verify brake fault data byte */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_tx_pdu_data[FZC_COM_TX_BRAKE_FAULT][2]);
 }
 
 /* ==================================================================
@@ -438,8 +472,8 @@ int main(void)
     RUN_TEST(test_FzcCom_receive_steering_cmd_routing);
 
     /* SWR-FZC-027: CAN Message Transmission */
-    RUN_TEST(test_FzcCom_transmit_heartbeat_50ms);
-    RUN_TEST(test_FzcCom_transmit_event_driven_within_10ms);
+    RUN_TEST(test_FzcCom_transmit_steering_status_10ms);
+    RUN_TEST(test_FzcCom_transmit_event_driven_brake_fault);
 
     return UNITY_END();
 }
@@ -451,9 +485,11 @@ int main(void)
 /* Prevent BSW headers from redefining types when source is included */
 #define PLATFORM_TYPES_H
 #define STD_TYPES_H
+#define COMSTACK_TYPES_H
 #define SWC_FZC_COM_H
 #define FZC_CFG_H
 #define RTE_H
 #define COM_H
+#define PDUR_H
 
 #include "../src/Swc_FzcCom.c"

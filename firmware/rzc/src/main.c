@@ -54,6 +54,7 @@
 #include "Swc_TempMonitor.h"
 #include "Swc_Battery.h"
 #include "Swc_Heartbeat.h"
+#include "Swc_RzcCom.h"
 #include "Swc_RzcSafety.h"
 
 /* ==================================================================
@@ -305,6 +306,7 @@ int main(void)
     Swc_TempMonitor_Init();
     Swc_Battery_Init();
     Swc_Heartbeat_Init();
+    Swc_RzcCom_Init();
     Swc_RzcSafety_Init();
 
     /* ---- Step 4: Self-test sequence (8 items, SWR-RZC-025) ---- */

@@ -9,7 +9,7 @@
  * increment and wrap, ECU ID (0x03) / fault mask / vehicle state inclusion in
  * heartbeat payload, CAN bus-off suppression, and safe behaviour on init.
  *
- * Mocks: Rte_Read, Rte_Write, Com_SendSignal, Dem_ReportErrorStatus
+ * Mocks: Rte_Read, Rte_Write, PduR_Transmit, Dem_ReportErrorStatus
  *
  * @standard AUTOSAR SWC pattern, ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -33,7 +33,12 @@ typedef uint8           Std_ReturnType;
 #define NULL_PTR    ((void*)0)
 
 typedef uint8           boolean;
-typedef uint8           Com_SignalIdType;
+typedef uint16          PduIdType;
+
+typedef struct {
+    uint8* SduDataPtr;
+    uint8  SduLength;
+} PduInfoType;
 
 /* Prevent BSW headers from redefining types when source is included */
 #define PLATFORM_TYPES_H
@@ -42,7 +47,7 @@ typedef uint8           Com_SignalIdType;
 #define SWC_HEARTBEAT_H
 #define RZC_CFG_H
 #define RTE_H
-#define COM_H
+#define PDUR_H
 #define DEM_H
 #define WDGM_H
 #define IOHWAB_H
@@ -136,7 +141,7 @@ Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
 }
 
 /* ==================================================================
- * Mock: Com_SendSignal
+ * Mock: PduR_Transmit
  * ================================================================== */
 
 #define MOCK_COM_MAX_DATA  8u
@@ -145,14 +150,15 @@ static uint8   mock_com_send_count;
 static uint16  mock_com_last_signal_id;
 static uint8   mock_com_last_data[MOCK_COM_MAX_DATA];
 
-Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
 {
     uint8 i;
-    const uint8* DataPtr = (const uint8*)SignalDataPtr;
     mock_com_send_count++;
-    mock_com_last_signal_id = (uint16)SignalId;
-    for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
-        mock_com_last_data[i] = DataPtr[i];
+    mock_com_last_signal_id = (uint16)TxPduId;
+    if ((PduInfoPtr != NULL_PTR) && (PduInfoPtr->SduDataPtr != NULL_PTR)) {
+        for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
+            mock_com_last_data[i] = PduInfoPtr->SduDataPtr[i];
+        }
     }
     return E_OK;
 }

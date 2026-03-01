@@ -51,6 +51,7 @@
 #include "Swc_Brake.h"
 #include "Swc_Lidar.h"
 #include "Swc_Heartbeat.h"
+#include "Swc_FzcCom.h"
 #include "Swc_FzcSafety.h"
 #include "Swc_Buzzer.h"
 
@@ -337,6 +338,7 @@ int main(void)
     Swc_Brake_Init(&brake_config);
     Swc_Lidar_Init(&lidar_config);
     Swc_Heartbeat_Init();
+    Swc_FzcCom_Init();
     Swc_FzcSafety_Init();
     Swc_Buzzer_Init();
 

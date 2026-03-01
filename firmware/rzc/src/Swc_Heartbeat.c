@@ -26,7 +26,7 @@
  * ================================================================== */
 
 #include "Rte.h"
-#include "Com.h"
+#include "PduR.h"
 #include "Dem.h"
 
 /* ==================================================================
@@ -111,8 +111,13 @@ void Swc_Heartbeat_MainFunction(void)
     tx_data[HB_BYTE_FAULT_LO] = (uint8)(fault_mask & 0xFFu);
     tx_data[HB_BYTE_FAULT_HI] = (uint8)((fault_mask >> 8u) & 0xFFu);
 
-    /* Send via Com */
-    (void)Com_SendSignal(RZC_COM_TX_HEARTBEAT, tx_data);
+    /* Send complete PDU via PduR → CanIf → CAN 0x012 */
+    {
+        PduInfoType pdu_info;
+        pdu_info.SduDataPtr = tx_data;
+        pdu_info.SduLength  = 8u;
+        (void)PduR_Transmit(RZC_COM_TX_HEARTBEAT, &pdu_info);
+    }
 
     /* Write alive counter to RTE for diagnostics */
     (void)Rte_Write(RZC_SIG_HEARTBEAT_ALIVE, (uint32)Hb_AliveCounter);

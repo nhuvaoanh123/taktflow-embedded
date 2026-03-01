@@ -10,7 +10,7 @@
  * handling, torque timeout at 100ms, heartbeat 50ms TX schedule,
  * and motor status 10ms TX schedule.
  *
- * Mocks: Rte_Read, Rte_Write, Com_SendSignal, Dem_ReportErrorStatus
+ * Mocks: Rte_Read, Rte_Write, Com_SendSignal, PduR_Transmit, Dem_ReportErrorStatus
  *
  * @standard AUTOSAR SWC pattern, ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -37,6 +37,12 @@ typedef uint8           Std_ReturnType;
 
 typedef uint8           boolean;
 typedef uint8           Com_SignalIdType;
+typedef uint16          PduIdType;
+
+typedef struct {
+    uint8* SduDataPtr;
+    uint8  SduLength;
+} PduInfoType;
 
 /* Prevent BSW headers from redefining types when source is included */
 #define PLATFORM_TYPES_H
@@ -46,6 +52,7 @@ typedef uint8           Com_SignalIdType;
 #define RZC_CFG_H
 #define RTE_H
 #define COM_H
+#define PDUR_H
 #define DEM_H
 #define WDGM_H
 #define IOHWAB_H
@@ -96,6 +103,8 @@ typedef uint8           Com_SignalIdType;
 #define RZC_E2E_HEARTBEAT_DATA_ID    0x04u
 #define RZC_E2E_MOTOR_STATUS_DATA_ID 0x0Eu
 #define RZC_E2E_MOTOR_CURRENT_DATA_ID 0x0Fu
+#define RZC_E2E_MOTOR_TEMP_DATA_ID   0x10u
+#define RZC_E2E_BATTERY_DATA_ID      0x11u
 #define RZC_E2E_ESTOP_DATA_ID        0x00u
 
 #define RZC_ECU_ID               0x03u
@@ -170,6 +179,35 @@ Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataP
 }
 
 /* ==================================================================
+ * Mock: PduR_Transmit
+ * ================================================================== */
+
+#define MOCK_PDUR_MAX_PDUS  8u
+
+static uint8   mock_pdur_tx_count;
+static uint16  mock_pdur_last_pdu_id;
+static uint8   mock_pdur_last_data[8];
+static uint8   mock_pdur_tx_data[MOCK_PDUR_MAX_PDUS][8];
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    uint8 i;
+    mock_pdur_tx_count++;
+    mock_pdur_last_pdu_id = TxPduId;
+    if ((PduInfoPtr != NULL_PTR) && (PduInfoPtr->SduDataPtr != NULL_PTR)) {
+        for (i = 0u; i < 8u; i++) {
+            mock_pdur_last_data[i] = PduInfoPtr->SduDataPtr[i];
+        }
+        if (TxPduId < MOCK_PDUR_MAX_PDUS) {
+            for (i = 0u; i < 8u; i++) {
+                mock_pdur_tx_data[TxPduId][i] = PduInfoPtr->SduDataPtr[i];
+            }
+        }
+    }
+    return E_OK;
+}
+
+/* ==================================================================
  * Mock: Dem_ReportErrorStatus
  * ================================================================== */
 
@@ -203,6 +241,20 @@ void setUp(void)
     mock_com_last_signal_id = 0xFFu;
     for (i = 0u; i < 8u; i++) {
         mock_com_last_data[i] = 0u;
+    }
+
+    mock_pdur_tx_count    = 0u;
+    mock_pdur_last_pdu_id = 0xFFu;
+    for (i = 0u; i < 8u; i++) {
+        mock_pdur_last_data[i] = 0u;
+    }
+    {
+        uint8 j;
+        for (j = 0u; j < MOCK_PDUR_MAX_PDUS; j++) {
+            for (i = 0u; i < 8u; i++) {
+                mock_pdur_tx_data[j][i] = 0u;
+            }
+        }
     }
 
     mock_dem_call_count    = 0u;
@@ -344,45 +396,45 @@ void test_RzcCom_receive_torque_timeout_100ms_zero(void)
  * SWR-RZC-027: CAN Message Transmission
  * ================================================================== */
 
-/** @verifies SWR-RZC-027 -- Heartbeat transmitted every 50ms (5 cycles) */
-void test_RzcCom_transmit_heartbeat_50ms(void)
-{
-    uint8 i;
-    uint8 hb_send_count;
-
-    mock_com_send_count = 0u;
-
-    /* Run 5 cycles (50ms): should get 1 heartbeat + 5 motor status */
-    for (i = 0u; i < 5u; i++) {
-        Swc_RzcCom_TransmitSchedule();
-    }
-
-    /* Count heartbeat sends: motor status every cycle (5) + heartbeat at cycle 5 (1) = 6 */
-    TEST_ASSERT_EQUAL_UINT8(6u, mock_com_send_count);
-
-    /* The last heartbeat should have been sent to RZC_COM_TX_HEARTBEAT */
-    /* Actually motor_status is sent every cycle. Heartbeat is sent on cycle 5. */
-    /* After 5 cycles: 5 motor_status + 1 heartbeat = 6 total sends */
-    hb_send_count = mock_com_send_count;
-    TEST_ASSERT_TRUE(hb_send_count >= 6u);
-}
-
-/** @verifies SWR-RZC-027 -- Motor status transmitted every 10ms (every cycle) */
-void test_RzcCom_transmit_motor_status_10ms(void)
+/** @verifies SWR-RZC-027 -- Motor data transmitted via PduR_Transmit every cycle */
+void test_RzcCom_transmit_motor_data_10ms(void)
 {
     /* Set some known values in RTE */
+    mock_rte_signals[RZC_SIG_TORQUE_ECHO]   = 42u;
+    mock_rte_signals[RZC_SIG_ENCODER_SPEED] = 1500u;
+    mock_rte_signals[RZC_SIG_MOTOR_DIR]     = 1u;
+    mock_rte_signals[RZC_SIG_MOTOR_ENABLE]  = 1u;
+    mock_rte_signals[RZC_SIG_MOTOR_FAULT]   = 0u;
     mock_rte_signals[RZC_SIG_CURRENT_MA]    = 5000u;
+    mock_rte_signals[RZC_SIG_OVERCURRENT]   = 0u;
     mock_rte_signals[RZC_SIG_TEMP1_DC]      = 650u;
-    mock_rte_signals[RZC_SIG_ENCODER_SPEED]  = 1500u;
+    mock_rte_signals[RZC_SIG_TEMP2_DC]      = 700u;
+    mock_rte_signals[RZC_SIG_DERATING_PCT]  = 0u;
     mock_rte_signals[RZC_SIG_BATTERY_MV]    = 12000u;
+    mock_rte_signals[RZC_SIG_BATTERY_STATUS] = 1u;
 
-    mock_com_send_count = 0u;
+    mock_pdur_tx_count = 0u;
 
-    /* Run 1 cycle: motor status should be sent */
+    /* Run 1 cycle: 4 PDUs should be transmitted via PduR_Transmit */
     Swc_RzcCom_TransmitSchedule();
 
-    /* At least 1 Com_SendSignal call for motor status */
-    TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
+    /* 4 PduR_Transmit calls: motor_status, motor_current, motor_temp, battery_status */
+    TEST_ASSERT_EQUAL_UINT8(4u, mock_pdur_tx_count);
+
+    /* Verify motor status PDU (0x300) — torque_echo in byte 2 */
+    TEST_ASSERT_EQUAL_UINT8(42u, mock_pdur_tx_data[RZC_COM_TX_MOTOR_STATUS][2]);
+
+    /* Verify motor current PDU (0x301) — current_mA low byte in byte 2 */
+    TEST_ASSERT_EQUAL_UINT8((uint8)(5000u & 0xFFu),
+                            mock_pdur_tx_data[RZC_COM_TX_MOTOR_CURRENT][2]);
+
+    /* Verify motor temp PDU (0x302) — temp1 low byte in byte 2 */
+    TEST_ASSERT_EQUAL_UINT8((uint8)(650u & 0xFFu),
+                            mock_pdur_tx_data[RZC_COM_TX_MOTOR_TEMP][2]);
+
+    /* Verify battery status PDU (0x303) — battery_mV low byte in byte 2 */
+    TEST_ASSERT_EQUAL_UINT8((uint8)(12000u & 0xFFu),
+                            mock_pdur_tx_data[RZC_COM_TX_BATTERY_STATUS][2]);
 }
 
 /* ==================================================================
@@ -405,8 +457,7 @@ int main(void)
     RUN_TEST(test_RzcCom_receive_torque_timeout_100ms_zero);
 
     /* SWR-RZC-027: CAN Message Transmission */
-    RUN_TEST(test_RzcCom_transmit_heartbeat_50ms);
-    RUN_TEST(test_RzcCom_transmit_motor_status_10ms);
+    RUN_TEST(test_RzcCom_transmit_motor_data_10ms);
 
     return UNITY_END();
 }

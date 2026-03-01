@@ -26,6 +26,8 @@ extern void Swc_Heartbeat_MainFunction(void);
 extern void Com_MainFunction_Tx(void);
 extern void Can_MainFunction_BusOff(void);
 extern void Swc_RzcSafety_MainFunction(void);   /* WatchdogFeed */
+extern void Swc_RzcCom_Receive(void);            /* CAN RX bridge */
+extern void Swc_RzcCom_TransmitSchedule(void);   /* CAN TX schedule */
 
 /* ==================================================================
  * Signal Configuration Table
@@ -88,7 +90,9 @@ static const Rte_RunnableConfigType rzc_runnable_config[] = {
     { Swc_Motor_MainFunction,               10u,      6u,     1u    },  /* Motor control          */
     { Swc_Encoder_MainFunction,             10u,      6u,     2u    },  /* Encoder processing     */
     { Can_MainFunction_Read,                10u,      5u,     0xFFu },  /* CAN RX                 */
-    { Com_MainFunction_Tx,                  10u,      5u,     0xFFu },  /* COM TX                 */
+    { Swc_RzcCom_Receive,                   10u,      5u,     0xFFu },  /* Com→RTE bridge (after CAN RX) */
+    { Swc_RzcCom_TransmitSchedule,          10u,      4u,     0xFFu },  /* Motor/battery TX schedule */
+    { Com_MainFunction_Tx,                  10u,      3u,     0xFFu },  /* COM TX (after all SWCs) */
     { Swc_TempMonitor_MainFunction,        100u,      4u,     3u    },  /* Temperature monitor    */
     { Swc_Battery_MainFunction,            100u,      4u,     4u    },  /* Battery monitor        */
     { Swc_Heartbeat_MainFunction,           50u,      3u,     5u    },  /* Heartbeat TX/RX        */

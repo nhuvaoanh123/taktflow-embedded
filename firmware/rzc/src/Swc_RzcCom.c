@@ -36,6 +36,7 @@
 
 #include "Rte.h"
 #include "Com.h"
+#include "PduR.h"
 #include "Dem.h"
 
 /* ==================================================================
@@ -136,10 +137,14 @@ static uint8 RzcCom_GetTxDataId(uint8 pduId)
     {
         case RZC_COM_TX_HEARTBEAT:
             return RZC_E2E_HEARTBEAT_DATA_ID;
-        case RZC_COM_TX_MOTOR_CURRENT:
-            return RZC_E2E_MOTOR_CURRENT_DATA_ID;
         case RZC_COM_TX_MOTOR_STATUS:
             return RZC_E2E_MOTOR_STATUS_DATA_ID;
+        case RZC_COM_TX_MOTOR_CURRENT:
+            return RZC_E2E_MOTOR_CURRENT_DATA_ID;
+        case RZC_COM_TX_MOTOR_TEMP:
+            return RZC_E2E_MOTOR_TEMP_DATA_ID;
+        case RZC_COM_TX_BATTERY_STATUS:
+            return RZC_E2E_BATTERY_DATA_ID;
         default:
             return 0x00u;
     }
@@ -360,65 +365,95 @@ void Swc_RzcCom_Receive(void)
 
 void Swc_RzcCom_TransmitSchedule(void)
 {
-    uint32 current_ma;
-    uint32 temp_ddc;
+    uint32 torque_echo;
     uint32 speed_rpm;
+    uint32 motor_dir;
+    uint32 motor_enable;
+    uint32 motor_fault;
+    uint32 current_ma;
+    uint32 overcurrent;
+    uint32 temp1_ddc;
+    uint32 temp2_ddc;
+    uint32 derating_pct;
     uint32 battery_mv;
-    uint8  motor_data[8];
-    uint8  hb_data[8];
+    uint32 battery_status;
+    uint8  pdu[8];
     uint8  i;
+    PduInfoType pdu_info;
 
     if (RzcCom_Initialized != TRUE)
     {
         return;
     }
 
-    /* --- 0x301 Motor status: every 10ms (every cycle) --- */
-    current_ma = 0u;
-    (void)Rte_Read(RZC_SIG_CURRENT_MA, &current_ma);
+    pdu_info.SduDataPtr = pdu;
+    pdu_info.SduLength  = 8u;
 
-    temp_ddc = 0u;
-    (void)Rte_Read(RZC_SIG_TEMP1_DC, &temp_ddc);
-
-    speed_rpm = 0u;
+    /* --- 0x300 Motor Status: every cycle (RZCCOM_MSTATUS_PERIOD) --- */
+    torque_echo  = 0u;
+    speed_rpm    = 0u;
+    motor_dir    = 0u;
+    motor_enable = 0u;
+    motor_fault  = 0u;
+    (void)Rte_Read(RZC_SIG_TORQUE_ECHO, &torque_echo);
     (void)Rte_Read(RZC_SIG_ENCODER_SPEED, &speed_rpm);
+    (void)Rte_Read(RZC_SIG_MOTOR_DIR, &motor_dir);
+    (void)Rte_Read(RZC_SIG_MOTOR_ENABLE, &motor_enable);
+    (void)Rte_Read(RZC_SIG_MOTOR_FAULT, &motor_fault);
 
-    battery_mv = 0u;
+    for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+    pdu[2] = (uint8)torque_echo;
+    pdu[3] = (uint8)(speed_rpm & 0xFFu);
+    pdu[4] = (uint8)((speed_rpm >> 8u) & 0xFFu);
+    pdu[5] = (uint8)motor_dir;
+    pdu[6] = (uint8)motor_enable;
+    pdu[7] = (uint8)motor_fault;
+    (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_STATUS, pdu, 8u);
+    (void)PduR_Transmit(RZC_COM_TX_MOTOR_STATUS, &pdu_info);
+
+    /* --- 0x301 Motor Current: every cycle --- */
+    current_ma  = 0u;
+    overcurrent = 0u;
+    (void)Rte_Read(RZC_SIG_CURRENT_MA, &current_ma);
+    (void)Rte_Read(RZC_SIG_OVERCURRENT, &overcurrent);
+
+    for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+    pdu[2] = (uint8)(current_ma & 0xFFu);
+    pdu[3] = (uint8)((current_ma >> 8u) & 0xFFu);
+    pdu[4] = (uint8)overcurrent;
+    (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, pdu, 8u);
+    (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
+
+    /* --- 0x302 Motor Temp: every 10 cycles (100ms) --- */
+    /* Managed by Com_MainFunction_Tx cycle time (100ms in Com config) */
+    temp1_ddc    = 0u;
+    temp2_ddc    = 0u;
+    derating_pct = 0u;
+    (void)Rte_Read(RZC_SIG_TEMP1_DC, &temp1_ddc);
+    (void)Rte_Read(RZC_SIG_TEMP2_DC, &temp2_ddc);
+    (void)Rte_Read(RZC_SIG_DERATING_PCT, &derating_pct);
+
+    for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+    pdu[2] = (uint8)(temp1_ddc & 0xFFu);
+    pdu[3] = (uint8)((temp1_ddc >> 8u) & 0xFFu);
+    pdu[4] = (uint8)(temp2_ddc & 0xFFu);
+    pdu[5] = (uint8)((temp2_ddc >> 8u) & 0xFFu);
+    pdu[6] = (uint8)derating_pct;
+    (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_TEMP, pdu, 8u);
+    (void)PduR_Transmit(RZC_COM_TX_MOTOR_TEMP, &pdu_info);
+
+    /* --- 0x303 Battery Status: every 100 cycles (1000ms) --- */
+    battery_mv     = 0u;
+    battery_status = 0u;
     (void)Rte_Read(RZC_SIG_BATTERY_MV, &battery_mv);
+    (void)Rte_Read(RZC_SIG_BATTERY_STATUS, &battery_status);
 
-    for (i = 0u; i < 8u; i++)
-    {
-        motor_data[i] = 0u;
-    }
+    for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+    pdu[2] = (uint8)(battery_mv & 0xFFu);
+    pdu[3] = (uint8)((battery_mv >> 8u) & 0xFFu);
+    pdu[4] = (uint8)battery_status;
+    (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
+    (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
 
-    /* Pack motor status: current(2), temp(2), speed(2), battery(2) */
-    motor_data[0] = 0u;  /* Reserved for E2E CRC */
-    motor_data[1] = 0u;  /* Reserved for alive counter */
-    motor_data[2] = (uint8)(current_ma & 0xFFu);
-    motor_data[3] = (uint8)((current_ma >> 8u) & 0xFFu);
-    motor_data[4] = (uint8)(temp_ddc & 0xFFu);
-    motor_data[5] = (uint8)((temp_ddc >> 8u) & 0xFFu);
-    motor_data[6] = (uint8)(speed_rpm & 0xFFu);
-    motor_data[7] = (uint8)((speed_rpm >> 8u) & 0xFFu);
-
-    (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, motor_data, 8u);
-    (void)Com_SendSignal(RZC_COM_TX_MOTOR_CURRENT, motor_data);
-
-    /* --- 0x012 Heartbeat: every 50ms (5 cycles) --- */
-    RzcCom_HbCycleCount++;
-
-    if (RzcCom_HbCycleCount >= RZCCOM_HB_PERIOD)
-    {
-        RzcCom_HbCycleCount = 0u;
-
-        for (i = 0u; i < 8u; i++)
-        {
-            hb_data[i] = 0u;
-        }
-
-        hb_data[1] = RZC_ECU_ID;
-
-        (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_HEARTBEAT, hb_data, 8u);
-        (void)Com_SendSignal(RZC_COM_TX_HEARTBEAT, hb_data);
-    }
+    /* Heartbeat TX handled by Swc_Heartbeat_MainFunction (50ms via RTE) */
 }
