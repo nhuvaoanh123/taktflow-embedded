@@ -21,6 +21,10 @@
 
 #include "Std_Types.h"
 
+/* ---- Constants ---- */
+
+#define NVM_BLOCK_SIZE  1024u   /**< Max bytes per NvM block */
+
 /* ---- Types ---- */
 
 typedef uint16 NvM_BlockIdType;

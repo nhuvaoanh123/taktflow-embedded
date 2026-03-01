@@ -121,4 +121,13 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs);
 Std_ReturnType Swc_CvcCom_GetRxStatus(uint8 rxIndex,
                                        Swc_CvcCom_RxStatusType* status);
 
+/**
+ * @brief  Bridge Com RX fault signals to RTE for VehicleState consumption
+ *
+ * Reads brake_fault, motor_cutoff, FZC/RZC heartbeat alive counters from
+ * Com shadow buffers and writes them to corresponding RTE signals.
+ * Call periodically from the 10ms task.
+ */
+void Swc_CvcCom_BridgeRxToRte(void);
+
 #endif /* SWC_CVCCOM_H */

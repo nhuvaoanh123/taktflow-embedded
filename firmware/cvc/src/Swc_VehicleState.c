@@ -27,6 +27,7 @@
 #include "Rte.h"
 #include "BswM.h"
 #include "Dem.h"
+#include "Com.h"
 
 /* ==================================================================
  * BswM mode mapping — vehicle state to BswM mode
@@ -362,4 +363,10 @@ void Swc_VehicleState_MainFunction(void)
 
     /* ---- Step 5: Write current state to RTE ---- */
     (void)Rte_Write(CVC_SIG_VEHICLE_STATE, (uint32)current_state);
+
+    /* ---- Step 6: Publish vehicle state to Com -> CAN 0x100 ---- */
+    {
+        uint8 tx_state = current_state;
+        (void)Com_SendSignal(4u, &tx_state);  /* Signal 4 = vehicle_state */
+    }
 }

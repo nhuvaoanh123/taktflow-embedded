@@ -12,6 +12,8 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 import paho.mqtt.client as mqtt
@@ -135,6 +137,9 @@ class DTCConnector:
             dtc_code,
         )
 
+        # Generate 8D report
+        self._generate_8d_report(record, dtc_code, defect, plant)
+
         # Publish event for the WebSocket bridge
         event_payload = json.dumps(
             {
@@ -154,6 +159,48 @@ class DTCConnector:
             PUBLISH_TOPIC,
             record["notification_id"],
         )
+
+    # ------------------------------------------------------------------
+    # 8D Report generation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _generate_8d_report(
+        record: dict[str, Any],
+        dtc_code: str,
+        defect: dict[str, Any],
+        plant: str | None,
+    ) -> None:
+        """Generate an 8D report template as JSON when a Q-Meldung is created."""
+        qm_number = record.get("notification_id", "UNKNOWN")
+        report_dir = Path(__file__).resolve().parent.parent / "reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        report = {
+            "qm_number": qm_number,
+            "dtc_code": dtc_code,
+            "defect_code": defect.get("code", ""),
+            "defect_text": defect.get("text", ""),
+            "plant": plant or "N/A",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "d1_team": "Taktflow Embedded — Functional Safety",
+            "d2_problem_description": (
+                f"DTC {dtc_code} detected: {defect.get('text', 'Unknown defect')}"
+            ),
+            "d3_containment_actions": [],
+            "d4_root_cause_analysis": "",
+            "d5_corrective_actions": [],
+            "d6_verification": "",
+            "d7_preventive_actions": [],
+            "d8_closure": {"closed": False, "date": None},
+        }
+
+        report_path = report_dir / f"8D-{qm_number}.json"
+        report_path.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        logger.info("8D report generated: %s", report_path)
 
     # ------------------------------------------------------------------
     # Lifecycle

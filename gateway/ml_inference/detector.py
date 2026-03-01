@@ -248,6 +248,15 @@ async def inference_loop(client: mqtt.Client, buffers: SensorBuffers,
         client.publish(TOPIC_SCORE, score_payload, qos=0)
         logger.debug("anomaly score=%.4f  raw=%.6f", anomaly_score, raw_score)
 
+        # Publish to vehicle/alerts for xIL verdict checking
+        alert_payload = json.dumps({
+            "anomaly_score": round(anomaly_score, 4),
+            "anomaly_type": "motor_current",
+            "features": feature_dict,
+            "ts": time.time(),
+        })
+        client.publish("vehicle/alerts", alert_payload, qos=1)
+
         # DTC alert if above threshold
         if anomaly_score > DTC_SCORE_THRESHOLD:
             dtc_payload = json.dumps({

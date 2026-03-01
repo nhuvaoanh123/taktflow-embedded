@@ -43,4 +43,25 @@ Std_ReturnType Dem_GetEventStatus(Dem_EventIdType EventId, uint8* StatusPtr);
 Std_ReturnType Dem_GetOccurrenceCounter(Dem_EventIdType EventId, uint32* CountPtr);
 Std_ReturnType Dem_ClearAllDTCs(void);
 
+/**
+ * @brief  Periodic DTC broadcast function
+ *
+ * Scans for newly confirmed DTCs and broadcasts them via Com on CAN 0x500.
+ * Call from the 100ms periodic task. Reusable across all ECUs.
+ */
+void           Dem_MainFunction(void);
+
+/**
+ * @brief  Set the ECU source ID for DTC broadcasts
+ * @param  EcuId  ECU identifier (e.g. 0x10=CVC, 0x20=FZC, 0x30=RZC)
+ */
+void           Dem_SetEcuId(uint8 EcuId);
+
+/**
+ * @brief  Register a UDS DTC code for an event ID
+ * @param  EventId   Event ID (0 .. DEM_MAX_EVENTS-1)
+ * @param  DtcCode   24-bit UDS DTC code (e.g. 0xC00100)
+ */
+void           Dem_SetDtcCode(Dem_EventIdType EventId, uint32 DtcCode);
+
 #endif /* DEM_H */

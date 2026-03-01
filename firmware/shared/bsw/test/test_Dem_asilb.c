@@ -9,9 +9,43 @@
  */
 #include "unity.h"
 #include "Dem.h"
+#include "ComStack_Types.h"
+
+/* ---- Mock stubs for Dem_MainFunction dependencies ---- */
+
+static uint8  mock_pdur_called;
+static uint16 mock_pdur_last_id;
+static uint8  mock_pdur_last_data[8];
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    mock_pdur_called++;
+    mock_pdur_last_id = TxPduId;
+    if ((PduInfoPtr != NULL_PTR) && (PduInfoPtr->SduDataPtr != NULL_PTR)) {
+        uint8 i;
+        for (i = 0u; (i < PduInfoPtr->SduLength) && (i < 8u); i++) {
+            mock_pdur_last_data[i] = PduInfoPtr->SduDataPtr[i];
+        }
+    }
+    return E_OK;
+}
+
+/* NvM stubs (already linked, but declare for mock tracking) */
+static uint8 mock_nvm_write_called;
+
+/* Override NvM_WriteBlock for tracking (weak symbol pattern) */
+Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr);
+Std_ReturnType NvM_ReadBlock(NvM_BlockIdType BlockId, void* NvM_DstPtr);
 
 void setUp(void)
 {
+    mock_pdur_called = 0u;
+    mock_pdur_last_id = 0u;
+    mock_nvm_write_called = 0u;
+    uint8 i;
+    for (i = 0u; i < 8u; i++) {
+        mock_pdur_last_data[i] = 0u;
+    }
     Dem_Init(NULL_PTR);
 }
 
@@ -337,6 +371,84 @@ void test_Dem_ClearDTC_resets_occurrence_counter(void)
 }
 
 /* ==================================================================
+ * Dem_MainFunction, Dem_SetEcuId, Dem_SetDtcCode
+ * ================================================================== */
+
+/** @verifies SWR-BSW-017 */
+void test_Dem_SetEcuId(void)
+{
+    Dem_SetEcuId(0x20u);
+
+    /* Confirm a DTC and run MainFunction — ECU ID should appear in byte 4 */
+    Dem_SetDtcCode(0u, 0xC00100u);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+
+    Dem_MainFunction();
+
+    TEST_ASSERT_TRUE(mock_pdur_called > 0u);
+    TEST_ASSERT_EQUAL_HEX8(0x20u, mock_pdur_last_data[4]);
+}
+
+/** @verifies SWR-BSW-017 */
+void test_Dem_MainFunction_broadcasts_confirmed_dtc(void)
+{
+    Dem_SetEcuId(0x10u);
+    Dem_SetDtcCode(0u, 0xC00100u);
+
+    /* Confirm DTC */
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+
+    Dem_MainFunction();
+
+    TEST_ASSERT_TRUE(mock_pdur_called > 0u);
+    TEST_ASSERT_EQUAL_HEX16(0x500u, mock_pdur_last_id);
+    /* DTC code 0xC00100 packed in bytes 0-2 */
+    TEST_ASSERT_EQUAL_HEX8(0xC0u, mock_pdur_last_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_pdur_last_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_pdur_last_data[2]);
+}
+
+/** @verifies SWR-BSW-017 */
+void test_Dem_MainFunction_no_broadcast_before_confirm(void)
+{
+    Dem_SetDtcCode(0u, 0xC00100u);
+
+    /* Only 1 FAILED — not yet confirmed (threshold=3) */
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+
+    Dem_MainFunction();
+
+    TEST_ASSERT_EQUAL(0u, mock_pdur_called);
+}
+
+/** @verifies SWR-BSW-017 */
+void test_Dem_MainFunction_no_duplicate_broadcast(void)
+{
+    Dem_SetDtcCode(0u, 0xC00100u);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+
+    Dem_MainFunction();
+    uint8 first_count = mock_pdur_called;
+
+    /* Second call should not re-broadcast */
+    Dem_MainFunction();
+    TEST_ASSERT_EQUAL(first_count, mock_pdur_called);
+}
+
+/** @verifies SWR-BSW-018 */
+void test_Dem_SetDtcCode_invalid_id(void)
+{
+    /* Should not crash */
+    Dem_SetDtcCode(DEM_MAX_EVENTS, 0xFFFFFFu);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -367,6 +479,13 @@ int main(void)
     RUN_TEST(test_Dem_GetOccurrenceCounter_invalid_id);
     RUN_TEST(test_Dem_GetOccurrenceCounter_null_ptr);
     RUN_TEST(test_Dem_ClearDTC_resets_occurrence_counter);
+
+    /* Dem_MainFunction / SetEcuId / SetDtcCode tests */
+    RUN_TEST(test_Dem_SetEcuId);
+    RUN_TEST(test_Dem_MainFunction_broadcasts_confirmed_dtc);
+    RUN_TEST(test_Dem_MainFunction_no_broadcast_before_confirm);
+    RUN_TEST(test_Dem_MainFunction_no_duplicate_broadcast);
+    RUN_TEST(test_Dem_SetDtcCode_invalid_id);
 
     return UNITY_END();
 }

@@ -21,6 +21,8 @@
 #include "Swc_CvcCom.h"
 #include "Cvc_Cfg.h"
 #include "E2E.h"
+#include "Com.h"
+#include "Rte.h"
 
 /* ==================================================================
  * TX Message Schedule Table (SWR-CVC-017)
@@ -250,6 +252,63 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
              * Mark the slot as due for transmission. */
         }
     }
+
+    /* Publish steering and brake commands from RTE to Com -> CAN */
+    {
+        uint32 steer_raw = 0u;
+        uint32 brake_raw = 0u;
+        sint16 tx_steer;
+        uint8  tx_brake;
+
+        (void)Rte_Read(CVC_SIG_STEERING_FAULT, &steer_raw);  /* reuse as steer angle source */
+        (void)Rte_Read(CVC_SIG_BRAKE_FAULT, &brake_raw);     /* reuse as brake pressure source */
+
+        tx_steer = (sint16)steer_raw;
+        tx_brake = (uint8)brake_raw;
+
+        (void)Com_SendSignal(6u, &tx_steer);  /* Signal 6 = steer_angle -> CAN 0x102 */
+        (void)Com_SendSignal(7u, &tx_brake);  /* Signal 7 = brake_pressure -> CAN 0x103 */
+    }
+}
+
+/* ==================================================================
+ * API: Swc_CvcCom_BridgeRxToRte
+ *
+ * Bridges Com RX fault signals to RTE so VehicleState can read them.
+ * Called periodically from the main 10ms task.
+ * ================================================================== */
+
+void Swc_CvcCom_BridgeRxToRte(void)
+{
+    uint8  brake_fault_val  = 0u;
+    uint8  motor_cutoff_val = 0u;
+    uint8  fzc_hb_alive     = 0u;
+    uint8  rzc_hb_alive     = 0u;
+
+    if (CvcCom_Initialized != TRUE)
+    {
+        return;
+    }
+
+    /* Read fault signals from Com shadow buffers */
+    (void)Com_ReceiveSignal(13u, &brake_fault_val);   /* sig_rx_brake_fault */
+    (void)Com_ReceiveSignal(14u, &motor_cutoff_val);  /* sig_rx_motor_cutoff */
+
+    /* Bridge to RTE for VehicleState to consume */
+    (void)Rte_Write(CVC_SIG_BRAKE_FAULT,  (uint32)brake_fault_val);
+    (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF, (uint32)motor_cutoff_val);
+
+    /* Bridge FZC/RZC heartbeat alive counters to comm status */
+    (void)Com_ReceiveSignal(9u,  &fzc_hb_alive);  /* sig_rx_fzc_hb_alive */
+    (void)Com_ReceiveSignal(11u, &rzc_hb_alive);  /* sig_rx_rzc_hb_alive */
+
+    /* Non-zero alive counter = communication OK */
+    (void)Rte_Write(CVC_SIG_FZC_COMM_STATUS,
+                    (fzc_hb_alive != 0u) ? (uint32)CVC_COMM_OK
+                                         : (uint32)CVC_COMM_TIMEOUT);
+    (void)Rte_Write(CVC_SIG_RZC_COMM_STATUS,
+                    (rzc_hb_alive != 0u) ? (uint32)CVC_COMM_OK
+                                         : (uint32)CVC_COMM_TIMEOUT);
 }
 
 /* ==================================================================

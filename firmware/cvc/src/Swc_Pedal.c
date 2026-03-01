@@ -28,6 +28,7 @@
 #include "IoHwAb.h"
 #include "Rte.h"
 #include "Dem.h"
+#include "Com.h"
 
 /* ==================================================================
  * Constants
@@ -475,6 +476,14 @@ void Swc_Pedal_MainFunction(void)
     (void)Rte_Write(CVC_SIG_PEDAL_POSITION, (uint32)Pedal_Position);
     (void)Rte_Write(CVC_SIG_PEDAL_FAULT, (uint32)Pedal_Fault);
     (void)Rte_Write(CVC_SIG_TORQUE_REQUEST, (uint32)torque);
+
+    /* ----------------------------------------------------------
+     * Step 10b: Publish torque to Com -> CAN 0x101
+     * ---------------------------------------------------------- */
+    {
+        uint16 tx_torque = (uint16)torque;
+        (void)Com_SendSignal(5u, &tx_torque);  /* Signal 5 = torque_request */
+    }
 
     /* ----------------------------------------------------------
      * Step 11: Report DTCs via Dem

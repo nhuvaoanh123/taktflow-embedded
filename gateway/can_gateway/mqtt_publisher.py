@@ -9,6 +9,7 @@ Topic structure:
 import json
 import logging
 import time
+from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
@@ -31,6 +32,10 @@ class MqttPublisher:
             client_id="can-gateway",
         )
         self._connected = False
+
+        # Latest signal values for aggregated telemetry
+        self._latest: dict[str, float | str] = {}
+        self._last_telemetry_time = time.monotonic()
 
         # Stats
         self._msg_count = 0
@@ -72,6 +77,9 @@ class MqttPublisher:
             payload = str(value) if not isinstance(value, (dict, list)) else json.dumps(value)
             self._client.publish(topic, payload, qos=0, retain=True)
 
+            # Track latest values for aggregated telemetry
+            self._latest[f"{msg_name}/{signal_name}"] = value
+
         self._msg_count += 1
 
         # Check for DTC broadcast — publish as alert
@@ -97,7 +105,42 @@ class MqttPublisher:
             "ts": time.time(),
         }
         topic = f"{TOPIC_PREFIX}/alerts/dtc/{alert['dtc']}"
-        self._client.publish(topic, json.dumps(alert), qos=1)
+        alert_json = json.dumps(alert)
+        self._client.publish(topic, alert_json, qos=1)
+
+        # Also publish to vehicle/dtc/new for xIL verdict checking
+        self._client.publish("vehicle/dtc/new", alert_json, qos=1)
+
+    def publish_telemetry_aggregate(self):
+        """Publish aggregated telemetry to vehicle/telemetry (5s interval)."""
+        now = time.monotonic()
+        if (now - self._last_telemetry_time) < 5.0:
+            return
+        self._last_telemetry_time = now
+
+        if not self._connected:
+            return
+
+        # Map internal signal keys to telemetry JSON fields
+        voltage_mv = self._latest.get("Battery_Status/BatteryVoltage_mV", 0)
+        try:
+            voltage_v = float(voltage_mv) / 1000.0
+        except (TypeError, ValueError):
+            voltage_v = 0.0
+
+        payload = {
+            "motor_speed_rpm": self._latest.get(
+                "Motor_Status/MotorSpeed_RPM", 0
+            ),
+            "battery_voltage_v": round(voltage_v, 2),
+            "vehicle_state": self._latest.get(
+                "Vehicle_State/State", "UNKNOWN"
+            ),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._client.publish(
+            "vehicle/telemetry", json.dumps(payload), qos=1, retain=True
+        )
 
     def publish_stats(self):
         """Publish CAN message rate stats. Called periodically."""
@@ -115,6 +158,9 @@ class MqttPublisher:
                     qos=0,
                     retain=True,
                 )
+
+        # Also publish aggregated telemetry
+        self.publish_telemetry_aggregate()
 
     @property
     def msgs_per_sec(self) -> float:

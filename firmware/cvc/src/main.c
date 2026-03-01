@@ -42,6 +42,7 @@
 #include "Swc_EStop.h"
 #include "Swc_Heartbeat.h"
 #include "Swc_Dashboard.h"
+#include "Swc_CvcCom.h"
 
 /* ==================================================================
  * External Configuration (defined in cfg/ files)
@@ -284,6 +285,7 @@ int main(void)
     Com_Init(&cvc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);
+    Dem_SetEcuId(0x10u);  /* CVC ECU ID for DTC broadcasts */
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&cvc_dcm_config);
@@ -336,19 +338,21 @@ int main(void)
             Rte_MainFunction();
         }
 
-        /* 10ms tasks: Dcm, BswM */
+        /* 10ms tasks: Dcm, BswM, Com->RTE bridge */
         if ((tick_ms - last_10ms) >= 10u)
         {
             last_10ms = tick_ms;
             Dcm_MainFunction();
             BswM_MainFunction();
+            Swc_CvcCom_BridgeRxToRte();
         }
 
-        /* 100ms tasks: WdgM */
+        /* 100ms tasks: WdgM, Dem (DTC broadcast) */
         if ((tick_ms - last_100ms) >= 100u)
         {
             last_100ms = tick_ms;
             WdgM_MainFunction();
+            Dem_MainFunction();
         }
     }
 

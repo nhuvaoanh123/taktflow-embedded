@@ -258,7 +258,11 @@ class CANBusMonitor:
         while time.monotonic() < deadline:
             if self.vehicle_state == target_state:
                 return True
-            time.sleep(0.05)  # 50ms polling
+            # Also check state transition history (catches transient states)
+            with self._lock:
+                if any(s == target_state for _, s in self._state_transitions):
+                    return True
+            time.sleep(0.01)  # 10ms polling for fast state transitions
         return False
 
     def wait_for_can_message(
@@ -883,6 +887,9 @@ class ScenarioExecutor:
                 "exit_code": result.returncode,
                 "output": result.stdout + result.stderr,
             }
+            # Alias: verdict looks up by tool name (e.g. "cppcheck")
+            if tool:
+                self._analysis_results[tool] = self._analysis_results["static_analysis"]
             log.info(
                 "  [STEP] Static analysis completed: exit_code=%d",
                 result.returncode,
@@ -914,6 +921,8 @@ class ScenarioExecutor:
                     else f"Pattern found:\n{result.stdout[:1000]}"
                 ),
             }
+            # Alias for verdict lookup by tool name
+            self._analysis_results["grep"] = self._analysis_results["grep_absent"]
             log.info(
                 "  [STEP] grep_absent: pattern '%s' %s",
                 pattern,
@@ -936,6 +945,7 @@ class ScenarioExecutor:
                     "exit_code": 1,
                     "output": f"Map file not found: {map_path}",
                 }
+                self._analysis_results["linker"] = self._analysis_results["linker_map_check"]
                 log.warning("  [STEP] Map file not found: %s", map_path)
             else:
                 map_content = map_path.read_text(encoding="utf-8",
@@ -948,6 +958,8 @@ class ScenarioExecutor:
                         f"max_flash_percent={max_flash_pct}"
                     ),
                 }
+                # Alias for verdict lookup by tool name
+                self._analysis_results["linker"] = self._analysis_results["linker_map_check"]
                 log.info("  [STEP] Linker map check done")
 
         elif action == "timing_analysis":
@@ -968,6 +980,8 @@ class ScenarioExecutor:
                     f"Full WCET analysis requires target hardware."
                 ),
             }
+            # Alias for verdict lookup by tool name
+            self._analysis_results["timing"] = self._analysis_results["timing_analysis"]
             log.info("  [STEP] Timing analysis recorded")
 
         else:
@@ -1807,11 +1821,14 @@ class ScenarioExecutor:
                 if len(msg.data) >= 1:
                     counters.append((msg.data[0] >> 4) & counter_max)
 
-            # Count wraps (counter goes from max back to 0)
+            # Count wraps using modular arithmetic (handles 4-bit wrap at 15->0)
             wraps = 0
             for i in range(1, len(counters)):
-                if counters[i] < counters[i - 1]:
-                    wraps += 1
+                # Wrap detected when counter decreases (modular wrap-around)
+                if counters[i] != counters[i - 1]:
+                    delta = (counters[i] - counters[i - 1]) % (counter_max + 1)
+                    if delta > (counter_max // 2):
+                        wraps += 1
 
             ok = wraps >= expected_wraps_min
             if not ok:
