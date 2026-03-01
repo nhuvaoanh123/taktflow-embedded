@@ -2,7 +2,7 @@
 
 > **Status**: Phase 0 PARTIAL — Inventory Confirmed 2026-02-27, gap items pending
 > **Created**: 2026-02-23
-> **Last Updated**: 2026-02-27
+> **Last Updated**: 2026-03-01
 > **Builder Profile**: Solo, SW-strong / HW-beginner
 > **Estimated Completion**: ~4 weekends (40-60 hours hands-on)
 
@@ -86,7 +86,7 @@ This plan is written for someone who is strong on the SW side but less experienc
 | 100nF ceramic capacitor bag (50x) | 1 | Ordered (gap closure) | Probably limited loose stock now |
 | Electrolytic capacitor kit | 1 | Ordered (gap closure) | Blocks bulk decoupling |
 | Resistor kit (1350 pcs) | 1 | Ordered (gap closure) | Pull-ups available, kit adds range |
-| BZX84C3V3 Zener diodes (25x) | 25 | **Arriving 2026-03-02/03** | ADC overvoltage protection |
+| BZX84C3V3 Zener diodes (25x) | 25 | **ON HAND** (received 2026-03-01) | ADC overvoltage protection |
 | 1N4007 diodes (30x) | 30 | **Arriving 2026-03-02/03** | Flyback diodes for relay/motor circuits |
 | 16AWG wire (red+black) | 4m | Ordered (gap closure) | Blocks heavy power wiring |
 | Common-mode chokes | 4 | Ordered | Optional for initial bring-up |
@@ -173,9 +173,9 @@ Lay out every component you received. Check against BOM #1-29 using the `procure
 | 4 | SB560 Schottky diode (5A/60V) | 10 | HUABAN SR560 (SB560) DO-201AD | **ON HAND** (received 2026-02-27) |
 | 5 | Electrolytic capacitor kit | 130 (13 values) | POPESQ 1uF-1000uF (includes 10uF, 100uF, 220uF, 470uF) | Ordered — not confirmed received |
 | 6 | Resistor kit | 1350 (50 values) | BOJACK 0Ω-5.6MΩ 1% 1/4W metal film | Ordered — not confirmed received (pull-ups ON HAND) |
-| 7 | BZX84C3V3 Zener diodes (SOT-23) | 25 | BZX84C3V3-DIO64 0.3W 3.3V | **Arriving 2026-03-02/03** |
+| 7 | BZX84C3V3 Zener diodes (SOT-23) | 25 | BZX84C3V3-DIO64 0.3W 3.3V | **ON HAND** (received 2026-03-01) |
 | 8 | 16AWG silicone wire (red+black) | 2×(1m+1m) = 4m | 16AWG flexible tinned copper stranded | Ordered — not confirmed received |
-| 9 | SOT-23 breakout boards | 10 (pack) | Colcolo SOT23 to DIP adapter (6-pin) | Ordered — not confirmed received |
+| 9 | SOT-23 breakout boards | 10 (pack) | Colcolo SOT23 to DIP adapter (6-pin) | **Arriving 2026-03-05 to 03-10** — needed for BZX84C3V3 Zeners (Phase 4.6) and TPS3823 watchdogs (Phase 4.5) |
 
 **Estimated total: ~€104 (Amazon.de)**
 
@@ -461,6 +461,45 @@ Pin 6 (MR) → 3.3V (no manual reset)
 
 ---
 
+## Phase 4.6: Preemptive ADC/GPIO Overvoltage Protection (Do Before Phase 5)
+
+> **Goal**: Protect all MCU analog/digital inputs from accidental overvoltage before connecting any sensor. Uses BZX84C3V3 Zener diodes (BOM #7 gap closure, 25x arriving 2026-03-02/03) and 100R series resistors (on hand).
+
+**Why now**: A miswired sensor or loose jumper can put 12V on a 3.3V ADC pin. The Zener + resistor clamp costs €0.10 per channel and takes 5 minutes to add. Replacing a dead Nucleo costs €16 and a weekend.
+
+**Protection circuit (per ADC channel)**:
+
+```
+Sensor output → [100R series resistor] → junction → MCU ADC pin
+                                            |
+                                     BZX84C3V3 Zener
+                                     (cathode to junction,
+                                      anode to GND)
+                                            |
+                                           GND
+```
+
+At normal operation (0-3.3V signal), the Zener is reverse-biased and invisible. If voltage exceeds ~3.6V, the Zener clamps it. The 100R resistor limits current through the Zener to safe levels (at 12V: (12-3.3)/100 = 87mA, well within BZX84C3V3's 300mW rating).
+
+**Channels to protect (install Zener + 100R on each)**:
+
+| ECU | Pin | Signal | Risk Source |
+|-----|-----|--------|-------------|
+| RZC | PA0 (CN7-28) | ACS723 current sense | Sensor fault, miswire |
+| RZC | PA1 | NTC motor temperature | Divider miswire |
+| RZC | PA2 | NTC board temperature | Divider miswire |
+| RZC | PA3 (CN10-37) | Battery voltage (47k/10k divider) | Already has Zener in design — verify installed |
+| CVC | PA4 (CN7-32) | SPI CS1 (digital, 3.3V) | Optional — SPI is 3.3V only |
+| FZC | PA3 (CN10-37) | Lidar UART RX | Optional — UART is 3.3V logic |
+
+**Minimum protection (4 Zeners + 4 × 100R)**: RZC PA0, PA1, PA2, PA3. These are the channels most exposed to 12V wiring proximity.
+
+**Verification**: After installing each Zener, measure voltage at the ADC pin with multimeter while applying 5V from bench PSU through the 100R. Should read ≤3.6V (Zener clamping). Then apply 3.3V — should read ~3.2V (Zener inactive, small drop across 100R).
+
+**Parts needed**: 4-6× BZX84C3V3 (from 25x arriving), 4-6× 100R resistors (on hand). Solder onto small perfboard strip near each Nucleo, or use breadboard for initial testing.
+
+---
+
 ## Phase 5: Sensors
 
 > **Goal**: Each sensor reads valid data through the MCU.
@@ -644,6 +683,8 @@ Phase 3: CAN Bus              ← Communication backbone
     ↓
 Phase 4: Safety Chain          ← MUST pass before Phase 6 (actuators)
     ↓
+Phase 4.6: ADC Zener Protection ← Install before ANY sensor (needs BZX84C3V3, arriving Mar 2-3)
+    ↓
 Phase 5: Sensors              ← Can run in parallel with Phase 4
     ↓
 Phase 6: Actuators            ← Only after Phase 4 passes!
@@ -734,6 +775,8 @@ Experienced people glance at an oscilloscope trace and say "that's ringing" or "
 
 ## Safety Rules (Follow These Always)
 
+### General Rules
+
 1. **Never connect actuators (motor, servos) until the kill relay is tested and working**
 2. **Always check 12V polarity before connecting a new board**
 3. **Always use fuses** — a short circuit without a fuse = fire risk
@@ -741,3 +784,15 @@ Experienced people glance at an oscilloscope trace and say "that's ringing" or "
 5. **Keep the E-stop within arm's reach** at all times during actuator testing
 6. **Disconnect USB from PC before measuring high-current paths** with oscilloscope — ground loop risk
 7. **One change at a time** — wire one thing, test it, then wire the next
+
+### Fault Injection & HIL Testing Rules (added 2026-03-01)
+
+> Cross-reference: Full safety cautions in `gap-analysis-hil-bench-vs-professional.md` Section 10.
+
+8. **No 12V (VBAT) fault paths on MCU signal pins** — 12V on a 3.3V GPIO/ADC kills the STM32 instantly. Only short-to-GND faults on MCU-facing channels. Short-to-VBAT only on actuator power lines (motor, relay coil, servo power rail).
+9. **100R current-limiting resistor on every FIU relay channel** connected to an MCU pin — limits short-circuit current to 33mA at 3.3V.
+10. **Verify voltage with oscilloscope before triggering any fault** — probe the wire, confirm it matches expectation (3.3V signal, not 12V power), only then trigger the fault from the test script. The oscilloscope does not protect anything — it lets you see miswiring before it destroys hardware.
+11. **Hard timeout on every destructive test** — motor at >80% PWM: max 5s, electronic load >5A: max 10s, short-to-GND: max 2s. FIU Arduino must auto-restore all relays after 5s serial timeout.
+12. **Start every test at minimum stress** — electronic load: start at 1A; DAC: start at mid-range (1.65V); motor PWM: start at 10%.
+13. **Never hot-swap FIU wiring** — power off entire bench before connecting/disconnecting any FIU harness wire.
+14. **Install BZX84C3V3 Zener clamps on all ADC pins** (Phase 4.6) before connecting any sensor — prevents accidental overvoltage from miswiring.

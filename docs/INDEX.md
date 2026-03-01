@@ -57,6 +57,7 @@ Every document must be registered here. If it is not in this index, it does not 
 | Document | Path | Status |
 |----------|------|--------|
 | Master Plan | [plans/master-plan.md](plans/master-plan.md) | draft |
+| HIL Gap Analysis | [plans/gap-analysis-hil-bench-vs-professional.md](plans/gap-analysis-hil-bench-vs-professional.md) | draft |
 | Execution Roadmap | [aspice/plans/MAN.3-project-management/execution-roadmap.md](aspice/plans/MAN.3-project-management/execution-roadmap.md) | active |
 | Weekly Status Template | [aspice/plans/MAN.3-project-management/weekly-status-template.md](aspice/plans/MAN.3-project-management/weekly-status-template.md) | active |
 | Weekly Status (Current) | [aspice/plans/MAN.3-project-management/weekly-status-2026-W08.md](aspice/plans/MAN.3-project-management/weekly-status-2026-W08.md) | active |

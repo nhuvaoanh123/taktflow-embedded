@@ -244,6 +244,31 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 | 76 | Better wiring kit + crimp tools | 1 set | Reliability and maintainability | 40 |
 | | | | **Optional Total** | **~$70** |
 
+### 3.13 HIL Gap Closure — Optional
+
+Components to close the 8 gaps between our DIY bench and professional dSPACE/Vector HIL systems. See [`docs/plans/gap-analysis-hil-bench-vs-professional.md`](../docs/plans/gap-analysis-hil-bench-vs-professional.md) for full analysis.
+
+| # | Component | Qty | Unit Cost | Total | Supplier / Buy Link | Purpose | Gap | Status |
+|---|-----------|-----|-----------|-------|---------------------|---------|-----|--------|
+| 77 | Arduino UNO R3 (existing) | 1 | €0 | €0 | **Already owned** (see `plan-hardware-bringup.md` inventory) | FIU controller — 10 GPIO needed (8 relay + 2 fault bus), UNO has 14 digital | GAP-1 | Have it |
+| 78 | 8-ch optocoupler relay board (5V) | 1 | €8 | €8 | [Amazon.de](https://www.amazon.de/Keenso-Relaismodul-Relaiskarte-Optokoppler-Erweiterungsplatine/dp/B07PZC9V3S) | FIU relay matrix (open-circuit injection) | GAP-1 | Not ordered |
+| 79 | 2-ch relay module (5V) | 1 | €3 | €3 | [Amazon.de](https://www.amazon.de/-/en/Relay-Module-Channel-Arduino-Raspberry/dp/B07RR35CP9) | FIU fault bus switching | GAP-1 | Not ordered |
+| 80 | IDC harness connectors + terminal blocks | 1 set | €10 | €10 | Amazon.de | FIU wiring harness breakout | GAP-1 | Not ordered |
+| 81 | FIU enclosure (project box) | 1 | €12 | €12 | Amazon.de | FIU housing | GAP-1 | Not ordered |
+| 82 | Adafruit MCP4728 quad 12-bit DAC | 2 | €9 | €18 | [Amazon.de](https://www.amazon.de/Adafruit-4470-MCP4728-Quad-EEPROM/dp/B084HM1DM3) | Analog sensor simulation (8 ch) | GAP-3 | Not ordered |
+| 83 | Raspberry Pi Pico (RP2040) | 1 | €5 | €5 | [Amazon.de](https://www.amazon.de/Raspberry-Pi-Pico/dp/B09KVB8LVR) | SPI/UART sensor emulation + PIO µs timing | GAP-3/8 | Not ordered |
+| 84 | MCP6004 quad op-amp (DIP-14) | 1 | €2 | €2 | [Amazon.de](https://www.amazon.de/-/en/MCP6004-OP-AMP-MHz-0-6-DIP-14/dp/B0D1K3T1PS) | DAC output buffer | GAP-3 | Not ordered |
+| 85 | Resistors + caps (sensor sim) | 1 set | €2 | €2 | From existing passives (#43-54) | Anti-alias, voltage scaling | GAP-3 | **Reuse** |
+| 86 | Perfboard + headers | 1 | €0 | €0 | From existing stock (#61) | Sensor sim board assembly | GAP-3 | **Reuse** |
+| 87 | ATORCH DL24P electronic load (150W, 25A) | 1 | €45 | €45 | [Amazon.de](https://www.amazon.de/zhiwenCZW-Batteriekapazit%C3%A4tstester-Elektronischer-Lastleistungstester-Entladungsmesser/dp/B0923YWCYK) | Programmable actuator load simulation | GAP-4 | Not ordered |
+| | | | | **HIL Gap Closure Total** | | | **~€105** | |
+
+**Notes:**
+- GAP-2 (RT plant model): $0 — PREEMPT_RT kernel patch on existing RPi 4
+- GAP-5 (rest-bus simulation): $0 — python-can + cantools on existing hardware
+- GAP-6 (test traceability): $0 — Robot Framework + Allure reports
+- GAP-7 (XCP/A2L calibration): $0 — XCPlite (slave) + pyxcp (host), open-source
+
 ---
 
 ## 4. Cost Summary
