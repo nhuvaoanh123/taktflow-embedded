@@ -418,21 +418,21 @@ void test_RzcCom_transmit_motor_data_10ms(void)
     /* Run 1 cycle: 4 PDUs should be transmitted via PduR_Transmit */
     Swc_RzcCom_TransmitSchedule();
 
+#ifdef PLATFORM_POSIX
+    /* In SIL, ALL sensor TX is skipped (plant sim is the sole authority
+     * for motor, current, temperature, and battery CAN messages). */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_pdur_tx_count);
+#else
+    /* On target: 4 PduR_Transmit calls: motor_status, motor_current,
+     * motor_temp, battery_status */
+    TEST_ASSERT_EQUAL_UINT8(4u, mock_pdur_tx_count);
+
     /* Verify motor status PDU (0x300) — torque_echo in byte 2 */
     TEST_ASSERT_EQUAL_UINT8(42u, mock_pdur_tx_data[RZC_COM_TX_MOTOR_STATUS][2]);
 
     /* Verify motor current PDU (0x301) — current_mA low byte in byte 2 */
     TEST_ASSERT_EQUAL_UINT8((uint8)(5000u & 0xFFu),
                             mock_pdur_tx_data[RZC_COM_TX_MOTOR_CURRENT][2]);
-
-#ifdef PLATFORM_POSIX
-    /* In SIL, motor_temp and battery_status TX are skipped (plant sim
-     * is the authority for sensor-derived CAN messages). */
-    TEST_ASSERT_EQUAL_UINT8(2u, mock_pdur_tx_count);
-#else
-    /* On target: 4 PduR_Transmit calls: motor_status, motor_current,
-     * motor_temp, battery_status */
-    TEST_ASSERT_EQUAL_UINT8(4u, mock_pdur_tx_count);
 
     /* Verify motor temp PDU (0x302) — temp1 low byte in byte 2 */
     TEST_ASSERT_EQUAL_UINT8((uint8)(650u & 0xFFu),
