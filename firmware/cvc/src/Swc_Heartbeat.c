@@ -69,6 +69,9 @@ static boolean rzc_rx_flag;
 static uint8   fzc_comm_status;
 static uint8   rzc_comm_status;
 
+static uint8   fzc_recovery_count;
+static uint8   rzc_recovery_count;
+
 /** Last seen alive counter values from Com shadow buffers (poll-based detection) */
 static uint8   fzc_last_alive;
 static uint8   rzc_last_alive;
@@ -106,6 +109,9 @@ void Swc_Heartbeat_Init(void)
 
     fzc_comm_status = CVC_COMM_TIMEOUT;
     rzc_comm_status = CVC_COMM_TIMEOUT;
+
+    fzc_recovery_count = 0u;
+    rzc_recovery_count = 0u;
 
     fzc_last_alive  = 0u;   /* Match Com shadow buffer init (0) — no false positive */
     rzc_last_alive  = 0u;   /* Real detection starts when alive counter changes     */
@@ -193,15 +199,22 @@ void Swc_Heartbeat_MainFunction(void)
             fzc_miss_count = 0u;
             fzc_rx_flag    = FALSE;
 
-            /* Recovery: if was timed out, restore */
+            /* Recovery debounce: require CVC_HB_RECOVERY_THRESHOLD
+             * consecutive heartbeats before declaring OK */
             if (fzc_comm_status == CVC_COMM_TIMEOUT) {
-                fzc_comm_status = CVC_COMM_OK;
-                HB_DIAG("FZC: TIMEOUT -> OK (alive=%u)", (unsigned)fzc_last_alive);
-                Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
-                                      DEM_EVENT_STATUS_PASSED);
+                fzc_recovery_count++;
+                if (fzc_recovery_count >= CVC_HB_RECOVERY_THRESHOLD) {
+                    fzc_comm_status    = CVC_COMM_OK;
+                    fzc_recovery_count = 0u;
+                    HB_DIAG("FZC: TIMEOUT -> OK (alive=%u)", (unsigned)fzc_last_alive);
+                    Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
+                                          DEM_EVENT_STATUS_PASSED);
+                }
             }
         } else {
-            /* No heartbeat received this period */
+            /* No heartbeat received this period — reset recovery */
+            fzc_recovery_count = 0u;
+
             if (fzc_miss_count < 255u) {
                 fzc_miss_count++;
             }
@@ -222,15 +235,22 @@ void Swc_Heartbeat_MainFunction(void)
             rzc_miss_count = 0u;
             rzc_rx_flag    = FALSE;
 
-            /* Recovery: if was timed out, restore */
+            /* Recovery debounce: require CVC_HB_RECOVERY_THRESHOLD
+             * consecutive heartbeats before declaring OK */
             if (rzc_comm_status == CVC_COMM_TIMEOUT) {
-                rzc_comm_status = CVC_COMM_OK;
-                HB_DIAG("RZC: TIMEOUT -> OK (alive=%u)", (unsigned)rzc_last_alive);
-                Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
-                                      DEM_EVENT_STATUS_PASSED);
+                rzc_recovery_count++;
+                if (rzc_recovery_count >= CVC_HB_RECOVERY_THRESHOLD) {
+                    rzc_comm_status    = CVC_COMM_OK;
+                    rzc_recovery_count = 0u;
+                    HB_DIAG("RZC: TIMEOUT -> OK (alive=%u)", (unsigned)rzc_last_alive);
+                    Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
+                                          DEM_EVENT_STATUS_PASSED);
+                }
             }
         } else {
-            /* No heartbeat received this period */
+            /* No heartbeat received this period — reset recovery */
+            rzc_recovery_count = 0u;
+
             if (rzc_miss_count < 255u) {
                 rzc_miss_count++;
             }

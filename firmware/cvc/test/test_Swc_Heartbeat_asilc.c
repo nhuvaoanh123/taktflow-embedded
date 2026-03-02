@@ -65,6 +65,7 @@ typedef uint8 WdgM_SupervisedEntityIdType;
 #define CVC_HB_TX_PERIOD_MS      50u
 #define CVC_HB_FZC_MAX_MISS        2u
 #define CVC_HB_RZC_MAX_MISS       3u
+#define CVC_HB_RECOVERY_THRESHOLD 3u
 #define CVC_HB_ALIVE_MAX         15u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
@@ -221,6 +222,32 @@ static void run_cycles(uint8 n)
     for (i = 0u; i < n; i++) {
         Swc_Heartbeat_MainFunction();
     }
+}
+
+/* ====================================================================
+ * Helpers: recover ECU from initial TIMEOUT (3 consecutive HBs)
+ * ==================================================================== */
+
+/** Recover FZC to OK via 3 alive counter changes (poll-based detection) */
+static void recover_fzc(uint8 start_alive)
+{
+    mock_com_rx_fzc_alive = start_alive;
+    run_cycles(5u);
+    mock_com_rx_fzc_alive = (uint8)(start_alive + 1u);
+    run_cycles(5u);
+    mock_com_rx_fzc_alive = (uint8)(start_alive + 2u);
+    run_cycles(5u);
+}
+
+/** Recover RZC to OK via 3 alive counter changes */
+static void recover_rzc(uint8 start_alive)
+{
+    mock_com_rx_rzc_alive = start_alive;
+    run_cycles(5u);
+    mock_com_rx_rzc_alive = (uint8)(start_alive + 1u);
+    run_cycles(5u);
+    mock_com_rx_rzc_alive = (uint8)(start_alive + 2u);
+    run_cycles(5u);
 }
 
 /* ====================================================================
@@ -452,15 +479,13 @@ void test_Heartbeat_RZC_timeout_after_3_misses(void)
 /** @verifies SWR-CVC-022 */
 void test_Heartbeat_FZC_timeout_DTC_reported(void)
 {
-    /* First recover FZC from initial TIMEOUT to OK */
-    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
-    run_cycles(5u);
+    /* First recover FZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_fzc(1u);
 
     /* Clear DEM mock state */
     mock_dem_report_count = 0u;
 
-    /* Now run 3 check periods without FZC RX to trigger timeout */
-    run_cycles(5u);
+    /* Now run 2 check periods without FZC RX to trigger timeout (FZC threshold = 2) */
     run_cycles(5u);
     run_cycles(5u);
 
@@ -478,14 +503,13 @@ void test_Heartbeat_FZC_timeout_DTC_reported(void)
 /** @verifies SWR-CVC-022 */
 void test_Heartbeat_RZC_timeout_DTC_reported(void)
 {
-    /* First recover RZC from initial TIMEOUT to OK */
-    Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
-    run_cycles(5u);
+    /* First recover RZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_rzc(1u);
 
     /* Clear DEM mock state */
     mock_dem_report_count = 0u;
 
-    /* Now run 3 check periods without RZC RX to trigger timeout */
+    /* Now run 3 check periods without RZC RX to trigger timeout (RZC threshold = 3) */
     run_cycles(5u);
     run_cycles(5u);
     run_cycles(5u);
@@ -504,15 +528,15 @@ void test_Heartbeat_RZC_timeout_DTC_reported(void)
 /** @verifies SWR-CVC-022 */
 void test_Heartbeat_Recovery_after_timeout(void)
 {
-    /* Cause FZC timeout */
-    run_cycles(5u);
-    run_cycles(5u);
-    run_cycles(5u);
-
-    /* Now RX indication — should recover */
+    /* FZC starts in TIMEOUT (from init).
+     * Need 3 consecutive HBs via RxIndication to recover. */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
+    run_cycles(5u);  /* recovery_count = 1 */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
+    run_cycles(5u);  /* recovery_count = 2 */
     Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
     mock_rte_write_count = 0u;
-    run_cycles(5u);
+    run_cycles(5u);  /* recovery_count = 3 → OK */
 
     /* Find FZC comm status — should be back to OK */
     boolean found_ok = FALSE;
@@ -686,9 +710,8 @@ void test_Heartbeat_RxIndication_ecu_id_zero_ignored(void)
  *  Boundary: miss_count = 1 (one below CVC_HB_FZC_MAX_MISS = 2) */
 void test_Heartbeat_FZC_no_timeout_at_1_miss(void)
 {
-    /* First recover FZC from initial TIMEOUT to OK */
-    mock_com_rx_fzc_alive = 1u;
-    run_cycles(5u);
+    /* First recover FZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_fzc(1u);
 
     /* Reset RTE mock to only see writes from here */
     mock_rte_write_count = 0u;
@@ -717,13 +740,14 @@ void test_Heartbeat_FZC_no_timeout_at_1_miss(void)
  *  Fault injection: asymmetric ECU failure */
 void test_Heartbeat_FZC_timeout_RZC_ok(void)
 {
-    /* Indicate RZC heartbeat each period, never FZC */
-    run_cycles(5u);
+    /* Indicate RZC heartbeat BEFORE each period (3 consecutive = recovery).
+     * FZC gets no heartbeats — stays in initial TIMEOUT. */
     Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
-    run_cycles(5u);
+    run_cycles(5u);   /* RZC recovery 1/3 */
     Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
-    run_cycles(5u);
+    run_cycles(5u);   /* RZC recovery 2/3 */
     Swc_Heartbeat_RxIndication(CVC_ECU_ID_RZC);
+    run_cycles(5u);   /* RZC recovery 3/3 → OK */
 
     /* After 3 periods: FZC should timeout, RZC should be OK */
     boolean fzc_timeout = FALSE;
@@ -818,14 +842,13 @@ void test_Heartbeat_Derived_TX_cycles_value(void)
  *  Verifies FZC alive signal is polled using named constant, not magic number */
 void test_Heartbeat_Named_signal_FZC_alive_detection(void)
 {
-    /* Set FZC alive counter via mock — uses CVC_COM_SIG_FZC_HB_ALIVE */
-    mock_com_rx_fzc_alive = 5u;
+    /* Recover FZC via 3 alive counter changes (poll-based detection) */
+    recover_fzc(5u);
 
-    /* Run one TX boundary to trigger poll */
-    run_cycles(5u);
+    /* After recovery, fzc_comm_status should be OK */
+    mock_rte_write_count = 0u;
+    run_cycles(1u);  /* trigger RTE write */
 
-    /* FZC should detect the alive change (0 → 5) and set rx_flag */
-    /* After processing, fzc_comm_status should transition to OK */
     boolean found_ok = FALSE;
     uint8 i;
     for (i = 0u; i < mock_rte_write_count; i++) {
@@ -841,13 +864,13 @@ void test_Heartbeat_Named_signal_FZC_alive_detection(void)
  *  Verifies RZC alive signal is polled using named constant */
 void test_Heartbeat_Named_signal_RZC_alive_detection(void)
 {
-    /* Set RZC alive counter via mock — uses CVC_COM_SIG_RZC_HB_ALIVE */
-    mock_com_rx_rzc_alive = 3u;
+    /* Recover RZC via 3 alive counter changes (poll-based detection) */
+    recover_rzc(3u);
 
-    /* Run one TX boundary to trigger poll */
-    run_cycles(5u);
+    /* After recovery, rzc_comm_status should be OK */
+    mock_rte_write_count = 0u;
+    run_cycles(1u);  /* trigger RTE write */
 
-    /* RZC should detect the alive change (0 → 3) and set rx_flag */
     boolean found_ok = FALSE;
     uint8 i;
     for (i = 0u; i < mock_rte_write_count; i++) {
@@ -904,9 +927,8 @@ void test_Heartbeat_E2E_Protect_with_real_config(void)
  *  Phase 2: FZC timeout after 2 misses (100ms — SG-008 FTTI) */
 void test_Heartbeat_FZC_timeout_after_2_misses(void)
 {
-    /* Recover FZC from initial TIMEOUT to OK */
-    mock_com_rx_fzc_alive = 1u;
-    run_cycles(5u);
+    /* Recover FZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_fzc(1u);
 
     /* Reset tracking */
     mock_rte_write_count = 0u;
@@ -931,9 +953,8 @@ void test_Heartbeat_FZC_timeout_after_2_misses(void)
  *  Phase 2: RZC NOT timed out at 2 misses (needs 3 — local motor cutoff primary) */
 void test_Heartbeat_RZC_no_timeout_at_2_misses(void)
 {
-    /* Recover RZC from initial TIMEOUT to OK */
-    mock_com_rx_rzc_alive = 1u;
-    run_cycles(5u);
+    /* Recover RZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_rzc(1u);
 
     /* Reset tracking */
     mock_rte_write_count = 0u;
@@ -958,9 +979,8 @@ void test_Heartbeat_RZC_no_timeout_at_2_misses(void)
  *  Phase 2: FZC DTC fires after exactly 2 misses (tighter than RZC) */
 void test_Heartbeat_FZC_DTC_at_2_misses(void)
 {
-    /* Recover FZC from initial TIMEOUT to OK */
-    mock_com_rx_fzc_alive = 1u;
-    run_cycles(5u);
+    /* Recover FZC from initial TIMEOUT to OK (3 consecutive HBs) */
+    recover_fzc(1u);
 
     /* Clear DEM mock */
     mock_dem_report_count = 0u;
@@ -979,6 +999,84 @@ void test_Heartbeat_FZC_DTC_at_2_misses(void)
         }
     }
     TEST_ASSERT_TRUE(fzc_dtc);
+}
+
+/* ====================================================================
+ * PHASE 4: Recovery Debounce
+ * ==================================================================== */
+
+/** @verifies SWR-CVC-022
+ *  Phase 4: Single HB after timeout does NOT recover (needs 3 consecutive) */
+void test_Heartbeat_Single_HB_stays_timeout(void)
+{
+    /* FZC starts in TIMEOUT (from init).
+     * Send only 1 RxIndication — should NOT recover. */
+    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
+    mock_rte_write_count = 0u;
+    run_cycles(5u);  /* recovery_count = 1, still TIMEOUT */
+
+    boolean found_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            found_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found_timeout);
+}
+
+/** @verifies SWR-CVC-022
+ *  Phase 4: Miss during recovery resets recovery counter */
+void test_Heartbeat_Recovery_reset_on_miss(void)
+{
+    /* FZC starts in TIMEOUT. Send 2 HBs (recovery count = 2),
+     * then miss a period to reset recovery, then send 2 more.
+     * Should still be TIMEOUT (never reached 3 consecutive). */
+    mock_com_rx_fzc_alive = 1u;
+    run_cycles(5u);  /* recovery 1/3 */
+    mock_com_rx_fzc_alive = 2u;
+    run_cycles(5u);  /* recovery 2/3 */
+
+    /* Miss: don't change alive counter for 1 period */
+    run_cycles(5u);  /* recovery reset to 0 */
+
+    /* Try again — only 2 more */
+    mock_com_rx_fzc_alive = 3u;
+    run_cycles(5u);  /* recovery 1/3 */
+    mock_com_rx_fzc_alive = 4u;
+    mock_rte_write_count = 0u;
+    run_cycles(5u);  /* recovery 2/3 — still not enough */
+
+    boolean found_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            found_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found_timeout);
+}
+
+/** @verifies SWR-CVC-022
+ *  Phase 4: DTC PASSED reported when recovery completes (3 consecutive HBs) */
+void test_Heartbeat_Recovery_DTC_passed_after_3_HBs(void)
+{
+    /* Recover FZC from initial TIMEOUT via 3 consecutive HBs */
+    mock_dem_report_count = 0u;
+    recover_fzc(1u);
+
+    /* Check that DTC PASSED was reported for FZC */
+    boolean fzc_passed = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_dem_report_count; i++) {
+        if ((mock_dem_event_ids[i] == CVC_DTC_CAN_FZC_TIMEOUT) &&
+            (mock_dem_event_statuses[i] == DEM_EVENT_STATUS_PASSED)) {
+            fzc_passed = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(fzc_passed);
 }
 
 /* ====================================================================
@@ -1030,6 +1128,11 @@ int main(void)
     RUN_TEST(test_Heartbeat_FZC_timeout_after_2_misses);
     RUN_TEST(test_Heartbeat_RZC_no_timeout_at_2_misses);
     RUN_TEST(test_Heartbeat_FZC_DTC_at_2_misses);
+
+    /* --- PHASE 4: Recovery Debounce --- */
+    RUN_TEST(test_Heartbeat_Single_HB_stays_timeout);
+    RUN_TEST(test_Heartbeat_Recovery_reset_on_miss);
+    RUN_TEST(test_Heartbeat_Recovery_DTC_passed_after_3_HBs);
 
     return UNITY_END();
 }

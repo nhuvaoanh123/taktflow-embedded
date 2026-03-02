@@ -141,8 +141,9 @@
  * ==================================================================== */
 
 #define CVC_HB_TX_PERIOD_MS       50u   /* TX every 50ms */
-#define CVC_HB_FZC_MAX_MISS       2u   /* FZC: 2 misses = 100ms (SG-008 FTTI) */
+#define CVC_HB_FZC_MAX_MISS        2u   /* FZC: 2 misses = 100ms (SG-008 FTTI) */
 #define CVC_HB_RZC_MAX_MISS       3u   /* RZC: 3 misses = 150ms (local motor cutoff primary) */
+#define CVC_HB_RECOVERY_THRESHOLD 3u   /* 3 consecutive HBs before declaring OK after timeout */
 #define CVC_HB_ALIVE_MAX          15u   /* 4-bit alive counter wraps at 15 */
 
 #define CVC_ECU_ID_CVC             0x01u

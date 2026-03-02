@@ -42,6 +42,7 @@ typedef uint8               Std_ReturnType;
 
 #define SC_HB_TIMEOUT_TICKS         10u
 #define SC_HB_CONFIRM_TICKS         3u
+#define SC_HB_RECOVERY_THRESHOLD    3u
 
 #define SC_GIO_PORT_A               0u
 #define SC_PIN_LED_CVC              1u
@@ -223,6 +224,7 @@ void test_HB_confirmation_window(void)
 void test_HB_resume_cancels_confirmation(void)
 {
     uint8 i;
+    uint8 j;
 
     /* Enter timeout state */
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
@@ -230,17 +232,19 @@ void test_HB_resume_cancels_confirmation(void)
     }
     TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
 
-    /* Heartbeat resumes for all ECUs during confirmation window */
-    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
-    SC_Heartbeat_NotifyRx(SC_ECU_FZC);
-    SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+    /* Heartbeat resumes for all ECUs — 3 consecutive HBs each (recovery debounce) */
+    for (j = 0u; j < SC_HB_RECOVERY_THRESHOLD; j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+        SC_Heartbeat_NotifyRx(SC_ECU_FZC);
+        SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+    }
 
     /* Continue monitoring — should not reach confirmed */
     for (i = 0u; i < SC_HB_CONFIRM_TICKS; i++) {
         SC_Heartbeat_Monitor();
     }
 
-    /* Not confirmed because heartbeats resumed */
+    /* Not confirmed because heartbeats resumed (recovery completed) */
     TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
 }
 
@@ -248,14 +252,17 @@ void test_HB_resume_cancels_confirmation(void)
 void test_HB_partial_resume(void)
 {
     uint8 i;
+    uint8 j;
 
     /* All ECUs time out */
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
         SC_Heartbeat_Monitor();
     }
 
-    /* Only CVC resumes — FZC and RZC still timed out */
-    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    /* Only CVC resumes — 3 consecutive HBs for recovery debounce */
+    for (j = 0u; j < SC_HB_RECOVERY_THRESHOLD; j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    }
 
     /* FZC and RZC continue through confirmation window */
     for (i = 0u; i < SC_HB_CONFIRM_TICKS; i++) {
@@ -342,6 +349,7 @@ void test_hb_rapid_notify_monitor(void)
 void test_hb_single_ecu_late_resume(void)
 {
     uint8 i;
+    uint8 j;
 
     /* All ECUs timeout */
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
@@ -352,8 +360,10 @@ void test_hb_single_ecu_late_resume(void)
     SC_Heartbeat_Monitor();
     SC_Heartbeat_Monitor();
 
-    /* RZC resumes but CVC and FZC remain timed out */
-    SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+    /* RZC resumes — 3 consecutive HBs for recovery debounce */
+    for (j = 0u; j < SC_HB_RECOVERY_THRESHOLD; j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+    }
 
     /* Complete confirmation window */
     for (i = 0u; i < (SC_HB_CONFIRM_TICKS - 2u); i++) {
@@ -370,6 +380,7 @@ void test_hb_single_ecu_late_resume(void)
 void test_hb_led_cleared_on_resume(void)
 {
     uint8 i;
+    uint8 j;
 
     /* Trigger timeout to set LEDs */
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
@@ -377,13 +388,12 @@ void test_hb_led_cleared_on_resume(void)
     }
     TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a_state[SC_PIN_LED_CVC]);
 
-    /* Heartbeat resumes */
-    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
-    for (i = 0u; i < 5u; i++) {
-        SC_Heartbeat_Monitor();
+    /* Heartbeat resumes — 3 consecutive HBs for recovery debounce */
+    for (j = 0u; j < SC_HB_RECOVERY_THRESHOLD; j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
     }
 
-    /* LED should be cleared for CVC */
+    /* LED should be cleared after recovery (gioSetBit called in NotifyRx) */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a_state[SC_PIN_LED_CVC]);
 }
 
@@ -425,6 +435,81 @@ void test_HB_confirmation_at_3_ticks(void)
 }
 
 /* ==================================================================
+ * PHASE 4: Recovery Debounce
+ * ================================================================== */
+
+/** @verifies SWR-SC-005
+ *  Phase 4: Single HB does NOT cancel timeout (needs 3 consecutive) */
+void test_HB_single_notify_does_not_cancel_timeout(void)
+{
+    uint8 i;
+
+    /* Enter timeout state */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+
+    /* Single heartbeat — insufficient for recovery */
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+
+    /* CVC should still be timed out */
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+}
+
+/** @verifies SWR-SC-005
+ *  Phase 4: 3 consecutive HBs clears timeout via recovery debounce */
+void test_HB_recovery_after_3_consecutive_HBs(void)
+{
+    uint8 i;
+    uint8 j;
+
+    /* Enter timeout state */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+
+    /* 3 consecutive HBs for CVC */
+    for (j = 0u; j < SC_HB_RECOVERY_THRESHOLD; j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    }
+
+    /* CVC should now be recovered */
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    /* LED should be cleared */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a_state[SC_PIN_LED_CVC]);
+}
+
+/** @verifies SWR-SC-005
+ *  Phase 4: Recovery counter resets when Monitor detects re-timeout */
+void test_HB_recovery_reset_on_continued_timeout(void)
+{
+    uint8 i;
+
+    /* Enter timeout state */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+
+    /* 2 HBs (not enough) */
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+
+    /* Run enough Monitor ticks to re-enter timeout (counter resets recovery) */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    /* 2 more HBs — should NOT recover because counter was reset */
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+    SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -461,6 +546,11 @@ int main(void)
     /* Phase 2: FTTI Budget */
     RUN_TEST(test_HB_timeout_within_ftti);
     RUN_TEST(test_HB_confirmation_at_3_ticks);
+
+    /* Phase 4: Recovery Debounce */
+    RUN_TEST(test_HB_single_notify_does_not_cancel_timeout);
+    RUN_TEST(test_HB_recovery_after_3_consecutive_HBs);
+    RUN_TEST(test_HB_recovery_reset_on_continued_timeout);
 
     return UNITY_END();
 }

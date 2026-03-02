@@ -19,7 +19,7 @@ The heartbeat system has had 3 bugs in rapid succession (commits `430f3ba`, `e4a
 | 1 | Derived Constants + Compile-Time Safety | DONE |
 | 2 | FTTI Budget Documentation + Timeout Tuning | DONE |
 | 3 | WdgM Integration + E2E Fix | DONE |
-| 4 | Recovery Debounce + DTC Hardening | PENDING |
+| 4 | Recovery Debounce + DTC Hardening | DONE |
 | 5 | E2E State Machine | PENDING |
 | 6 | Comprehensive Test Coverage | PENDING |
 | 7 | Safety Documentation + Traceability | PENDING |

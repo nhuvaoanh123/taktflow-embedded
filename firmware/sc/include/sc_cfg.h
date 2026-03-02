@@ -74,6 +74,7 @@
 
 #define SC_HB_TIMEOUT_TICKS         10u    /* 100ms = 2x 50ms heartbeat period (SG-008 FTTI) */
 #define SC_HB_CONFIRM_TICKS         3u     /* 30ms additional confirmation */
+#define SC_HB_RECOVERY_THRESHOLD    3u     /* 3 consecutive HBs before canceling timeout */
 #define SC_HB_ALIVE_MAX             15u    /* 4-bit alive counter max */
 #ifdef PLATFORM_POSIX
 #define SC_HB_STARTUP_GRACE_TICKS  1500u   /* 15s grace for SIL — sequential Docker restarts need margin */

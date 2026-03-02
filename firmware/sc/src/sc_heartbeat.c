@@ -26,8 +26,11 @@ static boolean hb_timed_out[SC_ECU_COUNT];
 /** Per-ECU confirmation counter (ticks after timeout detection) */
 static uint8 hb_confirm_counter[SC_ECU_COUNT];
 
-/** Per-ECU confirmed timeout flag (>= 200ms total) */
+/** Per-ECU confirmed timeout flag (latched — requires power cycle) */
 static boolean hb_confirmed[SC_ECU_COUNT];
+
+/** Per-ECU recovery counter — consecutive HBs received during timeout */
+static uint8 hb_recovery_count[SC_ECU_COUNT];
 
 /** Startup grace counter — skip monitoring until ECUs have time to boot */
 static uint16 hb_startup_grace;
@@ -54,6 +57,7 @@ void SC_Heartbeat_Init(void)
         hb_timed_out[i]       = FALSE;
         hb_confirm_counter[i] = 0u;
         hb_confirmed[i]       = FALSE;
+        hb_recovery_count[i]  = 0u;
     }
     hb_startup_grace = SC_HB_STARTUP_GRACE_TICKS;
 }
@@ -64,16 +68,25 @@ void SC_Heartbeat_NotifyRx(uint8 ecuIndex)
         return;
     }
 
-    hb_counter[ecuIndex]         = 0u;
-    hb_timed_out[ecuIndex]       = FALSE;
-    hb_confirm_counter[ecuIndex] = 0u;
-    /* Note: do NOT clear hb_confirmed here — once confirmed,
-     * it stays confirmed until relay de-energize (power cycle).
-     * But per plan, if heartbeat resumes during confirmation window,
-     * we cancel. So we only clear confirmed if NOT yet confirmed. */
-    if (hb_confirmed[ecuIndex] == FALSE) {
-        /* Confirmation window canceled by resume */
+    hb_counter[ecuIndex] = 0u;
+
+    /* Confirmed is latched — no recovery possible after relay kill */
+    if (hb_confirmed[ecuIndex] == TRUE) {
+        return;
     }
+
+    if (hb_timed_out[ecuIndex] == TRUE) {
+        /* Recovery debounce: require SC_HB_RECOVERY_THRESHOLD
+         * consecutive heartbeats before canceling timeout */
+        hb_recovery_count[ecuIndex]++;
+        if (hb_recovery_count[ecuIndex] >= SC_HB_RECOVERY_THRESHOLD) {
+            hb_timed_out[ecuIndex]       = FALSE;
+            hb_confirm_counter[ecuIndex] = 0u;
+            hb_recovery_count[ecuIndex]  = 0u;
+            gioSetBit(SC_GIO_PORT_A, ecu_led_pin[ecuIndex], 0u);
+        }
+    }
+    /* If not timed out, counter reset above is sufficient */
 }
 
 void SC_Heartbeat_Monitor(void)
@@ -112,7 +125,8 @@ void SC_Heartbeat_Monitor(void)
                 /* Drive fault LED HIGH immediately */
                 gioSetBit(SC_GIO_PORT_A, ecu_led_pin[i], 1u);
             } else {
-                /* Already timed out — increment confirmation counter */
+                /* Already timed out — reset recovery, increment confirmation */
+                hb_recovery_count[i] = 0u;
                 hb_confirm_counter[i]++;
 
                 /* Check confirmation threshold (50ms additional) */
