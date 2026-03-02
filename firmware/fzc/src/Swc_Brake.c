@@ -84,6 +84,9 @@ static uint8   Brake_CutoffCounter;
 /** Motor cutoff sending flag (TRUE while sending sequence) */
 static uint8   Brake_CutoffSending;
 
+/** First valid brake command received (timeout armed only after TRUE) */
+static uint8   Brake_FirstCmdReceived;
+
 /** Previous brake command for timeout and feedback detection */
 static uint32  Brake_PrevBrakeCmd;
 
@@ -110,6 +113,7 @@ void Swc_Brake_Init(const Swc_Brake_ConfigType* ConfigPtr)
     Brake_AutoBrakeActive     = FALSE;
     Brake_CutoffCounter       = 0u;
     Brake_CutoffSending       = FALSE;
+    Brake_FirstCmdReceived    = FALSE;
     Brake_PrevBrakeCmd        = 0xFFFFFFFFu;  /* Sentinel: no previous command */
 
     Brake_Initialized         = TRUE;
@@ -156,6 +160,7 @@ void Swc_Brake_MainFunction(void)
          * the commanded value is legitimately constant (e.g. 0). */
         if (rte_ret == E_OK) {
             Brake_CmdTimeoutCounter = 0u;
+            Brake_FirstCmdReceived  = TRUE;
         } else {
             if (Brake_CmdTimeoutCounter < 0xFFFFu) {
                 Brake_CmdTimeoutCounter++;
@@ -188,7 +193,7 @@ void Swc_Brake_MainFunction(void)
      *         If no fresh RTE data for BRAKE_TIMEOUT_CYCLES
      *         consecutive cycles, trigger auto-brake.
      * ---------------------------------------------------------- */
-    if (Brake_AutoBrakeActive == FALSE) {
+    if ((Brake_AutoBrakeActive == FALSE) && (Brake_FirstCmdReceived == TRUE)) {
         if (Brake_CmdTimeoutCounter >= BRAKE_TIMEOUT_CYCLES) {
             new_fault             = FZC_BRAKE_CMD_TIMEOUT;
             Brake_AutoBrakeActive = TRUE;

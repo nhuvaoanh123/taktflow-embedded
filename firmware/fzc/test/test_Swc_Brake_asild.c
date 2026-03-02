@@ -950,6 +950,37 @@ void test_FaultInj_double_init(void)
 }
 
 /* ==================================================================
+ * SWR-FZC-011: Startup — no timeout before first valid command
+ * ================================================================== */
+
+/** @verifies SWR-FZC-011
+ *  Equivalence class: startup — no timeout before first valid command */
+void test_No_timeout_before_first_command(void)
+{
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 i;
+    for (i = 0u; i < 15u; i++) {
+        Swc_Brake_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_rte_signals[FZC_SIG_BRAKE_FAULT]);
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/** @verifies SWR-FZC-011
+ *  Equivalence class: timeout armed after first valid command */
+void test_Timeout_works_after_first_command(void)
+{
+    run_cycles(30u, 1u);
+    mock_rte_brake_cmd_not_ok = 1u;
+    uint16 i;
+    for (i = 0u; i < 10u; i++) {
+        Swc_Brake_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_TIMEOUT, mock_rte_signals[FZC_SIG_BRAKE_FAULT]);
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -1006,6 +1037,10 @@ int main(void)
     RUN_TEST(test_FaultInj_feedback_at_exact_threshold);
     RUN_TEST(test_Estop_overrides_low_command);
     RUN_TEST(test_FaultInj_double_init);
+
+    /* HARDENED: Startup — no timeout before first valid command */
+    RUN_TEST(test_No_timeout_before_first_command);
+    RUN_TEST(test_Timeout_works_after_first_command);
 
     return UNITY_END();
 }
