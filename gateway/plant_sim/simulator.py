@@ -170,6 +170,10 @@ class PlantSimulator:
                     log.info("SC relay KILLED (reason=%d) — motor disabled", reason)
                     self.sc_relay_killed = True
                     self.motor._hw_disabled = True
+                elif not killed and self.sc_relay_killed:
+                    log.info("SC relay CLEARED — motor re-enabled")
+                    self.sc_relay_killed = False
+                    self.motor._hw_disabled = False
 
         elif arb_id == TX_BATTERY_STATUS:
             # External battery injection (from fault_inject) — override model
