@@ -10,8 +10,8 @@ BO_ 1 EStop_Broadcast: 4 CVC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" SC,FZC,RZC,BCM,ICU,TCU
  SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" SC,FZC,RZC,BCM,ICU,TCU
  SG_ E2E_CRC8 : 8|8@1+ (1,0) [0|255] "" SC,FZC,RZC,BCM,ICU,TCU
- SG_ EStop_Active : 16|1@1+ (1,0) [0|1] "" SC,FZC,RZC,BCM,ICU
- SG_ EStop_Source : 17|3@1+ (1,0) [0|7] "" SC,FZC,RZC,BCM,ICU
+ SG_ EStop_Active : 16|8@1+ (1,0) [0|1] "" SC,FZC,RZC,BCM,ICU
+ SG_ EStop_Source : 24|8@1+ (1,0) [0|7] "" SC,FZC,RZC,BCM,ICU
 
 BO_ 16 CVC_Heartbeat: 4 CVC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" SC,FZC,RZC,ICU

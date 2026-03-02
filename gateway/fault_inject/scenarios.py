@@ -197,12 +197,12 @@ def _estop_frame(active: bool, source: int = 1) -> bytes:
     Byte layout:
       [0] E2E: AliveCounter[7:4] | DataID[3:0]
       [1] E2E: CRC8
-      [2] EStop_Active[bit0] | EStop_Source[bits 3:1]
-      [3] reserved (0)
+      [2] EStop_Active  (uint8: 0=inactive, 1=active)
+      [3] EStop_Source   (uint8: 0=CVC_button, 1=CAN_request, 2=SC_relay)
     """
     payload = bytearray(4)
-    estop_byte = (1 if active else 0) | ((source & 0x07) << 1)
-    payload[2] = estop_byte
+    payload[2] = 1 if active else 0
+    payload[3] = source & 0xFF
     return _build_e2e_frame(CAN_ESTOP, DATA_ID_ESTOP, payload)
 
 
