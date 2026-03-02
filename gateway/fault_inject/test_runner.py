@@ -345,6 +345,8 @@ class DashboardTestRunner:
                     "sg": spec.sg,
                     "asil": spec.asil,
                     "he": spec.he,
+                    "description": spec.description,
+                    "injection": spec.injection,
                     "passed": scenario_passed,
                     "duration_sec": round(duration, 1),
                     "verdicts": verdict_results,
