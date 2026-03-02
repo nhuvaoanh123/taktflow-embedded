@@ -72,6 +72,9 @@ typedef uint8 Std_ReturnType;
 #define CVC_COMM_OK                 0u
 #define CVC_COMM_TIMEOUT            1u
 
+/* INIT hold time — must match Cvc_Cfg.h */
+#define CVC_INIT_HOLD_CYCLES      500u
+
 /* ECU IDs (from Cvc_Cfg.h) */
 #define CVC_ECU_ID_CVC              0x01u
 
@@ -281,6 +284,22 @@ void setUp(void)
 void tearDown(void) { }
 
 /* ==================================================================
+ * Helper: transition from INIT -> RUN (respecting hold time)
+ * ================================================================== */
+
+static void get_to_run(void)
+{
+    uint16 i;
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+    for (i = 0u; i <= CVC_INIT_HOLD_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+}
+
+/* ==================================================================
  * SWR-CVC-009: Initialization and INIT State Transitions
  * ================================================================== */
 
@@ -290,21 +309,44 @@ void test_Init_starts_in_INIT_state(void)
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
 }
 
-/** @verifies SWR-CVC-009 — INIT -> RUN on self-test pass + both heartbeats OK */
+/** @verifies SWR-CVC-009 — INIT -> RUN on self-test pass + heartbeats OK + hold time */
 void test_INIT_to_RUN_on_self_test_pass_heartbeats_ok(void)
 {
-    /* Set both comm statuses to OK */
+    get_to_run();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-009
+ *  INIT hold time: transition blocked during hold period even with heartbeats OK */
+void test_INIT_hold_blocks_early_transition(void)
+{
+    uint16 i;
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-
-    /* Fire self-test pass event */
     Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
 
-    /* Must have read heartbeats first via MainFunction to validate them.
-     * OnEvent checks the table, but the heartbeat guard is in MainFunction.
-     * Run MainFunction to apply the guarded transition. */
-    Swc_VehicleState_MainFunction();
+    /* Run half the hold time — should still be INIT */
+    for (i = 0u; i < (CVC_INIT_HOLD_CYCLES / 2u); i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
 
+/** @verifies SWR-CVC-009
+ *  INIT hold time: transition allowed after hold period completes */
+void test_INIT_to_RUN_after_hold_period(void)
+{
+    uint16 i;
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+
+    /* Run exactly the hold time — should transition on the last cycle */
+    for (i = 0u; i <= CVC_INIT_HOLD_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 }
 
@@ -324,11 +366,7 @@ void test_INIT_to_SAFE_STOP_on_self_test_fail(void)
 void test_RUN_to_DEGRADED_on_single_pedal_fault(void)
 {
     /* Get to RUN state first */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Now inject single pedal fault */
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
@@ -340,10 +378,7 @@ void test_RUN_to_DEGRADED_on_single_pedal_fault(void)
 void test_RUN_to_LIMP_on_single_CAN_timeout(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* Single CAN timeout */
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
@@ -355,10 +390,7 @@ void test_RUN_to_LIMP_on_single_CAN_timeout(void)
 void test_RUN_to_SAFE_STOP_on_dual_pedal_fault(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* Dual pedal fault */
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_DUAL);
@@ -370,10 +402,7 @@ void test_RUN_to_SAFE_STOP_on_dual_pedal_fault(void)
 void test_RUN_to_SAFE_STOP_on_estop(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* E-stop */
     Swc_VehicleState_OnEvent(CVC_EVT_ESTOP);
@@ -389,10 +418,7 @@ void test_RUN_to_SAFE_STOP_on_estop(void)
 void test_DEGRADED_to_RUN_on_fault_cleared(void)
 {
     /* Get to RUN, then DEGRADED */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 
@@ -406,10 +432,7 @@ void test_DEGRADED_to_RUN_on_fault_cleared(void)
 void test_DEGRADED_to_SAFE_STOP_on_estop(void)
 {
     /* Get to DEGRADED */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
 
     /* E-stop */
@@ -422,10 +445,7 @@ void test_DEGRADED_to_SAFE_STOP_on_estop(void)
 void test_DEGRADED_to_LIMP_on_CAN_timeout(void)
 {
     /* Get to DEGRADED */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
 
     /* Single CAN timeout */
@@ -442,10 +462,7 @@ void test_DEGRADED_to_LIMP_on_CAN_timeout(void)
 void test_LIMP_to_SAFE_STOP_on_estop(void)
 {
     /* Get to LIMP: RUN -> CAN_TIMEOUT_SINGLE */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
 
@@ -459,10 +476,7 @@ void test_LIMP_to_SAFE_STOP_on_estop(void)
 void test_LIMP_to_DEGRADED_on_CAN_restored(void)
 {
     /* Get to LIMP */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
 
@@ -493,11 +507,7 @@ void test_SAFE_STOP_to_SHUTDOWN_on_vehicle_stopped(void)
 void test_Any_to_SAFE_STOP_on_SC_kill(void)
 {
     /* From RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* SC kill */
     Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
@@ -513,11 +523,7 @@ void test_Any_to_SAFE_STOP_on_SC_kill(void)
 void test_Invalid_transition_rejected(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Try to inject VEHICLE_STOPPED — not valid from RUN */
     mock_bswm_call_count = 0u;
@@ -570,10 +576,7 @@ void test_State_written_to_RTE_each_cycle(void)
 void test_Motor_cutoff_reports_DTC(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* Set motor cutoff signal active + Com confirms */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
@@ -592,10 +595,7 @@ void test_Motor_cutoff_reports_DTC(void)
 void test_Brake_fault_reports_DTC(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* Set brake fault signal active + Com confirms + E2E OK */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -614,10 +614,7 @@ void test_Brake_fault_reports_DTC(void)
 void test_Steering_fault_reports_DTC(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
 
     /* Set steering fault signal active (debounce only, no Com) */
     mock_rte_signals[CVC_SIG_STEERING_FAULT] = 1u;
@@ -645,11 +642,7 @@ void test_Steering_fault_reports_DTC(void)
 void test_OnEvent_boundary_event_at_count(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Fire event with ID = CVC_EVT_COUNT (14) — out of range */
     Swc_VehicleState_OnEvent(CVC_EVT_COUNT);
@@ -693,10 +686,7 @@ void test_Estop_from_INIT_via_signal(void)
 void test_Estop_from_LIMP_via_OnEvent(void)
 {
     /* Get to LIMP */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
 
@@ -715,10 +705,7 @@ void test_Estop_from_LIMP_via_OnEvent(void)
 void test_SC_KILL_from_DEGRADED(void)
 {
     /* Get to DEGRADED */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 
@@ -732,10 +719,7 @@ void test_SC_KILL_from_DEGRADED(void)
 void test_SC_KILL_from_LIMP(void)
 {
     /* Get to LIMP */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_LIMP, Swc_VehicleState_GetState());
 
@@ -829,11 +813,7 @@ void test_MainFunction_rte_read_failure_no_crash(void)
 void test_RUN_to_SAFE_STOP_on_dual_CAN_timeout(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Dual CAN timeout */
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
@@ -848,11 +828,7 @@ void test_RUN_to_SAFE_STOP_on_dual_CAN_timeout(void)
 void test_RUN_to_DEGRADED_on_motor_cutoff(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Motor cutoff in RTE + Com confirms, 3 cycles */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
@@ -868,11 +844,7 @@ void test_RUN_to_DEGRADED_on_motor_cutoff(void)
 void test_RUN_to_SAFE_STOP_on_brake_fault(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Brake fault in RTE + Com confirms + E2E OK, 3 cycles for confirmation */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -888,11 +860,7 @@ void test_RUN_to_SAFE_STOP_on_brake_fault(void)
 void test_RUN_to_SAFE_STOP_on_steering_fault(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Steering fault: debounce only (no Com, no E2E), 3 cycles */
     mock_rte_signals[CVC_SIG_STEERING_FAULT] = 1u;
@@ -907,10 +875,7 @@ void test_RUN_to_SAFE_STOP_on_steering_fault(void)
 void test_DEGRADED_to_SAFE_STOP_on_motor_cutoff(void)
 {
     /* Get to DEGRADED via pedal fault */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 
@@ -935,12 +900,7 @@ void test_SAFE_STOP_recovery_when_all_faults_clear(void)
     uint16 i;
 
     /* Get to SAFE_STOP via dual CAN timeout */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
-
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
@@ -975,10 +935,7 @@ void test_SAFE_STOP_no_recovery_when_fault_persists(void)
     uint16 i;
 
     /* Get to SAFE_STOP */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
@@ -1001,10 +958,7 @@ void test_SAFE_STOP_recovery_counter_resets_on_fault(void)
     uint16 i;
 
     /* Get to SAFE_STOP */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
+    get_to_run();
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
@@ -1042,11 +996,7 @@ void test_SAFE_STOP_recovery_counter_resets_on_fault(void)
 void test_brake_fault_no_immediate_safe_stop(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Brake fault in RTE for only 1 cycle — should NOT transition */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -1060,11 +1010,7 @@ void test_brake_fault_no_immediate_safe_stop(void)
 void test_brake_fault_confirmed_after_threshold(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Brake fault in RTE + Com(13)=1, 3 cycles */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -1080,11 +1026,7 @@ void test_brake_fault_confirmed_after_threshold(void)
 void test_brake_fault_clears_before_threshold(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Brake fault for 2 cycles, then clears */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -1104,11 +1046,7 @@ void test_brake_fault_clears_before_threshold(void)
 void test_brake_fault_com_disagrees_no_transition(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* RTE says brake_fault=1 but Com(13)=0 — stale RTE data */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -1125,11 +1063,7 @@ void test_brake_fault_com_disagrees_no_transition(void)
 void test_brake_fault_e2e_degraded_no_transition(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* RTE=1, Com(13)=1, but E2E says useSafeDefault=TRUE */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
@@ -1147,11 +1081,7 @@ void test_brake_fault_e2e_degraded_no_transition(void)
 void test_motor_cutoff_confirmed_after_threshold(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Motor cutoff in RTE + Com(14)=1, 3 cycles */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
@@ -1168,11 +1098,7 @@ void test_motor_cutoff_confirmed_after_threshold(void)
 void test_motor_cutoff_com_disagrees_no_transition(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* RTE says motor_cutoff=1 but Com(14)=0 */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
@@ -1188,11 +1114,7 @@ void test_motor_cutoff_com_disagrees_no_transition(void)
 void test_steering_fault_debounce_only(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* Steering fault: no Com, no E2E — debounce only */
     mock_rte_signals[CVC_SIG_STEERING_FAULT] = 1u;
@@ -1207,11 +1129,7 @@ void test_steering_fault_debounce_only(void)
 void test_estop_immediate_no_debounce(void)
 {
     /* Get to RUN */
-    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
-    Swc_VehicleState_MainFunction();
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    get_to_run();
 
     /* E-stop: 1 cycle, immediate transition — no debounce */
     mock_rte_signals[CVC_SIG_ESTOP_ACTIVE] = 1u;
@@ -1228,9 +1146,11 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    /* SWR-CVC-009: Init and INIT state */
+    /* SWR-CVC-009: Init, INIT state, and INIT hold time */
     RUN_TEST(test_Init_starts_in_INIT_state);
     RUN_TEST(test_INIT_to_RUN_on_self_test_pass_heartbeats_ok);
+    RUN_TEST(test_INIT_hold_blocks_early_transition);
+    RUN_TEST(test_INIT_to_RUN_after_hold_period);
     RUN_TEST(test_INIT_to_SAFE_STOP_on_self_test_fail);
 
     /* SWR-CVC-010: RUN transitions */

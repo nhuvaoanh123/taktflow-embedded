@@ -116,6 +116,15 @@
 #define CVC_PEDAL_SENSOR2_FAIL     4u
 
 /* ====================================================================
+ * INIT Hold Time
+ * ==================================================================== */
+
+/** @brief  Minimum cycles to stay in INIT before allowing transition to RUN.
+ *          Allows all ECU containers time to boot and send heartbeats.
+ *          500 cycles × 10ms = 5 seconds. */
+#define CVC_INIT_HOLD_CYCLES     500u
+
+/* ====================================================================
  * Heartbeat Constants
  * ==================================================================== */
 

@@ -193,6 +193,9 @@ static uint8 initialized;
 /** @brief  Pending self-test pass flag — held until heartbeats validated */
 static uint8 self_test_pass_pending;
 
+/** @brief  INIT hold counter — counts cycles in INIT before allowing RUN */
+static uint16 init_hold_counter;
+
 /** @brief  SAFE_STOP recovery counter — counts all-clear cycles before recovery */
 static uint16 safe_stop_clear_count;
 
@@ -235,6 +238,7 @@ void Swc_VehicleState_Init(void)
     current_state          = CVC_STATE_INIT;
     initialized            = TRUE;
     self_test_pass_pending = FALSE;
+    init_hold_counter      = 0u;
     safe_stop_clear_count  = 0u;
 
     for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
@@ -456,17 +460,25 @@ void Swc_VehicleState_MainFunction(void)
     }
 #endif
 
-    /* ---- Step 2: Handle pending self-test pass (heartbeat guard) ---- */
-    if ((self_test_pass_pending == TRUE) && (current_state == CVC_STATE_INIT))
+    /* ---- Step 2: INIT hold timer + pending self-test pass guard ---- */
+    if (current_state == CVC_STATE_INIT)
     {
-        if ((fzc_comm == CVC_COMM_OK) && (rzc_comm == CVC_COMM_OK))
+        if (init_hold_counter < CVC_INIT_HOLD_CYCLES)
+        {
+            init_hold_counter++;
+        }
+
+        if ((self_test_pass_pending == TRUE)
+            && (init_hold_counter >= CVC_INIT_HOLD_CYCLES)
+            && (fzc_comm == CVC_COMM_OK)
+            && (rzc_comm == CVC_COMM_OK))
         {
             self_test_pass_pending = FALSE;
             current_state = CVC_STATE_RUN;
             (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_RUN);
             VSM_DIAG("INIT -> RUN (heartbeats confirmed)");
         }
-        /* else: remain in INIT, keep pending — heartbeats not yet OK */
+        /* else: remain in INIT — hold time or heartbeats not yet OK */
     }
 
     /* ---- Step 3: Derive events from signal values ---- */
