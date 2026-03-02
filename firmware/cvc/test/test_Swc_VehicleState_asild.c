@@ -1157,6 +1157,17 @@ void test_SC_kill_signal_triggers_safe_stop(void)
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 }
 
+/** @verifies SWR-CVC-013 — SC relay kill ignored during INIT (boot transient) */
+void test_SC_kill_signal_ignored_in_INIT(void)
+{
+    /* Still in INIT — SC relay kill should be absorbed */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+}
+
 /** @verifies SWR-CVC-013 — SC relay kill = 0 does NOT trigger transition */
 void test_SC_kill_signal_zero_stays_run(void)
 {
@@ -1236,6 +1247,7 @@ int main(void)
     /* SWR-CVC-013: SC relay kill via MainFunction signal path */
     RUN_TEST(test_SC_kill_signal_triggers_safe_stop);
     RUN_TEST(test_SC_kill_signal_zero_stays_run);
+    RUN_TEST(test_SC_kill_signal_ignored_in_INIT);
 
     /* SWR-CVC-009: Terminal state — SHUTDOWN rejects all events */
     RUN_TEST(test_SHUTDOWN_rejects_all_events);

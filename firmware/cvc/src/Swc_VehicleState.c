@@ -491,8 +491,11 @@ void Swc_VehicleState_MainFunction(void)
         Swc_VehicleState_OnEvent(CVC_EVT_ESTOP);
     }
 
-    /* SC relay kill — second highest priority */
-    if (sc_relay_kill != 0u)
+    /* SC relay kill — second highest priority.
+     * Guard: only after leaving INIT, so boot-time SC transients
+     * (relay killed before all ECUs send heartbeats) are absorbed
+     * by the INIT hold period just like CAN timeout events. */
+    if ((sc_relay_kill != 0u) && (current_state != CVC_STATE_INIT))
     {
         Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
     }
