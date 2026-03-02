@@ -533,6 +533,81 @@ void test_Heartbeat_Derived_period_value(void)
 }
 
 /* ==================================================================
+ * PHASE 6: Comprehensive Test Coverage
+ * ================================================================== */
+
+/** @verifies SWR-FZC-022
+ *  Phase 6: Alive counter rollover sequence 15→0→1 is continuous */
+void test_HB_alive_rollover_sequence(void)
+{
+    uint16 i;
+    /* Send 16 heartbeats to reach alive=15 */
+    for (i = 0u; i < 16u; i++) {
+        run_cycles(FZC_HB_PERIOD_CYCLES);
+    }
+    TEST_ASSERT_EQUAL_UINT8(15u, mock_com_last_data[HB_BYTE_ALIVE]);
+
+    /* Next should wrap to 0 */
+    run_cycles(FZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+
+    /* And then 1 */
+    run_cycles(FZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Phase 6: Fault mask high byte encoding (0xAA00 → lo=0x00, hi=0xAA)
+ *  Note: avoid 0xFF00 because bit 8 = FZC_FAULT_CAN_BUS_OFF suppresses TX */
+void test_HB_fault_mask_high_byte(void)
+{
+    mock_fault_mask = 0xAA00u;
+
+    run_cycles(FZC_HB_PERIOD_CYCLES);
+
+    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
+    TEST_ASSERT_EQUAL_UINT8(0xAAu, mock_com_last_data[HB_BYTE_FAULT_HI]);
+}
+
+/** @verifies SWR-FZC-022
+ *  Phase 6: Long-running accuracy — exactly 10 TXes in 10 periods */
+void test_HB_10_periods_accuracy(void)
+{
+    run_cycles(FZC_HB_PERIOD_CYCLES * 10u);
+
+    TEST_ASSERT_EQUAL_UINT8(10u, mock_com_send_count);
+}
+
+/** @verifies SWR-FZC-021
+ *  Phase 6: Bus-off clear — TX resumes on next period */
+void test_HB_bus_off_timer_resets_on_clear(void)
+{
+    /* Set bus-off for 3 periods */
+    mock_fault_mask = FZC_FAULT_CAN_BUS_OFF;
+    run_cycles(FZC_HB_PERIOD_CYCLES * 3u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+
+    /* Clear bus-off, run 1 full period */
+    mock_fault_mask = 0u;
+    run_cycles(FZC_HB_PERIOD_CYCLES);
+
+    /* Should get exactly 1 TX after clear */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
+}
+
+/** @verifies SWR-FZC-022
+ *  Phase 6: Heartbeat in INIT state carries correct state byte */
+void test_HB_init_state_in_heartbeat(void)
+{
+    mock_vehicle_state = FZC_STATE_INIT;
+
+    run_cycles(FZC_HB_PERIOD_CYCLES);
+
+    TEST_ASSERT_EQUAL_UINT8((uint8)FZC_STATE_INIT,
+                            mock_com_last_data[HB_BYTE_STATE]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -571,6 +646,13 @@ int main(void)
 
     /* PHASE 1: Derived Constants */
     RUN_TEST(test_Heartbeat_Derived_period_value);
+
+    /* PHASE 6: Comprehensive Coverage */
+    RUN_TEST(test_HB_alive_rollover_sequence);
+    RUN_TEST(test_HB_fault_mask_high_byte);
+    RUN_TEST(test_HB_10_periods_accuracy);
+    RUN_TEST(test_HB_bus_off_timer_resets_on_clear);
+    RUN_TEST(test_HB_init_state_in_heartbeat);
 
     return UNITY_END();
 }

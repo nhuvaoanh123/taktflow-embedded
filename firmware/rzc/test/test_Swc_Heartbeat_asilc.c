@@ -476,6 +476,67 @@ void test_Heartbeat_Derived_period_value(void)
 }
 
 /* ==================================================================
+ * PHASE 6: Comprehensive Test Coverage
+ * ================================================================== */
+
+/** @verifies SWR-RZC-022
+ *  Phase 6: Alive counter rollover sequence 15→0→1 is continuous */
+void test_HB_alive_rollover_sequence(void)
+{
+    uint16 i;
+    /* Send 16 heartbeats to reach alive=15 */
+    for (i = 0u; i < 16u; i++) {
+        run_cycles(RZC_HB_PERIOD_CYCLES);
+    }
+    TEST_ASSERT_EQUAL_UINT8(15u, mock_com_last_data[HB_BYTE_ALIVE]);
+
+    /* Next should wrap to 0 */
+    run_cycles(RZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+
+    /* And then 1 */
+    run_cycles(RZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-RZC-021
+ *  Phase 6: Double init resets alive counter to 0 */
+void test_HB_double_init_resets_alive(void)
+{
+    /* Advance alive counter */
+    run_cycles(RZC_HB_PERIOD_CYCLES * 5u);
+    TEST_ASSERT_EQUAL_UINT8(5u, mock_com_send_count);
+
+    /* Re-init */
+    Swc_Heartbeat_Init();
+    mock_com_send_count = 0u;
+    run_cycles(RZC_HB_PERIOD_CYCLES);
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+}
+
+/** @verifies SWR-RZC-022
+ *  Phase 6: Long-running accuracy — exactly 10 TXes in 10 periods */
+void test_HB_10_periods_accuracy(void)
+{
+    run_cycles(RZC_HB_PERIOD_CYCLES * 10u);
+
+    TEST_ASSERT_EQUAL_UINT8(10u, mock_com_send_count);
+}
+
+/** @verifies SWR-RZC-022
+ *  Phase 6: Fault mask high byte encoding (0xFF00 → lo=0x00, hi=0xFF) */
+void test_HB_fault_mask_high_byte(void)
+{
+    mock_fault_mask = 0xFF00u;
+
+    run_cycles(RZC_HB_PERIOD_CYCLES);
+
+    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_HI]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -497,7 +558,7 @@ int main(void)
     RUN_TEST(test_No_send_before_period);
     RUN_TEST(test_MainFunction_without_init_safe);
 
-    /* Hardened tests — boundary values, fault injection */
+    /* Hardened tests -- boundary values, fault injection */
     RUN_TEST(test_HB_alive_at_max);
     RUN_TEST(test_HB_fault_mask_max);
     RUN_TEST(test_HB_all_states_valid);
@@ -507,6 +568,12 @@ int main(void)
 
     /* PHASE 1: Derived Constants */
     RUN_TEST(test_Heartbeat_Derived_period_value);
+
+    /* PHASE 6: Comprehensive Coverage */
+    RUN_TEST(test_HB_alive_rollover_sequence);
+    RUN_TEST(test_HB_double_init_resets_alive);
+    RUN_TEST(test_HB_10_periods_accuracy);
+    RUN_TEST(test_HB_fault_mask_high_byte);
 
     return UNITY_END();
 }

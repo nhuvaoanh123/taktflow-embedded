@@ -510,6 +510,85 @@ void test_HB_recovery_reset_on_continued_timeout(void)
 }
 
 /* ==================================================================
+ * PHASE 6: Comprehensive Test Coverage
+ * ================================================================== */
+
+/** @verifies SWR-SC-004
+ *  Phase 6: Startup grace period prevents false timeout during ECU boot */
+void test_HB_startup_grace_no_timeout(void)
+{
+    uint16 g;
+
+    /* Re-init to get a fresh startup grace period */
+    SC_Heartbeat_Init();
+
+    /* Run just under grace period without any heartbeats */
+    for (g = 0u; g < (SC_HB_STARTUP_GRACE_TICKS - 1u); g++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    /* No ECU should be timed out — grace period active */
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_FZC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_RZC));
+}
+
+/** @verifies SWR-SC-004
+ *  Phase 6: Double init resets all counters and flags safely */
+void test_HB_double_init_resets_all(void)
+{
+    uint8 i;
+
+    /* Force a timeout */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+
+    /* Double init */
+    SC_Heartbeat_Init();
+
+    /* Advance past grace period again */
+    {
+        uint16 g;
+        for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
+            SC_Heartbeat_Monitor();
+        }
+    }
+
+    /* After fresh init + grace, no timeout (counters reset) */
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
+}
+
+/** @verifies SWR-SC-006
+ *  Phase 6: Confirmed timeout is latched — NotifyRx does NOT clear it */
+void test_HB_confirmed_timeout_latches(void)
+{
+    uint8 i;
+    uint8 j;
+
+    /* Timeout + confirmation */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    for (i = 0u; i < SC_HB_CONFIRM_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsAnyConfirmed());
+
+    /* Try to recover with heartbeats — should be ignored (latched) */
+    for (j = 0u; j < (SC_HB_RECOVERY_THRESHOLD * 3u); j++) {
+        SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+        SC_Heartbeat_NotifyRx(SC_ECU_FZC);
+        SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+    }
+
+    /* Still confirmed — latched */
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsAnyConfirmed());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -536,7 +615,7 @@ int main(void)
     RUN_TEST(test_HB_invalid_ecu_index);
     RUN_TEST(test_HB_notify_invalid_index);
 
-    /* Hardened tests — boundary values, fault injection */
+    /* Hardened tests -- boundary values, fault injection */
     RUN_TEST(test_hb_timeout_at_9_no_fault);
     RUN_TEST(test_hb_confirmation_at_2_not_confirmed);
     RUN_TEST(test_hb_rapid_notify_monitor);
@@ -551,6 +630,11 @@ int main(void)
     RUN_TEST(test_HB_single_notify_does_not_cancel_timeout);
     RUN_TEST(test_HB_recovery_after_3_consecutive_HBs);
     RUN_TEST(test_HB_recovery_reset_on_continued_timeout);
+
+    /* Phase 6: Comprehensive Coverage */
+    RUN_TEST(test_HB_startup_grace_no_timeout);
+    RUN_TEST(test_HB_double_init_resets_all);
+    RUN_TEST(test_HB_confirmed_timeout_latches);
 
     return UNITY_END();
 }
