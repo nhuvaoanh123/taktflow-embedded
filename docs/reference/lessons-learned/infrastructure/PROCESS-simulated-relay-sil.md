@@ -168,6 +168,28 @@ Reset `rx_drained = FALSE` in `rtiClearTick()`.
 
 ---
 
+## 11. Every SC Monitor Needs a Startup Grace Period
+
+**Problem**: After fixing the heartbeat startup grace (lesson in `PROCESS-estop-recovery-startup-sequencing.md`), the system still went to SAFE_STOP on boot. CAN 0x013 showed `01 02 00 00` — kill_reason=PLAUSIBILITY. The plausibility check had no grace period and triggered on boot transients (stale/zero CAN values before ECUs stabilize).
+
+**Pattern**: This is the same class of bug as the heartbeat monitor. Both modules start checking from tick 0, but CAN signals take seconds to stabilize during multi-ECU boot. Each fix to one monitor just reveals the next unprotected monitor.
+
+**Fix**: Added `plaus_startup_grace = SC_HB_STARTUP_GRACE_TICKS` (500 ticks = 5s) to `SC_Plausibility_Init()`, skip checking while counter > 0. Same pattern as heartbeat.
+
+**Test impact**: `setUp()` in plausibility tests must advance past grace period before running test assertions:
+```c
+SC_Plausibility_Init();
+for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
+    SC_Plausibility_Check();
+}
+```
+
+**Takeaway**: When adding a new safety monitor to SC (or any bare-metal controller that boots alongside other ECUs), **always include a startup grace period**. The grace must be >= the longest ECU boot time in the system. This should be a checklist item alongside "add recovery guard entry" (lesson 6). The two rules are:
+1. Every SAFE_STOP trigger needs a recovery guard entry
+2. Every cyclic safety monitor needs a startup grace period
+
+---
+
 ## Key Takeaways
 
 1. **AUTOSAR routing is verbose but traceable** — 6 files for 1 signal is the cost of layered architecture
@@ -178,3 +200,4 @@ Reset `rx_drained = FALSE` in `rtiClearTick()`.
 6. **Buffer-then-distribute for SocketCAN mailbox emulation** — serial recv() starves later mailboxes
 7. **Adding observability exposes pre-existing bugs** — the relay broadcast revealed E2E and frame consumption bugs that existed from day one
 8. **E2E format must be a shared specification** — not independently developed per ECU
+9. **Every cyclic safety monitor needs a startup grace period** — boot transients trigger false kills; grace must >= longest ECU boot time
