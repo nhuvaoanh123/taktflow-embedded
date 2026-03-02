@@ -67,6 +67,18 @@ static const uint32 mb_can_id[6u] = {
     SC_CAN_ID_MOTOR_CURRENT    /* MB5 = 0x301 */
 };
 
+#ifndef PLATFORM_POSIX_TEST
+/** Per-mailbox RX buffer — filled once per tick, served per mailbox query */
+static struct {
+    uint8 data[8];
+    uint8 dlc;
+    boolean valid;
+} rx_slot[6u];
+
+/** Flag: buffer has been drained for this tick */
+static boolean rx_drained = FALSE;
+#endif
+
 /* ==================================================================
  * HALCoGen system stubs (from sc_main.c:35-56)
  * ================================================================== */
@@ -149,6 +161,8 @@ void rtiClearTick(void)
 {
 #ifndef PLATFORM_POSIX_TEST
     clock_gettime(CLOCK_MONOTONIC, &rti_last_tick);
+    /* Reset per-tick CAN RX buffer so next SC_CAN_Receive() drains fresh */
+    rx_drained = FALSE;
 #endif
 }
 
@@ -298,47 +312,67 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
         return FALSE;
     }
 
-    /* Read available frames (non-blocking), looking for our mailbox's CAN ID */
-    struct can_frame frame;
-    uint32 target_id = mb_can_id[mbIndex];
-    int max_reads = 32; /* Limit reads per call to prevent starvation */
+    /* Drain socket into per-mailbox buffer on first call per tick.
+     * This avoids the bug where earlier mailbox queries consume and
+     * discard frames that belong to later mailboxes. */
+    if (rx_drained == FALSE) {
+        struct can_frame frame;
+        uint8 s;
+        int max_reads = 256;
 
-    while (max_reads > 0) {
-        max_reads--;
-        ssize_t nbytes = recv(dcan_fd, &frame, sizeof(frame), MSG_DONTWAIT | MSG_PEEK);
-        if (nbytes <= 0) {
-            return FALSE; /* No more frames available */
+        for (s = 0u; s < 6u; s++) {
+            rx_slot[s].valid = FALSE;
         }
 
-        /* Consume the frame */
-        nbytes = recv(dcan_fd, &frame, sizeof(frame), MSG_DONTWAIT);
-        if (nbytes <= 0) {
-            return FALSE;
-        }
-
-        /* Check if this frame matches our mailbox's CAN ID */
-        uint32 rx_id = frame.can_id & 0x7FFu; /* Mask to 11-bit standard */
-        if (rx_id == target_id) {
-            uint8 i;
-            uint8 rx_dlc = frame.can_dlc;
-            if (rx_dlc > 8u) {
-                rx_dlc = 8u;
+        while (max_reads > 0) {
+            max_reads--;
+            ssize_t nbytes = recv(dcan_fd, &frame, sizeof(frame), MSG_DONTWAIT);
+            if (nbytes <= 0) {
+                break;
             }
-            for (i = 0u; i < rx_dlc; i++) {
-                data[i] = frame.data[i];
+
+            uint32 rx_id = frame.can_id & 0x7FFu;
+            for (s = 0u; s < 6u; s++) {
+                if (rx_id == mb_can_id[s]) {
+                    uint8 j;
+                    uint8 rx_dlc = frame.can_dlc;
+                    if (rx_dlc > 8u) {
+                        rx_dlc = 8u;
+                    }
+                    for (j = 0u; j < rx_dlc; j++) {
+                        rx_slot[s].data[j] = frame.data[j];
+                    }
+                    rx_slot[s].dlc   = rx_dlc;
+                    rx_slot[s].valid = TRUE;
+                    break;
+                }
             }
-            *dlc = rx_dlc;
-            return TRUE;
         }
-        /* Frame didn't match this mailbox — continue reading */
+
+        rx_drained = TRUE;
     }
+
+    /* Serve from buffer */
+    if (rx_slot[mbIndex].valid == FALSE) {
+        return FALSE;
+    }
+
+    {
+        uint8 i;
+        for (i = 0u; i < rx_slot[mbIndex].dlc; i++) {
+            data[i] = rx_slot[mbIndex].data[i];
+        }
+        *dlc = rx_slot[mbIndex].dlc;
+        rx_slot[mbIndex].valid = FALSE;
+    }
+
+    return TRUE;
 #else
     (void)mbIndex;
     (void)data;
     (void)dlc;
-#endif
-
     return FALSE;
+#endif
 }
 
 /* ==================================================================
