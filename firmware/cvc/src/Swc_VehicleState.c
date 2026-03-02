@@ -33,7 +33,7 @@
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
 #include <stdio.h>
-#define VSM_DIAG(fmt, ...) (void)printf("[VSM] " fmt "\n", ##__VA_ARGS__)
+#define VSM_DIAG(fmt, ...) (void)fprintf(stderr, "[VSM] " fmt "\n", ##__VA_ARGS__)
 static const char * const diag_state_names[CVC_STATE_COUNT] = {
     "INIT", "RUN", "DEGRADED", "LIMP", "SAFE_STOP", "SHUTDOWN"
 };

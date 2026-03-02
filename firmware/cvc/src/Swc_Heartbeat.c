@@ -30,7 +30,7 @@
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
 #include <stdio.h>
-#define HB_DIAG(fmt, ...) (void)printf("[HB] " fmt "\n", ##__VA_ARGS__)
+#define HB_DIAG(fmt, ...) (void)fprintf(stderr, "[HB] " fmt "\n", ##__VA_ARGS__)
 #else
 #define HB_DIAG(fmt, ...) ((void)0)
 #endif
