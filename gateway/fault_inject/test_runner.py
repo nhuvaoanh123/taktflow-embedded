@@ -394,6 +394,13 @@ class DashboardTestRunner:
             }
 
             self.last_result = final_result
+            # Clear progress topic so frontend stops showing "running"
+            self._mqtt.publish(
+                "taktflow/test/progress",
+                json.dumps({"state": "complete", "run_id": run_id}),
+                qos=0,
+                retain=False,
+            )
             self._publish_result(final_result)
 
             with self._lock:

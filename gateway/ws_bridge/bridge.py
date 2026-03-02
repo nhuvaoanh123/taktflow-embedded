@@ -334,7 +334,9 @@ def on_mqtt_message(client, userdata, msg):
     # E2E test runner progress (from fault_inject test runner)
     elif topic == "taktflow/test/progress":
         try:
-            state.test_progress = json.loads(payload)
+            data = json.loads(payload)
+            # Clear progress when suite completes (so frontend stops showing "running")
+            state.test_progress = data if data.get("state") == "running" else None
         except (json.JSONDecodeError, TypeError):
             pass
 
