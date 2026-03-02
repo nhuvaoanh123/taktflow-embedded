@@ -137,6 +137,13 @@ void setUp(void)
     mock_fzc_brake_fault = FALSE;
 
     SC_Plausibility_Init();
+    /* Advance past startup grace period so tests run against active checking */
+    {
+        uint16 g;
+        for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
+            SC_Plausibility_Check();
+        }
+    }
 }
 
 void tearDown(void) { }

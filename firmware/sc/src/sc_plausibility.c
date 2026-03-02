@@ -55,6 +55,9 @@ static boolean plaus_faulted;
 /** Backup cutoff counter */
 static uint8 backup_cutoff_counter;
 
+/** Startup grace counter — skip plausibility until signals stabilize */
+static uint16 plaus_startup_grace;
+
 /* ==================================================================
  * Internal: Lookup expected current for given torque percentage
  * ================================================================== */
@@ -138,9 +141,10 @@ static boolean is_implausible(uint16 expected_ma, uint16 actual_ma)
 
 void SC_Plausibility_Init(void)
 {
-    plaus_debounce       = 0u;
-    plaus_faulted        = FALSE;
+    plaus_debounce        = 0u;
+    plaus_faulted         = FALSE;
     backup_cutoff_counter = 0u;
+    plaus_startup_grace   = SC_HB_STARTUP_GRACE_TICKS;
 }
 
 void SC_Plausibility_Check(void)
@@ -156,6 +160,12 @@ void SC_Plausibility_Check(void)
 
     /* If already faulted, nothing more to do (latched) */
     if (plaus_faulted == TRUE) {
+        return;
+    }
+
+    /* Startup grace — let CAN signals stabilize before checking */
+    if (plaus_startup_grace > 0u) {
+        plaus_startup_grace--;
         return;
     }
 
