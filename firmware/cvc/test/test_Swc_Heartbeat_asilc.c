@@ -34,14 +34,22 @@ typedef uint8          boolean;
 #define SWC_HEARTBEAT_H
 #define CVC_CFG_H
 
-/* Prevent real Dem.h / E2E.h from being pulled in through Swc_Heartbeat.c —
+/* Prevent real Dem.h / E2E.h / WdgM.h from being pulled in through Swc_Heartbeat.c —
  * the mocks below provide the required function definitions.
  * DEM_EVENT_STATUS_FAILED is defined here because it is used both in
  * Swc_Heartbeat.c and in this test file, and Dem.h is now blocked. */
 #define DEM_H
 #define E2E_H
+#define WDGM_H
 #define DEM_EVENT_STATUS_PASSED  0u
 #define DEM_EVENT_STATUS_FAILED  1u
+
+/* E2E types needed by Swc_Heartbeat.c */
+typedef struct { uint8 DataId; uint8 MaxDeltaCounter; uint16 DataLength; } E2E_ConfigType;
+typedef struct { uint8 Counter; } E2E_StateType;
+
+/* WdgM type needed by Swc_Heartbeat.c */
+typedef uint8 WdgM_SupervisedEntityIdType;
 
 /* Signal/DTC IDs (must match Cvc_Cfg.h) */
 #define CVC_SIG_FZC_COMM_STATUS   23u
@@ -60,6 +68,7 @@ typedef uint8          boolean;
 #define CVC_HB_ALIVE_MAX         15u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
+#define CVC_E2E_HEARTBEAT_DATA_ID 0x02u
 
 /* Named Com RX signal IDs for heartbeat alive counters */
 #define CVC_COM_SIG_FZC_HB_ALIVE  9u
@@ -114,15 +123,31 @@ Std_ReturnType Com_ReceiveSignal(uint8 SignalId, void* SignalDataPtr)
  * ==================================================================== */
 
 static uint8 mock_e2e_protect_count;
+static const E2E_ConfigType* mock_e2e_config_ptr;
+static E2E_StateType* mock_e2e_state_ptr;
 
-Std_ReturnType E2E_Protect(const void* Config, void* State,
+Std_ReturnType E2E_Protect(const E2E_ConfigType* Config, E2E_StateType* State,
                            uint8* DataPtr, uint16 Length)
 {
     mock_e2e_protect_count++;
-    (void)Config;
-    (void)State;
+    mock_e2e_config_ptr = Config;
+    mock_e2e_state_ptr  = State;
     (void)DataPtr;
     (void)Length;
+    return E_OK;
+}
+
+/* ====================================================================
+ * Mock: WdgM_CheckpointReached
+ * ==================================================================== */
+
+static uint8 mock_wdgm_checkpoint_count;
+static uint8 mock_wdgm_last_se_id;
+
+Std_ReturnType WdgM_CheckpointReached(WdgM_SupervisedEntityIdType SEId)
+{
+    mock_wdgm_checkpoint_count++;
+    mock_wdgm_last_se_id = SEId;
     return E_OK;
 }
 
@@ -211,6 +236,10 @@ void setUp(void)
     mock_com_rx_fzc_alive  = 0u;     /* Match fzc_last_alive init (0) — no false positive */
     mock_com_rx_rzc_alive  = 0u;     /* Match rzc_last_alive init (0) — no false positive */
     mock_e2e_protect_count = 0u;
+    mock_e2e_config_ptr    = NULL_PTR;
+    mock_e2e_state_ptr     = NULL_PTR;
+    mock_wdgm_checkpoint_count = 0u;
+    mock_wdgm_last_se_id   = 0xFFu;
     mock_rte_write_count   = 0u;
     mock_dem_report_count  = 0u;
     mock_rte_vehicle_state = 1u; /* CVC_STATE_RUN */
@@ -831,6 +860,43 @@ void test_Heartbeat_Named_signal_RZC_alive_detection(void)
 }
 
 /* ====================================================================
+ * PHASE 3: WdgM Integration + E2E Fix
+ * ==================================================================== */
+
+/** @verifies SWR-CVC-021
+ *  Phase 3: WdgM checkpoint fires at TX boundary (SE 3) */
+void test_Heartbeat_WdgM_checkpoint_at_TX(void)
+{
+    /* Run one TX period */
+    run_cycles(5u);
+
+    TEST_ASSERT_EQUAL(1u, mock_wdgm_checkpoint_count);
+    TEST_ASSERT_EQUAL(3u, mock_wdgm_last_se_id);
+}
+
+/** @verifies SWR-CVC-021
+ *  Phase 3: WdgM gets 2 checkpoints in 100ms (2 TX periods) */
+void test_Heartbeat_WdgM_two_checkpoints_in_100ms(void)
+{
+    /* Run two TX periods = 100ms */
+    run_cycles(10u);
+
+    TEST_ASSERT_EQUAL(2u, mock_wdgm_checkpoint_count);
+}
+
+/** @verifies SWR-CVC-021
+ *  Phase 3: E2E_Protect called with real config (not NULL) */
+void test_Heartbeat_E2E_Protect_with_real_config(void)
+{
+    /* Run one TX period */
+    run_cycles(5u);
+
+    TEST_ASSERT_NOT_NULL(mock_e2e_config_ptr);
+    TEST_ASSERT_NOT_NULL(mock_e2e_state_ptr);
+    TEST_ASSERT_EQUAL(CVC_E2E_HEARTBEAT_DATA_ID, mock_e2e_config_ptr->DataId);
+}
+
+/* ====================================================================
  * PHASE 2: Per-ECU Timeout Thresholds (FTTI Budget)
  * ==================================================================== */
 
@@ -954,6 +1020,11 @@ int main(void)
     RUN_TEST(test_Heartbeat_Derived_TX_cycles_value);
     RUN_TEST(test_Heartbeat_Named_signal_FZC_alive_detection);
     RUN_TEST(test_Heartbeat_Named_signal_RZC_alive_detection);
+
+    /* --- PHASE 3: WdgM + E2E Fix --- */
+    RUN_TEST(test_Heartbeat_WdgM_checkpoint_at_TX);
+    RUN_TEST(test_Heartbeat_WdgM_two_checkpoints_in_100ms);
+    RUN_TEST(test_Heartbeat_E2E_Protect_with_real_config);
 
     /* --- PHASE 2: Per-ECU Timeout Thresholds --- */
     RUN_TEST(test_Heartbeat_FZC_timeout_after_2_misses);

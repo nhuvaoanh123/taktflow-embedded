@@ -204,7 +204,7 @@ static const WdgM_SupervisedEntityConfigType wdgm_se_config[] = {
     { 0u, 1u, 1u, 3u },   /* SE 0: Swc_Pedal         — 1 checkpoint/cycle, 3 failures tolerated */
     { 1u, 1u, 1u, 3u },   /* SE 1: Swc_VehicleState  */
     { 2u, 1u, 1u, 3u },   /* SE 2: Swc_EStop         */
-    { 3u, 1u, 1u, 3u },   /* SE 3: Swc_Heartbeat     */
+    { 3u, 1u, 3u, 3u },   /* SE 3: Swc_Heartbeat     — 1-3 checkpoints per 100ms WdgM cycle */
     { 4u, 1u, 1u, 5u },   /* SE 4: Swc_Dashboard     — more tolerant (QM) */
 };
 

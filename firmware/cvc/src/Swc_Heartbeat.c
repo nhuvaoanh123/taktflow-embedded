@@ -27,6 +27,7 @@
 #include "E2E.h"
 #include "Rte.h"
 #include "Dem.h"
+#include "WdgM.h"
 
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
@@ -74,6 +75,17 @@ static uint8   rzc_last_alive;
 
 static boolean initialized;
 
+/** @brief E2E configuration for heartbeat TX protection
+ *  @safety_req SWR-CVC-021 */
+static const E2E_ConfigType hb_e2e_config = {
+    CVC_E2E_HEARTBEAT_DATA_ID,   /* DataId = 0x02 */
+    15u,                          /* MaxDeltaCounter */
+    HB_PDU_LENGTH                 /* DataLength = 8 */
+};
+
+/** @brief E2E state for heartbeat TX alive counter tracking */
+static E2E_StateType hb_e2e_state;
+
 /* ====================================================================
  * Public functions
  * ==================================================================== */
@@ -97,6 +109,8 @@ void Swc_Heartbeat_Init(void)
 
     fzc_last_alive  = 0u;   /* Match Com shadow buffer init (0) — no false positive */
     rzc_last_alive  = 0u;   /* Real detection starts when alive counter changes     */
+
+    hb_e2e_state.Counter = 0u;
 
     initialized     = TRUE;
 }
@@ -134,8 +148,11 @@ void Swc_Heartbeat_MainFunction(void)
         /* pdu[3..7] reserved (zero) */
 
         /* E2E protect then transmit */
-        (void)E2E_Protect(NULL_PTR, NULL_PTR, pdu, HB_PDU_LENGTH);
+        (void)E2E_Protect(&hb_e2e_config, &hb_e2e_state, pdu, HB_PDU_LENGTH);
         (void)Com_SendSignal(CVC_COM_TX_HEARTBEAT, pdu);
+
+        /* WdgM checkpoint: SE 3 alive indication at TX boundary */
+        (void)WdgM_CheckpointReached(3u);
 
         /* Increment alive counter with wrap */
         alive_counter++;
