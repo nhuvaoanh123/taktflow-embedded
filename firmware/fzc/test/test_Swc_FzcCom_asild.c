@@ -430,6 +430,21 @@ void test_FzcCom_transmit_event_driven_brake_fault(void)
     TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_tx_pdu_data[FZC_COM_TX_BRAKE_FAULT][2]);
 }
 
+/** @verifies SWR-FZC-027 — Brake position sent via Com_SendSignal every cycle */
+void test_FzcCom_transmit_brake_position_10ms(void)
+{
+    /* Set brake position in RTE */
+    mock_rte_signals[FZC_SIG_BRAKE_POS] = 75u;
+
+    mock_com_tx_count = 0u;
+
+    /* Single cycle should send brake position via Com_SendSignal(5u) */
+    Swc_FzcCom_TransmitSchedule();
+
+    /* assert: signal 5 was sent with correct value */
+    TEST_ASSERT_EQUAL_UINT8(75u, mock_com_tx_data[5][0]);
+}
+
 /* ==================================================================
  * Test runner
  * ================================================================== */
@@ -454,6 +469,7 @@ int main(void)
 
     /* SWR-FZC-027: CAN Message Transmission */
     RUN_TEST(test_FzcCom_transmit_steering_status_10ms);
+    RUN_TEST(test_FzcCom_transmit_brake_position_10ms);
     RUN_TEST(test_FzcCom_transmit_event_driven_brake_fault);
 
     return UNITY_END();

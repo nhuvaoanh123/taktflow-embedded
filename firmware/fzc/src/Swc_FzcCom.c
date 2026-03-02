@@ -297,6 +297,15 @@ void Swc_FzcCom_TransmitSchedule(void)
             (void)Com_SendSignal(3u, &angle);
             (void)Com_SendSignal(4u, &fault);
         }
+
+        /* Signal 5 = brake_pos (uint8) → 0x201 Brake_Status cyclic */
+        {
+            uint32 brake_val = 0u;
+            uint8  bpos;
+            (void)Rte_Read(FZC_SIG_BRAKE_POS, &brake_val);
+            bpos = (uint8)brake_val;
+            (void)Com_SendSignal(5u, &bpos);
+        }
     }
 
     /* ---- TX: 0x210 Brake Fault (event-driven, PduR_Transmit) ---- */
