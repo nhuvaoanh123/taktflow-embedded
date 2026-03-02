@@ -85,8 +85,6 @@ class PlantSimulator:
         # Vehicle state — starts INIT, transitions to RUN after startup delay
         self.vehicle_state = VS_INIT
         self._startup_ticks = 0  # counts ticks since start (300 = 3s)
-        # Reset recovery guard to separate fault clear and fault evaluation.
-        self._reset_grace_ticks = 0
 
         # DTC tracking — only fire each DTC once until cleared
         self._active_dtcs: set[int] = set()
@@ -145,13 +143,8 @@ class PlantSimulator:
                     self.brake.clear_fault()
                     self.battery.clear_override()
                     self._active_dtcs.clear()
-                    self.motor.duty_pct = 0.0
-                    self.motor.direction = 0
-                    self.steering.commanded_angle = 0.0
-                    self.brake.commanded_pct = 0.0
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
-                    self._reset_grace_ticks = 2
                 elif not self.estop_active and not was_active:
                     # Reset command (E-Stop clear when not active) — clear all faults
                     log.info("Reset received — clearing all faults, state -> INIT")
@@ -160,13 +153,8 @@ class PlantSimulator:
                     self.brake.clear_fault()
                     self.battery.clear_override()
                     self._active_dtcs.clear()
-                    self.motor.duty_pct = 0.0
-                    self.motor.direction = 0
-                    self.steering.commanded_angle = 0.0
-                    self.brake.commanded_pct = 0.0
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
-                    self._reset_grace_ticks = 2
 
         elif arb_id == TX_BATTERY_STATUS:
             # External battery injection (from fault_inject) — override model
@@ -177,8 +165,6 @@ class PlantSimulator:
                 log.info("Battery override: %dmV, %d%% SOC", v, soc)
 
         elif arb_id == RX_TORQUE_REQUEST:
-            if self._reset_grace_ticks > 0:
-                return
             if len(data) >= 4 and not self.estop_active:
                 # CVC sends torque as uint16 LE at bytes 2-3 (Com signal 5,
                 # bitPos=16, bitSize=16).  Value 0-100 = duty percent.
@@ -187,8 +173,6 @@ class PlantSimulator:
                 self.motor.direction = 1 if torque_raw > 0 else 0
 
         elif arb_id == RX_STEER_COMMAND:
-            if self._reset_grace_ticks > 0:
-                return
             if len(data) >= 4 and not self.estop_active:
                 raw = struct.unpack_from('<H', data, 2)[0]  # uint16 LE (DBC: unsigned)
                 angle = raw * 0.01 - 45.0  # DBC: factor=0.01, offset=-45.0
@@ -196,8 +180,6 @@ class PlantSimulator:
                 self.steering.record_command(angle)
 
         elif arb_id == RX_BRAKE_COMMAND:
-            if self._reset_grace_ticks > 0:
-                return
             if len(data) >= 3 and not self.estop_active:
                 self.brake.record_command(float(data[2]))
 
@@ -494,9 +476,6 @@ class PlantSimulator:
                       and self.vehicle_state in (VS_DEGRADED, VS_LIMP)):
                     self.vehicle_state = VS_RUN
                     log.info("Vehicle state -> RUN (faults cleared)")
-
-                if self._reset_grace_ticks > 0:
-                    self._reset_grace_ticks -= 1
 
                 # TX schedule
                 # Every 10ms: motor current, lidar
