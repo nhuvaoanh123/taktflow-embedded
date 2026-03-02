@@ -75,7 +75,11 @@
 #define SC_HB_TIMEOUT_TICKS         15u    /* 150ms = 3x 50ms heartbeat period */
 #define SC_HB_CONFIRM_TICKS         5u     /* 50ms additional confirmation */
 #define SC_HB_ALIVE_MAX             15u    /* 4-bit alive counter max */
+#ifdef PLATFORM_POSIX
+#define SC_HB_STARTUP_GRACE_TICKS  1500u   /* 15s grace for SIL — sequential Docker restarts need margin */
+#else
 #define SC_HB_STARTUP_GRACE_TICKS  500u    /* 5s grace — must >= CVC INIT hold (500 ticks) */
+#endif
 
 /* ==================================================================
  * Bus Silence Monitoring
