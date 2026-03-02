@@ -523,19 +523,28 @@ def estop() -> str:
 
 log = logging.getLogger("fault_inject")
 
-# Containers to restart on power-cycle reset (ECUs + plant physics)
-_POWER_CYCLE_CONTAINERS = [
-    "docker-cvc-1", "docker-fzc-1", "docker-rzc-1",
-    "docker-sc-1", "docker-bcm-1", "docker-icu-1", "docker-tcu-1",
+# Containers to restart on power-cycle reset.
+# Order matters: zone controllers first, CVC last (so heartbeats are
+# ready when CVC starts checking after its 5-second INIT hold).
+_ZONE_CONTAINERS = [
+    "docker-fzc-1", "docker-rzc-1", "docker-sc-1",
+    "docker-bcm-1", "docker-icu-1", "docker-tcu-1",
     "docker-plant-sim-1",
 ]
+_CVC_CONTAINER = "docker-cvc-1"
 
 
 def _restart_ecu_containers() -> list[str]:
-    """Restart ECU + plant-sim containers to clear latched firmware faults."""
+    """Restart ECU + plant-sim containers to clear latched firmware faults.
+
+    Restart order: zone controllers first → wait 2s → CVC last.
+    This ensures FZC/RZC heartbeats are ready when CVC boots.
+    """
     client = docker.from_env()
     restarted = []
-    for name in _POWER_CYCLE_CONTAINERS:
+
+    # Phase 1: restart zone controllers + plant-sim
+    for name in _ZONE_CONTAINERS:
         try:
             c = client.containers.get(name)
             c.restart(timeout=5)
@@ -544,6 +553,20 @@ def _restart_ecu_containers() -> list[str]:
             log.warning("Container %s not found — skipping", name)
         except Exception as exc:
             log.warning("Failed to restart %s: %s", name, exc)
+
+    # Phase 2: brief wait for zone controllers to boot
+    time.sleep(2)
+
+    # Phase 3: restart CVC last
+    try:
+        c = client.containers.get(_CVC_CONTAINER)
+        c.restart(timeout=5)
+        restarted.append(_CVC_CONTAINER)
+    except docker.errors.NotFound:
+        log.warning("Container %s not found — skipping", _CVC_CONTAINER)
+    except Exception as exc:
+        log.warning("Failed to restart %s: %s", _CVC_CONTAINER, exc)
+
     return restarted
 
 
