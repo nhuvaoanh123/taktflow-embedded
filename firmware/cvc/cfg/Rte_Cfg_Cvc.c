@@ -64,6 +64,7 @@ static const Rte_SignalConfigType cvc_signal_config[CVC_SIG_COUNT] = {
     { CVC_SIG_MOTOR_CUTOFF,    0u },   /* 28: Motor cutoff received         */
     { CVC_SIG_STEERING_FAULT,  0u },   /* 29: Steering fault received       */
     { CVC_SIG_BRAKE_FAULT,     0u },   /* 30: Brake fault received          */
+    { CVC_SIG_SC_RELAY_KILL,   0u },   /* 31: SC relay kill received         */
 };
 
 /* ==================================================================
