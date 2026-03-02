@@ -12,6 +12,7 @@
  * Mocks: E2E_Protect, E2E_Check (BSW E2E module)
  */
 #include "unity.h"
+#include <string.h>
 
 /* ==================================================================
  * Local type definitions (avoid BSW header mock conflicts)
@@ -41,6 +42,12 @@ typedef uint8           Std_ReturnType;
 #define CVC_SIG_TORQUE_REQUEST    21u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
+
+/* Vehicle state constants (mirrors Cvc_Cfg.h) */
+#define CVC_STATE_INIT        0u
+#define CVC_STATE_RUN         1u
+#define CVC_STATE_SAFE_STOP   4u
+#define CVC_STATE_SHUTDOWN    5u
 
 /* ==================================================================
  * E2E Types (mirrors BSW E2E.h)
@@ -113,15 +120,27 @@ extern Std_ReturnType  Swc_CvcCom_GetRxStatus(uint8 rxIndex,
                                                 Swc_CvcCom_RxStatusType* status);
 
 /* ==================================================================
+ * Mock: VehicleState
+ * ================================================================== */
+
+static uint8 mock_vehicle_state;
+uint8 Swc_VehicleState_GetState(void) { return mock_vehicle_state; }
+
+/* ==================================================================
  * Mock: Com_SendSignal, Com_ReceiveSignal, Rte_Read, Rte_Write
  * ================================================================== */
 
 static uint32 mock_rte_signals[48];
+static uint8  mock_com_sent_u8[16];
+static sint16 mock_com_sent_s16[16];
 
 Std_ReturnType Com_SendSignal(uint16 SignalId, const void* SignalDataPtr)
 {
-    (void)SignalId;
-    (void)SignalDataPtr;
+    if (SignalId < 16u)
+    {
+        mock_com_sent_u8[SignalId]  = *((const uint8*)SignalDataPtr);
+        mock_com_sent_s16[SignalId] = *((const sint16*)SignalDataPtr);
+    }
     return E_OK;
 }
 
@@ -213,6 +232,10 @@ void setUp(void)
     mock_e2e_protect_last_state = NULL_PTR;
     mock_e2e_check_result       = E2E_STATUS_OK;
     mock_e2e_check_call_count   = 0u;
+
+    mock_vehicle_state = CVC_STATE_RUN;
+    (void)memset(mock_com_sent_u8, 0, sizeof(mock_com_sent_u8));
+    (void)memset(mock_com_sent_s16, 0, sizeof(mock_com_sent_s16));
 
     Swc_CvcCom_Init();
 }
@@ -422,6 +445,42 @@ void test_CvcCom_transmit_schedule_large_time(void)
 }
 
 /* ==================================================================
+ * SWR-CVC-017: State-Gated TX Tests (Safe-State Actuation)
+ * ================================================================== */
+
+/** @verifies SWR-CVC-017 — TX sends brake=0 in RUN state */
+void test_TX_brake_zero_in_run_state(void)
+{
+    mock_vehicle_state = CVC_STATE_RUN;
+    Swc_CvcCom_TransmitSchedule(0u);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_sent_u8[7]);
+}
+
+/** @verifies SWR-CVC-017 — TX sends brake=100 in SAFE_STOP state */
+void test_TX_brake_max_in_safe_stop(void)
+{
+    mock_vehicle_state = CVC_STATE_SAFE_STOP;
+    Swc_CvcCom_TransmitSchedule(0u);
+    TEST_ASSERT_EQUAL_UINT8(100u, mock_com_sent_u8[7]);
+}
+
+/** @verifies SWR-CVC-017 — TX sends brake=100 in SHUTDOWN state */
+void test_TX_brake_max_in_shutdown(void)
+{
+    mock_vehicle_state = CVC_STATE_SHUTDOWN;
+    Swc_CvcCom_TransmitSchedule(0u);
+    TEST_ASSERT_EQUAL_UINT8(100u, mock_com_sent_u8[7]);
+}
+
+/** @verifies SWR-CVC-017 — TX sends steer=0 (center) in SAFE_STOP state */
+void test_TX_steer_center_in_safe_stop(void)
+{
+    mock_vehicle_state = CVC_STATE_SAFE_STOP;
+    Swc_CvcCom_TransmitSchedule(0u);
+    TEST_ASSERT_EQUAL_INT16(0, mock_com_sent_s16[6]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -448,6 +507,12 @@ int main(void)
     RUN_TEST(test_CvcCom_transmit_schedule_periods);
     RUN_TEST(test_CvcCom_transmit_schedule_large_time);
 
+    /* SWR-CVC-017: State-Gated TX */
+    RUN_TEST(test_TX_brake_zero_in_run_state);
+    RUN_TEST(test_TX_brake_max_in_safe_stop);
+    RUN_TEST(test_TX_brake_max_in_shutdown);
+    RUN_TEST(test_TX_steer_center_in_safe_stop);
+
     return UNITY_END();
 }
 
@@ -463,5 +528,6 @@ int main(void)
 #define E2E_H
 #define COM_H
 #define RTE_H
+#define SWC_VEHICLESTATE_H
 
 #include "../src/Swc_CvcCom.c"

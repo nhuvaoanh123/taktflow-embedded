@@ -23,6 +23,9 @@
 #include "E2E.h"
 #include "Com.h"
 #include "Rte.h"
+#include "Swc_VehicleState.h"
+
+#define CVC_SAFE_BRAKE_CMD   100u   /**< Max brake for safe-state TX */
 
 /* ==================================================================
  * TX Message Schedule Table (SWR-CVC-017)
@@ -253,13 +256,22 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
         }
     }
 
-    /* Publish steering and brake commands from RTE to Com -> CAN.
-     * CVC has no steering/brake planner SWC — send neutral (0) so the
-     * CAN frames exist for gateway/SIL monitoring.  When a real planner
-     * is added it will write dedicated RTE signals. */
+    /* Publish steering and brake commands.
+     * In SAFE_STOP / SHUTDOWN: override to safe-state values
+     * (max brake, center steering) so FZC clears its fault latch. */
     {
+        uint8  vs = Swc_VehicleState_GetState();
         sint16 tx_steer = 0;
-        uint8  tx_brake = 0u;
+        uint8  tx_brake;
+
+        if (vs >= CVC_STATE_SAFE_STOP)
+        {
+            tx_brake = CVC_SAFE_BRAKE_CMD;
+        }
+        else
+        {
+            tx_brake = 0u;
+        }
 
         (void)Com_SendSignal(6u, &tx_steer);  /* Signal 6 = steer_angle -> CAN 0x102 */
         (void)Com_SendSignal(7u, &tx_brake);  /* Signal 7 = brake_pressure -> CAN 0x103 */

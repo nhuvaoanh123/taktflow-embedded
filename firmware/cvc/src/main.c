@@ -223,7 +223,10 @@ static void BswM_Action_Run(void)
 
 static void BswM_Action_SafeStop(void)
 {
-    /* Disable motor, apply max brake, center steering */
+    /* Safe-state actuation: CvcCom_TransmitSchedule handles cyclic
+     * brake=100% TX via state-gate. No one-shot action needed here.
+     * TODO:POST-BETA — add DTC reporting when CVC_DTC_SAFE_STOP_ENTRY
+     * is defined in Cvc_Cfg.h. */
 }
 
 static void BswM_Action_Shutdown(void)
