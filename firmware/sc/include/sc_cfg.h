@@ -75,6 +75,7 @@
 #define SC_HB_TIMEOUT_TICKS         15u    /* 150ms = 3x 50ms heartbeat period */
 #define SC_HB_CONFIRM_TICKS         5u     /* 50ms additional confirmation */
 #define SC_HB_ALIVE_MAX             15u    /* 4-bit alive counter max */
+#define SC_HB_STARTUP_GRACE_TICKS  300u    /* 3s grace — let ECUs boot before monitoring */
 
 /* ==================================================================
  * Bus Silence Monitoring

@@ -29,6 +29,9 @@ static uint8 hb_confirm_counter[SC_ECU_COUNT];
 /** Per-ECU confirmed timeout flag (>= 200ms total) */
 static boolean hb_confirmed[SC_ECU_COUNT];
 
+/** Startup grace counter — skip monitoring until ECUs have time to boot */
+static uint16 hb_startup_grace;
+
 /* ==================================================================
  * LED pin lookup by ECU index
  * ================================================================== */
@@ -52,6 +55,7 @@ void SC_Heartbeat_Init(void)
         hb_confirm_counter[i] = 0u;
         hb_confirmed[i]       = FALSE;
     }
+    hb_startup_grace = SC_HB_STARTUP_GRACE_TICKS;
 }
 
 void SC_Heartbeat_NotifyRx(uint8 ecuIndex)
@@ -75,6 +79,12 @@ void SC_Heartbeat_NotifyRx(uint8 ecuIndex)
 void SC_Heartbeat_Monitor(void)
 {
     uint8 i;
+
+    /* Startup grace period — let ECUs boot before monitoring */
+    if (hb_startup_grace > 0u) {
+        hb_startup_grace--;
+        return;
+    }
 
     for (i = 0u; i < SC_ECU_COUNT; i++) {
         /* Skip if already confirmed (latched) */

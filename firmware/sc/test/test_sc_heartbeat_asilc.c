@@ -84,10 +84,15 @@ uint8 gioGetBit(uint8 port, uint8 pin)
 void setUp(void)
 {
     uint8 i;
+    uint16 g;
     for (i = 0u; i < 8u; i++) {
         mock_gio_a_state[i] = 0u;
     }
     SC_Heartbeat_Init();
+    /* Advance past startup grace period so tests run against active monitoring */
+    for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
+        SC_Heartbeat_Monitor();
+    }
 }
 
 void tearDown(void) { }
