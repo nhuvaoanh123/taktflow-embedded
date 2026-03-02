@@ -60,8 +60,11 @@ static uint16 plaus_startup_grace;
 
 /* ==================================================================
  * Internal: Lookup expected current for given torque percentage
+ *
+ * Only needed when real plausibility validation runs (not in SIL runtime).
  * ================================================================== */
 
+#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * @brief  Linear interpolation in the torque-to-current lookup table
  * @param  torque_pct  Torque percentage (0-100)
@@ -134,6 +137,7 @@ static boolean is_implausible(uint16 expected_ma, uint16 actual_ma)
 
     return (diff > threshold) ? TRUE : FALSE;
 }
+#endif
 
 /* ==================================================================
  * Public API
