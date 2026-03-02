@@ -56,11 +56,11 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 1 | STM32G474RE Nucleo-64 | 3 | $16.00 | $48.00 | Mouser / ST Direct | NUCLEO-G474RE | Not ordered | Phase 1 (first) |
+| 1 | STM32G474RE Nucleo-64 | 3 | $16.00 | $48.00 | Conrad | NUCLEO-G474RE | **Delivered** 2026-03-02 | Phase 1 (first) |
 | 2 | TMS570LC43x LaunchPad | 1 | $40.00 | $40.00 | Mouser / TI Direct | LAUNCHXL2-570LC43 | Not ordered | Phase 1 (first) |
 | 3 | Raspberry Pi 4 Model B (4GB) | 1 | $55.00 | $55.00 | Adafruit / PiShop | SC0194 | Not ordered | Phase 2 |
 | 4 | 32GB MicroSD Card (Class 10) | 1 | $9.00 | $9.00 | Amazon | SanDisk Ultra | Not ordered | Phase 2 |
-| 5 | RPi 4 USB-C Power Supply (5V/3A) | 1 | $8.00 | $8.00 | Adafruit / Amazon | CanaKit 3.5A | Not ordered | Phase 2 |
+| 5 | RPi 4 USB-C Power Supply (5V/3A) | 1 | $8.00 | $8.00 | Conrad | RPI PS 15W BK EU (5.1V/3A) | **Delivered** 2026-03-02 | Phase 2 |
 | | **Subtotal: MCU Boards** | | | **$160.00** | | | | |
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-BOM-SEC1 -->
@@ -104,8 +104,8 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 19 | 12V DC Brushed Motor (with encoder mount) | 1 | $15.00 | $15.00 | Amazon | 775 Motor 12V 12000RPM | Not ordered | Phase 2 |
-| 20 | BTS7960 H-Bridge Motor Driver Module (43A) | 1 | $12.00 | $12.00 | Amazon / AliExpress | BTS7960 module | Not ordered | Phase 2 |
+| 19 | 12V DC Gear Motor (with encoder mount) | 1 | $15.00 | $15.00 | Conrad | GM27 90 12V (27mm, 90:1 gear) | **Delivered** 2026-03-02 | Phase 2 |
+| 20 | BTS7960 H-Bridge Motor Driver Module (43A) | 1 | $12.00 | $12.00 | Amazon / AliExpress | BTS7960 module | **Delivered** | Phase 2 |
 | 21 | MG996R Metal Gear Servo (180 degree, 50Hz) | 2 | $8.00 | $16.00 | Amazon | MG996R (TowerPro or equiv.) | Not ordered | Phase 2 |
 | | **Subtotal: Actuators** | | | **$43.00** | | | | |
 
@@ -149,8 +149,8 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 34 | 12V 10A Bench DC Power Supply | 1 | $25.00 | $25.00 | Amazon | Adjustable PSU 12V 10A | Not ordered | Phase 1 (first) |
-| 35 | LM2596 Buck Converter Module (adjustable, 3A) | 2 | $3.00 | $6.00 | Amazon / AliExpress | LM2596 step-down module | Not ordered | Phase 1 |
+| 34 | 12V 10A Bench DC Power Supply | 1 | $25.00 | $25.00 | Conrad | McPower LBN-305 (0-30V/0-5A) | **Delivered** 2026-03-02 | Phase 1 (first) |
+| 35 | LM2596 Buck Converter Module (adjustable, 3A) | 3 | $3.00 | $9.00 | Conrad | DCDC DOWN 5 step-down module | **Delivered** 2026-03-02 | Phase 1 |
 | 36 | SB560 Schottky Diode (5A, 60V, reverse polarity) | 1 | $0.50 | $0.50 | Amazon / Mouser | SB560 | Not ordered | Phase 1 |
 | 37 | ATC/ATO Blade Fuse Holder (inline) | 2 | $2.00 | $4.00 | Amazon / AutoZone | Inline fuse holder | Not ordered | Phase 1 |
 | 38 | ATC Blade Fuse 10A | 2 | $0.50 | $1.00 | Amazon / AutoZone | Standard 10A fuse | Not ordered | Phase 1 |
@@ -206,8 +206,8 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 59 | Base Plate (plywood or acrylic, 400x300mm) | 1 | $8.00 | $8.00 | Home Depot / Amazon | 3/4 inch plywood | Not ordered | Phase 1 |
-| 60 | M3 Standoffs (Nylon, 10mm, M/F) + Screws | 20 | $0.15 | $3.00 | Amazon | M3 nylon standoff kit | Not ordered | Phase 1 |
-| 61 | Proto/Perf Board (5x7cm, double-sided) | 5 | $1.00 | $5.00 | Amazon | Universal PCB | Not ordered | Phase 1 |
+| 60 | M3 Standoffs (Nylon, 10mm, M/F) + Screws | 10 | $0.15 | $1.50 | Conrad | AH 11,1 plastic spacers (11.1mm) | **Delivered** 2026-03-02 | Phase 1 |
+| 61 | Proto/Perf Board (double-sided) | 2 | $1.00 | $2.00 | Conrad | H25PR200 (200x100mm) + LR DS-57 (70x50mm) | **Delivered** 2026-03-02 | Phase 1 |
 | 62 | Screw Terminal Block (2-position, 5.08mm pitch) | 10 | $0.30 | $3.00 | Amazon | 2P screw terminal | Not ordered | Phase 1 |
 | 63 | Screw Terminal Block (3-position, 5.08mm pitch) | 6 | $0.40 | $2.40 | Amazon | 3P screw terminal | Not ordered | Phase 1 |
 | 64 | Dupont Jumper Wires (M-F, 20cm, 40-pack) | 2 | $3.00 | $6.00 | Amazon | Dupont jumper cable | Not ordered | Phase 1 |
@@ -371,11 +371,11 @@ For critical components, backup alternatives are identified:
 
 | # | Component | Ordered | Received | Verified | Notes |
 |---|-----------|---------|----------|----------|-------|
-| 1 | STM32G474RE Nucleo-64 (x3) | 2026-02-22 | -- | -- | Conrad + additional order |
+| 1 | STM32G474RE Nucleo-64 (x3) | 2026-02-22 | 2026-03-02 | -- | Conrad (PV-08309187631) |
 | 2 | TMS570LC43x LaunchPad | 2026-02-22 | -- | -- | Confirmed on the way |
 | 3 | Raspberry Pi 4 4GB | 2026-02-22 | -- | -- | Confirmed done |
 | 4 | 32GB MicroSD | 2026-02-23 | -- | -- | Confirmed done |
-| 5 | RPi USB-C PSU | 2026-02-22 | -- | -- | 5.1V/3A ordered |
+| 5 | RPi USB-C PSU | 2026-02-22 | 2026-03-02 | -- | Conrad RPI PS 15W BK EU (5.1V/3A) |
 | 6 | TJA1051T/3 module (x3) | 2026-02-22 | -- | -- | Full qty confirmed done (initially x2, then topped up) |
 | 7 | SN65HVD230 module | 2026-02-22 | -- | -- | |
 | 8 | USB-CAN adapters (x2) | 2026-02-22 | -- | -- | Substitutes: Ecktron UCAN x1, Waveshare USB-CAN x1 (not CANable 2.0) |
@@ -389,8 +389,8 @@ For critical components, backup alternatives are identified:
 | 16 | ACS723 module | 2026-02-23 | -- | -- | Confirmed done (SparkFun order canceled, alternative sourced) |
 | 17 | NTC 10k thermistors (x3) | 2026-02-22 | -- | -- | Mixed 5k+10k pack; NTC requirement confirmed done |
 | 18 | Quadrature encoder | -- | -- | -- | |
-| 19 | 12V DC motor | 2026-02-22 | -- | -- | GM27 gear motor substitute |
-| 20 | BTS7960 module | 2026-02-22 | -- | -- | |
+| 19 | 12V DC motor | 2026-02-22 | 2026-03-02 | -- | Conrad GM27 90 12V (27mm, 90:1 gear) |
+| 20 | BTS7960 module | 2026-02-22 | Received | -- | On hand |
 | 21 | MG996R servos (x2) | 2026-02-23 | -- | -- | Confirmed done (initial order canceled, re-ordered) |
 | 22 | TPS3823-33DBVT (x5) | 2026-02-27 | -- | -- | Reichelt.de, 5 pcs (4 needed + 1 spare), €8.00 total |
 | 23 | SOT-23-5 breakout (x4) | -- | -- | -- | |
@@ -402,14 +402,14 @@ For critical components, backup alternatives are identified:
 | 29-31 | LEDs (red, green, amber) | 2026-02-22 | -- | -- | LED + resistor kit |
 | 32 | Piezo buzzer | 2026-02-22 | -- | -- | Pack ordered |
 | 33 | 2N7002 MOSFET | -- | -- | -- | |
-| 34 | 12V 10A PSU | 2026-02-22 | -- | -- | Lab PSU 0-30V/0-5A (better substitute) |
-| 35 | LM2596 buck modules (x2) | 2026-02-22 | -- | -- | DC/DC down converters ordered |
+| 34 | 12V 10A PSU | 2026-02-22 | 2026-03-02 | -- | Conrad McPower LBN-305 (0-30V/0-5A) |
+| 35 | LM2596 buck modules (x3) | 2026-02-22 | 2026-03-02 | -- | Conrad DCDC DOWN 5 x3 |
 | 36 | SB560 Schottky | -- | -- | -- | |
 | 37-41 | Fuses and holders | -- | -- | -- | Partial — needs as-built confirmation |
 | 42 | 6V regulator modules (x2) | -- | -- | -- | |
 | 43-54 | Passive components | -- | -- | -- | |
 | 55-58 | Protection components | -- | -- | -- | |
-| 59-73 | Infrastructure | 2026-02-22 | -- | -- | Partial: perfboards, standoffs, JST-XH kit ordered |
+| 59-73 | Infrastructure | 2026-02-22 | Partial 2026-03-02 | -- | Perfboards (#61) and spacers (#60) delivered via Conrad; JST-XH kit and rest pending |
 | 74 | Rigol DS1054Z (optional) | 2026-02-23 | -- | -- | Purchased |
 
 ---
@@ -577,6 +577,16 @@ For critical components, backup alternatives are identified:
 
 1. TPS3823-33DBVT ordered from Reichelt.de: 5 pcs x €1.60 = €8.00.
 2. All BOM sections received HITL review.
+
+### 2026-03-02 (Conrad Delivery — PV-08309187631)
+
+1. NUCLEO-G474RE x3 delivered (BOM #1).
+2. RPi USB-C PSU (RPI PS 15W BK EU, 5.1V/3A) delivered (BOM #5).
+3. GM27 90 12V gear motor (27mm, 90:1) delivered (BOM #19).
+4. McPower LBN-305 lab PSU (0-30V/0-5A) delivered (BOM #34).
+5. DC/DC step-down converters x3 (DCDC DOWN 5) delivered (BOM #35).
+6. Plastic spacers x10 (AH 11,1, 11.1mm) delivered (BOM #60).
+7. Perfboards: H25PR200 (200x100mm) + LR DS-57 (70x50mm) delivered (BOM #61).
 
 ---
 
