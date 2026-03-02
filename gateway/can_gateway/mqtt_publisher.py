@@ -35,6 +35,7 @@ class MqttPublisher:
 
         # Latest signal values for aggregated telemetry
         self._latest: dict[str, float | str] = {}
+        self._last_publish_time: dict[str, float] = {}
         self._last_telemetry_time = time.monotonic()
 
         # Stats
@@ -69,21 +70,34 @@ class MqttPublisher:
     # E2E header signals — change every frame, not useful for dashboard
     _E2E_SIGNALS = frozenset({"E2E_DataID", "E2E_AliveCounter", "E2E_CRC8"})
 
+    # Minimum interval (seconds) between MQTT publishes per signal.
+    # CAN frames arrive every 10ms but dashboard only needs ~5 Hz updates.
+    _MIN_PUBLISH_INTERVAL = 0.2  # 200ms = 5 Hz max per signal
+
     def publish_signals(self, msg_name: str, signals: dict):
-        """Publish each signal as a separate MQTT topic."""
+        """Publish each signal as a separate MQTT topic (rate-limited)."""
         if not self._connected:
             return
 
+        now = time.monotonic()
         for signal_name, value in signals.items():
             if signal_name in self._E2E_SIGNALS:
                 continue
+
+            key = f"{msg_name}/{signal_name}"
+
+            # Rate-limit: skip if same signal published recently
+            last_time = self._last_publish_time.get(key, 0.0)
+            if (now - last_time) < self._MIN_PUBLISH_INTERVAL:
+                self._latest[key] = value
+                continue
+
             topic = f"{TOPIC_PREFIX}/can/{msg_name}/{signal_name}"
-            # Use str for numeric values to keep them lightweight
             payload = str(value) if not isinstance(value, (dict, list)) else json.dumps(value)
             self._client.publish(topic, payload, qos=0, retain=True)
 
-            # Track latest values for aggregated telemetry
-            self._latest[f"{msg_name}/{signal_name}"] = value
+            self._latest[key] = value
+            self._last_publish_time[key] = now
 
         self._msg_count += 1
 
