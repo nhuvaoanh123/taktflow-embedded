@@ -5,8 +5,8 @@
  *
  * @verifies SWR-SC-004, SWR-SC-005, SWR-SC-006
  *
- * Tests 3-ECU independent timeout counters, 150ms timeout detection,
- * 50ms confirmation window, heartbeat resume during confirmation,
+ * Tests 3-ECU independent timeout counters, 100ms timeout detection,
+ * 30ms confirmation window, heartbeat resume during confirmation,
  * and per-ECU fault LED control.
  *
  * Mocks: GIO registers.
@@ -40,8 +40,8 @@ typedef uint8               Std_ReturnType;
 #define SC_ECU_RZC                  2u
 #define SC_ECU_COUNT                3u
 
-#define SC_HB_TIMEOUT_TICKS         15u
-#define SC_HB_CONFIRM_TICKS         5u
+#define SC_HB_TIMEOUT_TICKS         10u
+#define SC_HB_CONFIRM_TICKS         3u
 
 #define SC_GIO_PORT_A               0u
 #define SC_PIN_LED_CVC              1u
@@ -115,12 +115,12 @@ void test_HB_counter_increments(void)
 {
     uint8 i;
 
-    /* Run 14 ticks — just under timeout */
-    for (i = 0u; i < 14u; i++) {
+    /* Run 9 ticks — just under timeout */
+    for (i = 0u; i < (SC_HB_TIMEOUT_TICKS - 1u); i++) {
         SC_Heartbeat_Monitor();
     }
 
-    /* Should not be timed out yet (15 ticks = threshold) */
+    /* Should not be timed out yet (10 ticks = threshold) */
     TEST_ASSERT_FALSE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
 }
 
@@ -129,16 +129,16 @@ void test_HB_counter_resets_on_rx(void)
 {
     uint8 i;
 
-    /* Run 10 ticks toward timeout */
-    for (i = 0u; i < 10u; i++) {
+    /* Run 7 ticks toward timeout */
+    for (i = 0u; i < 7u; i++) {
         SC_Heartbeat_Monitor();
     }
 
     /* Receive heartbeat */
     SC_Heartbeat_NotifyRx(SC_ECU_CVC);
 
-    /* Run 14 more ticks — still should not timeout because counter reset */
-    for (i = 0u; i < 14u; i++) {
+    /* Run 9 more ticks — still should not timeout because counter reset */
+    for (i = 0u; i < (SC_HB_TIMEOUT_TICKS - 1u); i++) {
         SC_Heartbeat_Monitor();
     }
 
@@ -149,8 +149,8 @@ void test_HB_counter_resets_on_rx(void)
  * SWR-SC-005: 150ms Timeout Detection
  * ================================================================== */
 
-/** @verifies SWR-SC-005 -- Timeout detected at exactly 15 ticks */
-void test_HB_timeout_at_15_ticks(void)
+/** @verifies SWR-SC-005 -- Timeout detected at exactly 10 ticks (100ms) */
+void test_HB_timeout_at_10_ticks(void)
 {
     uint8 i;
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
@@ -196,25 +196,25 @@ void test_HB_fault_led_on_timeout(void)
  * SWR-SC-006: 50ms Confirmation Window
  * ================================================================== */
 
-/** @verifies SWR-SC-006 -- Timeout not confirmed until 200ms total */
+/** @verifies SWR-SC-006 -- Timeout not confirmed until 130ms total */
 void test_HB_confirmation_window(void)
 {
     uint8 i;
 
-    /* 15 ticks = timeout detected (150ms) */
+    /* 10 ticks = timeout detected (100ms) */
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
         SC_Heartbeat_Monitor();
     }
     TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
     TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
 
-    /* 4 more ticks = still in confirmation window */
+    /* 2 more ticks = still in confirmation window */
     for (i = 0u; i < (SC_HB_CONFIRM_TICKS - 1u); i++) {
         SC_Heartbeat_Monitor();
     }
     TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
 
-    /* 5th tick = confirmed */
+    /* 3rd tick = confirmed */
     SC_Heartbeat_Monitor();
     TEST_ASSERT_TRUE(SC_Heartbeat_IsAnyConfirmed());
 }
@@ -289,8 +289,8 @@ void test_HB_notify_invalid_index(void)
  * ================================================================== */
 
 /** @verifies SWR-SC-005
- *  Equivalence class: Boundary — timeout at exactly 14 ticks (one under) */
-void test_hb_timeout_at_14_no_fault(void)
+ *  Equivalence class: Boundary — timeout at exactly 9 ticks (one under) */
+void test_hb_timeout_at_9_no_fault(void)
 {
     uint8 i;
     for (i = 0u; i < (SC_HB_TIMEOUT_TICKS - 1u); i++) {
@@ -303,8 +303,8 @@ void test_hb_timeout_at_14_no_fault(void)
 }
 
 /** @verifies SWR-SC-006
- *  Equivalence class: Boundary — confirmation at exactly 4 ticks (one under) */
-void test_hb_confirmation_at_4_not_confirmed(void)
+ *  Equivalence class: Boundary — confirmation at exactly 2 ticks (one under) */
+void test_hb_confirmation_at_2_not_confirmed(void)
 {
     uint8 i;
     for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
@@ -388,6 +388,43 @@ void test_hb_led_cleared_on_resume(void)
 }
 
 /* ==================================================================
+ * PHASE 2: FTTI Budget Verification
+ * ================================================================== */
+
+/** @verifies SWR-SC-005
+ *  Phase 2: Timeout detection at 100ms (10 ticks), within SG-008 FTTI */
+void test_HB_timeout_within_ftti(void)
+{
+    uint8 i;
+    /* Run exactly 10 ticks = 100ms */
+    for (i = 0u; i < 10u; i++) {
+        SC_Heartbeat_Monitor();
+    }
+
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+}
+
+/** @verifies SWR-SC-006
+ *  Phase 2: Confirmation at 3 ticks (30ms), total 130ms */
+void test_HB_confirmation_at_3_ticks(void)
+{
+    uint8 i;
+
+    /* 10 ticks = timeout */
+    for (i = 0u; i < SC_HB_TIMEOUT_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsTimedOut(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsAnyConfirmed());
+
+    /* 3 more ticks = confirmed */
+    for (i = 0u; i < SC_HB_CONFIRM_TICKS; i++) {
+        SC_Heartbeat_Monitor();
+    }
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsAnyConfirmed());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -401,7 +438,7 @@ int main(void)
     RUN_TEST(test_HB_counter_resets_on_rx);
 
     /* SWR-SC-005: Timeout detection */
-    RUN_TEST(test_HB_timeout_at_15_ticks);
+    RUN_TEST(test_HB_timeout_at_10_ticks);
     RUN_TEST(test_HB_independent_ecus);
     RUN_TEST(test_HB_fault_led_on_timeout);
 
@@ -415,11 +452,15 @@ int main(void)
     RUN_TEST(test_HB_notify_invalid_index);
 
     /* Hardened tests — boundary values, fault injection */
-    RUN_TEST(test_hb_timeout_at_14_no_fault);
-    RUN_TEST(test_hb_confirmation_at_4_not_confirmed);
+    RUN_TEST(test_hb_timeout_at_9_no_fault);
+    RUN_TEST(test_hb_confirmation_at_2_not_confirmed);
     RUN_TEST(test_hb_rapid_notify_monitor);
     RUN_TEST(test_hb_single_ecu_late_resume);
     RUN_TEST(test_hb_led_cleared_on_resume);
+
+    /* Phase 2: FTTI Budget */
+    RUN_TEST(test_HB_timeout_within_ftti);
+    RUN_TEST(test_HB_confirmation_at_3_ticks);
 
     return UNITY_END();
 }

@@ -12,8 +12,9 @@
  *
  *           RX: Monitors FZC and RZC heartbeat reception. Uses a flag-based
  *           scheme — each 50ms check period, if no RxIndication was called,
- *           the miss counter increments. After CVC_HB_MAX_MISS consecutive
- *           misses, comm status transitions to TIMEOUT and a DTC is reported.
+ *           the miss counter increments. After CVC_HB_FZC_MAX_MISS (FZC) or
+ *           CVC_HB_RZC_MAX_MISS (RZC) consecutive misses, comm status
+ *           transitions to TIMEOUT and a DTC is reported.
  *           Recovery: if an RxIndication arrives after timeout, comm status
  *           is restored to OK and a PASSED DTC is reported.
  *
@@ -188,7 +189,7 @@ void Swc_Heartbeat_MainFunction(void)
                 fzc_miss_count++;
             }
 
-            if (fzc_miss_count >= CVC_HB_MAX_MISS) {
+            if (fzc_miss_count >= CVC_HB_FZC_MAX_MISS) {
                 if (fzc_comm_status != CVC_COMM_TIMEOUT) {
                     fzc_comm_status = CVC_COMM_TIMEOUT;
                     HB_DIAG("FZC: OK -> TIMEOUT (miss=%u)", (unsigned)fzc_miss_count);
@@ -217,7 +218,7 @@ void Swc_Heartbeat_MainFunction(void)
                 rzc_miss_count++;
             }
 
-            if (rzc_miss_count >= CVC_HB_MAX_MISS) {
+            if (rzc_miss_count >= CVC_HB_RZC_MAX_MISS) {
                 if (rzc_comm_status != CVC_COMM_TIMEOUT) {
                     rzc_comm_status = CVC_COMM_TIMEOUT;
                     HB_DIAG("RZC: OK -> TIMEOUT (miss=%u)", (unsigned)rzc_miss_count);
