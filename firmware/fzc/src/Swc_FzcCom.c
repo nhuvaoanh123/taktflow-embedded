@@ -16,8 +16,8 @@
  *              0x001 E-stop, 0x100 vehicle state,
  *              0x200 brake cmd, 0x201 steering cmd
  *           4. CAN message transmission (scheduled):
- *              0x011 heartbeat 50ms, 0x210 brake fault (event),
- *              0x211 motor cutoff (event), 0x220 lidar warning (event)
+ *              0x011 heartbeat 50ms, 0x210 brake fault (cyclic),
+ *              0x211 motor cutoff (cyclic), 0x220 lidar warning (event)
  *
  *           All variables are static file-scope. No dynamic memory.
  *
@@ -76,9 +76,7 @@ static uint8  FzcCom_RxAliveSteerCmd;
 /** Heartbeat TX cycle counter */
 static uint8  FzcCom_HbCycleCount;
 
-/** Event-driven TX pending flags */
-static uint8  FzcCom_TxPendBrakeFault;
-static uint8  FzcCom_TxPendMotorCutoff;
+/** Event-driven TX pending flag (lidar only — brake/motor are cyclic) */
 static uint8  FzcCom_TxPendLidarWarn;
 
 /* ==================================================================
@@ -126,8 +124,6 @@ void Swc_FzcCom_Init(void)
     FzcCom_RxAliveBrakeCmd  = 0xFFu;
     FzcCom_RxAliveSteerCmd  = 0xFFu;
     FzcCom_HbCycleCount     = 0u;
-    FzcCom_TxPendBrakeFault = FALSE;
-    FzcCom_TxPendMotorCutoff = FALSE;
     FzcCom_TxPendLidarWarn  = FALSE;
     FzcCom_Initialized      = TRUE;
 }
@@ -308,35 +304,23 @@ void Swc_FzcCom_TransmitSchedule(void)
         }
     }
 
-    /* ---- TX: 0x210 Brake Fault (event-driven, PduR_Transmit) ---- */
+    /* ---- TX: 0x210 Brake Fault (cyclic — always send current status) ---- */
     (void)Rte_Read(FZC_SIG_BRAKE_FAULT, &rteVal);
-    if (rteVal != (uint32)FZC_BRAKE_NO_FAULT) {
-        FzcCom_TxPendBrakeFault = TRUE;
+    for (i = 0u; i < 8u; i++) {
+        txBuf[i] = 0u;
     }
-    if (FzcCom_TxPendBrakeFault == TRUE) {
-        for (i = 0u; i < 8u; i++) {
-            txBuf[i] = 0u;
-        }
-        txBuf[2] = (uint8)rteVal;
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
-        (void)PduR_Transmit(FZC_COM_TX_BRAKE_FAULT, &pdu_info);
-        FzcCom_TxPendBrakeFault = FALSE;
-    }
+    txBuf[2] = (uint8)rteVal;
+    (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
+    (void)PduR_Transmit(FZC_COM_TX_BRAKE_FAULT, &pdu_info);
 
-    /* ---- TX: 0x211 Motor Cutoff (event-driven, PduR_Transmit) ---- */
+    /* ---- TX: 0x211 Motor Cutoff (cyclic — always send current status) ---- */
     (void)Rte_Read(FZC_SIG_MOTOR_CUTOFF, &rteVal);
-    if (rteVal != 0u) {
-        FzcCom_TxPendMotorCutoff = TRUE;
+    for (i = 0u; i < 8u; i++) {
+        txBuf[i] = 0u;
     }
-    if (FzcCom_TxPendMotorCutoff == TRUE) {
-        for (i = 0u; i < 8u; i++) {
-            txBuf[i] = 0u;
-        }
-        txBuf[2] = (uint8)rteVal;
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
-        (void)PduR_Transmit(FZC_COM_TX_MOTOR_CUTOFF, &pdu_info);
-        FzcCom_TxPendMotorCutoff = FALSE;
-    }
+    txBuf[2] = (uint8)rteVal;
+    (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
+    (void)PduR_Transmit(FZC_COM_TX_MOTOR_CUTOFF, &pdu_info);
 
     /* ---- TX: 0x220 Lidar Warning (event-driven, PduR_Transmit) ---- */
     (void)Rte_Read(FZC_SIG_LIDAR_ZONE, &rteVal);
