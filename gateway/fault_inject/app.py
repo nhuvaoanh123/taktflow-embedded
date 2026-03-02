@@ -97,17 +97,21 @@ def _publish_lock_state() -> None:
 
 def _lock_watchdog() -> None:
     """Background thread: auto-expire lock and publish updated remaining_sec."""
+    was_locked = False
     while True:
         time.sleep(1)
         with _lock_mu:
-            if _control_lock["client_id"] is None:
-                continue
-            if time.time() >= _control_lock["expires_at"]:
+            is_locked = _control_lock["client_id"] is not None
+            if is_locked and time.time() >= _control_lock["expires_at"]:
                 log.info("Control lock expired for %s", _control_lock["client_id"])
                 _control_lock["client_id"] = None
                 _control_lock["expires_at"] = 0.0
                 _control_lock["acquired_at"] = 0.0
-        _publish_lock_state()
+                is_locked = False
+        # Publish while locked, and one final time after expiry to clear retained msg
+        if is_locked or was_locked:
+            _publish_lock_state()
+        was_locked = is_locked
 
 
 def _idle_command_loop() -> None:
