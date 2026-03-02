@@ -63,6 +63,10 @@
 #define CVC_COM_RX_MOTOR_CURRENT   5u   /* CAN 0x301 */
 #define CVC_COM_RX_SC_RELAY        6u   /* CAN 0x013 */
 
+/* Com RX Signal IDs (for Com_ReceiveSignal — heartbeat alive counters) */
+#define CVC_COM_SIG_FZC_HB_ALIVE  9u   /* sig_rx_fzc_hb_alive */
+#define CVC_COM_SIG_RZC_HB_ALIVE 11u   /* sig_rx_rzc_hb_alive */
+
 /* ====================================================================
  * DTC Event IDs (Dem_EventIdType)
  * ==================================================================== */
@@ -125,6 +129,12 @@
  *          Allows all ECU containers time to boot and send heartbeats.
  *          500 cycles × 10ms = 5 seconds. */
 #define CVC_INIT_HOLD_CYCLES     500u
+
+/* ====================================================================
+ * RTE Period
+ * ==================================================================== */
+
+#define CVC_RTE_PERIOD_MS         10u   /* 10ms cyclic task rate */
 
 /* ====================================================================
  * Heartbeat Constants

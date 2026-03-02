@@ -36,11 +36,17 @@
 #endif
 
 /* ====================================================================
- * Internal constants
+ * Internal constants (derived from config — compile-time safe)
  * ==================================================================== */
 
-/** @brief TX timer threshold: 50ms / 10ms = 5 cycles */
-#define HB_TX_CYCLES  5u
+/** @brief TX timer threshold: derived from CVC_HB_TX_PERIOD_MS / CVC_RTE_PERIOD_MS
+ *  @safety_req SWR-CVC-021 */
+#define HB_TX_CYCLES  (CVC_HB_TX_PERIOD_MS / CVC_RTE_PERIOD_MS)
+
+_Static_assert(CVC_HB_TX_PERIOD_MS % CVC_RTE_PERIOD_MS == 0u,
+               "HB TX period must be exact multiple of RTE period");
+_Static_assert(HB_TX_CYCLES > 0u,
+               "HB TX cycles must be positive");
 
 /** @brief Heartbeat PDU length in bytes */
 #define HB_PDU_LENGTH 8u
@@ -149,8 +155,8 @@ void Swc_Heartbeat_MainFunction(void)
             uint8 fzc_alive = 0u;
             uint8 rzc_alive = 0u;
 
-            (void)Com_ReceiveSignal(9u, &fzc_alive);   /* sig_rx_fzc_hb_alive */
-            (void)Com_ReceiveSignal(11u, &rzc_alive);  /* sig_rx_rzc_hb_alive */
+            (void)Com_ReceiveSignal(CVC_COM_SIG_FZC_HB_ALIVE, &fzc_alive);
+            (void)Com_ReceiveSignal(CVC_COM_SIG_RZC_HB_ALIVE, &rzc_alive);
 
             if (fzc_alive != fzc_last_alive) {
                 fzc_rx_flag    = TRUE;

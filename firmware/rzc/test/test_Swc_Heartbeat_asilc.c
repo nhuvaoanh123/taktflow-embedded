@@ -63,8 +63,12 @@ typedef struct {
 #define RZC_COM_TX_HEARTBEAT         0u
 #define RZC_ECU_ID                  0x03u
 
-#define RZC_HB_TX_PERIOD_MS         1u
+#define RZC_RTE_PERIOD_MS           50u
+#define RZC_HB_TX_PERIOD_MS         50u
 #define RZC_HB_ALIVE_MAX            15u
+
+/** Derived: cycles per heartbeat TX period (used in run_cycles) */
+#define RZC_HB_PERIOD_CYCLES  (RZC_HB_TX_PERIOD_MS / RZC_RTE_PERIOD_MS)
 
 #define RZC_DTC_CAN_BUS_OFF          5u
 
@@ -250,7 +254,7 @@ void test_Init_succeeds(void)
 {
     /* Init already called in setUp. Verify module is operational
      * by running one full period — heartbeat should be sent. */
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
 }
@@ -262,7 +266,7 @@ void test_Init_succeeds(void)
 /** @verifies SWR-RZC-022 -- Heartbeat sent every 50ms (5 calls at 10ms each) */
 void test_HB_sends_at_50ms(void)
 {
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
     TEST_ASSERT_EQUAL_UINT16(RZC_COM_TX_HEARTBEAT, mock_com_last_signal_id);
@@ -275,11 +279,11 @@ void test_HB_alive_counter_increments(void)
     uint8 alive_second;
 
     /* First heartbeat */
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
     alive_first = mock_com_last_data[HB_BYTE_ALIVE];
 
     /* Second heartbeat */
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
     alive_second = mock_com_last_data[HB_BYTE_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(alive_first + 1u, alive_second);
@@ -293,12 +297,12 @@ void test_HB_alive_counter_wraps(void)
 
     /* Send 16 heartbeats (0..15), then the 17th should wrap to 0 */
     for (i = 0u; i <= RZC_HB_ALIVE_MAX; i++) {
-        run_cycles(RZC_HB_TX_PERIOD_MS);
+        run_cycles(RZC_HB_PERIOD_CYCLES);
     }
 
     /* After 16 TXs the alive counter should be at max (15).
      * One more period should wrap it to 0. */
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
     alive_val = mock_com_last_data[HB_BYTE_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(0u, alive_val);
@@ -307,7 +311,7 @@ void test_HB_alive_counter_wraps(void)
 /** @verifies SWR-RZC-022 -- ECU ID 0x03 included in heartbeat data */
 void test_HB_includes_ecu_id(void)
 {
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(RZC_ECU_ID, mock_com_last_data[HB_BYTE_ECU_ID]);
 }
@@ -317,7 +321,7 @@ void test_HB_includes_fault_mask(void)
 {
     mock_fault_mask = 0x00A5u;
 
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     /* Fault mask low byte */
     TEST_ASSERT_EQUAL_UINT8(0xA5u, mock_com_last_data[HB_BYTE_FAULT_LO]);
@@ -330,7 +334,7 @@ void test_HB_includes_state(void)
 {
     mock_vehicle_state = RZC_STATE_DEGRADED;
 
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8((uint8)RZC_STATE_DEGRADED,
                             mock_com_last_data[HB_BYTE_STATE]);
@@ -342,7 +346,7 @@ void test_HB_suppressed_in_bus_off(void)
     mock_vehicle_state = RZC_STATE_SAFE_STOP;
     mock_fault_mask    = RZC_FAULT_CAN;
 
-    run_cycles(RZC_HB_TX_PERIOD_MS * 3u);
+    run_cycles(RZC_HB_PERIOD_CYCLES * 3u);
 
     /* No heartbeat should have been sent */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
@@ -352,7 +356,7 @@ void test_HB_suppressed_in_bus_off(void)
 void test_No_send_before_period(void)
 {
     /* Run 4 cycles (< 5 cycles = 50ms period) */
-    run_cycles(RZC_HB_TX_PERIOD_MS - 1u);
+    run_cycles(RZC_HB_PERIOD_CYCLES - 1u);
 
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 }
@@ -361,7 +365,7 @@ void test_No_send_before_period(void)
 void test_MainFunction_without_init_safe(void)
 {
     /* Init called in setUp. Running fewer than one period should not send. */
-    run_cycles(RZC_HB_TX_PERIOD_MS - 1u);
+    run_cycles(RZC_HB_PERIOD_CYCLES - 1u);
 
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 }
@@ -377,7 +381,7 @@ void test_HB_alive_at_max(void)
     uint16 i;
     /* Send exactly 16 heartbeats to reach alive=15 (0..15) */
     for (i = 0u; i <= RZC_HB_ALIVE_MAX; i++) {
-        run_cycles(RZC_HB_TX_PERIOD_MS);
+        run_cycles(RZC_HB_PERIOD_CYCLES);
     }
 
     TEST_ASSERT_EQUAL_UINT8(RZC_HB_ALIVE_MAX,
@@ -390,7 +394,7 @@ void test_HB_fault_mask_max(void)
 {
     mock_fault_mask = 0xFFFFu;
 
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_LO]);
     TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_HI]);
@@ -408,7 +412,7 @@ void test_HB_all_states_valid(void)
         mock_vehicle_state = states[i];
         mock_fault_mask    = 0u;
         mock_com_send_count = 0u;
-        run_cycles(RZC_HB_TX_PERIOD_MS);
+        run_cycles(RZC_HB_PERIOD_CYCLES);
 
         if ((states[i] == RZC_STATE_SAFE_STOP) &&
             ((mock_fault_mask & RZC_FAULT_CAN) != 0u)) {
@@ -427,7 +431,7 @@ void test_HB_all_states_valid(void)
  *  Equivalence class: Boundary — exactly 4 cycles (just before first TX) */
 void test_HB_exactly_4_cycles_no_send(void)
 {
-    run_cycles(RZC_HB_TX_PERIOD_MS - 1u);
+    run_cycles(RZC_HB_PERIOD_CYCLES - 1u);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 }
 
@@ -436,7 +440,7 @@ void test_HB_exactly_4_cycles_no_send(void)
 void test_HB_zero_fault_mask(void)
 {
     mock_fault_mask = 0u;
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
     TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_HI]);
@@ -447,15 +451,28 @@ void test_HB_zero_fault_mask(void)
 void test_HB_bus_off_mid_sequence(void)
 {
     /* Normal TX first */
-    run_cycles(RZC_HB_TX_PERIOD_MS);
+    run_cycles(RZC_HB_PERIOD_CYCLES);
     TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
 
     /* CAN bus-off — no more TX */
     mock_fault_mask = RZC_FAULT_CAN;
     mock_vehicle_state = RZC_STATE_SAFE_STOP;
     mock_com_send_count = 0u;
-    run_cycles(RZC_HB_TX_PERIOD_MS * 3u);
+    run_cycles(RZC_HB_PERIOD_CYCLES * 3u);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
+}
+
+/* ==================================================================
+ * PHASE 1: Derived Constants Verification
+ * ================================================================== */
+
+/** @verifies SWR-RZC-021
+ *  Verifies HB_PERIOD_CYCLES is derived from RZC_HB_TX_PERIOD_MS / RZC_RTE_PERIOD_MS */
+void test_Heartbeat_Derived_period_value(void)
+{
+    /* Derived cycle count should equal 50ms / 50ms = 1 cycle */
+    TEST_ASSERT_EQUAL(1u, RZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL(RZC_HB_TX_PERIOD_MS / RZC_RTE_PERIOD_MS, RZC_HB_PERIOD_CYCLES);
 }
 
 /* ==================================================================
@@ -487,6 +504,9 @@ int main(void)
     RUN_TEST(test_HB_exactly_4_cycles_no_send);
     RUN_TEST(test_HB_zero_fault_mask);
     RUN_TEST(test_HB_bus_off_mid_sequence);
+
+    /* PHASE 1: Derived Constants */
+    RUN_TEST(test_Heartbeat_Derived_period_value);
 
     return UNITY_END();
 }

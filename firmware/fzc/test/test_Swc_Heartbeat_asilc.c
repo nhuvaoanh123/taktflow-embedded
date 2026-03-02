@@ -47,8 +47,12 @@ typedef struct {
 #define FZC_COM_TX_HEARTBEAT         0u
 #define FZC_ECU_ID                  0x02u
 
-#define FZC_HB_TX_PERIOD_MS         5u
+#define FZC_RTE_PERIOD_MS           10u
+#define FZC_HB_TX_PERIOD_MS         50u
 #define FZC_HB_ALIVE_MAX            15u
+
+/** Derived: cycles per heartbeat TX period (used in run_cycles) */
+#define FZC_HB_PERIOD_CYCLES  (FZC_HB_TX_PERIOD_MS / FZC_RTE_PERIOD_MS)
 
 #define FZC_DTC_CAN_BUS_OFF         12u
 
@@ -245,7 +249,7 @@ void test_Init(void)
 /** @verifies SWR-FZC-022 — Heartbeat sent every 50ms (50 calls at 1ms each) */
 void test_HB_sends_at_50ms(void)
 {
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
     TEST_ASSERT_EQUAL_UINT8(FZC_COM_TX_HEARTBEAT, mock_com_last_signal_id);
@@ -258,11 +262,11 @@ void test_HB_alive_counter_increments(void)
     uint8 alive_second;
 
     /* First heartbeat */
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
     alive_first = mock_com_last_data[HB_BYTE_ALIVE];
 
     /* Second heartbeat */
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
     alive_second = mock_com_last_data[HB_BYTE_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(alive_first + 1u, alive_second);
@@ -276,12 +280,12 @@ void test_HB_alive_counter_wraps(void)
 
     /* Send 16 heartbeats (0..15), then the 17th should wrap to 0 */
     for (i = 0u; i <= FZC_HB_ALIVE_MAX; i++) {
-        run_cycles(FZC_HB_TX_PERIOD_MS);
+        run_cycles(FZC_HB_PERIOD_CYCLES);
     }
 
     /* After 16 TXs the alive counter should be at max (15).
      * One more period should wrap it to 0. */
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
     alive_val = mock_com_last_data[HB_BYTE_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(0u, alive_val);
@@ -290,7 +294,7 @@ void test_HB_alive_counter_wraps(void)
 /** @verifies SWR-FZC-022 — ECU ID 0x02 included in heartbeat data */
 void test_HB_includes_ecu_id(void)
 {
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(FZC_ECU_ID, mock_com_last_data[HB_BYTE_ECU_ID]);
 }
@@ -300,7 +304,7 @@ void test_HB_includes_fault_mask(void)
 {
     mock_fault_mask = 0x00A5u;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     /* Fault mask low byte */
     TEST_ASSERT_EQUAL_UINT8(0xA5u, mock_com_last_data[HB_BYTE_FAULT_LO]);
@@ -313,7 +317,7 @@ void test_HB_includes_state(void)
 {
     mock_vehicle_state = FZC_STATE_DEGRADED;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8((uint8)FZC_STATE_DEGRADED,
                             mock_com_last_data[HB_BYTE_STATE]);
@@ -325,7 +329,7 @@ void test_HB_suppressed_in_bus_off(void)
     mock_vehicle_state = FZC_STATE_SAFE_STOP;
     mock_fault_mask    = FZC_FAULT_CAN_BUS_OFF;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS * 3u);
+    run_cycles(FZC_HB_PERIOD_CYCLES * 3u);
 
     /* No heartbeat should have been sent */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
@@ -335,7 +339,7 @@ void test_HB_suppressed_in_bus_off(void)
 void test_No_send_before_period(void)
 {
     /* Run 49 cycles (< 50ms period) */
-    run_cycles(FZC_HB_TX_PERIOD_MS - 1u);
+    run_cycles(FZC_HB_PERIOD_CYCLES - 1u);
 
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 }
@@ -344,7 +348,7 @@ void test_No_send_before_period(void)
 void test_Multiple_periods(void)
 {
     /* Run for 5 periods = 250ms */
-    run_cycles(FZC_HB_TX_PERIOD_MS * 5u);
+    run_cycles(FZC_HB_PERIOD_CYCLES * 5u);
 
     TEST_ASSERT_EQUAL_UINT8(5u, mock_com_send_count);
 }
@@ -354,7 +358,7 @@ void test_Fault_mask_zero(void)
 {
     mock_fault_mask = 0u;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_FAULT_LO]);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_FAULT_HI]);
@@ -395,7 +399,7 @@ void test_MainFunction_safe_on_init(void)
  *  Equivalence class: boundary — exactly 1 cycle before period (49 cycles = no TX) */
 void test_Boundary_one_before_period(void)
 {
-    run_cycles(FZC_HB_TX_PERIOD_MS - 1u);
+    run_cycles(FZC_HB_PERIOD_CYCLES - 1u);
 
     /* No heartbeat should have been sent */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
@@ -405,7 +409,7 @@ void test_Boundary_one_before_period(void)
  *  Equivalence class: boundary — exactly at period (50 cycles = 1 TX) */
 void test_Boundary_exactly_at_period(void)
 {
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     /* Exactly 1 heartbeat should have been sent */
     TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
@@ -415,7 +419,7 @@ void test_Boundary_exactly_at_period(void)
  *  Boundary: alive counter starts at 0 on first TX */
 void test_Boundary_alive_counter_starts_zero(void)
 {
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     /* First heartbeat alive counter should be 0 */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
@@ -428,7 +432,7 @@ void test_Boundary_alive_counter_at_max(void)
     /* Send 16 heartbeats (counters 0..15) */
     uint16 i;
     for (i = 0u; i < 16u; i++) {
-        run_cycles(FZC_HB_TX_PERIOD_MS);
+        run_cycles(FZC_HB_PERIOD_CYCLES);
     }
 
     /* The 16th heartbeat should have alive counter = 15 */
@@ -441,7 +445,7 @@ void test_FaultInj_all_fault_bits_set(void)
 {
     mock_fault_mask = 0x00FFu;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_LO]);
 }
@@ -453,13 +457,13 @@ void test_FaultInj_busoff_suppress_and_resume(void)
     /* Set CAN bus-off */
     mock_fault_mask = FZC_FAULT_CAN_BUS_OFF;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS * 2u);
+    run_cycles(FZC_HB_PERIOD_CYCLES * 2u);
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_send_count);
 
     /* Clear bus-off */
     mock_fault_mask = 0u;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
     TEST_ASSERT_TRUE(mock_com_send_count >= 1u);
 }
 
@@ -469,7 +473,7 @@ void test_Vehicle_state_safe_stop_in_heartbeat(void)
 {
     mock_vehicle_state = FZC_STATE_SAFE_STOP;
 
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     TEST_ASSERT_EQUAL_UINT8((uint8)FZC_STATE_SAFE_STOP,
                             mock_com_last_data[HB_BYTE_STATE]);
@@ -480,14 +484,14 @@ void test_Vehicle_state_safe_stop_in_heartbeat(void)
 void test_FaultInj_double_init_resets_alive(void)
 {
     /* Send a few heartbeats to advance alive counter */
-    run_cycles(FZC_HB_TX_PERIOD_MS * 5u);
+    run_cycles(FZC_HB_PERIOD_CYCLES * 5u);
     TEST_ASSERT_EQUAL_UINT8(5u, mock_com_send_count);
 
     /* Re-init */
     Swc_Heartbeat_Init();
 
     mock_com_send_count = 0u;
-    run_cycles(FZC_HB_TX_PERIOD_MS);
+    run_cycles(FZC_HB_PERIOD_CYCLES);
 
     /* Alive counter should restart at 0 */
     TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
@@ -507,12 +511,25 @@ void test_All_vehicle_states_heartbeat(void)
         mock_vehicle_state  = (uint32)states[i];
         mock_fault_mask     = 0u;
 
-        run_cycles(FZC_HB_TX_PERIOD_MS);
+        run_cycles(FZC_HB_PERIOD_CYCLES);
 
         TEST_ASSERT_EQUAL_UINT8(1u, mock_com_send_count);
         TEST_ASSERT_EQUAL_UINT8(states[i], mock_com_last_data[HB_BYTE_STATE]);
         TEST_ASSERT_EQUAL_UINT8(FZC_ECU_ID, mock_com_last_data[HB_BYTE_ECU_ID]);
     }
+}
+
+/* ==================================================================
+ * PHASE 1: Derived Constants Verification
+ * ================================================================== */
+
+/** @verifies SWR-FZC-021
+ *  Verifies HB_PERIOD_CYCLES is derived from FZC_HB_TX_PERIOD_MS / FZC_RTE_PERIOD_MS */
+void test_Heartbeat_Derived_period_value(void)
+{
+    /* Derived cycle count should equal 50ms / 10ms = 5 cycles */
+    TEST_ASSERT_EQUAL(5u, FZC_HB_PERIOD_CYCLES);
+    TEST_ASSERT_EQUAL(FZC_HB_TX_PERIOD_MS / FZC_RTE_PERIOD_MS, FZC_HB_PERIOD_CYCLES);
 }
 
 /* ==================================================================
@@ -551,6 +568,9 @@ int main(void)
     RUN_TEST(test_Vehicle_state_safe_stop_in_heartbeat);
     RUN_TEST(test_FaultInj_double_init_resets_alive);
     RUN_TEST(test_All_vehicle_states_heartbeat);
+
+    /* PHASE 1: Derived Constants */
+    RUN_TEST(test_Heartbeat_Derived_period_value);
 
     return UNITY_END();
 }

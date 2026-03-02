@@ -30,11 +30,17 @@
 #include "Dem.h"
 
 /* ==================================================================
- * Constants
+ * Constants (derived from config — compile-time safe)
  * ================================================================== */
 
-/** Heartbeat period in RTE cycles: 50ms / 50ms = 1 */
-#define HB_PERIOD_CYCLES    1u
+/** @brief Heartbeat period in RTE cycles: derived from RZC_HB_TX_PERIOD_MS / RZC_RTE_PERIOD_MS
+ *  @safety_req SWR-RZC-021 */
+#define HB_PERIOD_CYCLES  (RZC_HB_TX_PERIOD_MS / RZC_RTE_PERIOD_MS)
+
+_Static_assert(RZC_HB_TX_PERIOD_MS % RZC_RTE_PERIOD_MS == 0u,
+               "HB TX period must be exact multiple of RTE period");
+_Static_assert(HB_PERIOD_CYCLES > 0u,
+               "HB period cycles must be positive");
 
 /** Heartbeat TX data layout (8 bytes) */
 #define HB_BYTE_ALIVE       0u
