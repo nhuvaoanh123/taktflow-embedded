@@ -158,8 +158,8 @@ static void set_torque_current(uint8 torque_pct, uint16 current_ma)
     mock_can_data[SC_MB_IDX_VEHICLE_STATE][4] = torque_pct;
 
     mock_can_valid[SC_MB_IDX_MOTOR_CURRENT] = TRUE;
-    mock_can_data[SC_MB_IDX_MOTOR_CURRENT][2] = (uint8)(current_ma >> 8u);
-    mock_can_data[SC_MB_IDX_MOTOR_CURRENT][3] = (uint8)(current_ma & 0xFFu);
+    mock_can_data[SC_MB_IDX_MOTOR_CURRENT][2] = (uint8)(current_ma & 0xFFu);
+    mock_can_data[SC_MB_IDX_MOTOR_CURRENT][3] = (uint8)(current_ma >> 8u);
 }
 
 /* ==================================================================

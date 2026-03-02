@@ -177,8 +177,8 @@ void SC_Plausibility_Check(void)
 
     if ((veh_ok == TRUE) && (cur_ok == TRUE)) {
         torque_pct = veh_data[4];
-        actual_current_ma = ((uint16)cur_data[2] << 8u) |
-                            (uint16)cur_data[3];
+        actual_current_ma = ((uint16)cur_data[3] << 8u) |
+                            (uint16)cur_data[2];
 
         expected_current_ma = lookup_expected_current(torque_pct);
 
@@ -197,8 +197,8 @@ void SC_Plausibility_Check(void)
     /* Backup cutoff check (SWR-SC-024):
      * If FZC brake fault AND motor current > 1000mA for 100ms */
     if ((cur_ok == TRUE) && (SC_Heartbeat_IsFzcBrakeFault() == TRUE)) {
-        actual_current_ma = ((uint16)cur_data[2] << 8u) |
-                            (uint16)cur_data[3];
+        actual_current_ma = ((uint16)cur_data[3] << 8u) |
+                            (uint16)cur_data[2];
 
         if (actual_current_ma > SC_BACKUP_CUTOFF_CURRENT_MA) {
             backup_cutoff_counter++;

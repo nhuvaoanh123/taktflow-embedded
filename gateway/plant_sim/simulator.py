@@ -363,8 +363,8 @@ class PlantSimulator:
         payload[2] = self.vehicle_state & 0x0F
         # Byte 3: FaultMask (8 bits) — 0 for normal
         payload[3] = 0
-        # Byte 4: TorqueLimit (0-100)
-        payload[4] = 100 if self.vehicle_state == VS_RUN else 0
+        # Byte 4: TorqueLimit (0-100) — actual motor duty, not fixed ceiling
+        payload[4] = int(self.motor.duty_pct) & 0xFF if self.vehicle_state == VS_RUN else 0
         # Byte 5: SpeedLimit (0-100)
         payload[5] = 100 if self.vehicle_state == VS_RUN else 0
 

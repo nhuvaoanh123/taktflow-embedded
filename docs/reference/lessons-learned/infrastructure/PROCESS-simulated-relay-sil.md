@@ -190,6 +190,36 @@ for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
 
 ---
 
+## 12. SC Plausibility Read Must Match DBC Byte Order and Signal Semantics
+
+**Problem**: After all startup grace fixes, clicking "normal_drive" in the dashboard still triggered SAFE_STOP. SC relay broadcast showed `01 02 00 00` (kill_reason=PLAUSIBILITY). Two bugs:
+
+**Bug A — Endianness mismatch**: SC read Motor_Current (0x301) bytes 2-3 as big-endian (`(byte2 << 8) | byte3`), but the DBC specifies little-endian (Intel byte order). Plant-sim correctly writes LE. A 5000 mA current became 34835 mA in SC's view.
+
+**Bug B — Wrong signal semantics**: SC read byte 4 of Vehicle_State (0x100) as "torque percentage" (actual motor duty). But per DBC, byte 4 is `TorqueLimit` — a ceiling value, always 100 when in RUN. SC thought torque was 100%, expected 25000 mA, but actual current was ~5000 mA → massive mismatch → fault.
+
+**Fix A**: Swap byte order in SC:
+```c
+// Before (BE — wrong):
+actual_current_ma = ((uint16)cur_data[2] << 8u) | (uint16)cur_data[3];
+// After (LE — matches DBC):
+actual_current_ma = ((uint16)cur_data[3] << 8u) | (uint16)cur_data[2];
+```
+
+**Fix B**: Plant-sim now puts actual motor duty in byte 4 (not hardcoded 100):
+```python
+payload[4] = int(self.motor.duty_pct) & 0xFF if self.vehicle_state == VS_RUN else 0
+```
+
+**Takeaway**: When an SC module reads CAN signals, verify THREE things against the DBC:
+1. Correct byte position (which byte?)
+2. Correct byte order (LE vs BE?)
+3. Correct signal semantics (limit vs actual value?)
+
+The DBC is the single source of truth for CAN signal layout — not assumptions in the receiver code.
+
+---
+
 ## Key Takeaways
 
 1. **AUTOSAR routing is verbose but traceable** — 6 files for 1 signal is the cost of layered architecture
@@ -201,3 +231,4 @@ for (g = 0u; g < SC_HB_STARTUP_GRACE_TICKS; g++) {
 7. **Adding observability exposes pre-existing bugs** — the relay broadcast revealed E2E and frame consumption bugs that existed from day one
 8. **E2E format must be a shared specification** — not independently developed per ECU
 9. **Every cyclic safety monitor needs a startup grace period** — boot transients trigger false kills; grace must >= longest ECU boot time
+10. **Verify CAN reads against DBC for byte order AND signal semantics** — LE vs BE and limit vs actual are silent killers
