@@ -35,6 +35,11 @@ COV_LDFLAGS =
 # --- Debug flags (always on for simulated ECUs) ---
 CFLAGS += -Og -g3 -DDEBUG
 
+# --- Diagnostic logging (pass DIAG=1 to enable printf tracing in SIL) ---
+ifdef DIAG
+  CFLAGS += -DSIL_DIAG
+endif
+
 # --- MISRA targets do not require TARGET ---
 MISRA_GOALS = misra misra-report
 ifneq ($(filter $(MISRA_GOALS),$(MAKECMDGOALS)),)

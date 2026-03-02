@@ -27,6 +27,14 @@
 #include "Rte.h"
 #include "Dem.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define HB_DIAG(fmt, ...) (void)printf("[HB] " fmt "\n", ##__VA_ARGS__)
+#else
+#define HB_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ====================================================================
  * Internal constants
  * ==================================================================== */
@@ -164,6 +172,7 @@ void Swc_Heartbeat_MainFunction(void)
             /* Recovery: if was timed out, restore */
             if (fzc_comm_status == CVC_COMM_TIMEOUT) {
                 fzc_comm_status = CVC_COMM_OK;
+                HB_DIAG("FZC: TIMEOUT -> OK (alive=%u)", (unsigned)fzc_last_alive);
                 Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
                                       DEM_EVENT_STATUS_PASSED);
             }
@@ -176,6 +185,7 @@ void Swc_Heartbeat_MainFunction(void)
             if (fzc_miss_count >= CVC_HB_MAX_MISS) {
                 if (fzc_comm_status != CVC_COMM_TIMEOUT) {
                     fzc_comm_status = CVC_COMM_TIMEOUT;
+                    HB_DIAG("FZC: OK -> TIMEOUT (miss=%u)", (unsigned)fzc_miss_count);
                     Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
                                           DEM_EVENT_STATUS_FAILED);
                 }
@@ -191,6 +201,7 @@ void Swc_Heartbeat_MainFunction(void)
             /* Recovery: if was timed out, restore */
             if (rzc_comm_status == CVC_COMM_TIMEOUT) {
                 rzc_comm_status = CVC_COMM_OK;
+                HB_DIAG("RZC: TIMEOUT -> OK (alive=%u)", (unsigned)rzc_last_alive);
                 Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
                                       DEM_EVENT_STATUS_PASSED);
             }
@@ -203,6 +214,7 @@ void Swc_Heartbeat_MainFunction(void)
             if (rzc_miss_count >= CVC_HB_MAX_MISS) {
                 if (rzc_comm_status != CVC_COMM_TIMEOUT) {
                     rzc_comm_status = CVC_COMM_TIMEOUT;
+                    HB_DIAG("RZC: OK -> TIMEOUT (miss=%u)", (unsigned)rzc_miss_count);
                     Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
                                           DEM_EVENT_STATUS_FAILED);
                 }

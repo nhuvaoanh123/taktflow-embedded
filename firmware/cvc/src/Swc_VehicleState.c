@@ -30,6 +30,25 @@
 #include "Dem.h"
 #include "Com.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define VSM_DIAG(fmt, ...) (void)printf("[VSM] " fmt "\n", ##__VA_ARGS__)
+static const char * const diag_state_names[CVC_STATE_COUNT] = {
+    "INIT", "RUN", "DEGRADED", "LIMP", "SAFE_STOP", "SHUTDOWN"
+};
+static const char * const diag_event_names[CVC_EVT_COUNT] = {
+    "SELF_TEST_PASS", "SELF_TEST_FAIL",
+    "PEDAL_FAULT_S", "PEDAL_FAULT_D",
+    "CAN_TMO_S", "CAN_TMO_D",
+    "ESTOP", "SC_KILL",
+    "FAULT_CLR", "CAN_RESTORED", "VEH_STOPPED",
+    "MOTOR_CUTOFF", "BRAKE_FAULT", "STEER_FAULT"
+};
+#else
+#define VSM_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * BswM mode mapping — vehicle state to BswM mode
  * ================================================================== */
@@ -265,6 +284,7 @@ void Swc_VehicleState_OnEvent(uint8 event)
     if ((event == CVC_EVT_SELF_TEST_PASS) && (current_state == CVC_STATE_INIT))
     {
         self_test_pass_pending = TRUE;
+        VSM_DIAG("self-test pass pending (waiting for heartbeats)");
         return;
     }
 
@@ -278,7 +298,14 @@ void Swc_VehicleState_OnEvent(uint8 event)
     }
 
     /* Execute transition */
-    current_state = next_state;
+    {
+        uint8 prev = current_state;
+        current_state = next_state;
+        VSM_DIAG("%s + %s -> %s",
+                 diag_state_names[prev],
+                 diag_event_names[event],
+                 diag_state_names[current_state]);
+    }
 
     /* Notify BswM of the new mode */
     (void)BswM_RequestMode(CVC_ECU_ID_CVC, state_to_bswm_mode[current_state]);
@@ -389,6 +416,21 @@ void Swc_VehicleState_MainFunction(void)
     (void)Rte_Read(CVC_SIG_BRAKE_FAULT,      &brake_fault);
     (void)Rte_Read(CVC_SIG_STEERING_FAULT,   &steering_fault);
 
+#ifdef SIL_DIAG
+    {
+        static uint16 diag_cycle = 0u;
+        diag_cycle++;
+        if (diag_cycle <= 100u) {
+            VSM_DIAG("c=%u st=%u ped=%u es=%u fzc=%u rzc=%u mc=%u bf=%u sf=%u",
+                     (unsigned)diag_cycle, (unsigned)current_state,
+                     (unsigned)pedal_fault, (unsigned)estop_active,
+                     (unsigned)fzc_comm, (unsigned)rzc_comm,
+                     (unsigned)motor_cutoff, (unsigned)brake_fault,
+                     (unsigned)steering_fault);
+        }
+    }
+#endif
+
     /* ---- Step 2: Handle pending self-test pass (heartbeat guard) ---- */
     if ((self_test_pass_pending == TRUE) && (current_state == CVC_STATE_INIT))
     {
@@ -397,6 +439,7 @@ void Swc_VehicleState_MainFunction(void)
             self_test_pass_pending = FALSE;
             current_state = CVC_STATE_RUN;
             (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_RUN);
+            VSM_DIAG("INIT -> RUN (heartbeats confirmed)");
         }
         /* else: remain in INIT, keep pending — heartbeats not yet OK */
     }

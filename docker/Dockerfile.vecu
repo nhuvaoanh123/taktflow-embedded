@@ -26,11 +26,12 @@ COPY firmware/ /build/firmware/
 WORKDIR /build/firmware
 
 # Clean stale build artifacts, then build all 7 simulated ECU binaries
+# DIAG=1 enables SIL diagnostic printf for state machine tracing
 RUN rm -rf build && \
     make -f Makefile.posix TARGET=bcm && \
     make -f Makefile.posix TARGET=icu && \
     make -f Makefile.posix TARGET=tcu && \
-    make -f Makefile.posix TARGET=cvc && \
+    make -f Makefile.posix TARGET=cvc DIAG=1 && \
     make -f Makefile.posix TARGET=fzc && \
     make -f Makefile.posix TARGET=rzc && \
     make -f Makefile.posix TARGET=sc
