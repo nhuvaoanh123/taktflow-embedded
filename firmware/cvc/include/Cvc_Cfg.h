@@ -141,10 +141,19 @@
  * ==================================================================== */
 
 #define CVC_HB_TX_PERIOD_MS       50u   /* TX every 50ms */
-#define CVC_HB_FZC_MAX_MISS        2u   /* FZC: 2 misses = 100ms (SG-008 FTTI) */
-#define CVC_HB_RZC_MAX_MISS       3u   /* RZC: 3 misses = 150ms (local motor cutoff primary) */
-#define CVC_HB_RECOVERY_THRESHOLD 3u   /* 3 consecutive HBs before declaring OK after timeout */
 #define CVC_HB_ALIVE_MAX          15u   /* 4-bit alive counter wraps at 15 */
+
+/* E2E SM Configuration — FZC (100ms FTTI, SG-008 primary path) */
+#define CVC_E2E_SM_FZC_WINDOW        4u   /* 4 × 50ms = 200ms observation window */
+#define CVC_E2E_SM_FZC_MIN_OK_INIT   2u   /* 2 OKs to declare VALID (100ms) */
+#define CVC_E2E_SM_FZC_MAX_ERR_VALID 1u   /* >1 error in window → INVALID (2 misses = 100ms) */
+#define CVC_E2E_SM_FZC_MIN_OK_INV    3u   /* 3 OKs to recover from INVALID (150ms) */
+
+/* E2E SM Configuration — RZC (local motor cutoff primary, 150ms FTTI) */
+#define CVC_E2E_SM_RZC_WINDOW        6u   /* 6 × 50ms = 300ms observation window */
+#define CVC_E2E_SM_RZC_MIN_OK_INIT   3u   /* 3 OKs to declare VALID (150ms) */
+#define CVC_E2E_SM_RZC_MAX_ERR_VALID 2u   /* >2 errors in window → INVALID (3 misses = 150ms) */
+#define CVC_E2E_SM_RZC_MIN_OK_INV    3u   /* 3 OKs to recover from INVALID (150ms) */
 
 #define CVC_ECU_ID_CVC             0x01u
 #define CVC_ECU_ID_FZC             0x02u

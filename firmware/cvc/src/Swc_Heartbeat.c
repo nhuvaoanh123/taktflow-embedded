@@ -10,13 +10,12 @@
  *           counter (4-bit, wraps at 15), ECU ID, and vehicle state.
  *           E2E protection applied before transmission.
  *
- *           RX: Monitors FZC and RZC heartbeat reception. Uses a flag-based
- *           scheme — each 50ms check period, if no RxIndication was called,
- *           the miss counter increments. After CVC_HB_FZC_MAX_MISS (FZC) or
- *           CVC_HB_RZC_MAX_MISS (RZC) consecutive misses, comm status
- *           transitions to TIMEOUT and a DTC is reported.
- *           Recovery: if an RxIndication arrives after timeout, comm status
- *           is restored to OK and a PASSED DTC is reported.
+ *           RX: Monitors FZC and RZC heartbeat reception via E2E State
+ *           Machine (sliding window evaluator). At each 50ms TX boundary,
+ *           polls Com shadow buffers for alive counter changes, feeds
+ *           E2E_STATUS_OK or E2E_STATUS_NO_NEW_DATA to per-ECU SM.
+ *           SM status maps to comm status: VALID→OK, INIT/INVALID→TIMEOUT.
+ *           DTC reported on transitions.
  *
  * @standard AUTOSAR, ISO 26262 Part 6 (ASIL D)
  * @copyright Taktflow Systems 2026
@@ -25,6 +24,7 @@
 #include "Cvc_Cfg.h"
 #include "Com.h"
 #include "E2E.h"
+#include "E2E_Sm.h"
 #include "Rte.h"
 #include "Dem.h"
 #include "WdgM.h"
@@ -60,17 +60,11 @@ _Static_assert(HB_TX_CYCLES > 0u,
 static uint8   alive_counter;
 static uint8   tx_timer;
 
-static uint8   fzc_miss_count;
-static uint8   rzc_miss_count;
-
 static boolean fzc_rx_flag;
 static boolean rzc_rx_flag;
 
 static uint8   fzc_comm_status;
 static uint8   rzc_comm_status;
-
-static uint8   fzc_recovery_count;
-static uint8   rzc_recovery_count;
 
 /** Last seen alive counter values from Com shadow buffers (poll-based detection) */
 static uint8   fzc_last_alive;
@@ -89,6 +83,26 @@ static const E2E_ConfigType hb_e2e_config = {
 /** @brief E2E state for heartbeat TX alive counter tracking */
 static E2E_StateType hb_e2e_state;
 
+/** @brief E2E SM per-ECU configurations (const, flash)
+ *  @safety_req SWR-CVC-022 */
+static const E2E_SmConfigType fzc_sm_config = {
+    CVC_E2E_SM_FZC_WINDOW,
+    CVC_E2E_SM_FZC_MIN_OK_INIT,
+    CVC_E2E_SM_FZC_MAX_ERR_VALID,
+    CVC_E2E_SM_FZC_MIN_OK_INV
+};
+
+static const E2E_SmConfigType rzc_sm_config = {
+    CVC_E2E_SM_RZC_WINDOW,
+    CVC_E2E_SM_RZC_MIN_OK_INIT,
+    CVC_E2E_SM_RZC_MAX_ERR_VALID,
+    CVC_E2E_SM_RZC_MIN_OK_INV
+};
+
+/** @brief E2E SM per-ECU runtime state */
+static E2E_SmStateType fzc_sm_state;
+static E2E_SmStateType rzc_sm_state;
+
 /* ====================================================================
  * Public functions
  * ==================================================================== */
@@ -101,22 +115,19 @@ void Swc_Heartbeat_Init(void)
     alive_counter   = 0u;
     tx_timer        = 0u;
 
-    fzc_miss_count  = 0u;
-    rzc_miss_count  = 0u;
-
     fzc_rx_flag     = FALSE;
     rzc_rx_flag     = FALSE;
 
     fzc_comm_status = CVC_COMM_TIMEOUT;
     rzc_comm_status = CVC_COMM_TIMEOUT;
 
-    fzc_recovery_count = 0u;
-    rzc_recovery_count = 0u;
-
     fzc_last_alive  = 0u;   /* Match Com shadow buffer init (0) — no false positive */
     rzc_last_alive  = 0u;   /* Real detection starts when alive counter changes     */
 
     hb_e2e_state.Counter = 0u;
+
+    E2E_Sm_Init(&fzc_sm_state);
+    E2E_Sm_Init(&rzc_sm_state);
 
     initialized     = TRUE;
 }
@@ -126,9 +137,9 @@ void Swc_Heartbeat_Init(void)
  *
  * @details Execution flow:
  *   1. TX: count cycles, transmit at 50ms intervals
- *   2. RX check: at each TX boundary, evaluate miss flags
- *   3. Timeout: report DTC when miss count reaches CVC_HB_MAX_MISS
- *   4. Recovery: restore OK status when RX flag set after timeout
+ *   2. RX poll: detect alive counter changes in Com shadow buffers
+ *   3. E2E SM: feed OK/NO_NEW_DATA per ECU, evaluate window
+ *   4. DTC: report on SM-driven comm status transitions
  *   5. Write comm status to RTE every cycle
  */
 void Swc_Heartbeat_MainFunction(void)
@@ -193,75 +204,59 @@ void Swc_Heartbeat_MainFunction(void)
             }
         }
 
-        /* FZC monitoring */
-        if (fzc_rx_flag == TRUE) {
-            /* Heartbeat received — clear miss count */
-            fzc_miss_count = 0u;
-            fzc_rx_flag    = FALSE;
+        /* --- 3. E2E SM evaluation ------------------------------------ */
+        {
+            E2E_CheckStatusType fzc_profile;
+            E2E_CheckStatusType rzc_profile;
+            E2E_SmStatusType    fzc_sm;
+            E2E_SmStatusType    rzc_sm;
+            uint8               fzc_new_comm;
+            uint8               rzc_new_comm;
 
-            /* Recovery debounce: require CVC_HB_RECOVERY_THRESHOLD
-             * consecutive heartbeats before declaring OK */
-            if (fzc_comm_status == CVC_COMM_TIMEOUT) {
-                fzc_recovery_count++;
-                if (fzc_recovery_count >= CVC_HB_RECOVERY_THRESHOLD) {
-                    fzc_comm_status    = CVC_COMM_OK;
-                    fzc_recovery_count = 0u;
+            /* Map rx flags to E2E profile status */
+            fzc_profile = (fzc_rx_flag == TRUE) ? E2E_STATUS_OK
+                                                 : E2E_STATUS_NO_NEW_DATA;
+            rzc_profile = (rzc_rx_flag == TRUE) ? E2E_STATUS_OK
+                                                 : E2E_STATUS_NO_NEW_DATA;
+            fzc_rx_flag = FALSE;
+            rzc_rx_flag = FALSE;
+
+            /* Feed into per-ECU state machines */
+            fzc_sm = E2E_Sm_Check(&fzc_sm_config, &fzc_sm_state, fzc_profile);
+            rzc_sm = E2E_Sm_Check(&rzc_sm_config, &rzc_sm_state, rzc_profile);
+
+            /* Map SM status → comm status */
+            fzc_new_comm = (fzc_sm == E2E_SM_VALID) ? CVC_COMM_OK
+                                                      : CVC_COMM_TIMEOUT;
+            rzc_new_comm = (rzc_sm == E2E_SM_VALID) ? CVC_COMM_OK
+                                                      : CVC_COMM_TIMEOUT;
+
+            /* DTC on FZC transition */
+            if (fzc_new_comm != fzc_comm_status) {
+                if (fzc_new_comm == CVC_COMM_TIMEOUT) {
+                    HB_DIAG("FZC: OK -> TIMEOUT");
+                    Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
+                                          DEM_EVENT_STATUS_FAILED);
+                } else {
                     HB_DIAG("FZC: TIMEOUT -> OK (alive=%u)", (unsigned)fzc_last_alive);
                     Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
                                           DEM_EVENT_STATUS_PASSED);
                 }
-            }
-        } else {
-            /* No heartbeat received this period — reset recovery */
-            fzc_recovery_count = 0u;
-
-            if (fzc_miss_count < 255u) {
-                fzc_miss_count++;
+                fzc_comm_status = fzc_new_comm;
             }
 
-            if (fzc_miss_count >= CVC_HB_FZC_MAX_MISS) {
-                if (fzc_comm_status != CVC_COMM_TIMEOUT) {
-                    fzc_comm_status = CVC_COMM_TIMEOUT;
-                    HB_DIAG("FZC: OK -> TIMEOUT (miss=%u)", (unsigned)fzc_miss_count);
-                    Dem_ReportErrorStatus(CVC_DTC_CAN_FZC_TIMEOUT,
+            /* DTC on RZC transition */
+            if (rzc_new_comm != rzc_comm_status) {
+                if (rzc_new_comm == CVC_COMM_TIMEOUT) {
+                    HB_DIAG("RZC: OK -> TIMEOUT");
+                    Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
                                           DEM_EVENT_STATUS_FAILED);
-                }
-            }
-        }
-
-        /* RZC monitoring */
-        if (rzc_rx_flag == TRUE) {
-            /* Heartbeat received — clear miss count */
-            rzc_miss_count = 0u;
-            rzc_rx_flag    = FALSE;
-
-            /* Recovery debounce: require CVC_HB_RECOVERY_THRESHOLD
-             * consecutive heartbeats before declaring OK */
-            if (rzc_comm_status == CVC_COMM_TIMEOUT) {
-                rzc_recovery_count++;
-                if (rzc_recovery_count >= CVC_HB_RECOVERY_THRESHOLD) {
-                    rzc_comm_status    = CVC_COMM_OK;
-                    rzc_recovery_count = 0u;
+                } else {
                     HB_DIAG("RZC: TIMEOUT -> OK (alive=%u)", (unsigned)rzc_last_alive);
                     Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
                                           DEM_EVENT_STATUS_PASSED);
                 }
-            }
-        } else {
-            /* No heartbeat received this period — reset recovery */
-            rzc_recovery_count = 0u;
-
-            if (rzc_miss_count < 255u) {
-                rzc_miss_count++;
-            }
-
-            if (rzc_miss_count >= CVC_HB_RZC_MAX_MISS) {
-                if (rzc_comm_status != CVC_COMM_TIMEOUT) {
-                    rzc_comm_status = CVC_COMM_TIMEOUT;
-                    HB_DIAG("RZC: OK -> TIMEOUT (miss=%u)", (unsigned)rzc_miss_count);
-                    Dem_ReportErrorStatus(CVC_DTC_CAN_RZC_TIMEOUT,
-                                          DEM_EVENT_STATUS_FAILED);
-                }
+                rzc_comm_status = rzc_new_comm;
             }
         }
     }

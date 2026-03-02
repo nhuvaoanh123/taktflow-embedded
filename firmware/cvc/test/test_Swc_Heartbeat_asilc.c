@@ -35,9 +35,7 @@ typedef uint8          boolean;
 #define CVC_CFG_H
 
 /* Prevent real Dem.h / E2E.h / WdgM.h from being pulled in through Swc_Heartbeat.c —
- * the mocks below provide the required function definitions.
- * DEM_EVENT_STATUS_FAILED is defined here because it is used both in
- * Swc_Heartbeat.c and in this test file, and Dem.h is now blocked. */
+ * the mocks below provide the required function definitions. */
 #define DEM_H
 #define E2E_H
 #define WDGM_H
@@ -47,6 +45,13 @@ typedef uint8          boolean;
 /* E2E types needed by Swc_Heartbeat.c */
 typedef struct { uint8 DataId; uint8 MaxDeltaCounter; uint16 DataLength; } E2E_ConfigType;
 typedef struct { uint8 Counter; } E2E_StateType;
+typedef enum {
+    E2E_STATUS_OK          = 0u,
+    E2E_STATUS_REPEATED    = 1u,
+    E2E_STATUS_WRONG_SEQ   = 2u,
+    E2E_STATUS_ERROR       = 3u,
+    E2E_STATUS_NO_NEW_DATA = 4u
+} E2E_CheckStatusType;
 
 /* WdgM type needed by Swc_Heartbeat.c */
 typedef uint8 WdgM_SupervisedEntityIdType;
@@ -63,13 +68,20 @@ typedef uint8 WdgM_SupervisedEntityIdType;
 #define CVC_ECU_ID_RZC          0x03u
 #define CVC_RTE_PERIOD_MS        10u
 #define CVC_HB_TX_PERIOD_MS      50u
-#define CVC_HB_FZC_MAX_MISS        2u
-#define CVC_HB_RZC_MAX_MISS       3u
-#define CVC_HB_RECOVERY_THRESHOLD 3u
 #define CVC_HB_ALIVE_MAX         15u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
 #define CVC_E2E_HEARTBEAT_DATA_ID 0x02u
+
+/* E2E SM per-ECU configurations (must match Cvc_Cfg.h) */
+#define CVC_E2E_SM_FZC_WINDOW        4u
+#define CVC_E2E_SM_FZC_MIN_OK_INIT   2u
+#define CVC_E2E_SM_FZC_MAX_ERR_VALID 1u
+#define CVC_E2E_SM_FZC_MIN_OK_INV    3u
+#define CVC_E2E_SM_RZC_WINDOW        6u
+#define CVC_E2E_SM_RZC_MIN_OK_INIT   3u
+#define CVC_E2E_SM_RZC_MAX_ERR_VALID 2u
+#define CVC_E2E_SM_RZC_MIN_OK_INV    3u
 
 /* Named Com RX signal IDs for heartbeat alive counters */
 #define CVC_COM_SIG_FZC_HB_ALIVE  9u
@@ -207,9 +219,10 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ====================================================================
- * Include SWC under test (source inclusion for test build)
+ * Include E2E SM + SWC under test (source inclusion for test build)
  * ==================================================================== */
 
+#include "../../shared/bsw/services/E2E_Sm.c"
 #include "../src/Swc_Heartbeat.c"
 
 /* ====================================================================
@@ -225,10 +238,10 @@ static void run_cycles(uint8 n)
 }
 
 /* ====================================================================
- * Helpers: recover ECU from initial TIMEOUT (3 consecutive HBs)
+ * Helpers: recover ECU from initial TIMEOUT via E2E SM
  * ==================================================================== */
 
-/** Recover FZC to OK via 3 alive counter changes (poll-based detection) */
+/** Recover FZC to OK via 3 alive counter changes (exceeds MinOkInit=2) */
 static void recover_fzc(uint8 start_alive)
 {
     mock_com_rx_fzc_alive = start_alive;
@@ -239,7 +252,7 @@ static void recover_fzc(uint8 start_alive)
     run_cycles(5u);
 }
 
-/** Recover RZC to OK via 3 alive counter changes */
+/** Recover RZC to OK via 3 alive counter changes (matches MinOkInit=3) */
 static void recover_rzc(uint8 start_alive)
 {
     mock_com_rx_rzc_alive = start_alive;
@@ -1002,51 +1015,18 @@ void test_Heartbeat_FZC_DTC_at_2_misses(void)
 }
 
 /* ====================================================================
- * PHASE 4: Recovery Debounce
+ * PHASE 5: E2E State Machine Integration
  * ==================================================================== */
 
 /** @verifies SWR-CVC-022
- *  Phase 4: Single HB after timeout does NOT recover (needs 3 consecutive) */
-void test_Heartbeat_Single_HB_stays_timeout(void)
+ *  Phase 5: Single OK in INIT does not reach MinOkInit (FZC needs 2) */
+void test_Heartbeat_SM_single_OK_stays_INIT(void)
 {
-    /* FZC starts in TIMEOUT (from init).
-     * Send only 1 RxIndication — should NOT recover. */
-    Swc_Heartbeat_RxIndication(CVC_ECU_ID_FZC);
-    mock_rte_write_count = 0u;
-    run_cycles(5u);  /* recovery_count = 1, still TIMEOUT */
-
-    boolean found_timeout = FALSE;
-    uint8 i;
-    for (i = 0u; i < mock_rte_write_count; i++) {
-        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
-            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
-            found_timeout = TRUE;
-        }
-    }
-    TEST_ASSERT_TRUE(found_timeout);
-}
-
-/** @verifies SWR-CVC-022
- *  Phase 4: Miss during recovery resets recovery counter */
-void test_Heartbeat_Recovery_reset_on_miss(void)
-{
-    /* FZC starts in TIMEOUT. Send 2 HBs (recovery count = 2),
-     * then miss a period to reset recovery, then send 2 more.
-     * Should still be TIMEOUT (never reached 3 consecutive). */
+    /* FZC starts in INIT (comm_status = TIMEOUT).
+     * 1 alive change = 1 OK, MinOkInit = 2, stays INIT. */
     mock_com_rx_fzc_alive = 1u;
-    run_cycles(5u);  /* recovery 1/3 */
-    mock_com_rx_fzc_alive = 2u;
-    run_cycles(5u);  /* recovery 2/3 */
-
-    /* Miss: don't change alive counter for 1 period */
-    run_cycles(5u);  /* recovery reset to 0 */
-
-    /* Try again — only 2 more */
-    mock_com_rx_fzc_alive = 3u;
-    run_cycles(5u);  /* recovery 1/3 */
-    mock_com_rx_fzc_alive = 4u;
     mock_rte_write_count = 0u;
-    run_cycles(5u);  /* recovery 2/3 — still not enough */
+    run_cycles(5u);  /* 1 OK, OkCount=1 < MinOkInit=2 */
 
     boolean found_timeout = FALSE;
     uint8 i;
@@ -1060,14 +1040,85 @@ void test_Heartbeat_Recovery_reset_on_miss(void)
 }
 
 /** @verifies SWR-CVC-022
- *  Phase 4: DTC PASSED reported when recovery completes (3 consecutive HBs) */
-void test_Heartbeat_Recovery_DTC_passed_after_3_HBs(void)
+ *  Phase 5: FZC INIT→VALID after exactly MinOkInit=2 OKs */
+void test_Heartbeat_SM_FZC_INIT_to_VALID_after_2_OKs(void)
 {
-    /* Recover FZC from initial TIMEOUT via 3 consecutive HBs */
+    /* Feed exactly 2 alive changes → 2 OKs → INIT→VALID */
+    mock_com_rx_fzc_alive = 1u;
+    run_cycles(5u);  /* OK 1 */
+    mock_com_rx_fzc_alive = 2u;
+    mock_rte_write_count = 0u;
+    run_cycles(5u);  /* OK 2 → VALID */
+
+    boolean found_ok = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_OK)) {
+            found_ok = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found_ok);
+}
+
+/** @verifies SWR-CVC-022
+ *  Phase 5: Single error in VALID window doesn't cause INVALID (MaxErrValid=1) */
+void test_Heartbeat_SM_single_miss_stays_VALID(void)
+{
+    /* Recover FZC to VALID */
+    recover_fzc(1u);
+
+    /* 1 miss in VALID — ErrorCount=1, MaxErrValid=1, 1 > 1 is false → stays VALID */
+    mock_rte_write_count = 0u;
+    run_cycles(5u);  /* 1 error, still VALID */
+
+    boolean found_ok = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_OK)) {
+            found_ok = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found_ok);
+}
+
+/** @verifies SWR-CVC-022
+ *  Phase 5: INVALID recovery requires MinOkInvalid=3 OKs (FZC) */
+void test_Heartbeat_SM_INVALID_recovery_requires_3_OKs(void)
+{
+    /* Recover FZC to VALID, then force INVALID with 2 misses */
+    recover_fzc(1u);
+    run_cycles(5u);  /* miss 1 */
+    run_cycles(5u);  /* miss 2 → ErrorCount > MaxErrValid → INVALID */
+
+    /* Feed only 2 OKs — not enough for MinOkInvalid=3 */
+    mock_com_rx_fzc_alive = 10u;
+    run_cycles(5u);  /* OK 1 */
+    mock_com_rx_fzc_alive = 11u;
+    mock_rte_write_count = 0u;
+    run_cycles(5u);  /* OK 2 — still INVALID */
+
+    boolean found_timeout = FALSE;
+    uint8 i;
+    for (i = 0u; i < mock_rte_write_count; i++) {
+        if ((mock_rte_write_sig_ids[i] == CVC_SIG_FZC_COMM_STATUS) &&
+            (mock_rte_write_vals[i] == CVC_COMM_TIMEOUT)) {
+            found_timeout = TRUE;
+        }
+    }
+    TEST_ASSERT_TRUE(found_timeout);
+}
+
+/** @verifies SWR-CVC-022
+ *  Phase 5: DTC PASSED when SM transitions INIT→VALID */
+void test_Heartbeat_SM_DTC_passed_on_VALID(void)
+{
+    /* Recover FZC from initial TIMEOUT (INIT→VALID) */
     mock_dem_report_count = 0u;
     recover_fzc(1u);
 
-    /* Check that DTC PASSED was reported for FZC */
+    /* Check DTC PASSED reported on transition */
     boolean fzc_passed = FALSE;
     uint8 i;
     for (i = 0u; i < mock_dem_report_count; i++) {
@@ -1129,10 +1180,12 @@ int main(void)
     RUN_TEST(test_Heartbeat_RZC_no_timeout_at_2_misses);
     RUN_TEST(test_Heartbeat_FZC_DTC_at_2_misses);
 
-    /* --- PHASE 4: Recovery Debounce --- */
-    RUN_TEST(test_Heartbeat_Single_HB_stays_timeout);
-    RUN_TEST(test_Heartbeat_Recovery_reset_on_miss);
-    RUN_TEST(test_Heartbeat_Recovery_DTC_passed_after_3_HBs);
+    /* --- PHASE 5: E2E State Machine --- */
+    RUN_TEST(test_Heartbeat_SM_single_OK_stays_INIT);
+    RUN_TEST(test_Heartbeat_SM_FZC_INIT_to_VALID_after_2_OKs);
+    RUN_TEST(test_Heartbeat_SM_single_miss_stays_VALID);
+    RUN_TEST(test_Heartbeat_SM_INVALID_recovery_requires_3_OKs);
+    RUN_TEST(test_Heartbeat_SM_DTC_passed_on_VALID);
 
     return UNITY_END();
 }
