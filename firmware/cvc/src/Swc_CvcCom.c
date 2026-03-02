@@ -261,7 +261,7 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
      * (max brake, center steering) so FZC clears its fault latch. */
     {
         uint8  vs = Swc_VehicleState_GetState();
-        sint16 tx_steer = 0;
+        uint16 tx_steer = 4500u;  /* DBC: raw=(0°+45)/0.01 = center */
         uint8  tx_brake;
 
         if (vs >= CVC_STATE_SAFE_STOP)
