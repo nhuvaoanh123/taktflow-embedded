@@ -22,8 +22,11 @@
 
 /* ==================================================================
  * Torque-to-Current Lookup Table
+ *
+ * Only needed when real plausibility validation runs (not in SIL runtime).
  * ================================================================== */
 
+#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * Torque percentage entries (0%, 7%, 13%, 20%, 27%, 33%, 40%, 47%,
  * 53%, 60%, 67%, 73%, 80%, 87%, 93%, 100%)
@@ -41,6 +44,7 @@ static const uint16 current_ma_lut[SC_TORQUE_LUT_SIZE] = {
     0u,    1750u,  3250u,  5000u,  6750u,  8250u,  10000u, 11750u,
     13250u, 15000u, 16750u, 18250u, 20000u, 21750u, 23250u, 25000u
 };
+#endif
 
 /* ==================================================================
  * Module State
