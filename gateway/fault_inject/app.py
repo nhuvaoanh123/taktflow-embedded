@@ -305,10 +305,10 @@ def trigger_scenario(name: str, request: Request):
 
 @app.post("/api/fault/reset")
 def reset_all(request: Request):
-    """Reset all actuators to safe idle state."""
+    """Power-cycle reset: restart ECU containers to clear all latched faults."""
     _check_control_lock(request)
     global _idle_paused
-    log.info("Resetting all actuators")
+    log.info("Power-cycle reset initiated")
     try:
         result = reset_scenario()
     except Exception as exc:

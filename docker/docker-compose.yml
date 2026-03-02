@@ -281,6 +281,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       can-setup:
         condition: service_completed_successfully

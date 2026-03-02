@@ -8,11 +8,13 @@ CRC-8 SAE J1850 (poly 0x1D, init 0xFF) computed over [data_id] + payload[2:].
 """
 
 import json
+import logging
 import os
 import time
 from typing import Optional
 
 import can
+import docker
 import paho.mqtt.client as paho_mqtt
 
 from .pedal_udp import (
@@ -519,31 +521,51 @@ def estop() -> str:
     return "E-Stop activated: EStop_Active=1, source=CAN_request"
 
 
-def reset() -> str:
-    """Clear E-Stop, clear pedal override, reset all actuators to idle.
+log = logging.getLogger("fault_inject")
 
-    Clears the SPI pedal override (reverts to dead-zone = torque 0),
-    sends E-Stop clear (EStop_Active=0), then sets steer to 0 deg
-    and brake to 0%.  Also publishes MQTT reset command so the ML
-    detector and ws_bridge clear their state.
+# Containers to restart on power-cycle reset (ECUs + plant physics)
+_POWER_CYCLE_CONTAINERS = [
+    "docker-cvc-1", "docker-fzc-1", "docker-rzc-1",
+    "docker-sc-1", "docker-bcm-1", "docker-icu-1", "docker-tcu-1",
+    "docker-plant-sim-1",
+]
+
+
+def _restart_ecu_containers() -> list[str]:
+    """Restart ECU + plant-sim containers to clear latched firmware faults."""
+    client = docker.from_env()
+    restarted = []
+    for name in _POWER_CYCLE_CONTAINERS:
+        try:
+            c = client.containers.get(name)
+            c.restart(timeout=5)
+            restarted.append(name)
+        except docker.errors.NotFound:
+            log.warning("Container %s not found — skipping", name)
+        except Exception as exc:
+            log.warning("Failed to restart %s: %s", name, exc)
+    return restarted
+
+
+def reset() -> str:
+    """Power-cycle reset: restart ECU containers to clear all latched faults.
+
+    1. Clears the SPI pedal override
+    2. Publishes MQTT reset (ML detector + ws_bridge clear state)
+    3. Restarts all ECU + plant-sim containers (clears latched firmware faults)
     """
     clear_pedal_override()
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_ESTOP, _estop_frame(active=False, source=1))
-        time.sleep(0.01)
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(0, 0))
-        _send(bus, CAN_STEER_COMMAND, _steer_frame(0.0))
-        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
-    finally:
-        bus.shutdown()
 
     # Publish MQTT reset command for ML detector and ws_bridge
     if _mqtt_client is not None:
         reset_payload = json.dumps({"action": "reset", "ts": time.time()})
         _mqtt_client.publish("taktflow/command/reset", reset_payload, qos=1)
 
-    return "Reset: E-Stop cleared, torque=0, steer=0, brake=0"
+    # Power-cycle: restart ECU containers to clear latched faults
+    restarted = _restart_ecu_containers()
+    log.info("Power-cycle reset: restarted %d containers", len(restarted))
+
+    return f"Power-cycle reset: {len(restarted)} containers restarted"
 
 
 # ---------------------------------------------------------------------------
@@ -652,8 +674,8 @@ SCENARIOS: dict[str, dict] = {
     "reset": {
         "fn": reset,
         "description": (
-            "Reset: clears pedal override + E-Stop, "
-            "sets steer/brake to zero."
+            "Power-cycle reset: restarts all ECU + plant-sim containers "
+            "to clear latched firmware faults. Full clean boot."
         ),
     },
 }
