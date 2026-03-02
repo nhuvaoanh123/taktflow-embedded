@@ -1,7 +1,7 @@
 """WebSocket Telemetry Bridge — aggregates MQTT signals into JSON snapshots.
 
 Subscribes to MQTT taktflow/# topics, maintains a single state snapshot,
-and broadcasts it to all connected WebSocket clients at 10Hz.
+and broadcasts it to all connected WebSocket clients at 4Hz.
 """
 
 import asyncio
@@ -592,7 +592,7 @@ async def health():
 
 
 async def broadcast_loop():
-    """Broadcast telemetry snapshot to all WebSocket clients at 10Hz."""
+    """Broadcast telemetry snapshot to all WebSocket clients at 4Hz."""
     while True:
         if ws_clients:
             snapshot = state.to_snapshot()
@@ -605,7 +605,7 @@ async def broadcast_loop():
                     disconnected.add(ws)
             ws_clients.difference_update(disconnected)
 
-        await asyncio.sleep(0.1)  # 10Hz
+        await asyncio.sleep(0.25)  # 4Hz — smooth for visual dashboard
 
 
 def main():
