@@ -598,7 +598,6 @@ def reset() -> str:
 SCENARIOS: dict[str, dict] = {
     "normal_drive": {
         "fn": normal_drive,
-        "resume_idle": True,
         "description": (
             "Normal drive: pedal 50% (SPI override), steer 0 deg, brake 0%.  "
             "CVC processes pedal through full pipeline -> Torque_Request CAN."
@@ -697,7 +696,6 @@ SCENARIOS: dict[str, dict] = {
     },
     "reset": {
         "fn": reset,
-        "resume_idle": True,
         "description": (
             "Power-cycle reset: restarts all ECU + plant-sim containers "
             "to clear latched firmware faults. Full clean boot."
