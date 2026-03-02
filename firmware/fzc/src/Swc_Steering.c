@@ -102,6 +102,9 @@ static uint8    Steering_PwmDisableLevel;
 /** Number of distinct fault episodes (for escalation) */
 static uint8    Steering_FaultEpisodeCount;
 
+/** First valid steering command received (timeout armed only after TRUE) */
+static uint8    Steering_FirstCmdReceived;
+
 /* ==================================================================
  * Private Helper: Absolute difference of sint16 values
  * ================================================================== */
@@ -246,6 +249,7 @@ void Swc_Steering_Init(const Swc_Steering_ConfigType* ConfigPtr)
     Steering_PrevAngle10        = 0;
     Steering_PwmDisableLevel    = 0u;
     Steering_FaultEpisodeCount  = 0u;
+    Steering_FirstCmdReceived   = FALSE;
 
     Steering_Initialized        = TRUE;
 }
@@ -301,6 +305,7 @@ void Swc_Steering_MainFunction(void)
         new_cmd_received = TRUE;
         Steering_CmdTimeoutCounter = 0u;
         Steering_CmdTimedOut = FALSE;
+        Steering_FirstCmdReceived = TRUE;
     } else {
         /* No fresh command data: increment timeout counter */
         new_cmd_received = FALSE;
@@ -359,7 +364,7 @@ void Swc_Steering_MainFunction(void)
      * Step 6: Check command timeout
      *         Timeout = cmdTimeoutMs / 10ms = 10 cycles
      * ---------------------------------------------------------- */
-    if (Steering_CmdTimeoutCounter >= STEER_TIMEOUT_CYCLES) {
+    if ((Steering_FirstCmdReceived == TRUE) && (Steering_CmdTimeoutCounter >= STEER_TIMEOUT_CYCLES)) {
         Steering_CmdTimedOut = TRUE;
         if (new_fault == FZC_STEER_NO_FAULT) {
             new_fault = FZC_STEER_CMD_TIMEOUT;

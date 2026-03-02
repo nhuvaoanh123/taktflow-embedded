@@ -1081,6 +1081,35 @@ void test_FaultInj_pwm_disable_escalation(void)
 }
 
 /* ==================================================================
+ * SWR-FZC-028: Startup — no timeout before first valid command
+ * ================================================================== */
+
+/** @verifies SWR-FZC-028
+ *  Equivalence class: startup — no timeout before first valid command */
+void test_No_timeout_before_first_command(void)
+{
+    mock_rte_read_result = E_NOT_OK;
+    uint16 i;
+    for (i = 0u; i < 15u; i++) {
+        Swc_Steering_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, mock_rte_signals[FZC_SIG_STEER_FAULT]);
+}
+
+/** @verifies SWR-FZC-028
+ *  Equivalence class: timeout armed after first valid command */
+void test_Timeout_works_after_first_command(void)
+{
+    run_cycles(10, 10, 1u);
+    mock_rte_read_result = E_NOT_OK;
+    uint16 i;
+    for (i = 0u; i < 15u; i++) {
+        Swc_Steering_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT32(FZC_STEER_CMD_TIMEOUT, mock_rte_signals[FZC_SIG_STEER_FAULT]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -1155,6 +1184,10 @@ int main(void)
     RUN_TEST(test_FaultInj_RTC_reaches_zero_and_stops);
     RUN_TEST(test_FaultInj_double_init_steering);
     RUN_TEST(test_FaultInj_pwm_disable_escalation);
+
+    /* HARDENED: Startup — no timeout before first valid command */
+    RUN_TEST(test_No_timeout_before_first_command);
+    RUN_TEST(test_Timeout_works_after_first_command);
 
     return UNITY_END();
 }
