@@ -111,11 +111,11 @@ def _lock_watchdog() -> None:
 
 
 def _idle_command_loop() -> None:
-    """Background thread: send brake=0% / steer=0deg every 50ms on CAN.
+    """Background thread: keep CAN bus handle alive.
 
-    Acts as a virtual pedal ECU — prevents FZC from timing out when no
-    scenario is active.  Paused while a fault scenario runs (so scenarios
-    can hold their fault frames without being overwritten).
+    CVC now sends steer/brake commands in all states (including INIT),
+    so the idle loop no longer needs to send them.  Kept as a skeleton
+    for future idle-time CAN needs and to maintain the bus handle.
     """
     bus = None
     while True:
@@ -124,8 +124,6 @@ def _idle_command_loop() -> None:
                 if bus is None:
                     bus = _get_bus()
                     log.info("Idle command loop: CAN bus opened")
-                _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
-                _send(bus, CAN_STEER_COMMAND, _steer_frame(0.0))
         except Exception as exc:
             log.warning("Idle command loop error: %s", exc)
             bus = None
