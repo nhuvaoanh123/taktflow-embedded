@@ -113,10 +113,68 @@ Total project tests remain healthy. The +8 tests verify the new feature end-to-e
 
 ---
 
+## 8. SocketCAN Single-Socket Consumes All Frames — Buffer First, Distribute Second
+
+**Problem**: SC's `dcan1_get_mailbox_data()` reads from a single SocketCAN socket. When checking mailbox 0 (E-Stop 0x001), the function reads and discards all non-matching frames — including heartbeats (0x010, 0x011, 0x012). By the time mailbox 1/2/3 are queried, their frames are gone.
+
+**Root cause**: Real DCAN hardware has per-mailbox hardware filters that run in parallel. SocketCAN is a serial stream — reading for one ID consumes frames for all IDs.
+
+**Fix**: Drain all pending frames into a per-mailbox buffer once per tick, then serve from the buffer for individual mailbox queries:
+```c
+/* Drain on first call per tick */
+if (rx_drained == FALSE) {
+    while (recv(dcan_fd, &frame, ...) > 0) {
+        /* Sort into rx_slot[mailbox] by CAN ID */
+    }
+    rx_drained = TRUE;
+}
+/* Serve from buffer */
+return rx_slot[mbIndex].valid ? copy_and_return() : FALSE;
+```
+Reset `rx_drained = FALSE` in `rtiClearTick()`.
+
+**Takeaway**: When emulating hardware mailboxes over SocketCAN, always buffer-then-distribute. A per-ID serial scan will starve later mailboxes.
+
+---
+
+## 9. E2E Format Mismatch Is Silent — Heartbeats Arrive But Are Rejected
+
+**Problem**: SC's E2E module expects `alive` in upper nibble of byte 0 and CRC-8 in byte 1. BSW senders (CVC/FZC/RZC) use a different E2E layout. All E2E checks fail silently, so `SC_Heartbeat_NotifyRx()` is never called.
+
+**Root cause**: The SC (TMS570, bare-metal) and the AUTOSAR BSW ECUs use independently developed E2E implementations with different byte layouts.
+
+**Fix for SIL**: Bypass E2E in Docker builds where vcan0 provides perfect data integrity:
+```c
+#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
+    return TRUE;  /* SIL bypass — vcan0 has no bit-flips */
+#else
+    /* Full E2E check for production + unit tests */
+#endif
+```
+
+**Lesson**: This bug was invisible until the relay broadcast feature — SC was always killing the relay in SIL, but nobody knew because there was no observable effect. **Adding observability (CAN 0x013 broadcast) exposed a pre-existing bug.**
+
+**Takeaway**: When adding observability to a system, expect to discover bugs that were always there. Also: E2E format must be documented in a shared CAN matrix, not just in each ECU's source code.
+
+---
+
+## 10. Rte_Cfg Array Size Must Match SIG_COUNT — The 6th File
+
+**Problem**: After bumping `CVC_SIG_COUNT` to 32 for the new signal, the Docker build (`-Werror`) failed because `Rte_Cfg_Cvc.c` had only 31 initializers for a 32-element array.
+
+**Fix**: Add `{ CVC_SIG_SC_RELAY_KILL, 0u }` to the RTE signal config array.
+
+**Takeaway**: The AUTOSAR routing tax is actually **6 files**, not 5. `Rte_Cfg_Cvc.c` is the silent 6th that only bites you if SIG_COUNT changes.
+
+---
+
 ## Key Takeaways
 
-1. **AUTOSAR routing is verbose but traceable** — 5 files for 1 signal is the cost of layered architecture
+1. **AUTOSAR routing is verbose but traceable** — 6 files for 1 signal is the cost of layered architecture
 2. **Two-level POSIX guards** (`PLATFORM_POSIX` + `PLATFORM_POSIX_TEST`) solve the Windows unit test problem cleanly
 3. **Docker stop = ECU failure** — use container lifecycle as first-class fault injection
 4. **Every SAFE_STOP trigger needs a recovery guard entry** — otherwise the system "recovers" while the fault persists
 5. **~80% of SIL feature code is production-reusable** — only the CAN TX mechanism is SIL-specific
+6. **Buffer-then-distribute for SocketCAN mailbox emulation** — serial recv() starves later mailboxes
+7. **Adding observability exposes pre-existing bugs** — the relay broadcast revealed E2E and frame consumption bugs that existed from day one
+8. **E2E format must be a shared specification** — not independently developed per ECU
