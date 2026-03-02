@@ -64,11 +64,13 @@ typedef uint8           Std_ReturnType;
 #define FZC_BRAKE_PWM_DEVIATION     1u
 #define FZC_BRAKE_CMD_TIMEOUT       2u
 #define FZC_BRAKE_LATCHED           3u
+#define FZC_BRAKE_CMD_OSCILLATION   4u
 
 /* DTC event IDs */
 #define FZC_DTC_BRAKE_FAULT         5u
 #define FZC_DTC_BRAKE_TIMEOUT       6u
 #define FZC_DTC_BRAKE_PWM_FAIL      7u
+#define FZC_DTC_BRAKE_OSCILLATION  15u
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_PASSED     0u
@@ -80,6 +82,10 @@ typedef uint8           Std_ReturnType;
 #define FZC_BRAKE_FAULT_DEBOUNCE        3u
 #define FZC_BRAKE_LATCH_CLEAR_CYCLES   50u
 #define FZC_BRAKE_CUTOFF_REPEAT_COUNT  10u
+
+/* Brake oscillation detection constants */
+#define FZC_BRAKE_OSCILLATION_DELTA_THRESH  30u
+#define FZC_BRAKE_OSCILLATION_DEBOUNCE       4u
 
 /* Com TX PDU IDs */
 #define FZC_COM_TX_MOTOR_CUTOFF     4u
@@ -981,6 +987,147 @@ void test_Timeout_works_after_first_command(void)
 }
 
 /* ==================================================================
+ * SWR-FZC-010: Brake Command Oscillation Detection
+ * ================================================================== */
+
+/** @verifies SWR-FZC-010
+ *  Stable command for 10 cycles — no oscillation fault */
+void test_Oscillation_no_fault_stable_command(void)
+{
+    /* Raise PWM fault debounce to isolate oscillation detection */
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Send same brake command for 10 cycles */
+    run_cycles(50u, 10u);
+
+    uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
+}
+
+/** @verifies SWR-FZC-010
+ *  Small delta (20% < 30% threshold) for 10 cycles — no oscillation fault */
+void test_Oscillation_no_fault_small_delta(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Alternate 40/60 — delta = 20 < 30 threshold */
+    uint16 i;
+    for (i = 0u; i < 10u; i++) {
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 40u;
+        Swc_Brake_MainFunction();
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 60u;
+        Swc_Brake_MainFunction();
+    }
+
+    uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
+}
+
+/** @verifies SWR-FZC-010
+ *  Single large jump then stable — counter resets, no fault */
+void test_Oscillation_no_fault_single_jump(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Establish at 0% */
+    run_cycles(0u, 3u);
+
+    /* One large jump to 100% — counter = 1 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+
+    /* Stay at 100% — delta = 0, counter resets */
+    run_cycles(100u, 10u);
+
+    uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
+}
+
+/** @verifies SWR-FZC-010
+ *  Alternating 0/100 for 4 consecutive large-delta cycles triggers fault */
+void test_Oscillation_fault_after_debounce(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Establish at 0% */
+    run_cycles(0u, 2u);
+
+    /* Alternate 0/100 — delta = 100 each cycle, 4 consecutive = fault */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();   /* counter = 1 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();   /* counter = 2 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();   /* counter = 3 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();   /* counter = 4 -> FAULT */
+
+    uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, fault);
+}
+
+/** @verifies SWR-FZC-010
+ *  Oscillation fault forces 100% brake and starts motor cutoff */
+void test_Oscillation_fault_triggers_auto_brake(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Establish at 0% */
+    run_cycles(0u, 2u);
+
+    /* Trigger oscillation fault */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+
+    /* Brake forced to 100% */
+    TEST_ASSERT_EQUAL_UINT32(100u, mock_rte_signals[FZC_SIG_BRAKE_POS]);
+
+    /* Motor cutoff started */
+    TEST_ASSERT_EQUAL_UINT32(1u, mock_rte_signals[FZC_SIG_MOTOR_CUTOFF]);
+}
+
+/** @verifies SWR-FZC-010
+ *  Oscillation fault reports DTC via Dem */
+void test_Oscillation_DTC_reported(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Establish at 0% */
+    run_cycles(0u, 2u);
+
+    /* Trigger oscillation fault */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+
+    /* Oscillation DTC reported */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_BRAKE_OSCILLATION]);
+    TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
+                            mock_dem_event_status[FZC_DTC_BRAKE_OSCILLATION]);
+
+    /* Generic brake fault DTC also reported */
+    TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
+                            mock_dem_event_status[FZC_DTC_BRAKE_FAULT]);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -1041,6 +1188,14 @@ int main(void)
     /* HARDENED: Startup — no timeout before first valid command */
     RUN_TEST(test_No_timeout_before_first_command);
     RUN_TEST(test_Timeout_works_after_first_command);
+
+    /* SWR-FZC-010: Brake Command Oscillation Detection */
+    RUN_TEST(test_Oscillation_no_fault_stable_command);
+    RUN_TEST(test_Oscillation_no_fault_small_delta);
+    RUN_TEST(test_Oscillation_no_fault_single_jump);
+    RUN_TEST(test_Oscillation_fault_after_debounce);
+    RUN_TEST(test_Oscillation_fault_triggers_auto_brake);
+    RUN_TEST(test_Oscillation_DTC_reported);
 
     return UNITY_END();
 }

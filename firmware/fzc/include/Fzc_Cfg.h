@@ -82,6 +82,7 @@
 #define FZC_DTC_CAN_BUS_OFF          12u   /* 0xD30100 */
 #define FZC_DTC_SELF_TEST_FAIL       13u   /* 0xD40100 */
 #define FZC_DTC_WATCHDOG_FAIL        14u   /* 0xD40200 */
+#define FZC_DTC_BRAKE_OSCILLATION    15u   /* 0xD10400 */
 
 /* ====================================================================
  * E2E Data IDs
@@ -124,6 +125,10 @@
 #define FZC_BRAKE_PWM_MIN                0u    /* 0% = no brake */
 #define FZC_BRAKE_PWM_MAX              100u    /* 100% = full brake */
 #define FZC_BRAKE_LATCH_CLEAR_CYCLES    50u    /* Fault-free cycles to clear latch */
+
+/* Brake oscillation detection (ASIL D — command plausibility) */
+#define FZC_BRAKE_OSCILLATION_DELTA_THRESH  30u   /* 30% min jump per cycle */
+#define FZC_BRAKE_OSCILLATION_DEBOUNCE       4u   /* 4 consecutive = fault (40ms) */
 
 /* ====================================================================
  * Lidar Constants (ASIL C)
@@ -224,5 +229,6 @@
 #define FZC_BRAKE_PWM_DEVIATION         1u
 #define FZC_BRAKE_CMD_TIMEOUT           2u
 #define FZC_BRAKE_LATCHED               3u
+#define FZC_BRAKE_CMD_OSCILLATION       4u
 
 #endif /* FZC_CFG_H */

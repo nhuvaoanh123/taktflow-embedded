@@ -239,3 +239,4 @@ And when the SIL environment can't faithfully replicate the signal path (two sen
 8. **E2E format must be a shared specification** — not independently developed per ECU
 9. **Every cyclic safety monitor needs a startup grace period** — boot transients trigger false kills; grace must >= longest ECU boot time
 10. **Verify CAN reads against DBC for byte order AND signal semantics** — LE vs BE and limit vs actual are silent killers
+11. **Simulated feedback masks command-plausibility faults** — SIL feedback tracks commanded instantly, so PWM-deviation detection never triggers on oscillating commands; add dedicated command-oscillation detection (delta + debounce) to catch bus attacks and faulty senders

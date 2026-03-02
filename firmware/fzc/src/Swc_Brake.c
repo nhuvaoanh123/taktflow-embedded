@@ -90,6 +90,12 @@ static uint8   Brake_FirstCmdReceived;
 /** Previous brake command for timeout and feedback detection */
 static uint32  Brake_PrevBrakeCmd;
 
+/** Previous clamped brake command for oscillation detection */
+static uint8   Brake_OscPrevCmd;
+
+/** Oscillation detection counter (consecutive large-delta cycles) */
+static uint8   Brake_OscillationCounter;
+
 /* ==================================================================
  * API: Swc_Brake_Init
  * ================================================================== */
@@ -115,6 +121,8 @@ void Swc_Brake_Init(const Swc_Brake_ConfigType* ConfigPtr)
     Brake_CutoffSending       = FALSE;
     Brake_FirstCmdReceived    = FALSE;
     Brake_PrevBrakeCmd        = 0xFFFFFFFFu;  /* Sentinel: no previous command */
+    Brake_OscPrevCmd          = 0u;
+    Brake_OscillationCounter  = 0u;
 
     Brake_Initialized         = TRUE;
 }
@@ -201,6 +209,40 @@ void Swc_Brake_MainFunction(void)
             Brake_LatchCounter    = 0u;
         }
     }
+
+    /* ----------------------------------------------------------
+     * Step 3b: Command oscillation detection
+     *          Track absolute change between consecutive clamped
+     *          commands.  If delta exceeds threshold for N
+     *          consecutive cycles, declare oscillation fault.
+     *          Gated on no existing fault to avoid interference
+     *          with timeout/PWM-deviation detection.
+     * ---------------------------------------------------------- */
+    if ((new_fault == FZC_BRAKE_NO_FAULT) && (Brake_FaultLatched == FALSE)) {
+        uint8 osc_delta;
+
+        if (brake_cmd >= Brake_OscPrevCmd) {
+            osc_delta = brake_cmd - Brake_OscPrevCmd;
+        } else {
+            osc_delta = Brake_OscPrevCmd - brake_cmd;
+        }
+
+        if (osc_delta > FZC_BRAKE_OSCILLATION_DELTA_THRESH) {
+            if (Brake_OscillationCounter < 0xFFu) {
+                Brake_OscillationCounter++;
+            }
+        } else {
+            Brake_OscillationCounter = 0u;
+        }
+
+        if (Brake_OscillationCounter >= FZC_BRAKE_OSCILLATION_DEBOUNCE) {
+            new_fault = FZC_BRAKE_CMD_OSCILLATION;
+        }
+    } else {
+        Brake_OscillationCounter = 0u;
+    }
+
+    Brake_OscPrevCmd = brake_cmd;
 
     Brake_PrevBrakeCmd = brake_cmd_raw;
 
@@ -329,11 +371,15 @@ void Swc_Brake_MainFunction(void)
     } else if (new_fault == FZC_BRAKE_CMD_TIMEOUT) {
         Dem_ReportErrorStatus(FZC_DTC_BRAKE_TIMEOUT, DEM_EVENT_STATUS_FAILED);
         Dem_ReportErrorStatus(FZC_DTC_BRAKE_FAULT, DEM_EVENT_STATUS_FAILED);
+    } else if (new_fault == FZC_BRAKE_CMD_OSCILLATION) {
+        Dem_ReportErrorStatus(FZC_DTC_BRAKE_OSCILLATION, DEM_EVENT_STATUS_FAILED);
+        Dem_ReportErrorStatus(FZC_DTC_BRAKE_FAULT, DEM_EVENT_STATUS_FAILED);
     } else if (Brake_FaultLatched == FALSE) {
         /* All clear: report PASSED for all brake DTCs */
         Dem_ReportErrorStatus(FZC_DTC_BRAKE_FAULT, DEM_EVENT_STATUS_PASSED);
         Dem_ReportErrorStatus(FZC_DTC_BRAKE_TIMEOUT, DEM_EVENT_STATUS_PASSED);
         Dem_ReportErrorStatus(FZC_DTC_BRAKE_PWM_FAIL, DEM_EVENT_STATUS_PASSED);
+        Dem_ReportErrorStatus(FZC_DTC_BRAKE_OSCILLATION, DEM_EVENT_STATUS_PASSED);
     } else {
         /* Latch still active but no new fault — no DTC report change */
     }
