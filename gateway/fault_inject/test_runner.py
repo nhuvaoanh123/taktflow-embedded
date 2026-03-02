@@ -222,6 +222,7 @@ class DashboardTestRunner:
         self._reset = reset_fn
         self._monitor = MQTTVerdictMonitor()
         self._running = False
+        self._stop_requested = False
         self._lock = threading.Lock()
         self._run_id: str = ""
         self.last_result: dict | None = None
@@ -278,8 +279,17 @@ class DashboardTestRunner:
             args=(specs, self._run_id),
             daemon=True,
         )
+        self._stop_requested = False
         thread.start()
         return self._run_id
+
+    def stop(self) -> bool:
+        """Request the running suite to stop after the current scenario."""
+        if not self._running:
+            return False
+        self._stop_requested = True
+        log.info("[TEST %s] Stop requested", self._run_id)
+        return True
 
     def _run_suite(self, specs: list[TestSpec], run_id: str):
         """Execute the test suite (runs in daemon thread)."""
@@ -288,6 +298,10 @@ class DashboardTestRunner:
 
         try:
             for idx, spec in enumerate(specs):
+                if self._stop_requested:
+                    log.info("[TEST %s] Stopped by user after %d scenarios", run_id, idx)
+                    break
+
                 self._publish_progress(run_id, len(specs), idx, spec, "preparing", results, start_time)
 
                 # Prep: reset + normal_drive to establish baseline
@@ -312,6 +326,8 @@ class DashboardTestRunner:
                 self._publish_progress(run_id, len(specs), idx, spec, "observing", results, start_time)
                 observe_end = inject_time + spec.observe_sec
                 while time.time() < observe_end:
+                    if self._stop_requested:
+                        break
                     time.sleep(0.2)  # poll at 5Hz
 
                 # Evaluate verdicts

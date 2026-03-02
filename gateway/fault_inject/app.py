@@ -364,6 +364,17 @@ def start_test_run(body: TestRunBody, request: Request):
     return {"run_id": run_id, "state": "running"}
 
 
+@app.post("/api/test/stop")
+def stop_test_run(request: Request):
+    """Stop the running test suite after the current scenario."""
+    _check_control_lock(request)
+    if _test_runner is None:
+        raise HTTPException(status_code=503, detail="Test runner not initialized")
+    if not _test_runner.stop():
+        raise HTTPException(status_code=409, detail="No test run in progress")
+    return {"state": "stopping"}
+
+
 @app.get("/api/test/status")
 def test_status():
     """Current test run state."""
