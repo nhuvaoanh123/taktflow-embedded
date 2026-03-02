@@ -368,6 +368,10 @@ static void Swc_VehicleState_ConfirmFault(
 
             if (confirmed == TRUE)
             {
+                VSM_DIAG("CONFIRM idx=%u rte=%u com=%u e2e=%u evt=%u",
+                         (unsigned)faultIdx, (unsigned)rte_value,
+                         (unsigned)comSignalId, (unsigned)e2eRxIndex,
+                         (unsigned)eventId);
                 Dem_ReportErrorStatus(dtcId, DEM_EVENT_STATUS_FAILED);
                 Swc_VehicleState_OnEvent(eventId);
             }
@@ -419,6 +423,8 @@ void Swc_VehicleState_MainFunction(void)
 #ifdef SIL_DIAG
     {
         static uint16 diag_cycle = 0u;
+        static uint32 prev_mc = 0u;
+        static uint32 prev_bf = 0u;
         diag_cycle++;
         if (diag_cycle <= 100u) {
             VSM_DIAG("c=%u st=%u ped=%u es=%u fzc=%u rzc=%u mc=%u bf=%u sf=%u",
@@ -428,6 +434,21 @@ void Swc_VehicleState_MainFunction(void)
                      (unsigned)motor_cutoff, (unsigned)brake_fault,
                      (unsigned)steering_fault);
         }
+        /* Log whenever motor_cutoff or brake_fault transitions to non-zero */
+        if ((motor_cutoff != 0u) && (prev_mc == 0u)) {
+            VSM_DIAG("!! mc ONSET c=%u st=%u mc=%u bf=%u fzc=%u rzc=%u",
+                     (unsigned)diag_cycle, (unsigned)current_state,
+                     (unsigned)motor_cutoff, (unsigned)brake_fault,
+                     (unsigned)fzc_comm, (unsigned)rzc_comm);
+        }
+        if ((brake_fault != 0u) && (prev_bf == 0u)) {
+            VSM_DIAG("!! bf ONSET c=%u st=%u mc=%u bf=%u fzc=%u rzc=%u",
+                     (unsigned)diag_cycle, (unsigned)current_state,
+                     (unsigned)motor_cutoff, (unsigned)brake_fault,
+                     (unsigned)fzc_comm, (unsigned)rzc_comm);
+        }
+        prev_mc = motor_cutoff;
+        prev_bf = brake_fault;
     }
 #endif
 
