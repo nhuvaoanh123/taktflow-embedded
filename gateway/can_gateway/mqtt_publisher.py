@@ -66,12 +66,17 @@ class MqttPublisher:
         self._client.loop_stop()
         self._client.disconnect()
 
+    # E2E header signals — change every frame, not useful for dashboard
+    _E2E_SIGNALS = frozenset({"E2E_DataID", "E2E_AliveCounter", "E2E_CRC8"})
+
     def publish_signals(self, msg_name: str, signals: dict):
         """Publish each signal as a separate MQTT topic."""
         if not self._connected:
             return
 
         for signal_name, value in signals.items():
+            if signal_name in self._E2E_SIGNALS:
+                continue
             topic = f"{TOPIC_PREFIX}/can/{msg_name}/{signal_name}"
             # Use str for numeric values to keep them lightweight
             payload = str(value) if not isinstance(value, (dict, list)) else json.dumps(value)
