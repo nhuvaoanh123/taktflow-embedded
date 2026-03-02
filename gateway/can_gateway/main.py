@@ -65,6 +65,7 @@ async def run_gateway():
                 result = decoder.decode(msg)
                 if result is not None:
                     decoded_frames += 1
+                    result["signals"]["_raw"] = msg.data.hex()
                     publisher.publish_signals(result["msg_name"], result["signals"])
 
             # Publish stats every tick
