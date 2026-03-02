@@ -36,6 +36,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | [PROCESS-sil-demo-integration.md](infrastructure/PROCESS-sil-demo-integration.md) | SIL demo integration — Docker CAN, heartbeat wrap, plant sim tuning | 2026-03-01 | Closed |
 | [PROCESS-fault-injection-demo.md](infrastructure/PROCESS-fault-injection-demo.md) | Fault injection & demo — deterministic faults, DTC, SAP QM, ML anomaly | 2026-03-01 | Closed |
 | [PROCESS-rzc-heartbeat-overtransmit.md](infrastructure/PROCESS-rzc-heartbeat-overtransmit.md) | RZC heartbeat 5x over-transmit — Com_SendSignal signal ID vs PDU ID, timing bugs | 2026-03-01 | Closed |
+| [PROCESS-simulated-relay-sil.md](infrastructure/PROCESS-simulated-relay-sil.md) | Simulated relay — SIL CAN broadcast, BSW routing tax, POSIX test guards, Docker as fault injection | 2026-03-02 | Closed |
 
 ### Process
 

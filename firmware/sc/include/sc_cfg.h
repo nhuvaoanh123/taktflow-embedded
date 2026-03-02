@@ -28,6 +28,7 @@
 #define SC_CAN_ID_RZC_HB            0x012u   /* RZC heartbeat */
 #define SC_CAN_ID_VEHICLE_STATE     0x100u   /* Vehicle_State (torque in byte 4) */
 #define SC_CAN_ID_MOTOR_CURRENT     0x301u   /* Motor_Current (RZC) */
+#define SC_CAN_ID_RELAY_STATUS      0x013u   /* SC_Relay_Status (SIL broadcast) */
 
 /* ==================================================================
  * CAN Mailbox Numbers (1-indexed, DCAN1 hardware)
@@ -192,6 +193,34 @@
  * ================================================================== */
 
 #define SC_CAN_DLC                  8u
+#define SC_RELAY_STATUS_DLC         4u     /* Relay status message: 4 bytes */
+
+/* ==================================================================
+ * SIL Relay Broadcast Period (in 10ms ticks)
+ * ================================================================== */
+
+#define SC_RELAY_BROADCAST_TICKS    5u     /* 50ms = 5 x 10ms ticks */
+
+/* ==================================================================
+ * Kill Reason Enum (for relay status broadcast)
+ * ================================================================== */
+
+#define SC_KILL_REASON_NONE         0u
+#define SC_KILL_REASON_HB_TIMEOUT   1u
+#define SC_KILL_REASON_PLAUSIBILITY 2u
+#define SC_KILL_REASON_SELFTEST     3u
+#define SC_KILL_REASON_ESM          4u
+#define SC_KILL_REASON_BUSOFF       5u
+#define SC_KILL_REASON_READBACK     6u
+
+/* ==================================================================
+ * Fault Source Enum (for relay status broadcast)
+ * ================================================================== */
+
+#define SC_FAULT_SOURCE_NONE        0u
+#define SC_FAULT_SOURCE_CVC         1u
+#define SC_FAULT_SOURCE_FZC         2u
+#define SC_FAULT_SOURCE_RZC         3u
 
 /* ==================================================================
  * DCAN1 Baud Rate Configuration (500 kbps from 75 MHz VCLK1)

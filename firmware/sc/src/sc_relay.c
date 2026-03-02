@@ -31,6 +31,17 @@ static boolean relay_commanded;
 /** GPIO readback mismatch counter */
 static uint8 readback_mismatch_count;
 
+/** Kill reason code (SC_KILL_REASON_*) */
+static uint8 kill_reason;
+
+#ifdef PLATFORM_POSIX
+/** SIL broadcast tick counter */
+static uint8 broadcast_tick_count;
+
+/* Forward declaration for POSIX CAN send */
+extern void sc_posix_can_send(uint32 can_id, const uint8 *data, uint8 dlc);
+#endif
+
 /* ==================================================================
  * Public API
  * ================================================================== */
@@ -41,6 +52,10 @@ void SC_Relay_Init(void)
      * This ensures the kill latch survives re-initialization (SWR-SC-011). */
     relay_commanded         = FALSE;
     readback_mismatch_count = 0u;
+    kill_reason             = SC_KILL_REASON_NONE;
+#ifdef PLATFORM_POSIX
+    broadcast_tick_count    = 0u;
+#endif
 
     /* Ensure relay is de-energized (safe state) */
     gioSetBit(SC_GIO_PORT_A, SC_PIN_RELAY, 0u);
@@ -75,30 +90,35 @@ void SC_Relay_CheckTriggers(void)
 
     /* Trigger (a): Heartbeat confirmed timeout */
     if (SC_Heartbeat_IsAnyConfirmed() == TRUE) {
+        kill_reason = SC_KILL_REASON_HB_TIMEOUT;
         SC_Relay_DeEnergize();
         return;
     }
 
     /* Trigger (b): Plausibility fault */
     if (SC_Plausibility_IsFaulted() == TRUE) {
+        kill_reason = SC_KILL_REASON_PLAUSIBILITY;
         SC_Relay_DeEnergize();
         return;
     }
 
     /* Trigger (c/d): Self-test failure (startup or runtime) */
     if (SC_SelfTest_IsHealthy() == FALSE) {
+        kill_reason = SC_KILL_REASON_SELFTEST;
         SC_Relay_DeEnergize();
         return;
     }
 
     /* Trigger (e): ESM lockstep error */
     if (SC_ESM_IsErrorActive() == TRUE) {
+        kill_reason = SC_KILL_REASON_ESM;
         SC_Relay_DeEnergize();
         return;
     }
 
     /* Trigger (f): CAN bus-off */
     if (SC_CAN_IsBusOff() == TRUE) {
+        kill_reason = SC_KILL_REASON_BUSOFF;
         SC_Relay_DeEnergize();
         return;
     }
@@ -120,6 +140,7 @@ void SC_Relay_CheckTriggers(void)
     }
 
     if (readback_mismatch_count >= SC_RELAY_READBACK_THRESHOLD) {
+        kill_reason = SC_KILL_REASON_READBACK;
         SC_Relay_DeEnergize();
     }
 }
@@ -128,3 +149,28 @@ boolean SC_Relay_IsKilled(void)
 {
     return relay_killed;
 }
+
+uint8 SC_Relay_GetKillReason(void)
+{
+    return kill_reason;
+}
+
+#ifdef PLATFORM_POSIX
+void SC_Relay_BroadcastSil(void)
+{
+    uint8 payload[4];
+
+    broadcast_tick_count++;
+    if (broadcast_tick_count < SC_RELAY_BROADCAST_TICKS) {
+        return;
+    }
+    broadcast_tick_count = 0u;
+
+    payload[0] = (relay_killed == TRUE) ? 1u : 0u;
+    payload[1] = kill_reason;
+    payload[2] = SC_FAULT_SOURCE_NONE;  /* TODO: derive from heartbeat module */
+    payload[3] = 0u;                     /* reserved */
+
+    sc_posix_can_send(SC_CAN_ID_RELAY_STATUS, payload, SC_RELAY_STATUS_DLC);
+}
+#endif

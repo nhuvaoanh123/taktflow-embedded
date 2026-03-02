@@ -171,6 +171,11 @@ int main(void)
         /* ---- Step 4: Relay Trigger Evaluation ---- */
         SC_Relay_CheckTriggers();
 
+#ifdef PLATFORM_POSIX
+        /* ---- Step 4b: SIL Relay Status Broadcast (50ms) ---- */
+        SC_Relay_BroadcastSil();
+#endif
+
         /* ---- Step 5: LED Update ---- */
         SC_LED_Update();
 

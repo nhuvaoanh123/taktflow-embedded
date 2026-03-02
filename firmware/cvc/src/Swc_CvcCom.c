@@ -295,15 +295,19 @@ void Swc_CvcCom_BridgeRxToRte(void)
         return;
     }
 
+    uint8  sc_relay_kill_val = 0u;
+
     /* Read fault signals from Com shadow buffers */
-    (void)Com_ReceiveSignal(13u, &brake_fault_val);   /* sig_rx_brake_fault */
-    (void)Com_ReceiveSignal(14u, &motor_cutoff_val);  /* sig_rx_motor_cutoff */
+    (void)Com_ReceiveSignal(13u, &brake_fault_val);      /* sig_rx_brake_fault */
+    (void)Com_ReceiveSignal(14u, &motor_cutoff_val);     /* sig_rx_motor_cutoff */
+    (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* sig_rx_sc_relay_kill */
 
     /* Bridge to RTE for VehicleState to consume.
      * Heartbeat comm status is owned exclusively by Swc_Heartbeat.c
      * — do NOT write CVC_SIG_FZC/RZC_COMM_STATUS here. */
-    (void)Rte_Write(CVC_SIG_BRAKE_FAULT,  (uint32)brake_fault_val);
-    (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF, (uint32)motor_cutoff_val);
+    (void)Rte_Write(CVC_SIG_BRAKE_FAULT,    (uint32)brake_fault_val);
+    (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF,   (uint32)motor_cutoff_val);
+    (void)Rte_Write(CVC_SIG_SC_RELAY_KILL,  (uint32)sc_relay_kill_val);
 }
 
 /* ==================================================================

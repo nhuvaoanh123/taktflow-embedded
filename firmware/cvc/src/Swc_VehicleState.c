@@ -413,6 +413,7 @@ void Swc_VehicleState_MainFunction(void)
     uint32 motor_cutoff   = 0u;
     uint32 brake_fault    = 0u;
     uint32 steering_fault = 0u;
+    uint32 sc_relay_kill  = 0u;
 
     if (initialized != TRUE)
     {
@@ -427,6 +428,7 @@ void Swc_VehicleState_MainFunction(void)
     (void)Rte_Read(CVC_SIG_MOTOR_CUTOFF,     &motor_cutoff);
     (void)Rte_Read(CVC_SIG_BRAKE_FAULT,      &brake_fault);
     (void)Rte_Read(CVC_SIG_STEERING_FAULT,   &steering_fault);
+    (void)Rte_Read(CVC_SIG_SC_RELAY_KILL,   &sc_relay_kill);
 
 #ifdef SIL_DIAG
     {
@@ -487,6 +489,12 @@ void Swc_VehicleState_MainFunction(void)
     if (estop_active != 0u)
     {
         Swc_VehicleState_OnEvent(CVC_EVT_ESTOP);
+    }
+
+    /* SC relay kill — second highest priority */
+    if (sc_relay_kill != 0u)
+    {
+        Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
     }
 
     /* CAN communication faults */
@@ -552,6 +560,7 @@ void Swc_VehicleState_MainFunction(void)
             (brake_fault == 0u) &&
             (steering_fault == 0u) &&
             (pedal_fault == 0u) &&
+            (sc_relay_kill == 0u) &&
             (fzc_comm == CVC_COMM_OK) &&
             (rzc_comm == CVC_COMM_OK))
         {

@@ -47,4 +47,20 @@ void SC_Relay_CheckTriggers(void);
  */
 boolean SC_Relay_IsKilled(void);
 
+/**
+ * @brief  Get the reason code for the most recent relay kill
+ * @return Kill reason (SC_KILL_REASON_* from sc_cfg.h), 0 if not killed
+ */
+uint8 SC_Relay_GetKillReason(void);
+
+#ifdef PLATFORM_POSIX
+/**
+ * @brief  Broadcast relay state on CAN 0x013 (SIL-only, 50ms period)
+ *
+ * Sends a 4-byte CAN frame with relay_killed, kill_reason, fault_source,
+ * and reserved byte. Only exists in POSIX builds — no effect on real TMS570.
+ */
+void SC_Relay_BroadcastSil(void);
+#endif
+
 #endif /* SC_RELAY_H */

@@ -39,6 +39,7 @@ typedef uint8 Std_ReturnType;
 #define CVC_SIG_MOTOR_CUTOFF      28u
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_BRAKE_FAULT       30u
+#define CVC_SIG_SC_RELAY_KILL     31u
 
 /* ==================================================================
  * Vehicle State / Event / Comm definitions (from Cvc_Cfg.h)
@@ -1139,6 +1140,38 @@ void test_estop_immediate_no_debounce(void)
 }
 
 /* ==================================================================
+ * SWR-CVC-013: SC relay kill via signal (MainFunction path)
+ * ================================================================== */
+
+/** @verifies SWR-CVC-013 — SC relay kill signal triggers SAFE_STOP from RUN */
+void test_SC_kill_signal_triggers_safe_stop(void)
+{
+    /* Get to RUN */
+    get_to_run();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Set SC relay kill signal via RTE (simulates BridgeRxToRte path) */
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+}
+
+/** @verifies SWR-CVC-013 — SC relay kill = 0 does NOT trigger transition */
+void test_SC_kill_signal_zero_stays_run(void)
+{
+    /* Get to RUN */
+    get_to_run();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* SC relay kill signal is zero — no transition */
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 0u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -1199,6 +1232,10 @@ int main(void)
     /* SWR-CVC-009: SC_KILL from various states */
     RUN_TEST(test_SC_KILL_from_DEGRADED);
     RUN_TEST(test_SC_KILL_from_LIMP);
+
+    /* SWR-CVC-013: SC relay kill via MainFunction signal path */
+    RUN_TEST(test_SC_kill_signal_triggers_safe_stop);
+    RUN_TEST(test_SC_kill_signal_zero_stays_run);
 
     /* SWR-CVC-009: Terminal state — SHUTDOWN rejects all events */
     RUN_TEST(test_SHUTDOWN_rejects_all_events);

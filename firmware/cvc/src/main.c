@@ -105,6 +105,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     { 0x211u, CVC_COM_RX_MOTOR_CUTOFF,  8u, FALSE },  /* Motor cutoff       */
     { 0x220u, CVC_COM_RX_LIDAR,         8u, FALSE },  /* Lidar distance     */
     { 0x301u, CVC_COM_RX_MOTOR_CURRENT, 8u, FALSE },  /* Motor current      */
+    { 0x013u, CVC_COM_RX_SC_RELAY,      4u, FALSE },  /* SC relay status    */
     { 0x7DFu, 0xFFu,                    8u, FALSE },  /* UDS functional req  */
     { 0x7E0u, 0xFEu,                    8u, FALSE },  /* UDS physical req    */
 };
@@ -124,6 +125,7 @@ static const PduR_RoutingTableType cvc_pdur_routing[] = {
     { CVC_COM_RX_MOTOR_CUTOFF,  PDUR_DEST_COM, CVC_COM_RX_MOTOR_CUTOFF  },
     { CVC_COM_RX_LIDAR,         PDUR_DEST_COM, CVC_COM_RX_LIDAR         },
     { CVC_COM_RX_MOTOR_CURRENT, PDUR_DEST_COM, CVC_COM_RX_MOTOR_CURRENT },
+    { CVC_COM_RX_SC_RELAY,      PDUR_DEST_COM, CVC_COM_RX_SC_RELAY      },
     { 0xFFu,                    PDUR_DEST_DCM, 0u                        },
     { 0xFEu,                    PDUR_DEST_DCM, 1u                        },
 };

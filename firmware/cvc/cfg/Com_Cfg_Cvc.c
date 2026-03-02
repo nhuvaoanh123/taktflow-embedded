@@ -36,6 +36,7 @@ static uint8  sig_rx_brake_fault;
 static uint8  sig_rx_motor_cutoff;
 static uint16 sig_rx_lidar_dist;
 static uint16 sig_rx_motor_current;
+static uint8  sig_rx_sc_relay_kill;
 
 /* ==================================================================
  * Signal Configuration Table
@@ -64,6 +65,7 @@ static const Com_SignalConfigType cvc_signal_config[] = {
     { 14u,   16u,     8u, COM_UINT8,  CVC_COM_RX_MOTOR_CUTOFF,  &sig_rx_motor_cutoff   },
     { 15u,   16u,    16u, COM_UINT16, CVC_COM_RX_LIDAR,         &sig_rx_lidar_dist     },
     { 16u,   16u,    16u, COM_UINT16, CVC_COM_RX_MOTOR_CURRENT, &sig_rx_motor_current  },
+    { 17u,    0u,     8u, COM_UINT8,  CVC_COM_RX_SC_RELAY,      &sig_rx_sc_relay_kill  },
 };
 
 #define CVC_COM_SIGNAL_COUNT  (sizeof(cvc_signal_config) / sizeof(cvc_signal_config[0]))
@@ -100,6 +102,7 @@ static const Com_RxPduConfigType cvc_rx_pdu_config[] = {
     { CVC_COM_RX_MOTOR_CUTOFF,    8u, 1000u },   /* Event — long timeout */
     { CVC_COM_RX_LIDAR,           8u,  200u },   /* 5 Hz lidar updates   */
     { CVC_COM_RX_MOTOR_CURRENT,   8u,  200u },   /* 5 Hz motor feedback  */
+    { CVC_COM_RX_SC_RELAY,        4u,  200u },   /* SC relay status      */
 };
 
 #define CVC_COM_RX_PDU_COUNT  (sizeof(cvc_rx_pdu_config) / sizeof(cvc_rx_pdu_config[0]))

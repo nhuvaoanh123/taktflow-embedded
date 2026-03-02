@@ -32,6 +32,7 @@ RX_TORQUE_REQUEST = 0x101
 RX_STEER_COMMAND = 0x102
 RX_BRAKE_COMMAND = 0x103
 RX_ESTOP = 0x001
+RX_SC_RELAY_STATUS = 0x013
 
 # CAN IDs we write (sensor feedback to ECUs)
 TX_VEHICLE_STATE = 0x100
@@ -81,6 +82,9 @@ class PlantSimulator:
 
         # E-stop state
         self.estop_active = False
+
+        # SC relay kill state (from CAN 0x013)
+        self.sc_relay_killed = False
 
         # Vehicle state — starts INIT, transitions to RUN after startup delay
         self.vehicle_state = VS_INIT
@@ -143,6 +147,7 @@ class PlantSimulator:
                     self.brake.clear_fault()
                     self.battery.clear_override()
                     self._active_dtcs.clear()
+                    self.sc_relay_killed = False
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
                 elif not self.estop_active and not was_active:
@@ -153,8 +158,18 @@ class PlantSimulator:
                     self.brake.clear_fault()
                     self.battery.clear_override()
                     self._active_dtcs.clear()
+                    self.sc_relay_killed = False
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0
+
+        elif arb_id == RX_SC_RELAY_STATUS:
+            if len(data) >= 1:
+                killed = bool(data[0])
+                if killed and not self.sc_relay_killed:
+                    reason = data[1] if len(data) >= 2 else 0
+                    log.info("SC relay KILLED (reason=%d) — motor disabled", reason)
+                    self.sc_relay_killed = True
+                    self.motor._hw_disabled = True
 
         elif arb_id == TX_BATTERY_STATUS:
             # External battery injection (from fault_inject) — override model
@@ -396,7 +411,7 @@ class PlantSimulator:
                     self._process_rx(msg)
 
                 # Update physics — limit output in degraded/limp/safe states
-                if self.estop_active or self.vehicle_state == VS_SAFE_STOP:
+                if self.estop_active or self.vehicle_state == VS_SAFE_STOP or self.sc_relay_killed:
                     self.motor.update(0, 0, dt)
                     self.steering.update(0, dt)
                     self.brake.update(100, dt)
@@ -442,7 +457,8 @@ class PlantSimulator:
                       and not self.brake.fault
                       and not self.steering.fault
                       and not self.motor.overcurrent
-                      and not self.motor._hw_disabled):
+                      and not self.motor._hw_disabled
+                      and not self.sc_relay_killed):
                     # Exit SAFE_STOP only when ALL safety triggers cleared
                     self.vehicle_state = VS_INIT
                     self._startup_ticks = 0

@@ -462,25 +462,54 @@ def babbling_node() -> str:
 
 
 def heartbeat_loss() -> str:
-    """Document heartbeat loss injection.
+    """Stop the FZC container to trigger SC heartbeat timeout.
 
-    ECU heartbeats (CVC 0x010, FZC 0x011, RZC 0x012) are sent by the
-    firmware containers themselves at 50 ms intervals.  To simulate a
-    heartbeat loss, stop the target container:
+    The Safety Controller monitors FZC/RZC heartbeats (0x011, 0x012).
+    Stopping the FZC container causes its heartbeat to cease.  After
+    ~150 ms (3 missed beats), the SC:
+      1. Detects heartbeat timeout
+      2. De-energizes the safety relay (kill_reason=HB_TIMEOUT)
+      3. Broadcasts relay status on CAN 0x013 (SIL)
+      4. Plant-sim disables motor, CVC transitions to SAFE_STOP
 
-        docker stop cvc   # CVC heartbeat loss
-        docker stop fzc   # FZC heartbeat loss
-        docker stop rzc   # RZC heartbeat loss
-
-    The Safety Controller (SC) monitors all heartbeats and will trigger
-    a safe-stop transition after the configured timeout (typically
-    150-200 ms = 3 missed heartbeats).
-
-    This scenario is not directly injectable via CAN frames.
+    Use 'reset' to restart all containers and recover.
     """
-    return ("Heartbeat loss: not directly injectable via CAN.  "
-            "Stop an ECU container (e.g. `docker stop cvc`) to trigger "
-            "SC heartbeat timeout -> safe-stop transition.")
+    client = docker.from_env()
+    target = "docker-fzc-1"
+    try:
+        c = client.containers.get(target)
+        c.stop(timeout=3)
+    except docker.errors.NotFound:
+        return f"Heartbeat loss: container {target} not found"
+    except Exception as exc:
+        return f"Heartbeat loss: failed to stop {target}: {exc}"
+    return ("Heartbeat loss: FZC container stopped.  "
+            "SC detects HB timeout -> relay kill -> CAN 0x013 -> "
+            "plant-sim motor off + CVC SAFE_STOP.")
+
+
+def sc_relay_kill() -> str:
+    """Stop the FZC container to trigger the full SC relay kill chain.
+
+    Identical mechanism to heartbeat_loss, but named to emphasize the
+    relay kill path:
+      FZC stopped -> SC HB timeout -> relay de-energized ->
+      CAN 0x013 broadcast -> plant-sim motor disabled ->
+      CVC reads 0x013 via BSW -> EVT_SC_KILL -> SAFE_STOP
+
+    This is the primary demo scenario for the simulated relay feature.
+    """
+    client = docker.from_env()
+    target = "docker-fzc-1"
+    try:
+        c = client.containers.get(target)
+        c.stop(timeout=3)
+    except docker.errors.NotFound:
+        return f"SC relay kill: container {target} not found"
+    except Exception as exc:
+        return f"SC relay kill: failed to stop {target}: {exc}"
+    return ("SC relay kill: FZC stopped -> SC HB timeout -> relay killed -> "
+            "CAN 0x013 -> motor off + SAFE_STOP.  Use 'reset' to recover.")
 
 
 def can_loss() -> str:
@@ -676,8 +705,15 @@ SCENARIOS: dict[str, dict] = {
     "heartbeat_loss": {
         "fn": heartbeat_loss,
         "description": (
-            "Heartbeat loss: stop an ECU container to trigger SC "
-            "heartbeat timeout.  Not injectable via CAN."
+            "Heartbeat loss: stops FZC container -> SC detects HB timeout "
+            "-> relay kill (CAN 0x013) -> motor off + SAFE_STOP."
+        ),
+    },
+    "sc_relay_kill": {
+        "fn": sc_relay_kill,
+        "description": (
+            "SC relay kill: stops FZC -> SC HB timeout -> relay de-energized "
+            "-> CAN 0x013 -> motor off + CVC SAFE_STOP.  Full safety chain demo."
         ),
     },
     "can_loss": {

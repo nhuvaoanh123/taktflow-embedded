@@ -342,6 +342,47 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
 }
 
 /* ==================================================================
+ * CAN TX — send a frame on SocketCAN (SIL relay broadcast)
+ * ================================================================== */
+
+/**
+ * @brief  Send a CAN frame on SocketCAN
+ * @param  can_id  11-bit standard CAN ID
+ * @param  data    Payload buffer
+ * @param  dlc     Data length code (0-8)
+ */
+void sc_posix_can_send(uint32 can_id, const uint8 *data, uint8 dlc)
+{
+#ifndef PLATFORM_POSIX_TEST
+    struct can_frame frame;
+    uint8 i;
+
+    if (dcan_fd < 0) {
+        sc_posix_can_init();
+        if (dcan_fd < 0) {
+            return;
+        }
+    }
+    if ((data == NULL) || (dlc > 8u)) {
+        return;
+    }
+
+    memset(&frame, 0, sizeof(frame));
+    frame.can_id  = can_id & 0x7FFu;
+    frame.can_dlc = dlc;
+    for (i = 0u; i < dlc; i++) {
+        frame.data[i] = data[i];
+    }
+
+    (void)write(dcan_fd, &frame, sizeof(frame));
+#else
+    (void)can_id;
+    (void)data;
+    (void)dlc;
+#endif
+}
+
+/* ==================================================================
  * Self-test hardware stubs (from sc_selftest.c:20-30)
  * ================================================================== */
 

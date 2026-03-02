@@ -35,7 +35,8 @@
 #define CVC_SIG_MOTOR_CUTOFF      28u
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_BRAKE_FAULT       30u
-#define CVC_SIG_COUNT             31u
+#define CVC_SIG_SC_RELAY_KILL     31u
+#define CVC_SIG_COUNT             32u
 
 /* ====================================================================
  * Com TX PDU IDs
@@ -60,6 +61,7 @@
 #define CVC_COM_RX_MOTOR_CUTOFF    3u   /* CAN 0x211 */
 #define CVC_COM_RX_LIDAR           4u   /* CAN 0x220 */
 #define CVC_COM_RX_MOTOR_CURRENT   5u   /* CAN 0x301 */
+#define CVC_COM_RX_SC_RELAY        6u   /* CAN 0x013 */
 
 /* ====================================================================
  * DTC Event IDs (Dem_EventIdType)
