@@ -35,6 +35,7 @@ typedef uint8           Std_ReturnType;
 
 /* CVC config constants (mirrors Cvc_Cfg.h) needed by new bridge/TX code */
 #define CVC_SIG_BRAKE_FAULT       30u
+#define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_SIG_MOTOR_CUTOFF      28u
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_FZC_COMM_STATUS   23u
@@ -472,12 +473,13 @@ void test_TX_brake_max_in_shutdown(void)
     TEST_ASSERT_EQUAL_UINT8(100u, mock_com_sent_u8[7]);
 }
 
-/** @verifies SWR-CVC-017 — TX sends steer=0 (center) in SAFE_STOP state */
+/** @verifies SWR-CVC-017 — TX sends steer=center (4500 raw) in SAFE_STOP state.
+ *  DBC: raw = (angle_deg + 45.0) / 0.01, so 0 deg = 4500 raw */
 void test_TX_steer_center_in_safe_stop(void)
 {
     mock_vehicle_state = CVC_STATE_SAFE_STOP;
     Swc_CvcCom_TransmitSchedule(0u);
-    TEST_ASSERT_EQUAL_INT16(0, mock_com_sent_s16[6]);
+    TEST_ASSERT_EQUAL_INT16(4500, mock_com_sent_s16[6]);
 }
 
 /* ==================================================================

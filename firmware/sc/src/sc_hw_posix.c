@@ -374,7 +374,9 @@ void sc_posix_can_send(uint32 can_id, const uint8 *data, uint8 dlc)
         frame.data[i] = data[i];
     }
 
-    (void)write(dcan_fd, &frame, sizeof(frame));
+    if (write(dcan_fd, &frame, sizeof(frame)) < 0) {
+        /* Best-effort SIL broadcast — log failure but don't abort */
+    }
 #else
     (void)can_id;
     (void)data;
