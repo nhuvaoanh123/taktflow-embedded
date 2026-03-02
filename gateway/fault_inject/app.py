@@ -299,7 +299,11 @@ def trigger_scenario(name: str, request: Request):
             status_code=500,
             detail=f"Scenario '{name}' failed: {exc}",
         ) from exc
-    log.info("Scenario '%s' complete: %s", name, result)
+    if entry.get("resume_idle", False):
+        _idle_paused = False
+        log.info("Scenario '%s' complete: %s (idle commands resumed)", name, result)
+    else:
+        log.info("Scenario '%s' complete: %s", name, result)
     return {"scenario": name, "result": result}
 
 
