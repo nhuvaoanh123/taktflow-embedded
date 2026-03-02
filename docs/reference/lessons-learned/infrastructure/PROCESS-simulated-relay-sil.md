@@ -227,6 +227,38 @@ And when the SIL environment can't faithfully replicate the signal path (two sen
 
 ---
 
+## 14. Plant-Sim Must Match CVC Signal Scaling — Not Assume Percent
+
+**Problem**: CVC's torque LUT outputs 0-1000 (raw units), but the plant-sim read `uint16 LE` from CAN 0x101 bytes 2-3 and treated it as duty percent (0-100), capping at 100%. At pedal 50%, CVC sent torque=505 → plant-sim set duty=100% → stall current 25A → overcurrent threshold 20A → `_hw_disabled = True` → SAFE_STOP on the first physics tick.
+
+**Root cause**: The comment in plant-sim said `Value 0-100 = duty percent` — a wrong assumption. The CVC torque LUT clearly outputs 0-1000 (documented in `Swc_Pedal.c`).
+
+**Fix**: `float(torque_raw) / 10.0` — torque 500 → duty 50% → stall current 12.5A (safe).
+
+**Takeaway**: When the plant-sim reads a CAN signal, verify the scaling against the sender's source code (not just a comment). CVC torque, steering, and brake may each use different units. A "0-100" assumption works for percent signals but not for raw lookup outputs.
+
+---
+
+## 15. Latched Fault Flags Need an Un-Latch Path
+
+**Problem**: When SC relay killed the motor (`CAN 0x013 byte 0 = 1`), plant-sim set `sc_relay_killed = True` and `motor._hw_disabled = True`. But there was no handler for when SC relay un-killed (`byte 0 = 0`). The flags stayed latched forever — even after SC stopped killing, the plant-sim remained in SAFE_STOP with brake=100%.
+
+**Root cause**: The SC relay RX handler only had a "killed and not already killed" branch. No "not killed and was killed" branch existed.
+
+**Fix**: Added `elif not killed and self.sc_relay_killed:` branch to clear both `sc_relay_killed` and `_hw_disabled`.
+
+**Pattern**: This is the same class of bug as the recovery guard lesson (#4) — every latch needs an unlatch. For SC relay, the latch was in the plant-sim Python code rather than C firmware, but the principle is identical:
+
+| Latch event | Must have un-latch |
+|---|---|
+| SC relay kill → `_hw_disabled = True` | SC relay clear → `_hw_disabled = False` |
+| Brake fault → `fault = True` | Reset/clear → `fault = False` (already existed via `clear_fault()`) |
+| E-Stop → `estop_active = True` | E-Stop clear → reset faults + `estop_active = False` (already existed) |
+
+**Takeaway**: For every flag that triggers SAFE_STOP, trace both the set path AND the clear path. If the clear path doesn't exist, the system latches permanently and can only recover by container restart.
+
+---
+
 ## Key Takeaways
 
 1. **AUTOSAR routing is verbose but traceable** — 6 files for 1 signal is the cost of layered architecture
@@ -242,3 +274,5 @@ And when the SIL environment can't faithfully replicate the signal path (two sen
 11. **Simulated feedback masks command-plausibility faults** — SIL feedback tracks commanded instantly, so PWM-deviation detection never triggers on oscillating commands; add dedicated command-oscillation detection (delta + debounce) to catch bus attacks and faulty senders
 12. **Sequential Docker restart accumulates fatal delay for grace-period-based monitors** — any container with a fixed-duration grace period must restart last among its peers
 13. **Rte_Write ≠ CAN TX** — writing to RTE updates the local buffer; `Com_SendSignal` is required separately to transmit on CAN. Trace the full chain for every new fault detection
+14. **Match sender's signal scaling in plant-sim** — CVC torque is 0-1000 (not 0-100); wrong scaling causes instant overcurrent at RPM=0
+15. **Every latched fault flag needs an unlatch path** — SC relay kill latched `_hw_disabled` with no clear handler; system stayed in SAFE_STOP permanently
