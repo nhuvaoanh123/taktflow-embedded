@@ -186,9 +186,9 @@ class PlantSimulator:
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
                 # CVC sends torque as uint16 LE at bytes 2-3 (Com signal 5,
-                # bitPos=16, bitSize=16).  Value 0-100 = duty percent.
+                # bitPos=16, bitSize=16).  Value 0-1000 from torque LUT.
                 torque_raw = struct.unpack_from('<H', data, 2)[0]
-                self.motor.duty_pct = min(100.0, float(torque_raw))
+                self.motor.duty_pct = min(100.0, float(torque_raw) / 10.0)
                 self.motor.direction = 1 if torque_raw > 0 else 0
 
         elif arb_id == RX_STEER_COMMAND:
