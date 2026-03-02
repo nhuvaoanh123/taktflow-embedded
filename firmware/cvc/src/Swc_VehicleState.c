@@ -437,12 +437,12 @@ void Swc_VehicleState_MainFunction(void)
         static uint32 prev_bf = 0u;
         diag_cycle++;
         if (diag_cycle <= 100u) {
-            VSM_DIAG("c=%u st=%u ped=%u es=%u fzc=%u rzc=%u mc=%u bf=%u sf=%u",
+            VSM_DIAG("c=%u st=%u ped=%u es=%u fzc=%u rzc=%u mc=%u bf=%u sf=%u sc=%u",
                      (unsigned)diag_cycle, (unsigned)current_state,
                      (unsigned)pedal_fault, (unsigned)estop_active,
                      (unsigned)fzc_comm, (unsigned)rzc_comm,
                      (unsigned)motor_cutoff, (unsigned)brake_fault,
-                     (unsigned)steering_fault);
+                     (unsigned)steering_fault, (unsigned)sc_relay_kill);
         }
         /* Log whenever motor_cutoff or brake_fault transitions to non-zero */
         if ((motor_cutoff != 0u) && (prev_mc == 0u)) {

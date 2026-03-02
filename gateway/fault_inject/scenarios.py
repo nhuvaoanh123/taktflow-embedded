@@ -553,26 +553,43 @@ def estop() -> str:
 log = logging.getLogger("fault_inject")
 
 # Containers to restart on power-cycle reset.
-# Order matters: zone controllers first, CVC last (so heartbeats are
-# ready when CVC starts checking after its 5-second INIT hold).
+# Order matters — each restart() blocks until the container is running,
+# so sequential restarts accumulate delay.  The SC has a 5-second
+# heartbeat grace period, so it MUST restart after the other zone
+# controllers (whose heartbeats it monitors) but close enough to the
+# CVC restart that its grace hasn't expired by the time CVC boots.
+#
+# Phase 1: FZC/RZC + simulated ECUs + plant-sim (heartbeat senders first)
+# Phase 2: SC (needs FZC/RZC heartbeats during its 5s grace)
+# Phase 3: 2s sleep (let SC stabilize)
+# Phase 4: CVC (needs SC relay OK + FZC/RZC heartbeats)
 _ZONE_CONTAINERS = [
-    "docker-fzc-1", "docker-rzc-1", "docker-sc-1",
+    "docker-fzc-1", "docker-rzc-1",
     "docker-bcm-1", "docker-icu-1", "docker-tcu-1",
     "docker-plant-sim-1",
 ]
+_SC_CONTAINER = "docker-sc-1"
 _CVC_CONTAINER = "docker-cvc-1"
 
 
 def _restart_ecu_containers() -> list[str]:
     """Restart ECU + plant-sim containers to clear latched firmware faults.
 
-    Restart order: zone controllers first → wait 2s → CVC last.
-    This ensures FZC/RZC heartbeats are ready when CVC boots.
+    Restart order:
+      1. Zone controllers + plant-sim (FZC/RZC send heartbeats)
+      2. SC (receives heartbeats during its 5s grace period)
+      3. Wait 2s (SC stabilizes, heartbeats flowing)
+      4. CVC last (SC relay not killed, heartbeats confirmed)
+
+    The SC was previously in the zone controller list, but sequential
+    restart means its 5s grace expired before CVC even booted — causing
+    immediate SC_KILL on every reset.  Moving SC to Phase 2 ensures its
+    grace period covers the CVC boot window.
     """
     client = docker.from_env()
     restarted = []
 
-    # Phase 1: restart zone controllers + plant-sim
+    # Phase 1: restart zone controllers + plant-sim (heartbeat senders)
     for name in _ZONE_CONTAINERS:
         try:
             c = client.containers.get(name)
@@ -583,10 +600,20 @@ def _restart_ecu_containers() -> list[str]:
         except Exception as exc:
             log.warning("Failed to restart %s: %s", name, exc)
 
-    # Phase 2: brief wait for zone controllers to boot
+    # Phase 2: restart SC (after heartbeat senders are running)
+    try:
+        c = client.containers.get(_SC_CONTAINER)
+        c.restart(timeout=5)
+        restarted.append(_SC_CONTAINER)
+    except docker.errors.NotFound:
+        log.warning("Container %s not found — skipping", _SC_CONTAINER)
+    except Exception as exc:
+        log.warning("Failed to restart %s: %s", _SC_CONTAINER, exc)
+
+    # Phase 3: wait for SC to boot and start receiving heartbeats
     time.sleep(2)
 
-    # Phase 3: restart CVC last
+    # Phase 4: restart CVC last
     try:
         c = client.containers.get(_CVC_CONTAINER)
         c.restart(timeout=5)
