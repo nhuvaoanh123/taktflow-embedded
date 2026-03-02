@@ -15,6 +15,12 @@ from typing import Optional
 import can
 import paho.mqtt.client as paho_mqtt
 
+from .pedal_udp import (
+    clear_pedal_override,
+    pedal_pct_to_angle,
+    send_pedal_override,
+)
+
 # Module-level MQTT client (set by app.py at startup)
 _mqtt_client: paho_mqtt.Client | None = None
 
@@ -205,18 +211,20 @@ def _estop_frame(active: bool, source: int = 1) -> bytes:
 # ---------------------------------------------------------------------------
 
 def normal_drive() -> str:
-    """Send torque request: 50% duty forward, steer 0 deg, brake 0%.
+    """Set pedal to 50% via SPI override, steer 0 deg, brake 0%.
 
-    Drives the vehicle in normal operating mode.
+    Injects pedal sensor value at the MCAL layer so the CVC processes
+    it through its full pipeline (plausibility, ramp limit, torque lookup).
+    The CVC naturally generates the Torque_Request CAN frame.
     """
+    send_pedal_override(pedal_pct_to_angle(50))
     bus = _get_bus()
     try:
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
         _send(bus, CAN_STEER_COMMAND, _steer_frame(0.0))
         _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0))
     finally:
         bus.shutdown()
-    return "Normal drive: 50% torque forward, steer 0 deg, brake 0%"
+    return "Normal drive: pedal 50% (SPI override), steer 0 deg, brake 0%"
 
 
 def overcurrent() -> str:
@@ -512,12 +520,14 @@ def estop() -> str:
 
 
 def reset() -> str:
-    """Clear E-Stop and reset all actuators to safe idle state.
+    """Clear E-Stop, clear pedal override, reset all actuators to idle.
 
-    Sends E-Stop clear (EStop_Active=0), then sets torque to 0,
-    steer to 0 deg, and brake to 0%.  Also publishes MQTT reset
-    command so the ML detector and ws_bridge clear their state.
+    Clears the SPI pedal override (reverts to dead-zone = torque 0),
+    sends E-Stop clear (EStop_Active=0), then sets steer to 0 deg
+    and brake to 0%.  Also publishes MQTT reset command so the ML
+    detector and ws_bridge clear their state.
     """
+    clear_pedal_override()
     bus = _get_bus()
     try:
         _send(bus, CAN_ESTOP, _estop_frame(active=False, source=1))
@@ -544,7 +554,8 @@ SCENARIOS: dict[str, dict] = {
     "normal_drive": {
         "fn": normal_drive,
         "description": (
-            "Normal drive: 50% torque forward, steer 0 deg, brake 0%."
+            "Normal drive: pedal 50% (SPI override), steer 0 deg, brake 0%.  "
+            "CVC processes pedal through full pipeline -> Torque_Request CAN."
         ),
     },
     "overcurrent": {
@@ -641,7 +652,8 @@ SCENARIOS: dict[str, dict] = {
     "reset": {
         "fn": reset,
         "description": (
-            "Reset: clears E-Stop, sets torque/steer/brake to zero."
+            "Reset: clears pedal override + E-Stop, "
+            "sets steer/brake to zero."
         ),
     },
 }

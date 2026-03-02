@@ -62,6 +62,7 @@ services:
     environment:
       - CAN_INTERFACE=vcan0
       - ECU_NAME=cvc
+      - SPI_PEDAL_UDP_PORT=9100
     restart: unless-stopped
 
   # --- Front Zone Controller ---

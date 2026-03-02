@@ -32,9 +32,10 @@ Dashboard                fault-inject :8091              MQTT broker
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Backend — Test Specs + Runner | PENDING |
-| 2 | Backend — ws_bridge relay | PENDING |
-| 3 | Frontend — Test Runner UI | PENDING |
+| 1 | Backend — Test Specs + Runner | DONE |
+| 2 | Backend — ws_bridge relay | DONE |
+| 3 | Frontend — Test Runner UI | DONE |
+| 4 | Fix — UDP pedal override for normal_drive | DONE |
 
 ### Phase 1: Backend — Test Specs + Runner (fault-inject service)
 
@@ -155,17 +156,41 @@ Each scenario row shows: label, ASIL badge, SG/HE reference, pass/fail icon, tim
 
 Same as progress but with `state: "complete"` and full `summary: { passed, failed, total, duration_sec, timestamp }`.
 
+## Phase 4: Fix — UDP Pedal Override for normal_drive
+
+**Problem**: `normal_drive` (and all torque-injecting scenarios) didn't work because
+the CVC sends Torque_Request (0x101) every 10ms from its pedal sensor input.
+`Spi_Posix.c` hardcoded pedal angle in dead zone (200-800) → torque=0.
+Fault-inject's one-shot CAN frames got overwritten within 10ms.
+
+**Fix**: Added UDP socket to `Spi_Posix.c` (env-var gated via `SPI_PEDAL_UDP_PORT`)
+that accepts 2-byte uint16 LE packets to override the simulated pedal angle.
+Fault-inject sends pedal overrides at the MCAL layer; the CVC processes the value
+through its full pipeline (Swc_Pedal plausibility, ramp limit, torque lookup).
+
+**Protocol**: 2 bytes uint16 LE — angle 0-16383 (14-bit AS5048A), or 0xFFFF to clear.
+
+| File | Action |
+|------|--------|
+| `firmware/shared/bsw/mcal/posix/Spi_Posix.c` | MODIFY (UDP socket + override logic) |
+| `gateway/fault_inject/pedal_udp.py` | CREATE (UDP helper: send/clear/convert) |
+| `gateway/fault_inject/scenarios.py` | MODIFY (normal_drive + reset use pedal override) |
+| `docker/docker-compose.yml` | MODIFY (add SPI_PEDAL_UDP_PORT=9100 to CVC) |
+
 ## File Changes Summary
 
 | File | Action |
 |------|--------|
 | `gateway/fault_inject/test_specs.py` | CREATE |
 | `gateway/fault_inject/test_runner.py` | CREATE |
+| `gateway/fault_inject/pedal_udp.py` | CREATE |
 | `gateway/fault_inject/app.py` | MODIFY (3 endpoints) |
 | `gateway/ws_bridge/bridge.py` | MODIFY (~15 lines) |
 | `apps/web/lib/hooks/useTelemetry.ts` | MODIFY (types) |
 | `apps/web/app/embedded/components/TestRunner.tsx` | CREATE |
 | `apps/web/app/embedded/components/TelemetryDashboard.tsx` | MODIFY (import + render) |
+| `firmware/shared/bsw/mcal/posix/Spi_Posix.c` | MODIFY (UDP pedal override) |
+| `docker/docker-compose.yml` | MODIFY (CVC env var) |
 
 ## What Does NOT Change
 

@@ -25,7 +25,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .scenarios import SCENARIOS, reset as reset_scenario, set_mqtt_client
+from .scenarios import (
+    SCENARIOS, reset as reset_scenario, set_mqtt_client,
+    _get_bus, _send, _brake_frame, _steer_frame,
+    CAN_BRAKE_COMMAND, CAN_STEER_COMMAND,
+)
 from .test_runner import DashboardTestRunner
 
 logging.basicConfig(
@@ -37,6 +41,10 @@ log = logging.getLogger("fault_inject")
 
 # MQTT client for publishing reset/command messages
 _mqtt_client: paho_mqtt.Client | None = None
+
+# Idle command TX — paused during active fault scenarios
+_idle_paused = False
+IDLE_CMD_INTERVAL = float(os.environ.get("IDLE_CMD_INTERVAL", "0.05"))  # 50ms
 
 # ---------------------------------------------------------------------------
 # Controller lock — single in-memory lock for fault-inject control
@@ -102,6 +110,28 @@ def _lock_watchdog() -> None:
         _publish_lock_state()
 
 
+def _idle_command_loop() -> None:
+    """Background thread: send brake=0% / steer=0deg every 50ms on CAN.
+
+    Acts as a virtual pedal ECU — prevents FZC from timing out when no
+    scenario is active.  Paused while a fault scenario runs (so scenarios
+    can hold their fault frames without being overwritten).
+    """
+    bus = None
+    while True:
+        try:
+            if not _idle_paused:
+                if bus is None:
+                    bus = _get_bus()
+                    log.info("Idle command loop: CAN bus opened")
+                _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+                _send(bus, CAN_STEER_COMMAND, _steer_frame(0.0))
+        except Exception as exc:
+            log.warning("Idle command loop error: %s", exc)
+            bus = None
+        time.sleep(IDLE_CMD_INTERVAL)
+
+
 def _init_mqtt() -> paho_mqtt.Client:
     """Initialize MQTT client for fault-inject command publishing."""
     host = os.environ.get("MQTT_HOST", "localhost")
@@ -153,6 +183,10 @@ def _on_startup():
     t = threading.Thread(target=_lock_watchdog, daemon=True)
     t.start()
     log.info("Control lock watchdog started (duration=%ds)", LOCK_DURATION_SEC)
+    # Start idle command loop (virtual pedal ECU — keeps FZC alive)
+    t2 = threading.Thread(target=_idle_command_loop, daemon=True)
+    t2.start()
+    log.info("Idle command loop started (interval=%.0fms)", IDLE_CMD_INTERVAL * 1000)
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +288,9 @@ def trigger_scenario(name: str, request: Request):
             detail=f"Unknown scenario '{name}'.  "
                    f"Available: {', '.join(SCENARIOS.keys())}",
         )
-    log.info("Triggering scenario: %s", name)
+    global _idle_paused
+    _idle_paused = True
+    log.info("Triggering scenario: %s (idle commands paused)", name)
     try:
         result = entry["fn"]()
     except Exception as exc:
@@ -271,6 +307,7 @@ def trigger_scenario(name: str, request: Request):
 def reset_all(request: Request):
     """Reset all actuators to safe idle state."""
     _check_control_lock(request)
+    global _idle_paused
     log.info("Resetting all actuators")
     try:
         result = reset_scenario()
@@ -280,7 +317,8 @@ def reset_all(request: Request):
             status_code=500,
             detail=f"Reset failed: {exc}",
         ) from exc
-    log.info("Reset complete: %s", result)
+    _idle_paused = False
+    log.info("Reset complete: %s (idle commands resumed)", result)
     return {"result": result}
 
 
