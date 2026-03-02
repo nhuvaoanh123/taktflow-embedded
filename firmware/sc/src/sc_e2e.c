@@ -30,8 +30,11 @@ static boolean e2e_failed[SC_MB_COUNT];
 
 /* ==================================================================
  * Internal: CRC-8 Computation (SAE-J1850, poly 0x1D, init 0xFF)
+ *
+ * Only needed when real E2E validation runs (not in SIL runtime).
  * ================================================================== */
 
+#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * @brief  Compute CRC-8 using bit-by-bit method
  *
@@ -61,6 +64,7 @@ static uint8 sc_crc8(const uint8* data, uint8 len)
 
     return crc;
 }
+#endif
 
 /* ==================================================================
  * Public API
