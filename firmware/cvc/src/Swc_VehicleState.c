@@ -299,12 +299,16 @@ void Swc_VehicleState_OnEvent(uint8 event)
 
     /* Execute transition */
     {
+#ifdef SIL_DIAG
         uint8 prev = current_state;
+#endif
         current_state = next_state;
+#ifdef SIL_DIAG
         VSM_DIAG("%s + %s -> %s",
                  diag_state_names[prev],
                  diag_event_names[event],
                  diag_state_names[current_state]);
+#endif
     }
 
     /* Notify BswM of the new mode */
