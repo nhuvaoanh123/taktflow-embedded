@@ -211,12 +211,19 @@ actual_current_ma = ((uint16)cur_data[3] << 8u) | (uint16)cur_data[2];
 payload[4] = int(self.motor.duty_pct) & 0xFF if self.vehicle_state == VS_RUN else 0
 ```
 
+**Additional discovery**: Even after fixing both bugs, plausibility still false-triggered in SIL because:
+- CAN 0x100 has **two senders** (CVC + plant-sim) — SC gets whichever frame arrived last
+- The plant-sim motor model's torque-to-current relationship doesn't match the SC's static lookup table
+- These are SIL environment limitations, not algorithm bugs
+
+**Final fix**: SIL bypass (`#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)`) — same pattern as E2E bypass. The plausibility algorithm is validated by unit tests. The endianness fix remains in the production path.
+
 **Takeaway**: When an SC module reads CAN signals, verify THREE things against the DBC:
 1. Correct byte position (which byte?)
 2. Correct byte order (LE vs BE?)
 3. Correct signal semantics (limit vs actual value?)
 
-The DBC is the single source of truth for CAN signal layout — not assumptions in the receiver code.
+And when the SIL environment can't faithfully replicate the signal path (two senders, model mismatch), bypass the check in SIL and rely on unit tests for algorithm validation. This is the same pattern as E2E bypass — keep the algorithm validated, skip the runtime check where signals are unreliable.
 
 ---
 
