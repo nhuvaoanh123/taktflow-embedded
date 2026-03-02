@@ -190,7 +190,8 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
-| 55 | BZX84C3V3 Zener Diode (3.3V, SOD-323 or THT) | 5 | $0.15 | $0.75 | Mouser / Amazon | BZX84C3V3 | Not ordered | Phase 1 |
+| 55a | BZX84C3V3 Zener Diode (3.3V, SOT-23) | 25 | €0.42 | €10.60 | Amazon | BZX84C3V3-DIO64 | **Delivered** (2026-03-01) | Phase 1 |
+| 55b | 1N4728~1N4737 Zener Diode Assortment (THT, 10 values) | 200 (20×10) | €0.04 | €7.83 | Amazon | 1N4728-1N4737 kit | Not ordered | Phase 1 |
 | 56 | 3.3V Bidirectional TVS Diode (SOD-323 or THT) | 6 | $0.30 | $1.80 | Mouser / Amazon | PESD3V3U1UA | Not ordered | Phase 1 |
 | 57 | 1N5819 Schottky Diode (1A, 40V, flyback) | 4 | $0.15 | $0.60 | Amazon / Mouser | 1N5819 | Not ordered | Phase 1 |
 | 58 | Resettable PTC Fuse (polyfuse, 3A, 6V) | 2 | $0.50 | $1.00 | Amazon / Mouser | MF-R300 | Not ordered | Phase 2 |

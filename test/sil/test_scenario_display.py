@@ -1,4 +1,9 @@
-"""Integration tests: click fault button → verify dashboard values.
+"""SIL integration tests: click fault button → verify dashboard values.
+
+@aspice  SYS.4 — System Integration and Test
+@iso     ISO 26262 Part 4, Section 7.4.4 — System integration testing
+@scope   Full CAN-frame-to-dashboard pipeline (fault injection → plant sim
+         physics → vehicle state machine → WS bridge snapshot)
 
 Each test simulates clicking a button on the dashboard:
   1. Build the exact CAN frames the fault_inject scenario sends
@@ -9,6 +14,12 @@ Each test simulates clicking a button on the dashboard:
 
 This tests the REAL pipeline: scenario CAN frames → plant sim → snapshot.
 """
+
+import sys
+import os
+
+# Add gateway/ to path so fault_inject and plant_sim imports resolve
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "gateway"))
 
 import pytest
 
@@ -682,3 +693,373 @@ class TestClickReset:
     def test_lidar_default(self, snap):
         assert snap["lidar"]["distance_cm"] == 500
         assert snap["lidar"]["zone"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Click "Motor Reversal"
+# ---------------------------------------------------------------------------
+
+class TestClickMotorReversal:
+    """Click 'Motor Reversal' → direction flipped fwd→rev at 80% torque.
+
+    HE-014 (ASIL C): Motor direction reversal during forward motion.
+    The plant sim does NOT detect direction plausibility — that's the SC
+    firmware's job.  This test verifies the physics response: motor takes
+    the reverse command, RPM remains high, direction field changes.
+    """
+
+    @pytest.fixture()
+    def sim_and_snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Normal forward drive first
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0))
+        for _ in range(300):
+            sim.tick()
+
+        # Capture pre-reversal state
+        pre_snap = sim.snapshot()
+
+        # Click "Motor Reversal" — exact CAN frames from scenarios.motor_reversal()
+        # Scenario sends 50% fwd then 0.5s later 80% reverse
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        for _ in range(50):  # 0.5s
+            sim.tick()
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(80, 2))
+
+        # Let physics settle (3s)
+        for _ in range(300):
+            sim.tick()
+
+        return sim, sim.snapshot(), pre_snap
+
+    def test_direction_changed_to_reverse(self, sim_and_snap):
+        """Motor must accept the reverse command."""
+        sim, _, _ = sim_and_snap
+        assert sim.motor.direction == 2
+
+    def test_motor_running(self, sim_and_snap):
+        """Motor should be running at high RPM in reverse."""
+        _, snap, _ = sim_and_snap
+        assert snap["motor"]["rpm"] > 2000
+
+    def test_duty_is_80(self, sim_and_snap):
+        _, snap, _ = sim_and_snap
+        assert snap["motor"]["duty_pct"] == 80
+
+    def test_vehicle_still_in_run(self, sim_and_snap):
+        """Plant sim has no direction-reversal detection — stays RUN.
+        In real firmware, SC would trigger SAFE_STOP."""
+        _, snap, _ = sim_and_snap
+        assert snap["vehicle"]["state_name"] == "RUN"
+
+    def test_speed_high(self, sim_and_snap):
+        """80% duty → high speed (direction is invisible in speed)."""
+        _, snap, _ = sim_and_snap
+        assert snap["vehicle"]["speed_kmh"] > 15.0
+
+    def test_no_faults(self, sim_and_snap):
+        _, snap, _ = sim_and_snap
+        assert snap["steering"]["fault"] == 0
+        assert snap["brake"]["fault"] == 0
+        assert snap["motor"]["overcurrent"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Click "Unintended Braking"
+# ---------------------------------------------------------------------------
+
+class TestClickUnintendedBraking:
+    """Click 'Unintended Brake' → emergency brake at 100% while cruising.
+
+    HE-006 (ASIL A): Unexpected braking during normal driving.
+    Single emergency brake command — NOT alternating, so no brake fault
+    is triggered.  Vehicle decelerates rapidly.
+    """
+
+    @pytest.fixture()
+    def snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Normal drive first
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+        for _ in range(300):
+            sim.tick()
+
+        # Click "Unintended Braking" — exact CAN frames from scenario
+        # Scenario establishes drive, waits 0.5s, then emergency brake
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+        for _ in range(50):  # 0.5s
+            sim.tick()
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(100, brake_mode=2))
+
+        # Let physics settle (3s)
+        for _ in range(300):
+            sim.tick()
+
+        return sim.snapshot()
+
+    def test_brake_fully_applied(self, snap):
+        """Emergency brake at 100% must be fully engaged."""
+        assert snap["brake"]["position_pct"] >= 95
+
+    def test_speed_near_zero(self, snap):
+        """Vehicle must decelerate to near-zero under full braking."""
+        assert snap["vehicle"]["speed_kmh"] < 2.0
+
+    def test_rpm_low(self, snap):
+        """Motor RPM should be very low with full brake load."""
+        assert snap["motor"]["rpm"] < 100
+
+    def test_no_brake_fault(self, snap):
+        """Single brake command — not alternating, no fault triggered."""
+        assert snap["brake"]["fault"] == 0
+
+    def test_vehicle_state_run(self, snap):
+        """No plant-sim fault detected — stays in RUN."""
+        assert snap["vehicle"]["state_name"] == "RUN"
+
+    def test_steering_unaffected(self, snap):
+        assert snap["steering"]["fault"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Click "Torque Loss"
+# ---------------------------------------------------------------------------
+
+class TestClickTorqueLoss:
+    """Click 'Torque Loss' → torque drops to 0% mid-drive.
+
+    HE-002 (ASIL B): Loss of drive torque during driving.
+    Motor decelerates and stops.  No overcurrent — just power loss.
+    """
+
+    @pytest.fixture()
+    def snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Normal drive first
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0))
+        for _ in range(300):
+            sim.tick()
+
+        # Click "Torque Loss" — exact CAN frames from scenario
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        for _ in range(50):  # 0.5s
+            sim.tick()
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(0, 0))
+
+        # Let physics settle (4s — tau=0.5s decel, need ~4tau)
+        for _ in range(400):
+            sim.tick()
+
+        return sim.snapshot()
+
+    def test_rpm_near_zero(self, snap):
+        """Motor must decelerate to near-zero after torque loss."""
+        assert snap["motor"]["rpm"] < 50
+
+    def test_speed_near_zero(self, snap):
+        """Vehicle must coast to near-stop."""
+        assert snap["vehicle"]["speed_kmh"] < 1.0
+
+    def test_current_near_zero(self, snap):
+        """No torque = no current draw."""
+        assert snap["motor"]["current_ma"] < 100
+
+    def test_duty_zero(self, snap):
+        assert snap["motor"]["duty_pct"] == 0
+
+    def test_no_overcurrent(self, snap):
+        """Torque loss — no overcurrent condition."""
+        assert snap["motor"]["overcurrent"] == 0
+
+    def test_vehicle_state_run(self, snap):
+        """No fault flag set — plant sim stays in RUN."""
+        assert snap["vehicle"]["state_name"] == "RUN"
+
+    def test_brake_unaffected(self, snap):
+        assert snap["brake"]["fault"] == 0
+
+    def test_steering_unaffected(self, snap):
+        assert snap["steering"]["fault"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Click "Runaway Accel"
+# ---------------------------------------------------------------------------
+
+class TestClickRunawayAccel:
+    """Click 'Runaway Accel' → 100% torque forward.
+
+    HE-016 (ASIL C): Unintended acceleration at high speed.
+    Motor reaches near-max RPM.  At high RPM with no brake, load factor
+    is low so current stays below overcurrent threshold.
+    """
+
+    @pytest.fixture()
+    def snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Normal drive first — RPM must be up so 100% duty doesn't
+        # trigger overcurrent from stall (25A stall > 20A threshold).
+        # This matches real-world: runaway accel happens at speed.
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0))
+        for _ in range(300):
+            sim.tick()
+
+        # Click "Runaway Accel" — 100% torque forward
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(100, 1))
+
+        # Let physics settle (5s — approach max RPM)
+        for _ in range(500):
+            sim.tick()
+
+        return sim.snapshot()
+
+    def test_rpm_near_max(self, snap):
+        """100% duty → RPM should approach 4000 (no-load max)."""
+        assert snap["motor"]["rpm"] > 3500
+
+    def test_speed_near_max(self, snap):
+        """Max RPM ≈ 28 km/h."""
+        assert snap["vehicle"]["speed_kmh"] > 24.0
+
+    def test_duty_100(self, snap):
+        assert snap["motor"]["duty_pct"] == 100
+
+    def test_no_overcurrent(self, snap):
+        """High speed = low load factor → current stays below 20A."""
+        assert snap["motor"]["overcurrent"] == 0
+
+    def test_vehicle_state_run(self, snap):
+        """No fault triggered — stays RUN.
+        In real firmware, SC would detect pedal plausibility violation."""
+        assert snap["vehicle"]["state_name"] == "RUN"
+
+    def test_brake_released(self, snap):
+        assert snap["brake"]["position_pct"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Click "Creep from Stop"
+# ---------------------------------------------------------------------------
+
+class TestClickCreepFromStop:
+    """Click 'Creep from Stop' → brakes released + 30% torque from standstill.
+
+    HE-017 (ASIL D): Unintended vehicle motion from stationary.
+    Vehicle begins moving when it should stay stopped.
+    """
+
+    @pytest.fixture()
+    def snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Vehicle is stationary (booted to RUN, no drive commands)
+        # Click "Creep from Stop" — exact CAN frames from scenario
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
+        for _ in range(10):  # 0.1s gap
+            sim.tick()
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(30, 1))
+
+        # Let physics settle (3s)
+        for _ in range(300):
+            sim.tick()
+
+        return sim.snapshot()
+
+    def test_vehicle_moving(self, snap):
+        """Vehicle must have started moving — the hazard is exactly this."""
+        assert snap["vehicle"]["speed_kmh"] > 3.0
+
+    def test_rpm_moderate(self, snap):
+        """30% duty → target 1200 RPM (no brake load)."""
+        assert snap["motor"]["rpm"] > 800
+
+    def test_duty_30(self, snap):
+        assert snap["motor"]["duty_pct"] == 30
+
+    def test_brake_released(self, snap):
+        """Brakes must be released for creep to occur."""
+        assert snap["brake"]["position_pct"] == 0
+
+    def test_no_faults(self, snap):
+        """No fault flags — plant sim can't detect stationary plausibility."""
+        assert snap["motor"]["overcurrent"] == 0
+        assert snap["steering"]["fault"] == 0
+        assert snap["brake"]["fault"] == 0
+
+    def test_vehicle_state_run(self, snap):
+        """Plant sim stays RUN — SC firmware would detect this."""
+        assert snap["vehicle"]["state_name"] == "RUN"
+
+
+# ---------------------------------------------------------------------------
+# Click "Babbling Node"
+# ---------------------------------------------------------------------------
+
+class TestClickBabblingNode:
+    """Click 'Babbling Node' → 200 rapid 0-torque frames flood the bus.
+
+    HE-020 (ASIL B): CAN bus babbling node.
+    The flood overwrites the motor's torque command to 0%, causing the
+    motor to stop.  In reality, bus saturation would also starve other
+    CAN messages — the plant sim only models the overwrite effect.
+    """
+
+    @pytest.fixture()
+    def snap(self):
+        sim = SimHarness()
+        sim.boot()
+
+        # Normal drive first
+        sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(50, 1))
+        sim.feed_can(CAN_BRAKE_COMMAND, _brake_frame(0))
+        for _ in range(300):
+            sim.tick()
+
+        # Verify driving
+        assert sim.motor.rpm > 1000
+
+        # Click "Babbling Node" — exact CAN frames from scenario
+        # 200 rapid torque=0 direction=0 frames (no ticks between = instant)
+        for _ in range(200):
+            sim.feed_can(CAN_TORQUE_REQUEST, _torque_frame(0, 0))
+
+        # Let physics settle (4s — motor must fully decelerate)
+        for _ in range(400):
+            sim.tick()
+
+        return sim.snapshot()
+
+    def test_rpm_near_zero(self, snap):
+        """Babbling node overrides torque to 0 → motor stops."""
+        assert snap["motor"]["rpm"] < 50
+
+    def test_speed_near_zero(self, snap):
+        assert snap["vehicle"]["speed_kmh"] < 1.0
+
+    def test_duty_zero(self, snap):
+        """Last frame set duty to 0."""
+        assert snap["motor"]["duty_pct"] == 0
+
+    def test_current_near_zero(self, snap):
+        assert snap["motor"]["current_ma"] < 100
+
+    def test_no_overcurrent(self, snap):
+        assert snap["motor"]["overcurrent"] == 0
+
+    def test_vehicle_state_run(self, snap):
+        """Plant sim has no bus-saturation model — stays RUN."""
+        assert snap["vehicle"]["state_name"] == "RUN"

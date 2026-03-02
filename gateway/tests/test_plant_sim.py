@@ -1,7 +1,12 @@
-"""Tests for plant simulator models — battery, motor limiting, vehicle state.
+"""Unit tests for plant simulator models — battery, motor, steering, brake.
 
-Covers the demo scenarios: speed simulation, battery fault injection,
-and vehicle state transitions (DEGRADED, LIMP).
+@aspice  SWE.4 — Software Unit Verification
+@iso     ISO 26262 Part 6, Section 9 — Software unit testing
+@scope   Individual plant simulator model classes in isolation
+
+Covers: speed simulation, battery fault injection, voltage sag,
+status thresholds, steering tracking/faults, brake tracking/faults,
+motor limiting in degraded/limp states, vehicle state transitions.
 """
 
 import time

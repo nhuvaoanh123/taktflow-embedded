@@ -94,66 +94,14 @@ Clip this or keep it visible. These are the most-referenced BOM items.
 
 **GATHER**: Every box/bag you received from your orders.
 
-**TOOLS**: Table space, this workbook, pen to check off items.
+**TOOLS**: Table space, [`hardware/bom.md`](../../hardware/bom.md) (printed or on screen), pen to check off items.
 
 **DO**:
 1. Open every package and lay components out on the desk, grouped by category.
-2. Walk through the BOM items below. For each one, physically find it and place it in the correct group pile.
-3. Check the quantity. Put a checkmark next to each verified item.
+2. Walk through **every item in [`hardware/bom.md`](../../hardware/bom.md)**. For each one with status **Delivered**, physically find it and place it in the correct group pile.
+3. If any item marked Delivered in `bom.md` is actually missing, update `bom.md` status and stop.
 
-| Check | BOM # | Component | Need | Have? |
-|-------|-------|-----------|------|-------|
-| [ ] | 1 | STM32G474RE Nucleo-64 boards | 3 | |
-| [ ] | 2 | TMS570LC43x LaunchPad (LAUNCHXL2-570LC43) | 1 | |
-| [ ] | 6 | TJA1051T/3 CAN transceiver modules | 3 | |
-| [ ] | 7 | SN65HVD230 CAN transceiver module | 1 | |
-| [ ] | 8 | USB-CAN adapters (CANable 2.0 or substitutes) | 2 | |
-| [ ] | 9 | 120 ohm resistors | 2+ | |
-| [ ] | 13 | AS5048A angle sensor modules | 3 | |
-| [ ] | 14 | Diametric magnets (6mm x 2.5mm) | 3 | |
-| [ ] | 15 | TFMini-S lidar sensor | 1 | |
-| [ ] | 16 | ACS723 current sensor module | 1 | |
-| [ ] | 17 | NTC 10k thermistors (B=3950) | 2+ | |
-| [ ] | 19 | 12V DC motor | 1 | |
-| [ ] | 20 | BTS7960 H-bridge motor driver module | 1 | |
-| [ ] | 21 | MG996R servos | 2 | |
-| [ ] | 22 | TPS3823DBVR watchdog ICs (SOT-23-5) | 4 | |
-| [ ] | 23 | SOT-23-5 breakout boards | 4+ | |
-| [ ] | 24 | 12V 30A automotive relay (SPST-NO) | 1 | |
-| [ ] | 25 | IRLZ44N N-channel MOSFET (TO-220) | 1 | |
-| [ ] | 26 | 1N4007 rectifier diodes | 2+ | |
-| [ ] | 27 | E-stop button (NC, mushroom head, red) | 1+ | |
-| [ ] | 28 | SSD1306 OLED display (128x64, I2C) | 1 | |
-| [ ] | 29-31 | LEDs: red (5), green (5), amber (2) | sets | |
-| [ ] | 34 | 12V bench power supply (10A capable) | 1 | |
-| [ ] | 35 | LM2596 buck converter modules | 2 | |
-| [ ] | 36 | SB560 Schottky diodes | 1+ | |
-| [ ] | 37 | Fuse holders (inline or fuse box) | 2+ | |
-| [ ] | 38 | 10A blade fuse | 1+ | |
-| [ ] | 39 | 30A blade fuse | 1+ | |
-| [ ] | 42 | LM7806 6V regulator modules | 2 | |
-| [ ] | 43 | 100nF ceramic capacitors (bag of 30+) | 30+ | |
-| [ ] | 44 | 1nF ceramic capacitors | 2+ | |
-| [ ] | 45-48 | Electrolytic caps: 10uF, 100uF, 220uF, 470uF | assorted | |
-| [ ] | 49 | 10k ohm resistors (1/4W, 1%) | 20+ | |
-| [ ] | 50 | 47k ohm resistors (1/4W, 1%) | 5+ | |
-| [ ] | 51 | 330 ohm resistors | 10+ | |
-| [ ] | 52 | 100 ohm resistors | 5+ | |
-| [ ] | 53 | 4.7k ohm resistors | 5+ | |
-| [ ] | 55 | BZX84C3V3 Zener diodes (3.3V) | 5+ | |
-| [ ] | 59 | Base plate (plywood/acrylic, ~400x300mm) | 1 | |
-| [ ] | 60 | M3 nylon standoffs (10mm) + screws | 20+ | |
-| [ ] | 61 | Perfboard / protoboard (5x7cm) | 5+ | |
-| [ ] | 62-63 | Screw terminal blocks (2-pos and 3-pos) | 10+, 6+ | |
-| [ ] | 64-65 | Dupont jumper wires (M-F and M-M) | packs | |
-| [ ] | 66 | 22 AWG hookup wire (multiple colors) | kit | |
-| [ ] | 67 | 18 AWG wire (red + black) | lengths | |
-| [ ] | 68 | 16 AWG wire (red + black) | lengths | |
-| [ ] | 12 | 22 AWG twisted pair (yellow + green) | 5m | |
-
-**MEASURE**: Count each item. If any critical item (BOM #1, 2, 6, 7, 22, 24, 25, 34, 35) is missing, STOP and order it before proceeding.
-
-**WRONG**: Don't proceed with soldering and wiring if you're missing fuses (#37-39), Schottky diode (#36), or 100nF caps (#43). These protect your boards from the first power-up.
+**STOP CONDITION**: Do not proceed with soldering if BOM #36 (Schottky diode), #37-39 (fuses), or #43 (100nF caps) are missing. These protect your boards from the first power-up.
 
 ---
 
