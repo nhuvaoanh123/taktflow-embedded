@@ -88,6 +88,7 @@ typedef uint8           Std_ReturnType;
 #define FZC_BRAKE_OSCILLATION_DEBOUNCE       4u
 
 /* Com TX PDU IDs */
+#define FZC_COM_TX_BRAKE_FAULT      3u
 #define FZC_COM_TX_MOTOR_CUTOFF     4u
 
 /* ==================================================================
@@ -178,12 +179,22 @@ static uint8   mock_com_last_signal_id;
 static uint8   mock_com_call_count;
 static uint32  mock_com_last_data;
 
+#define MOCK_COM_MAX_SIGNALS  8u
+static uint8   mock_com_signal_count[MOCK_COM_MAX_SIGNALS];
+static uint32  mock_com_signal_data[MOCK_COM_MAX_SIGNALS];
+
 Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr)
 {
     mock_com_call_count++;
     mock_com_last_signal_id = SignalId;
     if (SignalDataPtr != NULL_PTR) {
         mock_com_last_data = *((const uint32*)SignalDataPtr);
+    }
+    if (SignalId < MOCK_COM_MAX_SIGNALS) {
+        mock_com_signal_count[SignalId]++;
+        if (SignalDataPtr != NULL_PTR) {
+            mock_com_signal_data[SignalId] = *((const uint32*)SignalDataPtr);
+        }
     }
     return E_OK;
 }
@@ -249,6 +260,10 @@ void setUp(void)
     mock_com_last_signal_id = 0xFFu;
     mock_com_call_count     = 0u;
     mock_com_last_data      = 0u;
+    for (i = 0u; i < MOCK_COM_MAX_SIGNALS; i++) {
+        mock_com_signal_count[i] = 0u;
+        mock_com_signal_data[i]  = 0u;
+    }
 
     /* Reset DEM mock */
     mock_dem_call_count    = 0u;
@@ -612,7 +627,7 @@ void test_Motor_cutoff_com_send(void)
     /* Run one more cycle to trigger Com_SendSignal for cutoff */
     run_cycles(100u, 1u);
 
-    TEST_ASSERT_EQUAL_UINT8(FZC_COM_TX_MOTOR_CUTOFF, mock_com_last_signal_id);
+    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_TX_MOTOR_CUTOFF] > 0u);
 }
 
 /** @verifies SWR-FZC-012 -- No cutoff when no fault present */
@@ -627,8 +642,8 @@ void test_No_cutoff_without_fault(void)
     uint32 cutoff = mock_rte_signals[FZC_SIG_MOTOR_CUTOFF];
     TEST_ASSERT_EQUAL_UINT32(0u, cutoff);
 
-    /* No Com_SendSignal for cutoff */
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_call_count);
+    /* No Com_SendSignal for motor cutoff (brake fault status is sent every cycle) */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_signal_count[FZC_COM_TX_MOTOR_CUTOFF]);
 }
 
 /* ==================================================================
@@ -1098,6 +1113,32 @@ void test_Oscillation_fault_triggers_auto_brake(void)
 }
 
 /** @verifies SWR-FZC-010
+ *  Brake fault status sent on CAN 0x210 every cycle */
+void test_Brake_fault_sent_on_CAN(void)
+{
+    test_config.faultDebounce = 200u;
+    Swc_Brake_Init(&test_config);
+
+    /* Normal operation — fault = 0 but still sent cyclically */
+    run_cycles(50u, 3u);
+    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_TX_BRAKE_FAULT] > 0u);
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_com_signal_data[FZC_COM_TX_BRAKE_FAULT]);
+
+    /* Trigger oscillation fault */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+    Swc_Brake_MainFunction();
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
+    Swc_Brake_MainFunction();
+
+    /* Fault code transmitted on CAN */
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, mock_com_signal_data[FZC_COM_TX_BRAKE_FAULT]);
+}
+
+/** @verifies SWR-FZC-010
  *  Oscillation fault reports DTC via Dem */
 void test_Oscillation_DTC_reported(void)
 {
@@ -1195,6 +1236,7 @@ int main(void)
     RUN_TEST(test_Oscillation_no_fault_single_jump);
     RUN_TEST(test_Oscillation_fault_after_debounce);
     RUN_TEST(test_Oscillation_fault_triggers_auto_brake);
+    RUN_TEST(test_Brake_fault_sent_on_CAN);
     RUN_TEST(test_Oscillation_DTC_reported);
 
     return UNITY_END();

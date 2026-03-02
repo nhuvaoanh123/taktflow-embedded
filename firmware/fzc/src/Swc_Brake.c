@@ -342,10 +342,16 @@ void Swc_Brake_MainFunction(void)
     }
 
     /* ----------------------------------------------------------
-     * Step 9: Write RTE signals
+     * Step 9: Write RTE signals + send brake fault on CAN 0x210
      * ---------------------------------------------------------- */
     (void)Rte_Write(FZC_SIG_BRAKE_POS,   (uint32)Brake_Position);
     (void)Rte_Write(FZC_SIG_BRAKE_FAULT,  (uint32)Brake_Fault);
+
+    /* Cyclic TX of brake fault status so CVC always has current value */
+    {
+        uint32 fault_tx = (uint32)Brake_Fault;
+        (void)Com_SendSignal(FZC_COM_TX_BRAKE_FAULT, &fault_tx);
+    }
 
     if (Brake_CutoffSending == TRUE) {
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
