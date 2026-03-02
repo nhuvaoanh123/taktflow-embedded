@@ -22,7 +22,7 @@ The heartbeat system has had 3 bugs in rapid succession (commits `430f3ba`, `e4a
 | 4 | Recovery Debounce + DTC Hardening | DONE |
 | 5 | E2E State Machine | DONE |
 | 6 | Comprehensive Test Coverage | DONE |
-| 7 | Safety Documentation + Traceability | PENDING |
+| 7 | Safety Documentation + Traceability | DONE |
 
 ---
 
@@ -143,8 +143,8 @@ Key new categories: jitter injection (±5ms), burst reception, startup synchroni
 4. All new tests: `@verifies` tags
 5. New `docs/reference/lessons-learned/infrastructure/PROCESS-heartbeat-hardening.md`
 
-**Files**: `functional-safety-concept.md`, `safety-goals.md`, `heartbeat-ftti-budget.md` (finalize), new lessons-learned
-**DONE**: FSC updated, traceability complete, lessons learned documented
+**Files**: `functional-safety-concept.md`, `heartbeat-ftti-budget.md` (finalize), new `PROCESS-heartbeat-hardening.md`
+**DONE**: FSC SM-019 updated (E2E SM, per-ECU thresholds, timing table 205ms→140ms, Note 3 closed), FTTI budget traceability updated (E2E SM refs), lessons learned documented (7 key lessons)
 
 ---
 

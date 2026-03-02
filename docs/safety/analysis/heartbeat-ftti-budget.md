@@ -119,6 +119,8 @@ normal system startup.
 
 | Requirement | Implementation | Test |
 |-------------|---------------|------|
-| SWR-CVC-022 | `Swc_Heartbeat.c` (CVC) — per-ECU miss thresholds | `test_Heartbeat_FZC_timeout_after_2_misses` |
+| SWR-CVC-022 | `Swc_Heartbeat.c` (CVC) — E2E SM-based per-ECU monitoring | `test_Heartbeat_SM_FZC_INIT_to_VALID_after_2_OKs` |
+| SWR-CVC-023 | `E2E_Sm.c` — AUTOSAR E2E State Machine (INIT/VALID/INVALID) | `test_E2E_Sm_*` (24 tests) |
 | SWR-SC-005 | `sc_heartbeat.c` — 10-tick timeout | `test_HB_timeout_at_10_ticks` |
 | SWR-SC-006 | `sc_heartbeat.c` — 3-tick confirmation | `test_HB_confirmation_at_3_ticks` |
+| SWR-SC-007 | `sc_heartbeat.c` — 3-HB recovery debounce | `test_HB_confirmed_timeout_latches` |

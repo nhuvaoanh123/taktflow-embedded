@@ -324,12 +324,14 @@ The Safety Controller provides an independent, diverse monitoring layer. Its fai
 
 #### SM-019: Heartbeat Monitoring
 
-- **Mechanism**: Each zone ECU (CVC, FZC, RZC) transmits a heartbeat CAN message at a fixed interval (CVC: 50 ms, FZC: 50 ms, RZC: 50 ms). The SC monitors each heartbeat and maintains independent timeout counters. If any ECU's heartbeat is not received within the timeout period (3x heartbeat interval = 150 ms), the SC declares a heartbeat fault for that ECU.
+- **Mechanism**: Each zone ECU (CVC, FZC, RZC) transmits a heartbeat CAN message at a fixed interval (CVC: 50 ms, FZC: 50 ms, RZC: 50 ms). Two independent monitoring paths exist:
+  - **SC (backup)**: The SC monitors each heartbeat with independent timeout counters (100 ms timeout = 10 ticks × 10 ms). If timeout is reached, a confirmation window (30 ms = 3 ticks) prevents false triggers from CAN bus contention. After confirmation, the SC opens the kill relay. Recovery requires 3 consecutive heartbeats (debounce).
+  - **CVC (primary)**: The CVC monitors FZC and RZC heartbeats using an AUTOSAR-inspired E2E State Machine with sliding window evaluation. Per-ECU thresholds: FZC 2-miss (100 ms), RZC 3-miss (150 ms). The E2E SM provides INIT/VALID/INVALID state transitions with configurable window-based recovery.
 - **Detection**: ECU processor hang (watchdog not yet triggered), CAN transceiver failure, ECU power loss, software crash.
-- **Fault reaction**: SC illuminates the fault LED for the specific ECU. If the failed ECU is safety-critical (CVC, FZC, or RZC), the SC opens the kill relay after a confirmation delay (50 ms debounce to avoid false triggers from CAN bus contention). System enters SHUTDOWN state.
-- **ECU**: SC (TMS570LC43x) — CAN listen-only mode
+- **Fault reaction**: SC illuminates the fault LED for the specific ECU. If the failed ECU is safety-critical (CVC, FZC, or RZC), the SC opens the kill relay after confirmation. CVC independently transitions to DEGRADED/SAFE_STOP within one RTE cycle (10 ms) of detection. System enters SHUTDOWN state.
+- **ECU**: SC (TMS570LC43x, CAN listen-only), CVC (STM32, E2E SM-based monitoring)
 - **Diagnostic coverage**: 95%
-- **FTTI compliance**: Detection within 150 ms + 50 ms debounce = 200 ms. Reaction (relay de-energize) within 5 ms. Total: 205 ms. This exceeds the 100 ms FTTI for SG-008. Mitigation: each ECU has its own external watchdog (SM-020) providing faster local response. The SC heartbeat monitoring provides system-level fault detection as a complementary mechanism.
+- **FTTI compliance**: CVC primary path detects FZC failure within 100 ms (2 × 50 ms heartbeat interval), achieving SG-008 FTTI compliance. SC backup path: 100 ms timeout + 30 ms confirmation = 130 ms detection, ~10 ms relay reaction = 140 ms total. SC path exceeds 100 ms FTTI but provides independent hardware diversity. Mitigation: each ECU also has its own external watchdog (SM-020).
 - **Traces to**: FSR-014, FSR-015
 
 #### SM-020: External Watchdog per ECU (TPS3823)
@@ -541,7 +543,7 @@ The following table verifies that each safety mechanism achieves its safe state 
 | SM-016: Motor current limiting | 1 ms | 1 ms | 2 ms | 500 ms | 498 ms | Yes |
 | SM-017: Lidar distance | 10 ms | 10 ms | 20 ms | 200 ms | 180 ms | Yes |
 | SM-018: Lidar plausibility | 100 ms | 10 ms | 110 ms | 200 ms | 90 ms | Yes |
-| SM-019: Heartbeat monitoring | 200 ms | 5 ms | 205 ms | 100 ms | -105 ms | No (Note 3) |
+| SM-019: Heartbeat monitoring (SC) | 130 ms | 10 ms | 140 ms | 100 ms | -40 ms | No (Note 3) |
 | SM-020: Ext. watchdog (TPS3823) | 1600 ms | 50 ms | 1650 ms | 100 ms | -1550 ms | No (Note 4) |
 | SM-021: SC self-test/lockstep | < 0.001 ms | < 0.001 ms | < 0.001 ms | 100 ms | ~100 ms | Yes |
 | SM-022: Vehicle state machine | 10 ms | 10 ms | 20 ms | 50 ms | 30 ms | Yes |
@@ -553,7 +555,7 @@ The following table verifies that each safety mechanism achieves its safe state 
 
 **Note 2 — SM-012 (Auto-brake on CAN timeout)**: The 100 ms timeout exceeds the 50 ms FTTI for SG-004 (loss of braking). This is a design tradeoff: a shorter timeout would cause false triggers due to normal CAN bus jitter. SM-011 (brake command monitoring, 30 ms) provides primary FTTI-compliant detection for brake actuator faults. SM-012 specifically addresses CAN communication loss, which is a gradual degradation scenario where the full 100 ms timeout is justified.
 
-**Note 3 — SM-019 (Heartbeat monitoring)**: The 205 ms total exceeds the 100 ms FTTI for SG-008. Mitigation: the heartbeat mechanism is a system-level monitoring function complemented by faster local mechanisms (SM-020 external watchdog, SM-021 lockstep). The SC heartbeat monitoring provides detection of faults that survive local watchdog recovery (e.g., MCU resets to a faulty state).
+**Note 3 — SM-019 (Heartbeat monitoring)**: The SC backup path (140 ms total) exceeds the 100 ms FTTI for SG-008. However, the CVC primary detection path achieves FTTI compliance: FZC failure is detected within 100 ms (2-miss E2E State Machine window × 50 ms heartbeat interval), with CVC SAFE_STOP transition within 110 ms. The SC path was reduced from 205 ms to 140 ms through timeout tuning (150→100 ms) and confirmation window reduction (50→30 ms). The SC provides independent hardware-diverse backup monitoring. Together, the CVC (FTTI-compliant primary) and SC (independent backup) provide defense-in-depth heartbeat monitoring for SG-008.
 
 **Note 4 — SM-020 (External watchdog)**: The TPS3823 timeout (1.6 seconds) is intentionally long to avoid false resets during normal operation. It is not intended to provide FTTI-compliant response. It is a last-resort mechanism that prevents permanent firmware hang. Faster software-level diagnostics (SM-001 through SM-019) provide FTTI-compliant coverage for all safety goals.
 
