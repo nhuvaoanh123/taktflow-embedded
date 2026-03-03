@@ -345,12 +345,13 @@ class DashboardTestRunner:
 
                 self._publish_progress(run_id, len(specs), idx, spec, "preparing", results, start_time)
 
-                # Prep: clear monitor state, then reset containers, then wait for RUN.
-                # Monitor reset BEFORE container restart so we don't erase
-                # VehicleState messages that arrive during/after the restart.
+                # Prep: restart containers, THEN clear monitor state, THEN wait for RUN.
+                # Monitor reset AFTER container restart to clear stale VehicleState
+                # messages from the previous boot cycle (CVC sends state=1 while
+                # zone controllers restart, then CVC itself restarts last).
                 log.info("[TEST %s] Resetting for scenario: %s", run_id, spec.id)
-                self._monitor.reset()
                 self._reset()
+                self._monitor.reset()
 
                 if not self._wait_for_run(run_id):
                     # CVC didn't reach RUN — skip this test
