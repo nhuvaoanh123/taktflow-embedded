@@ -27,6 +27,7 @@ from .plant_inject import (
     inject_overcurrent as plant_inject_overcurrent,
     inject_stall as plant_inject_stall,
     inject_steer_fault,
+    inject_voltage as plant_inject_voltage,
     reset_plant_faults,
 )
 
@@ -300,16 +301,19 @@ def brake_fault() -> str:
 
 
 def battery_low() -> str:
-    """Simulate battery undervoltage by injecting low-voltage CAN frames.
+    """Simulate battery undervoltage via MQTT plant-sim injection.
 
-    Sends Battery_Status frames (0x303) at 100 ms intervals with
-    progressively lower voltage and SOC, overriding the plant sim's
-    1000 ms Battery_Status cycle.  After the drain sequence, sends a
-    DTC_BATTERY_UV broadcast to trigger the SAP QM notification path.
+    Sends progressive voltage drops via MQTT to the plant-sim battery model.
+    The plant-sim then sends low voltage on virtual sensor CAN (0x401),
+    which the RZC reads via its sensor feeder → IoHwAb → SWC → CAN 0x303.
+    After the drain sequence, sends a DTC_BATTERY_UV broadcast.
 
     Phase 1 (2 s): 12.6 V -> 10.2 V (UV_warn zone)
     Phase 2 (3 s): 10.2 V ->  8.5 V (critical_UV zone) + DTC
     """
+    if _mqtt_client is None:
+        return "Battery low: MQTT client not available"
+
     bus = _get_bus()
     try:
         # Phase 1: voltage drops from 12.6 V to 10.2 V (UV_warn) over 2 s
@@ -317,8 +321,7 @@ def battery_low() -> str:
             frac = i / 19.0
             v = int(12600 - (12600 - 10200) * frac)
             soc = int(100 - (100 - 18) * frac)
-            status = 1 if v < 10500 else 2  # UV_warn below 10.5 V
-            _send(bus, CAN_BATTERY_STATUS, _battery_frame(v, soc, status))
+            plant_inject_voltage(_mqtt_client, v, soc)
             time.sleep(0.1)
 
         # Phase 2: voltage drops from 10.2 V to 8.5 V (critical_UV) over 3 s
@@ -326,8 +329,7 @@ def battery_low() -> str:
             frac = i / 29.0
             v = int(10200 - (10200 - 8500) * frac)
             soc = int(18 - (18 - 3) * frac)
-            status = 0 if v < 9000 else 1  # critical_UV below 9.0 V
-            _send(bus, CAN_BATTERY_STATUS, _battery_frame(v, soc, status))
+            plant_inject_voltage(_mqtt_client, v, soc)
             time.sleep(0.1)
 
         # Fire DTC_BATTERY_UV
@@ -335,8 +337,8 @@ def battery_low() -> str:
               _dtc_frame(DTC_BATTERY_UV, ECU_RZC))
     finally:
         bus.shutdown()
-    return ("Battery drain: 12.6 V -> 8.5 V over 5 s + DTC 0xE401.  "
-            "Plant sim restores normal values within ~1 s after scenario ends.")
+    return ("Battery drain: 12.6 V -> 8.5 V over 5 s via MQTT + DTC 0xE401.  "
+            "Plant sim restores normal values within ~8 s after scenario ends.")
 
 
 def motor_reversal() -> str:

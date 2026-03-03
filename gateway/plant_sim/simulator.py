@@ -245,13 +245,11 @@ class PlantSimulator:
                     self.sc_relay_killed = False
                     self.motor._hw_disabled = False
 
-        elif arb_id == TX_BATTERY_STATUS:
-            # External battery injection (from fault_inject) — override model
-            if len(data) >= 4:
-                v = data[0] | (data[1] << 8)
-                soc = data[2]
-                self.battery.inject_voltage(v, soc)
-                log.info("Battery override: %dmV, %d%% SOC", v, soc)
+        # NOTE: CAN 0x303 handler removed — RZC is sole authority for
+        # Battery_Status on the CAN bus. Processing 0x303 here created a
+        # feedback loop (RZC TX → plant-sim override → plant-sim TX on
+        # 0x401 → RZC reads → RZC TX). Battery overrides now use MQTT
+        # only (taktflow/command/plant_inject {"type":"voltage"}).
 
         elif arb_id == RX_TORQUE_REQUEST:
             if len(data) >= 4 and not self.estop_active:
