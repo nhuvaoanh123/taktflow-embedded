@@ -115,6 +115,7 @@ BSW_SRCS = \
     $(SERVICES_DIR)/Dcm.c \
     $(SERVICES_DIR)/Dem.c \
     $(SERVICES_DIR)/E2E.c \
+    $(SERVICES_DIR)/E2E_Sm.c \
     $(SERVICES_DIR)/WdgM.c \
     $(SERVICES_DIR)/BswM.c \
     $(SERVICES_DIR)/NvM.c \
@@ -348,7 +349,7 @@ MISRA_BSW_SRCS = \
     $(_MCAL_DIR)/Uart.c \
     $(_ECUAL_DIR)/CanIf.c $(_ECUAL_DIR)/PduR.c $(_ECUAL_DIR)/IoHwAb.c \
     $(_SERVICES_DIR)/Com.c $(_SERVICES_DIR)/Dcm.c $(_SERVICES_DIR)/Dem.c \
-    $(_SERVICES_DIR)/E2E.c $(_SERVICES_DIR)/WdgM.c $(_SERVICES_DIR)/BswM.c \
+    $(_SERVICES_DIR)/E2E.c $(_SERVICES_DIR)/E2E_Sm.c $(_SERVICES_DIR)/WdgM.c $(_SERVICES_DIR)/BswM.c \
     $(_SERVICES_DIR)/NvM.c \
     $(_RTE_DIR)/Rte.c
 
