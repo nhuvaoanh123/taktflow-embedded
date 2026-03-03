@@ -49,7 +49,7 @@ IDLE_CMD_INTERVAL = float(os.environ.get("IDLE_CMD_INTERVAL", "0.05"))  # 50ms
 # ---------------------------------------------------------------------------
 # Controller lock — single in-memory lock for fault-inject control
 # ---------------------------------------------------------------------------
-LOCK_DURATION_SEC = int(os.environ.get("LOCK_DURATION_SEC", "300"))  # 5 min default
+LOCK_DURATION_SEC = int(os.environ.get("LOCK_DURATION_SEC", "900"))  # 15 min default
 
 _control_lock = {
     "client_id": None,      # str | None — who holds it
