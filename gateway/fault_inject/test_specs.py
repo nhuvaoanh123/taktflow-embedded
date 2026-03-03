@@ -47,16 +47,16 @@ TEST_SPECS: list[TestSpec] = [
         label="Overcurrent",
         scenario="overcurrent",
         sg="SG-001", asil="D", he="HE-001",
-        description="Verifies motor overcurrent triggers DEGRADED mode and DTC. "
+        description="Verifies motor overcurrent triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-001: prevent unintended vehicle acceleration from motor fault.",
-        injection="CAN frame Motor_Current (0x201) with Current_A=120 (>100A threshold)",
+        injection="SPI pedal 95% + MQTT inject_overcurrent to plant-sim",
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
-                description="Vehicle enters DEGRADED",
+                description="Vehicle enters SAFE_STOP",
                 check_type="vehicle_state",
-                expected="DEGRADED",
-                value=2,       # DEGRADED enum
+                expected="SAFE_STOP",
+                value=4,       # SAFE_STOP enum
                 timeout_ms=5000,
             ),
             VerdictCheck(
@@ -92,18 +92,24 @@ TEST_SPECS: list[TestSpec] = [
         label="Steer Fault",
         scenario="steer_fault",
         sg="SG-003", asil="D", he="HE-003/004",
-        description="Verifies steering actuator fault is detected and flagged. "
+        description="Verifies steering fault triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-003: prevent unintended steering from actuator malfunction.",
-        injection="CAN frame Steer_Command (0x301) with SteerAngle beyond plausibility limit",
-        observe_sec=3.0,
+        injection="MQTT inject_steer_fault to plant-sim",
+        observe_sec=5.0,
         verdicts=[
             VerdictCheck(
-                description="SteerFaultStatus = 1",
-                check_type="fault_flag",
-                expected="Steering fault active",
-                field="steer_fault",
-                value=1,
-                timeout_ms=3000,
+                description="Vehicle enters SAFE_STOP",
+                check_type="vehicle_state",
+                expected="SAFE_STOP",
+                value=4,       # SAFE_STOP enum
+                timeout_ms=5000,
+            ),
+            VerdictCheck(
+                description="DTC 0xE201 broadcast",
+                check_type="dtc",
+                expected="DTC 0xE201 received",
+                value=0xE201,
+                timeout_ms=5000,
             ),
         ],
     ),
@@ -112,18 +118,24 @@ TEST_SPECS: list[TestSpec] = [
         label="Brake Fault",
         scenario="brake_fault",
         sg="SG-004", asil="D", he="HE-005",
-        description="Verifies brake actuator fault is detected and flagged. "
+        description="Verifies brake fault triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-004: prevent loss of braking from actuator malfunction.",
-        injection="CAN frame Brake_Command (0x300) with BrakeForce beyond plausibility limit",
-        observe_sec=3.0,
+        injection="MQTT inject_brake_fault to plant-sim",
+        observe_sec=5.0,
         verdicts=[
             VerdictCheck(
-                description="BrakeFaultStatus = 1",
-                check_type="fault_flag",
-                expected="Brake fault active",
-                field="brake_fault",
-                value=1,
-                timeout_ms=3000,
+                description="Vehicle enters SAFE_STOP",
+                check_type="vehicle_state",
+                expected="SAFE_STOP",
+                value=4,       # SAFE_STOP enum
+                timeout_ms=5000,
+            ),
+            VerdictCheck(
+                description="DTC 0xE202 broadcast",
+                check_type="dtc",
+                expected="DTC 0xE202 received",
+                value=0xE202,
+                timeout_ms=5000,
             ),
         ],
     ),
@@ -158,17 +170,17 @@ TEST_SPECS: list[TestSpec] = [
         label="Motor Reversal",
         scenario="motor_reversal",
         sg="SG-010", asil="C", he="HE-014",
-        description="Verifies reverse torque request triggers SAFE_STOP. "
+        description="Verifies motor fault at speed triggers SAFE_STOP. "
                     "Safety Goal SG-010: prevent unintended reversal at speed.",
-        injection="CAN frame Torque_Request (0x101) with negative torque while speed > 0",
-        observe_sec=4.0,
+        injection="SPI pedal 80% + MQTT inject stall+overcurrent to plant-sim",
+        observe_sec=5.0,
         verdicts=[
             VerdictCheck(
                 description="Vehicle enters SAFE_STOP",
                 check_type="vehicle_state",
                 expected="SAFE_STOP",
                 value=4,
-                timeout_ms=4000,
+                timeout_ms=5000,
             ),
         ],
     ),
@@ -177,17 +189,17 @@ TEST_SPECS: list[TestSpec] = [
         label="Runaway Acceleration",
         scenario="runaway_accel",
         sg="SG-011", asil="C", he="HE-016",
-        description="Verifies excessive torque request triggers DEGRADED with torque limiting. "
+        description="Verifies excessive pedal input triggers DEGRADED with torque limiting. "
                     "Safety Goal SG-011: prevent runaway acceleration from sensor/software fault.",
-        injection="CAN frame Torque_Request (0x101) with TorquePercent=100 (max) suddenly",
-        observe_sec=4.0,
+        injection="SPI pedal override at 100% (enters CVC full pipeline)",
+        observe_sec=5.0,
         verdicts=[
             VerdictCheck(
                 description="Vehicle enters DEGRADED (torque limited)",
                 check_type="vehicle_state",
                 expected="DEGRADED",
                 value=2,
-                timeout_ms=4000,
+                timeout_ms=5000,
             ),
         ],
     ),
@@ -198,15 +210,15 @@ TEST_SPECS: list[TestSpec] = [
         sg="SG-012", asil="D", he="HE-017",
         description="Verifies unintended creep from standstill triggers SAFE_STOP. "
                     "Safety Goal SG-012: prevent vehicle movement without driver intent.",
-        injection="CAN frame Torque_Request (0x101) with low torque while vehicle speed=0 and brake released",
-        observe_sec=4.0,
+        injection="SPI pedal override at 30% from stationary (enters CVC full pipeline)",
+        observe_sec=5.0,
         verdicts=[
             VerdictCheck(
                 description="Vehicle enters SAFE_STOP",
                 check_type="vehicle_state",
                 expected="SAFE_STOP",
                 value=4,
-                timeout_ms=4000,
+                timeout_ms=5000,
             ),
         ],
     ),

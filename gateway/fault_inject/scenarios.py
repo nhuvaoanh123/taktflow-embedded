@@ -22,6 +22,13 @@ from .pedal_udp import (
     pedal_pct_to_angle,
     send_pedal_override,
 )
+from .plant_inject import (
+    inject_brake_fault,
+    inject_overcurrent as plant_inject_overcurrent,
+    inject_stall as plant_inject_stall,
+    inject_steer_fault,
+    reset_plant_faults,
+)
 
 # Module-level MQTT client (set by app.py at startup)
 _mqtt_client: paho_mqtt.Client | None = None
@@ -230,66 +237,66 @@ def normal_drive() -> str:
 
 
 def overcurrent() -> str:
-    """Send very high torque request (95% duty) with emergency brake locked.
+    """Inject motor overcurrent via plant-sim MQTT command.
 
-    Simulates a mechanical jam: the motor drives at full power while the
-    brake holds the wheels.  RPM stays near zero, so the load factor
-    remains ~1.0 and current stays above 20 A (overcurrent threshold).
+    Sends SPI pedal override at 95% so the CVC drives the motor at
+    high duty, then tells the plant-sim to inject an overcurrent fault
+    directly.  This bypasses the CAN cyclic-TX override problem (CVC
+    cyclically sends 0x101/0x103, overriding any injected frames).
 
-    The RZC sets OvercurrentFlag, the Safety Controller detects it,
-    triggers a DTC broadcast, and ultimately generates an SAP QM
-    notification via the gateway.
+    The plant-sim sets motor.overcurrent = True, which:
+      1. Appears on Motor_Current (0x301) OvercurrentFlag
+      2. Triggers DTC 0xE301 broadcast
+      3. Plant-sim physics -> SAFE_STOP (motor disabled)
+      4. CVC reads overcurrent from CAN -> transitions to SAFE_STOP
     """
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(100, brake_mode=2))
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(95, 1))
-    finally:
-        bus.shutdown()
-    return ("Overcurrent: 95% torque + 100% brake (mechanical jam).  "
-            "Plant sim models sustained overcurrent -> RZC DTC -> "
-            "SC detection -> SAP notification.")
+    if _mqtt_client is None:
+        return "Overcurrent: MQTT client not available"
+    send_pedal_override(pedal_pct_to_angle(95))
+    time.sleep(0.5)  # let motor spin up
+    plant_inject_overcurrent(_mqtt_client)
+    return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent.  "
+            "Plant sim reports overcurrent on CAN -> DTC 0xE301 -> SAFE_STOP.")
 
 
 def steer_fault() -> str:
-    """Inject a steering fault by rapidly oscillating steer commands.
+    """Inject a steering fault via plant-sim MQTT command.
 
-    Sends alternating +/- 40 deg commands with zero rate-limit delay,
-    exceeding the FZC's configured maximum steering rate and triggering
-    a SteerFaultStatus in the Steering_Status response.
+    Directly sets steering.fault = True in the plant-sim, bypassing
+    the CAN cyclic-TX override problem (CVC cyclically sends 0x102,
+    overriding any injected steer commands within one tick).
+
+    The plant-sim:
+      1. Sets steering fault flag
+      2. Sends DTC 0xE201 (steer fault) on CAN 0x500
+      3. Transitions to SAFE_STOP (motor off, brake applied)
+      4. Motor_Status CAN frames reflect motor disabled
     """
-    bus = _get_bus()
-    try:
-        for _ in range(10):
-            _send(bus, CAN_STEER_COMMAND, _steer_frame(40.0, rate_limit=50.0))
-            time.sleep(0.005)
-            _send(bus, CAN_STEER_COMMAND, _steer_frame(-40.0, rate_limit=50.0))
-            time.sleep(0.005)
-    finally:
-        bus.shutdown()
-    return ("Steer fault: 10 rapid +/-40 deg oscillations sent.  "
-            "FZC should detect rate-limit violation.")
+    if _mqtt_client is None:
+        return "Steer fault: MQTT client not available"
+    inject_steer_fault(_mqtt_client)
+    return ("Steer fault: MQTT inject_steer_fault -> plant-sim sets fault.  "
+            "DTC 0xE201 broadcast + physics -> SAFE_STOP.")
 
 
 def brake_fault() -> str:
-    """Send conflicting brake commands.
+    """Inject a brake fault via plant-sim MQTT command.
 
-    Rapidly alternates between 0% (release) and 100% (emergency) brake
-    commands to trigger a brake fault detection in the FZC.
+    Directly sets brake.fault = True in the plant-sim, bypassing
+    the CAN cyclic-TX override problem (CVC cyclically sends 0x103,
+    overriding any injected brake commands within one tick).
+
+    The plant-sim:
+      1. Sets brake fault flag
+      2. Sends DTC 0xE202 (brake fault) on CAN 0x500
+      3. Transitions to SAFE_STOP (motor off, brake applied)
+      4. Motor_Status CAN frames reflect motor disabled
     """
-    bus = _get_bus()
-    try:
-        for _ in range(10):
-            _send(bus, CAN_BRAKE_COMMAND,
-                  _brake_frame(100, brake_mode=2))  # emergency
-            time.sleep(0.005)
-            _send(bus, CAN_BRAKE_COMMAND,
-                  _brake_frame(0, brake_mode=0))    # release
-            time.sleep(0.005)
-    finally:
-        bus.shutdown()
-    return ("Brake fault: 10 rapid 0%/100% alternations sent.  "
-            "FZC should detect conflicting brake commands.")
+    if _mqtt_client is None:
+        return "Brake fault: MQTT client not available"
+    inject_brake_fault(_mqtt_client)
+    return ("Brake fault: MQTT inject_brake_fault -> plant-sim sets fault.  "
+            "DTC 0xE202 broadcast + physics -> SAFE_STOP.")
 
 
 def battery_low() -> str:
@@ -333,26 +340,27 @@ def battery_low() -> str:
 
 
 def motor_reversal() -> str:
-    """Inject sudden motor direction reversal while driving forward.
+    """Inject motor fault while driving forward via plant-sim MQTT.
 
-    Sends a Torque_Request with direction=2 (reverse) at 80% duty while
-    the vehicle is moving forward.  The Safety Controller should detect
-    the plausibility violation (direction change at speed) and trigger
-    a safe-stop transition.
+    Establishes forward drive via SPI pedal override at 80%, lets the
+    motor spin up, then injects a motor stall + overcurrent fault via
+    MQTT.  This simulates a sudden mechanical blockage (as would occur
+    during an attempted reversal under load).
+
+    Bypasses CAN cyclic-TX override problem — CVC owns 0x101 and
+    overwrites any injected Torque_Request frames within one tick.
 
     Maps to HE-014 (ASIL C): Motor direction reversal during forward motion.
     """
-    bus = _get_bus()
-    try:
-        # First establish forward drive
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
-        time.sleep(0.5)
-        # Reverse at high torque
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(80, 2))
-    finally:
-        bus.shutdown()
-    return ("Motor reversal: direction flipped fwd->rev at 80% torque.  "
-            "SC should detect plausibility violation -> safe-stop.")
+    if _mqtt_client is None:
+        return "Motor reversal: MQTT client not available"
+    send_pedal_override(pedal_pct_to_angle(80))
+    time.sleep(1.0)  # let motor reach speed
+    plant_inject_stall(_mqtt_client)
+    time.sleep(0.1)
+    plant_inject_overcurrent(_mqtt_client)
+    return ("Motor reversal: pedal 80% (SPI) + MQTT inject_stall + "
+            "inject_overcurrent.  Simulates mechanical blockage -> SAFE_STOP.")
 
 
 def unintended_braking() -> str:
@@ -401,44 +409,38 @@ def torque_loss() -> str:
 
 
 def runaway_accel() -> str:
-    """Inject runaway acceleration at maximum torque.
+    """Inject runaway acceleration via SPI pedal override at 100%.
 
-    Sends a Torque_Request at 100% duty forward, simulating a stuck
-    throttle or pedal sensor fault at high speed.  The Safety Controller
-    should detect the plausibility violation (no pedal input matches)
-    and intervene.
+    Overrides the pedal sensor at the MCAL layer with maximum position,
+    so the CVC processes it through its full pipeline (plausibility
+    check, ramp limit, torque lookup).  The CVC naturally generates
+    the Torque_Request CAN frame.
+
+    This bypasses the CAN cyclic-TX override problem — the pedal value
+    enters at the SPI layer, not via CAN frame injection.
 
     Maps to HE-016 (ASIL C): Unintended acceleration at high speed.
     """
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(100, 1))
-    finally:
-        bus.shutdown()
-    return ("Runaway acceleration: 100% torque forward.  "
-            "SC should detect pedal plausibility violation -> limit torque.")
+    send_pedal_override(pedal_pct_to_angle(100))
+    return ("Runaway acceleration: pedal 100% (SPI override).  "
+            "CVC processes through full pipeline -> torque limiting -> DEGRADED.")
 
 
 def creep_from_stop() -> str:
-    """Inject unintended vehicle motion from stationary state.
+    """Inject unintended vehicle motion via SPI pedal override at 30%.
 
-    Releases brakes and applies moderate torque while vehicle should be
-    stationary (e.g. parked, waiting at traffic light).  Simulates
-    unintended creep due to motor enable fault.
+    Overrides the pedal sensor at the MCAL layer with moderate position
+    while the vehicle is stationary.  The CVC processes the pedal value
+    through its full pipeline and generates torque naturally.
+
+    This bypasses the CAN cyclic-TX override problem — the pedal value
+    enters at the SPI layer, not via CAN frame injection on 0x101/0x103.
 
     Maps to HE-017 (ASIL D): Unintended vehicle motion from stationary.
     """
-    bus = _get_bus()
-    try:
-        # Release brakes
-        _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
-        time.sleep(0.1)
-        # Apply unexpected torque
-        _send(bus, CAN_TORQUE_REQUEST, _torque_frame(30, 1))
-    finally:
-        bus.shutdown()
-    return ("Creep from stop: brakes released + 30% torque from stationary.  "
-            "Simulates unintended motion due to motor enable fault.")
+    send_pedal_override(pedal_pct_to_angle(30))
+    return ("Creep from stop: pedal 30% (SPI override) from stationary.  "
+            "CVC generates torque naturally -> vehicle moves.")
 
 
 def babbling_node() -> str:
@@ -630,15 +632,16 @@ def reset() -> str:
     """Power-cycle reset: restart ECU containers to clear all latched faults.
 
     1. Clears the SPI pedal override
-    2. Publishes MQTT reset (ML detector + ws_bridge clear state)
+    2. Publishes MQTT reset (ML detector + ws_bridge + plant-sim clear state)
     3. Restarts all ECU + plant-sim containers (clears latched firmware faults)
     """
     clear_pedal_override()
 
-    # Publish MQTT reset command for ML detector and ws_bridge
+    # Publish MQTT reset command for ML detector, ws_bridge, and plant-sim
     if _mqtt_client is not None:
         reset_payload = json.dumps({"action": "reset", "ts": time.time()})
         _mqtt_client.publish("taktflow/command/reset", reset_payload, qos=1)
+        reset_plant_faults(_mqtt_client)
 
     # Power-cycle: restart ECU containers to clear latched faults
     restarted = _restart_ecu_containers()
@@ -662,22 +665,22 @@ SCENARIOS: dict[str, dict] = {
     "overcurrent": {
         "fn": overcurrent,
         "description": (
-            "Overcurrent: 95% torque + 100% brake (mechanical jam) "
-            "-> sustained overcurrent -> RZC DTC -> SC detection -> SAP notification."
+            "Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent to plant-sim.  "
+            "Plant sim reports overcurrent on CAN -> DTC 0xE301 -> SAFE_STOP."
         ),
     },
     "steer_fault": {
         "fn": steer_fault,
         "description": (
-            "Steering fault: rapid +/-40 deg oscillations exceed FZC "
-            "rate limit, triggering SteerFaultStatus."
+            "Steering fault: MQTT inject to plant-sim sets steering fault.  "
+            "DTC 0xE201 broadcast + physics cascade -> SAFE_STOP."
         ),
     },
     "brake_fault": {
         "fn": brake_fault,
         "description": (
-            "Brake fault: rapid 0%/100% alternations trigger FZC "
-            "conflicting-command detection."
+            "Brake fault: MQTT inject to plant-sim sets brake fault.  "
+            "DTC 0xE202 broadcast + physics cascade -> SAFE_STOP."
         ),
     },
     "battery_low": {
@@ -690,8 +693,8 @@ SCENARIOS: dict[str, dict] = {
     "motor_reversal": {
         "fn": motor_reversal,
         "description": (
-            "Motor reversal: direction flipped fwd->rev at 80% torque.  "
-            "SC detects plausibility violation -> safe-stop."
+            "Motor reversal: pedal 80% (SPI) + MQTT inject stall+overcurrent.  "
+            "Simulates mechanical blockage at speed -> SAFE_STOP."
         ),
     },
     "unintended_braking": {
@@ -711,15 +714,15 @@ SCENARIOS: dict[str, dict] = {
     "runaway_accel": {
         "fn": runaway_accel,
         "description": (
-            "Runaway acceleration: 100% torque forward.  "
-            "SC detects pedal plausibility violation -> limit torque."
+            "Runaway acceleration: pedal 100% (SPI override).  "
+            "CVC processes through full pipeline -> torque limiting -> DEGRADED."
         ),
     },
     "creep_from_stop": {
         "fn": creep_from_stop,
         "description": (
-            "Creep from stop: brakes released + 30% torque from stationary.  "
-            "Simulates unintended motion due to motor enable fault."
+            "Creep from stop: pedal 30% (SPI override) from stationary.  "
+            "CVC generates torque naturally -> vehicle moves."
         ),
     },
     "babbling_node": {

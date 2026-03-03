@@ -5,6 +5,7 @@ Runs at 100 Hz (10ms cycle). Uses python-can + cantools for CAN I/O.
 """
 
 import asyncio
+import json
 import logging
 import os
 import struct
@@ -13,6 +14,7 @@ import time
 
 import can
 import cantools
+import paho.mqtt.client as paho_mqtt
 
 from .motor_model import MotorModel
 from .steering_model import SteeringModel
@@ -96,6 +98,70 @@ class PlantSimulator:
 
         # Timing counters (10ms base tick)
         self._tick = 0
+
+        # MQTT client for fault injection commands
+        self._mqtt: paho_mqtt.Client | None = None
+
+    # ------------------------------------------------------------------
+    # MQTT fault injection interface
+    # ------------------------------------------------------------------
+
+    def _init_mqtt(self):
+        """Connect to MQTT broker and subscribe to plant injection commands."""
+        host = os.environ.get("MQTT_HOST", "localhost")
+        port = int(os.environ.get("MQTT_PORT", "1883"))
+        self._mqtt = paho_mqtt.Client(
+            paho_mqtt.CallbackAPIVersion.VERSION2,
+            client_id="taktflow-plant-sim",
+        )
+        self._mqtt.on_connect = self._on_mqtt_connect
+        self._mqtt.message_callback_add(
+            "taktflow/command/plant_inject", self._on_inject_cmd
+        )
+        self._mqtt.connect_async(host, port, keepalive=30)
+        self._mqtt.loop_start()
+        log.info("MQTT connecting to %s:%d", host, port)
+
+    def _on_mqtt_connect(self, client, userdata, flags, rc, properties=None):
+        """Subscribe to injection topic on (re)connect."""
+        client.subscribe("taktflow/command/plant_inject", qos=1)
+        log.info("MQTT connected — subscribed to taktflow/command/plant_inject")
+
+    def _on_inject_cmd(self, client, userdata, msg):
+        """Handle MQTT fault injection commands from fault_inject service."""
+        try:
+            cmd = json.loads(msg.payload)
+        except (json.JSONDecodeError, TypeError):
+            log.warning("Invalid inject command payload: %s", msg.payload)
+            return
+
+        cmd_type = cmd.get("type", "")
+        log.info("MQTT inject command: %s", cmd_type)
+
+        if cmd_type == "overcurrent":
+            self.motor.inject_overcurrent()
+            log.info("Injected overcurrent fault (current=%.0fmA)", self.motor.current_ma)
+        elif cmd_type == "stall":
+            self.motor.inject_stall()
+            log.info("Injected motor stall fault")
+        elif cmd_type == "voltage":
+            mv = int(cmd.get("mV", 8500))
+            soc = int(cmd.get("soc", 10))
+            self.battery.inject_voltage(mv, soc)
+            log.info("Injected battery voltage: %dmV, %d%% SOC", mv, soc)
+        elif cmd_type == "steer_fault":
+            self.steering.fault = True
+            log.info("Injected steering fault")
+        elif cmd_type == "brake_fault":
+            self.brake.fault = True
+            log.info("Injected brake fault")
+        elif cmd_type == "reset":
+            self.motor.reset_faults()
+            self.steering.clear_fault()
+            self.brake.clear_fault()
+            self.battery.clear_override()
+            self._active_dtcs.clear()
+            log.info("Plant faults cleared via MQTT reset")
 
     def _next_alive(self, msg_id: int) -> int:
         val = self._alive.get(msg_id, 0)
@@ -397,6 +463,7 @@ class PlantSimulator:
         """Main simulation loop at 100 Hz."""
         self.bus = can.interface.Bus(channel=self.channel,
                                      interface="socketcan")
+        self._init_mqtt()
         log.info("Plant simulator started on %s", self.channel)
         log.info("Loaded DBC with %d messages", len(self.db.messages))
 
@@ -545,6 +612,9 @@ class PlantSimulator:
         except KeyboardInterrupt:
             log.info("Plant simulator stopped")
         finally:
+            if self._mqtt:
+                self._mqtt.loop_stop()
+                self._mqtt.disconnect()
             if self.bus:
                 self.bus.shutdown()
 
