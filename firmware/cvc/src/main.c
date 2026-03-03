@@ -29,6 +29,7 @@
 #include "WdgM.h"
 #include "BswM.h"
 #include "Dcm.h"
+#include "CanTp.h"
 #include "Rte.h"
 #include "Spi.h"
 #include "Adc.h"
@@ -126,13 +127,21 @@ static const PduR_RoutingTableType cvc_pdur_routing[] = {
     { CVC_COM_RX_LIDAR,         PDUR_DEST_COM, CVC_COM_RX_LIDAR         },
     { CVC_COM_RX_MOTOR_CURRENT, PDUR_DEST_COM, CVC_COM_RX_MOTOR_CURRENT },
     { CVC_COM_RX_SC_RELAY,      PDUR_DEST_COM, CVC_COM_RX_SC_RELAY      },
-    { 0xFFu,                    PDUR_DEST_DCM, 0u                        },
-    { 0xFEu,                    PDUR_DEST_DCM, 1u                        },
+    { 0xFFu,                    PDUR_DEST_CANTP, 0u                      },
+    { 0xFEu,                    PDUR_DEST_CANTP, 0u                      },
 };
 
 static const PduR_ConfigType cvc_pdur_config = {
     .routingTable = cvc_pdur_routing,
     .routingCount = (uint8)(sizeof(cvc_pdur_routing) / sizeof(cvc_pdur_routing[0])),
+};
+
+/** CanTp configuration — single channel for UDS diagnostics */
+static const CanTp_ConfigType cantp_config = {
+    .rxPduId      = 0u,                    /* CanTp RX channel ID               */
+    .txPduId      = CVC_COM_TX_UDS_RSP,    /* TX frames → CanIf PDU (0x7E8)    */
+    .fcTxPduId    = CVC_COM_TX_UDS_RSP,    /* FC frames → same CAN ID          */
+    .upperRxPduId = 0u,                    /* Dcm RX PDU ID                     */
 };
 
 /** SPI driver configuration — AS5048A angle sensors (CPOL=0, CPHA=1, 16-bit) */
@@ -325,6 +334,7 @@ int main(void)
     Can_Init(&can_config);
     CanIf_Init(&canif_config);
     PduR_Init(&cvc_pdur_config);
+    CanTp_Init(&cantp_config);
     Com_Init(&cvc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);
@@ -387,10 +397,11 @@ int main(void)
             Rte_MainFunction();
         }
 
-        /* 10ms tasks: Dcm, BswM, Com->RTE bridge, CAN TX schedule */
+        /* 10ms tasks: CanTp, Dcm, BswM, Com->RTE bridge, CAN TX schedule */
         if ((tick_us - last_10ms_us) >= 10000u)
         {
             last_10ms_us = tick_us;
+            CanTp_MainFunction();
             Dcm_MainFunction();
             BswM_MainFunction();
             Swc_CvcCom_BridgeRxToRte();

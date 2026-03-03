@@ -10,6 +10,8 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Dem.h"
+#include "SchM.h"
+#include "Det.h"
 #include "ComStack_Types.h"
 #include "NvM.h"
 
@@ -82,8 +84,11 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
                            Dem_EventStatusType EventStatus)
 {
     if (EventId >= DEM_MAX_EVENTS) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_REPORT_ERROR_STATUS, DET_E_PARAM_VALUE);
         return;
     }
+
+    SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
 
     Dem_EventDataType* ev = &dem_events[EventId];
 
@@ -118,25 +123,45 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
             ev->debounceCounter = DEM_DEBOUNCE_PASS_THRESHOLD;
         }
     }
+
+    SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
 }
 
 Std_ReturnType Dem_GetEventStatus(Dem_EventIdType EventId, uint8* StatusPtr)
 {
-    if ((EventId >= DEM_MAX_EVENTS) || (StatusPtr == NULL_PTR)) {
+    if (EventId >= DEM_MAX_EVENTS) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_REPORT_ERROR_STATUS, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
+    if (StatusPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_REPORT_ERROR_STATUS, DET_E_PARAM_POINTER);
+        return E_NOT_OK;
+    }
+
+    SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
     *StatusPtr = dem_events[EventId].statusByte;
+    SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
+
     return E_OK;
 }
 
 Std_ReturnType Dem_GetOccurrenceCounter(Dem_EventIdType EventId, uint32* CountPtr)
 {
-    if ((EventId >= DEM_MAX_EVENTS) || (CountPtr == NULL_PTR)) {
+    if (EventId >= DEM_MAX_EVENTS) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_REPORT_ERROR_STATUS, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
+    if (CountPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_REPORT_ERROR_STATUS, DET_E_PARAM_POINTER);
+        return E_NOT_OK;
+    }
+
+    SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
     *CountPtr = dem_events[EventId].occurrenceCounter;
+    SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
+
     return E_OK;
 }
 
@@ -144,12 +169,14 @@ Std_ReturnType Dem_ClearAllDTCs(void)
 {
     uint8 i;
 
+    SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         dem_events[i].debounceCounter   = 0;
         dem_events[i].statusByte        = 0u;
         dem_events[i].occurrenceCounter = 0u;
         dem_broadcast_sent[i]           = 0u;
     }
+    SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
 
     return E_OK;
 }
@@ -165,9 +192,12 @@ void Dem_SetEcuId(uint8 EcuId)
 
 void Dem_SetDtcCode(Dem_EventIdType EventId, uint32 DtcCode)
 {
-    if (EventId < DEM_MAX_EVENTS) {
-        dem_dtc_codes[EventId] = DtcCode;
+    if (EventId >= DEM_MAX_EVENTS) {
+        Det_ReportError(DET_MODULE_DEM, 0u, DEM_API_SET_ECU_ID, DET_E_PARAM_VALUE);
+        return;
     }
+
+    dem_dtc_codes[EventId] = DtcCode;
 }
 
 /* ==================================================================
@@ -194,6 +224,8 @@ void Dem_MainFunction(void)
     pdu_info.SduLength  = 8u;
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
+        SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
+
         /* Only broadcast newly confirmed DTCs that haven't been sent yet */
         if (((dem_events[i].statusByte & DEM_STATUS_CONFIRMED_DTC) != 0u) &&
             (dem_broadcast_sent[i] == 0u))
@@ -201,6 +233,7 @@ void Dem_MainFunction(void)
             dtc_code = dem_dtc_codes[i];
 
             if (dtc_code == 0u) {
+                SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
                 continue;  /* Skip unmapped event IDs */
             }
 
@@ -214,15 +247,19 @@ void Dem_MainFunction(void)
             pdu_data[6] = 0x00u;
             pdu_data[7] = 0x00u;
 
-            /* Transmit via PduR -> CanIf -> CAN 0x500 */
-            (void)PduR_Transmit(0x500u, &pdu_info);
-
             /* Mark as broadcast — don't re-send until cleared */
             dem_broadcast_sent[i] = 1u;
 
-            /* Persist to NvM */
+            SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
+
+            /* Transmit via PduR -> CanIf -> CAN 0x500 (outside critical section) */
+            (void)PduR_Transmit(0x500u, &pdu_info);
+
+            /* Persist to NvM (outside critical section) */
             (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID,
                                   (const void*)dem_events);
+        } else {
+            SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
         }
     }
 }

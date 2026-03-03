@@ -15,6 +15,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Gpt.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -27,16 +28,19 @@ static boolean        gpt_ch_running[GPT_MAX_CHANNELS];
 void Gpt_Init(const Gpt_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_INIT, DET_E_PARAM_POINTER);
         gpt_status = GPT_UNINIT;
         return;
     }
 
     if (ConfigPtr->channels == NULL_PTR) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_INIT, DET_E_PARAM_POINTER);
         gpt_status = GPT_UNINIT;
         return;
     }
 
     if (ConfigPtr->numChannels > GPT_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_INIT, DET_E_PARAM_VALUE);
         gpt_status = GPT_UNINIT;
         return;
     }
@@ -78,14 +82,17 @@ Gpt_StatusType Gpt_GetStatus(void)
 Std_ReturnType Gpt_StartTimer(uint8 Channel, uint32 Value)
 {
     if (gpt_status != GPT_INITIALIZED) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_START_TIMER, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Channel >= gpt_num_channels) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_START_TIMER, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     if (Value == 0u) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_START_TIMER, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
@@ -101,10 +108,12 @@ Std_ReturnType Gpt_StartTimer(uint8 Channel, uint32 Value)
 Std_ReturnType Gpt_StopTimer(uint8 Channel)
 {
     if (gpt_status != GPT_INITIALIZED) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_STOP_TIMER, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Channel >= gpt_num_channels) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_STOP_TIMER, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
@@ -120,10 +129,12 @@ Std_ReturnType Gpt_StopTimer(uint8 Channel)
 uint32 Gpt_GetTimeElapsed(uint8 Channel)
 {
     if (gpt_status != GPT_INITIALIZED) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_GET_TIME_ELAPSED, DET_E_UNINIT);
         return 0u;
     }
 
     if (Channel >= gpt_num_channels) {
+        Det_ReportError(DET_MODULE_GPT, 0u, GPT_API_GET_TIME_ELAPSED, DET_E_PARAM_VALUE);
         return 0u;
     }
 

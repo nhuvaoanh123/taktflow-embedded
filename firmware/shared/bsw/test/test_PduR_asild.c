@@ -26,10 +26,10 @@ static const PduR_RoutingTableType test_routing[] = {
  * Mock: CanIf (lower layer, for TX path)
  * ================================================================== */
 
-static PduIdType  mock_canif_tx_pdu_id;
-static uint8      mock_canif_tx_data[8];
-static uint8      mock_canif_tx_dlc;
-static uint8      mock_canif_tx_count;
+static PduIdType      mock_canif_tx_pdu_id;
+static uint8          mock_canif_tx_data[8];
+static PduLengthType  mock_canif_tx_dlc;
+static uint8          mock_canif_tx_count;
 static Std_ReturnType mock_canif_tx_result;
 
 Std_ReturnType CanIf_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
@@ -49,10 +49,10 @@ Std_ReturnType CanIf_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
  * Mock: Com (upper layer, for RX path)
  * ================================================================== */
 
-static PduIdType  mock_com_rx_pdu_id;
-static uint8      mock_com_rx_data[8];
-static uint8      mock_com_rx_dlc;
-static uint8      mock_com_rx_count;
+static PduIdType      mock_com_rx_pdu_id;
+static uint8          mock_com_rx_data[8];
+static PduLengthType  mock_com_rx_dlc;
+static uint8          mock_com_rx_count;
 
 void Com_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
 {
@@ -81,6 +81,20 @@ void Dcm_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
 }
 
 /* ==================================================================
+ * Mock: CanTp (transport layer, for diagnostic TP RX path)
+ * ================================================================== */
+
+static PduIdType  mock_cantp_rx_pdu_id;
+static uint8      mock_cantp_rx_count;
+
+void CanTp_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
+{
+    (void)PduInfoPtr;
+    mock_cantp_rx_pdu_id = RxPduId;
+    mock_cantp_rx_count++;
+}
+
+/* ==================================================================
  * Test fixtures
  * ================================================================== */
 
@@ -94,6 +108,8 @@ void setUp(void)
     mock_com_rx_pdu_id = 0xFFu;
     mock_dcm_rx_count = 0u;
     mock_dcm_rx_pdu_id = 0xFFu;
+    mock_cantp_rx_count = 0u;
+    mock_cantp_rx_pdu_id = 0xFFu;
 
     pdur_cfg.routingTable = test_routing;
     pdur_cfg.routingCount = 4u;

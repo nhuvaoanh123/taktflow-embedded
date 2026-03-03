@@ -33,6 +33,15 @@ UNITY_DIR = test/unity
 # Unity source
 UNITY_SRC = $(UNITY_DIR)/unity.c
 
+# DET source — all BSW modules call Det_ReportError(), so Det.c must be
+# linked with every test.  The det_dep helper excludes it when the test
+# module IS Det (find_source already returns Det.c in that case).
+DET_SRC = $(SERVICES_DIR)/Det.c
+
+# SchM source — modules with SchM critical sections call SchM_Enter/Exit
+# which resolve to real functions in UNIT_TEST builds.
+SCHM_SRC = $(SERVICES_DIR)/SchM.c
+
 # Find all test files
 TEST_SRCS = $(wildcard $(TEST_DIR)/test_*.c)
 TEST_BINS = $(TEST_SRCS:$(TEST_DIR)/%.c=$(TEST_DIR)/build/%)
@@ -97,12 +106,13 @@ test-safety: $(TEST_SAFETY)
 $(TEST_DIR)/build:
 	mkdir -p $(TEST_DIR)/build
 
-# Pattern rule: compile test + matching source + unity
+# Pattern rule: compile test + matching source + unity + Det + SchM
 # Each test_<Module>_<asil>.c links with <Module>.c from the appropriate BSW layer.
 # strip_asil removes the ASIL suffix before calling find_source.
+# det_dep/schm_dep conditionally include Det.c/SchM.c (excluded when module IS that module).
 $(TEST_DIR)/build/test_%: $(TEST_DIR)/test_%.c $(UNITY_SRC) | $(TEST_DIR)/build
 	$(CC) $(CFLAGS) $(COV_CFLAGS) -I$(MCAL_DIR) -I$(ECUAL_DIR) -I$(SERVICES_DIR) -I$(RTE_DIR) -I$(TEST_DIR)/mocks \
-		$< $(call find_source,$(call strip_asil,$*)) $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
+		$< $(call find_source,$(call strip_asil,$*)) $(call det_dep,$*) $(call schm_dep,$*) $(UNITY_SRC) -o $@ $(COV_LDFLAGS)
 
 # Helper: strip ASIL suffix from module name (e.g., Can_asild -> Can)
 strip_asil = $(patsubst %_asild,%,$(patsubst %_asilc,%,$(patsubst %_asilb,%,$(patsubst %_asila,%,$(patsubst %_qm,%,$(1))))))
@@ -111,6 +121,12 @@ strip_asil = $(patsubst %_asild,%,$(patsubst %_asilc,%,$(patsubst %_asilb,%,$(pa
 define find_source
 $(or $(wildcard $(MCAL_DIR)/$(1).c),$(wildcard $(ECUAL_DIR)/$(1).c),$(wildcard $(SERVICES_DIR)/$(1).c),$(wildcard $(RTE_DIR)/$(1).c))
 endef
+
+# Helper: return DET_SRC unless the module IS Det (avoids double-linking)
+det_dep = $(if $(filter Det,$(call strip_asil,$(1))),,$(DET_SRC))
+
+# Helper: return SCHM_SRC unless the module IS SchM (avoids double-linking)
+schm_dep = $(if $(filter SchM,$(call strip_asil,$(1))),,$(SCHM_SRC))
 
 clean:
 	rm -rf $(TEST_DIR)/build

@@ -12,27 +12,57 @@
 #include "unity.h"
 #include "Dcm.h"
 
+#include <string.h>
+
 /* ==================================================================
- * Mock: PduR_DcmTransmit (lower layer transmit)
+ * Mock: PduR_DcmTransmit + CanTp_Transmit (lower layer transmit)
  * ================================================================== */
 
-static PduIdType      mock_tx_pdu_id;
-static uint8          mock_tx_data[8];
-static uint8          mock_tx_dlc;
-static uint8          mock_tx_count;
-static Std_ReturnType mock_tx_result;
+static PduIdType       mock_tx_pdu_id;
+static uint8           mock_tx_data[DCM_TX_BUF_SIZE];
+static PduLengthType   mock_tx_dlc;
+static uint8           mock_tx_count;
+static Std_ReturnType  mock_tx_result;
 
-Std_ReturnType PduR_DcmTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+static void mock_capture_tx(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
 {
     mock_tx_pdu_id = TxPduId;
     if (PduInfoPtr != NULL_PTR) {
         mock_tx_dlc = PduInfoPtr->SduLength;
-        for (uint8 i = 0u; (i < PduInfoPtr->SduLength) && (i < 8u); i++) {
-            mock_tx_data[i] = PduInfoPtr->SduDataPtr[i];
+        if ((PduInfoPtr->SduDataPtr != NULL_PTR) &&
+            (PduInfoPtr->SduLength <= DCM_TX_BUF_SIZE)) {
+            (void)memcpy(mock_tx_data, PduInfoPtr->SduDataPtr, PduInfoPtr->SduLength);
         }
     }
     mock_tx_count++;
+}
+
+Std_ReturnType PduR_DcmTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    mock_capture_tx(TxPduId, PduInfoPtr);
     return mock_tx_result;
+}
+
+Std_ReturnType CanTp_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    mock_capture_tx(TxPduId, PduInfoPtr);
+    return mock_tx_result;
+}
+
+/* ==================================================================
+ * Mock: BswM_RequestMode (for ECUReset)
+ * ================================================================== */
+
+static boolean mock_bswm_called;
+static uint8   mock_bswm_mode;
+
+Std_ReturnType BswM_RequestMode(BswM_RequesterIdType RequesterId,
+                                 BswM_ModeType RequestedMode)
+{
+    (void)RequesterId;
+    mock_bswm_called = TRUE;
+    mock_bswm_mode = (uint8)RequestedMode;
+    return E_OK;
 }
 
 /* ==================================================================
@@ -82,11 +112,10 @@ void setUp(void)
     mock_tx_count  = 0u;
     mock_tx_result = E_OK;
     mock_tx_dlc    = 0u;
+    (void)memset(mock_tx_data, 0, sizeof(mock_tx_data));
 
-    uint8 i;
-    for (i = 0u; i < 8u; i++) {
-        mock_tx_data[i] = 0u;
-    }
+    mock_bswm_called = FALSE;
+    mock_bswm_mode   = 0xFFu;
 
     test_config.DidTable     = test_did_table;
     test_config.DidCount     = 2u;
@@ -502,6 +531,238 @@ void test_Dcm_consecutive_requests(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-017: ECUReset (SID 0x11)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-017 — ECU hard reset */
+void test_Dcm_EcuReset_hard(void)
+{
+    uint8 req[] = {0x11u, 0x01u};  /* SID 0x11, sub=hardReset */
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Positive response: 0x51, 0x01 */
+    TEST_ASSERT_EQUAL_HEX8(0x51u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_tx_data[1]);
+
+    /* BswM_RequestMode should have been called */
+    TEST_ASSERT_TRUE(mock_bswm_called);
+}
+
+/** @verifies SWR-BSW-017 — ECU soft reset */
+void test_Dcm_EcuReset_soft(void)
+{
+    uint8 req[] = {0x11u, 0x03u};  /* SID 0x11, sub=softReset */
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    TEST_ASSERT_EQUAL_HEX8(0x51u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x03u, mock_tx_data[1]);
+    TEST_ASSERT_TRUE(mock_bswm_called);
+}
+
+/** @verifies SWR-BSW-017 — ECUReset invalid sub-function */
+void test_Dcm_EcuReset_invalid_sub(void)
+{
+    uint8 req[] = {0x11u, 0xFFu};
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* NRC 0x12: subFunctionNotSupported */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x11u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x12u, mock_tx_data[2]);
+    TEST_ASSERT_FALSE(mock_bswm_called);
+}
+
+/* ==================================================================
+ * SWR-BSW-017: SecurityAccess (SID 0x27)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-017 — SecurityAccess requires extended session */
+void test_Dcm_SecurityAccess_default_session_rejected(void)
+{
+    uint8 req[] = {0x27u, 0x01u};  /* Request seed */
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* NRC: serviceNotSupported (not in extended session) */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x27u, mock_tx_data[1]);
+}
+
+/** @verifies SWR-BSW-017 — SecurityAccess seed request */
+void test_Dcm_SecurityAccess_request_seed(void)
+{
+    /* First enter extended session */
+    uint8 sess[] = {0x10u, 0x03u};
+    PduInfoType sess_pdu = { sess, 2u };
+    Dcm_RxIndication(0u, &sess_pdu);
+    Dcm_MainFunction();
+    mock_tx_count = 0u;
+
+    /* Request seed */
+    uint8 req[] = {0x27u, 0x01u};
+    PduInfoType pdu = { req, 2u };
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Positive response: 0x67, 0x01, seed[4] */
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_tx_count);
+    TEST_ASSERT_EQUAL_HEX8(0x67u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL(6u, mock_tx_dlc);  /* 2 + 4 seed bytes */
+}
+
+/** @verifies SWR-BSW-017 — SecurityAccess full unlock flow */
+void test_Dcm_SecurityAccess_unlock(void)
+{
+    /* Enter extended session */
+    uint8 sess[] = {0x10u, 0x03u};
+    PduInfoType sess_pdu = { sess, 2u };
+    Dcm_RxIndication(0u, &sess_pdu);
+    Dcm_MainFunction();
+    mock_tx_count = 0u;
+
+    /* Request seed */
+    uint8 seed_req[] = {0x27u, 0x01u};
+    PduInfoType seed_pdu = { seed_req, 2u };
+    Dcm_RxIndication(0u, &seed_pdu);
+    Dcm_MainFunction();
+
+    /* Extract seed from response */
+    uint8 seed[4];
+    seed[0] = mock_tx_data[2];
+    seed[1] = mock_tx_data[3];
+    seed[2] = mock_tx_data[4];
+    seed[3] = mock_tx_data[5];
+
+    /* Compute key: seed XOR secret (0x5A, 0xA5, 0x3C, 0xC3) */
+    uint8 key_req[6];
+    key_req[0] = 0x27u;
+    key_req[1] = 0x02u;
+    key_req[2] = seed[0] ^ 0x5Au;
+    key_req[3] = seed[1] ^ 0xA5u;
+    key_req[4] = seed[2] ^ 0x3Cu;
+    key_req[5] = seed[3] ^ 0xC3u;
+
+    PduInfoType key_pdu = { key_req, 6u };
+    mock_tx_count = 0u;
+    Dcm_RxIndication(0u, &key_pdu);
+    Dcm_MainFunction();
+
+    /* Positive response: 0x67, 0x02 */
+    TEST_ASSERT_EQUAL_HEX8(0x67u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x02u, mock_tx_data[1]);
+    TEST_ASSERT_TRUE(Dcm_IsSecurityUnlocked());
+}
+
+/** @verifies SWR-BSW-017 — SecurityAccess invalid key */
+void test_Dcm_SecurityAccess_invalid_key(void)
+{
+    /* Enter extended session */
+    uint8 sess[] = {0x10u, 0x03u};
+    PduInfoType sess_pdu = { sess, 2u };
+    Dcm_RxIndication(0u, &sess_pdu);
+    Dcm_MainFunction();
+
+    /* Request seed */
+    uint8 seed_req[] = {0x27u, 0x01u};
+    PduInfoType seed_pdu = { seed_req, 2u };
+    Dcm_RxIndication(0u, &seed_pdu);
+    Dcm_MainFunction();
+
+    /* Send wrong key */
+    uint8 key_req[] = {0x27u, 0x02u, 0x00u, 0x00u, 0x00u, 0x00u};
+    PduInfoType key_pdu = { key_req, 6u };
+    mock_tx_count = 0u;
+    Dcm_RxIndication(0u, &key_pdu);
+    Dcm_MainFunction();
+
+    /* NRC 0x35: invalidKey */
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x27u, mock_tx_data[1]);
+    TEST_ASSERT_EQUAL_HEX8(0x35u, mock_tx_data[2]);
+    TEST_ASSERT_FALSE(Dcm_IsSecurityUnlocked());
+}
+
+/** @verifies SWR-BSW-017 — SecurityAccess already unlocked returns zero seed */
+void test_Dcm_SecurityAccess_already_unlocked(void)
+{
+    /* Unlock first */
+    test_Dcm_SecurityAccess_unlock();
+    mock_tx_count = 0u;
+
+    /* Request seed again — should get zero seed */
+    uint8 req[] = {0x27u, 0x01u};
+    PduInfoType pdu = { req, 2u };
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    TEST_ASSERT_EQUAL_HEX8(0x67u, mock_tx_data[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01u, mock_tx_data[1]);
+    /* Seed should be all zeros */
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[2]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[4]);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, mock_tx_data[5]);
+}
+
+/** @verifies SWR-BSW-017 — SecurityAccess lock on session change */
+void test_Dcm_SecurityAccess_lock_on_default_session(void)
+{
+    /* Unlock first */
+    test_Dcm_SecurityAccess_unlock();
+    TEST_ASSERT_TRUE(Dcm_IsSecurityUnlocked());
+
+    /* Switch to default session */
+    uint8 req[] = {0x10u, 0x01u};
+    PduInfoType pdu = { req, 2u };
+    Dcm_RxIndication(0u, &pdu);
+    Dcm_MainFunction();
+
+    /* Security should be locked */
+    TEST_ASSERT_FALSE(Dcm_IsSecurityUnlocked());
+}
+
+/* ==================================================================
+ * SWR-BSW-017: TpRxIndication (CanTp integration)
+ * ================================================================== */
+
+/** @verifies SWR-BSW-017 — TpRxIndication delegates to RxIndication */
+void test_Dcm_TpRxIndication_success(void)
+{
+    uint8 req[] = {0x3Eu, 0x00u};
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_TpRxIndication(0u, &pdu, NTFRSLT_OK);
+    Dcm_MainFunction();
+
+    TEST_ASSERT_EQUAL_HEX8(0x7Eu, mock_tx_data[0]);
+}
+
+/** @verifies SWR-BSW-017 — TpRxIndication error discards request */
+void test_Dcm_TpRxIndication_error_discards(void)
+{
+    uint8 req[] = {0x3Eu, 0x00u};
+    PduInfoType pdu = { req, 2u };
+
+    Dcm_TpRxIndication(0u, &pdu, NTFRSLT_E_TIMEOUT);
+    Dcm_MainFunction();
+
+    /* Error result — should not process */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_tx_count);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -541,6 +802,23 @@ int main(void)
     RUN_TEST(test_Dcm_TesterPresent_resets_S3);
     RUN_TEST(test_Dcm_ReadDID_SwVersion_full_data);
     RUN_TEST(test_Dcm_consecutive_requests);
+
+    /* ECUReset */
+    RUN_TEST(test_Dcm_EcuReset_hard);
+    RUN_TEST(test_Dcm_EcuReset_soft);
+    RUN_TEST(test_Dcm_EcuReset_invalid_sub);
+
+    /* SecurityAccess */
+    RUN_TEST(test_Dcm_SecurityAccess_default_session_rejected);
+    RUN_TEST(test_Dcm_SecurityAccess_request_seed);
+    RUN_TEST(test_Dcm_SecurityAccess_unlock);
+    RUN_TEST(test_Dcm_SecurityAccess_invalid_key);
+    RUN_TEST(test_Dcm_SecurityAccess_already_unlocked);
+    RUN_TEST(test_Dcm_SecurityAccess_lock_on_default_session);
+
+    /* TpRxIndication (CanTp integration) */
+    RUN_TEST(test_Dcm_TpRxIndication_success);
+    RUN_TEST(test_Dcm_TpRxIndication_error_discards);
 
     return UNITY_END();
 }

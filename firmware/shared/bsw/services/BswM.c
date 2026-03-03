@@ -17,6 +17,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "BswM.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -69,6 +70,7 @@ static boolean bswm_is_transition_valid(BswM_ModeType current, BswM_ModeType req
 void BswM_Init(const BswM_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_BSWM, 0u, BSWM_API_INIT, DET_E_PARAM_POINTER);
         bswm_initialized = FALSE;
         bswm_config = NULL_PTR;
         /* Keep mode at STARTUP as safe default */
@@ -104,16 +106,19 @@ Std_ReturnType BswM_RequestMode(BswM_RequesterIdType RequesterId,
     (void)RequesterId;  /* Reserved for future logging/arbitration */
 
     if ((bswm_initialized == FALSE) || (bswm_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_BSWM, 0u, BSWM_API_REQUEST_MODE, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     /* Validate requested mode is within enum range */
     if ((uint8)RequestedMode > (uint8)BSWM_SHUTDOWN) {
+        Det_ReportError(DET_MODULE_BSWM, 0u, BSWM_API_REQUEST_MODE, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     /* Check transition validity */
     if (bswm_is_transition_valid(bswm_current_mode, RequestedMode) == FALSE) {
+        Det_ReportError(DET_MODULE_BSWM, 0u, BSWM_API_REQUEST_MODE, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 

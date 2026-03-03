@@ -14,6 +14,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Spi.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -32,11 +33,13 @@ static uint16 spi_rx_buf[SPI_MAX_CHANNELS][SPI_IB_SIZE];
 void Spi_Init(const Spi_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_INIT, DET_E_PARAM_POINTER);
         spi_status = SPI_UNINIT;
         return;
     }
 
     if (ConfigPtr->numChannels > SPI_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_INIT, DET_E_PARAM_VALUE);
         spi_status = SPI_UNINIT;
         return;
     }
@@ -74,14 +77,17 @@ Spi_StatusType Spi_GetStatus(void)
 Std_ReturnType Spi_WriteIB(uint8 Channel, const uint16* DataBufferPtr)
 {
     if (spi_status == SPI_UNINIT) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_WRITE_IB, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Channel >= SPI_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_WRITE_IB, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     if (DataBufferPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_WRITE_IB, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -95,14 +101,17 @@ Std_ReturnType Spi_WriteIB(uint8 Channel, const uint16* DataBufferPtr)
 Std_ReturnType Spi_ReadIB(uint8 Channel, uint16* DataBufferPointer)
 {
     if (spi_status == SPI_UNINIT) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_READ_IB, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Channel >= SPI_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_READ_IB, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     if (DataBufferPointer == NULL_PTR) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_READ_IB, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -119,10 +128,12 @@ Std_ReturnType Spi_SyncTransmit(uint8 Sequence)
     uint8 channel = Sequence;  /* Sequence maps 1:1 to channel */
 
     if (spi_status == SPI_UNINIT) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_ASYNC_TRANSMIT, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (channel >= SPI_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_SPI, 0u, SPI_API_ASYNC_TRANSMIT, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 

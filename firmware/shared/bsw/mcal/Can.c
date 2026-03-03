@@ -13,6 +13,8 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Can.h"
+#include "SchM.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -25,6 +27,7 @@ static boolean       can_bus_off_active = FALSE;
 void Can_Init(const Can_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_INIT, DET_E_PARAM_POINTER);
         can_state = CAN_CS_UNINIT;
         return;
     }
@@ -43,8 +46,11 @@ void Can_Init(const Can_ConfigType* ConfigPtr)
 void Can_DeInit(void)
 {
     Can_Hw_Stop();
+
+    SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
     can_state = CAN_CS_UNINIT;
     can_bus_off_active = FALSE;
+    SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
 }
 
 Std_ReturnType Can_SetControllerMode(uint8 Controller, Can_StateType Mode)
@@ -52,14 +58,18 @@ Std_ReturnType Can_SetControllerMode(uint8 Controller, Can_StateType Mode)
     (void)Controller;
 
     if (can_state == CAN_CS_UNINIT) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_SET_CONTROLLER_MODE, DET_E_UNINIT);
         return E_NOT_OK;
     }
+
+    SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
 
     switch (Mode) {
     case CAN_CS_STARTED:
         if (can_state == CAN_CS_STOPPED) {
             Can_Hw_Start();
             can_state = CAN_CS_STARTED;
+            SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
             return E_OK;
         }
         break;
@@ -68,6 +78,7 @@ Std_ReturnType Can_SetControllerMode(uint8 Controller, Can_StateType Mode)
         if (can_state == CAN_CS_STARTED) {
             Can_Hw_Stop();
             can_state = CAN_CS_STOPPED;
+            SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
             return E_OK;
         }
         break;
@@ -76,6 +87,7 @@ Std_ReturnType Can_SetControllerMode(uint8 Controller, Can_StateType Mode)
         break;
     }
 
+    SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
     return E_NOT_OK;
 }
 
@@ -91,24 +103,30 @@ Can_ReturnType Can_Write(uint8 Hth, const Can_PduType* PduInfo)
 
     /* Must be in STARTED mode */
     if (can_state != CAN_CS_STARTED) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_WRITE, DET_E_UNINIT);
         return CAN_NOT_OK;
     }
 
     /* Validate parameters */
     if (PduInfo == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_WRITE, DET_E_PARAM_POINTER);
         return CAN_NOT_OK;
     }
 
     if (PduInfo->length > CAN_MAX_DLC) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_WRITE, DET_E_PARAM_VALUE);
         return CAN_NOT_OK;
     }
 
     if ((PduInfo->sdu == NULL_PTR) && (PduInfo->length > 0u)) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_WRITE, DET_E_PARAM_POINTER);
         return CAN_NOT_OK;
     }
 
-    /* Attempt hardware transmit */
+    /* Attempt hardware transmit (protected — mailbox buffer is shared with ISR) */
+    SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
     Std_ReturnType hw_ret = Can_Hw_Transmit(PduInfo->id, PduInfo->sdu, PduInfo->length);
+    SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
 
     if (hw_ret != E_OK) {
         return CAN_BUSY;
@@ -129,8 +147,14 @@ void Can_MainFunction_Read(void)
     }
 
     /* Process all pending messages, up to CAN_MAX_RX_PER_CALL */
-    while ((msg_count < CAN_MAX_RX_PER_CALL) &&
-           (Can_Hw_Receive(&rx_id, rx_data, &rx_dlc) == TRUE)) {
+    while (msg_count < CAN_MAX_RX_PER_CALL) {
+        SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
+        boolean received = Can_Hw_Receive(&rx_id, rx_data, &rx_dlc);
+        SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
+
+        if (received != TRUE) {
+            break;
+        }
         CanIf_RxIndication(rx_id, rx_data, rx_dlc);
         msg_count++;
     }
@@ -143,15 +167,21 @@ void Can_MainFunction_BusOff(void)
     }
 
     if (Can_Hw_IsBusOff() == TRUE) {
+        SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
         if (can_bus_off_active == FALSE) {
             can_bus_off_active = TRUE;
+            SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
             CanIf_ControllerBusOff(can_controller_id);
+        } else {
+            SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
         }
     } else {
+        SchM_Enter_Can_CAN_EXCLUSIVE_AREA_0();
         if (can_bus_off_active == TRUE) {
             can_bus_off_active = FALSE;
             /* Recovery complete — controller remains in STARTED */
         }
+        SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
     }
 }
 
@@ -160,6 +190,7 @@ Std_ReturnType Can_GetErrorCounters(uint8 Controller, uint8* tec, uint8* rec)
     (void)Controller;
 
     if ((tec == NULL_PTR) || (rec == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_GET_ERROR_COUNTERS, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -172,6 +203,7 @@ Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId, uint8* ErrorState
     (void)ControllerId;
 
     if (ErrorStatePtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CAN, 0u, CAN_API_GET_ERROR_STATE, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 

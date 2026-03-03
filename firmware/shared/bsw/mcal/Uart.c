@@ -15,6 +15,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Uart.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -28,6 +29,7 @@ static uint8           uart_prev_rx_count = 0u;
 void Uart_Init(const Uart_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_UART, 0u, UART_API_INIT, DET_E_PARAM_POINTER);
         uart_status = UART_UNINIT;
         return;
     }
@@ -59,14 +61,17 @@ Uart_StatusType Uart_GetStatus(void)
 Std_ReturnType Uart_ReadRxData(uint8* Buffer, uint8 Length, uint8* BytesRead)
 {
     if (uart_status == UART_UNINIT) {
+        Det_ReportError(DET_MODULE_UART, 0u, UART_API_RECEIVE, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Buffer == NULL_PTR) {
+        Det_ReportError(DET_MODULE_UART, 0u, UART_API_RECEIVE, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     if (BytesRead == NULL_PTR) {
+        Det_ReportError(DET_MODULE_UART, 0u, UART_API_RECEIVE, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 

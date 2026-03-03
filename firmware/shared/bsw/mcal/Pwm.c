@@ -15,6 +15,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Pwm.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -26,16 +27,19 @@ static uint8          pwm_num_channels = 0u;
 void Pwm_Init(const Pwm_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_INIT, DET_E_PARAM_POINTER);
         pwm_status = PWM_UNINIT;
         return;
     }
 
     if (ConfigPtr->channels == NULL_PTR) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_INIT, DET_E_PARAM_POINTER);
         pwm_status = PWM_UNINIT;
         return;
     }
 
     if (ConfigPtr->numChannels > PWM_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_INIT, DET_E_PARAM_VALUE);
         pwm_status = PWM_UNINIT;
         return;
     }
@@ -74,10 +78,12 @@ Pwm_StatusType Pwm_GetStatus(void)
 void Pwm_SetDutyCycle(uint8 ChannelNumber, uint16 DutyCycle)
 {
     if (pwm_status != PWM_INITIALIZED) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_SET_DUTY_CYCLE, DET_E_UNINIT);
         return;
     }
 
     if (ChannelNumber >= pwm_num_channels) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_SET_DUTY_CYCLE, DET_E_PARAM_VALUE);
         return;
     }
 
@@ -93,10 +99,12 @@ void Pwm_SetDutyCycle(uint8 ChannelNumber, uint16 DutyCycle)
 void Pwm_SetOutputToIdle(uint8 ChannelNumber)
 {
     if (pwm_status != PWM_INITIALIZED) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_SET_DUTY_CYCLE, DET_E_UNINIT);
         return;
     }
 
     if (ChannelNumber >= pwm_num_channels) {
+        Det_ReportError(DET_MODULE_PWM, 0u, PWM_API_SET_DUTY_CYCLE, DET_E_PARAM_VALUE);
         return;
     }
 

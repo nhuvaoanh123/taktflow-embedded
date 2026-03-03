@@ -15,6 +15,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Dio.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -35,10 +36,12 @@ void Dio_DeInit(void)
 uint8 Dio_ReadChannel(uint8 ChannelId)
 {
     if (dio_initialized == FALSE) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_READ_CHANNEL, DET_E_UNINIT);
         return STD_LOW;
     }
 
     if (ChannelId >= DIO_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_READ_CHANNEL, DET_E_PARAM_VALUE);
         return STD_LOW;
     }
 
@@ -48,10 +51,12 @@ uint8 Dio_ReadChannel(uint8 ChannelId)
 void Dio_WriteChannel(uint8 ChannelId, uint8 Level)
 {
     if (dio_initialized == FALSE) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_WRITE_CHANNEL, DET_E_UNINIT);
         return;
     }
 
     if (ChannelId >= DIO_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_WRITE_CHANNEL, DET_E_PARAM_VALUE);
         return;
     }
 
@@ -64,10 +69,12 @@ void Dio_WriteChannel(uint8 ChannelId, uint8 Level)
 uint8 Dio_FlipChannel(uint8 ChannelId)
 {
     if (dio_initialized == FALSE) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_READ_CHANNEL, DET_E_UNINIT);
         return STD_LOW;
     }
 
     if (ChannelId >= DIO_MAX_CHANNELS) {
+        Det_ReportError(DET_MODULE_DIO, 0u, DIO_API_READ_CHANNEL, DET_E_PARAM_VALUE);
         return STD_LOW;
     }
 

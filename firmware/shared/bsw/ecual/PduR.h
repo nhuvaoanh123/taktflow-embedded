@@ -19,8 +19,9 @@
 
 /** Destination module for routing */
 typedef enum {
-    PDUR_DEST_COM = 0u,
-    PDUR_DEST_DCM = 1u
+    PDUR_DEST_COM   = 0u,
+    PDUR_DEST_DCM   = 1u,
+    PDUR_DEST_CANTP = 2u    /**< Route through ISO-TP transport layer */
 } PduR_DestType;
 
 /** Single routing table entry */
@@ -36,9 +37,10 @@ typedef struct {
     uint8                         routingCount;
 } PduR_ConfigType;
 
-/* ---- Upper-layer callbacks (provided by Com and Dcm) ---- */
+/* ---- Upper-layer callbacks (provided by Com, Dcm, CanTp) ---- */
 extern void Com_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
 extern void Dcm_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
+extern void CanTp_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
 
 /* ---- Lower-layer interface (provided by CanIf) ---- */
 extern Std_ReturnType CanIf_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
@@ -73,5 +75,13 @@ Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
  * @return E_OK on success, E_NOT_OK on error
  */
 Std_ReturnType PduR_DcmTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
+
+/**
+ * @brief CanTp lower-layer transmit — routes single CAN frames through CanIf
+ * @param TxPduId     TX PDU ID
+ * @param PduInfoPtr  CAN frame data (max 8 bytes)
+ * @return E_OK on success, E_NOT_OK on error
+ */
+Std_ReturnType PduR_CanTpTransmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);
 
 #endif /* PDUR_H */

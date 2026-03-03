@@ -14,6 +14,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Adc.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -28,16 +29,19 @@ static const Adc_GroupConfigType* adc_groups = NULL_PTR;
 void Adc_Init(const Adc_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_INIT, DET_E_PARAM_POINTER);
         adc_status = ADC_UNINIT;
         return;
     }
 
     if (ConfigPtr->groups == NULL_PTR) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_INIT, DET_E_PARAM_POINTER);
         adc_status = ADC_UNINIT;
         return;
     }
 
     if (ConfigPtr->numGroups > ADC_MAX_GROUPS) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_INIT, DET_E_PARAM_VALUE);
         adc_status = ADC_UNINIT;
         return;
     }
@@ -67,10 +71,12 @@ Adc_StatusType Adc_GetStatus(void)
 Std_ReturnType Adc_StartGroupConversion(uint8 Group)
 {
     if (adc_status == ADC_UNINIT) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_START_GROUP_CONVERSION, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Group >= adc_num_groups) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_START_GROUP_CONVERSION, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
@@ -88,14 +94,17 @@ Std_ReturnType Adc_StartGroupConversion(uint8 Group)
 Std_ReturnType Adc_ReadGroup(uint8 Group, uint16* DataBufferPtr)
 {
     if (adc_status == ADC_UNINIT) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_READ_GROUP, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Group >= adc_num_groups) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_READ_GROUP, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     if (DataBufferPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_ADC, 0u, ADC_API_READ_GROUP, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 

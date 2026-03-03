@@ -17,6 +17,7 @@
  */
 
 #include "NvM.h"
+#include "Det.h"
 
 /* ---- POSIX file-backed implementation (SIL / MIL / PIL host) ---- */
 #if defined(__unix__) || defined(__linux__) || defined(__APPLE__) || \
@@ -73,6 +74,7 @@ Std_ReturnType NvM_ReadBlock(NvM_BlockIdType BlockId, void* NvM_DstPtr)
     ssize_t n;
 
     if (NvM_DstPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_NVM, 0u, NVM_API_READ_BLOCK, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -98,6 +100,7 @@ Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr)
     ssize_t n;
 
     if (NvM_SrcPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_NVM, 0u, NVM_API_WRITE_BLOCK, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 

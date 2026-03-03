@@ -10,6 +10,8 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Com.h"
+#include "SchM.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -44,6 +46,7 @@ void Com_Init(const Com_ConfigType* ConfigPtr)
     uint8 j;
 
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_INIT, DET_E_PARAM_POINTER);
         com_initialized = FALSE;
         com_config = NULL_PTR;
         return;
@@ -67,14 +70,23 @@ void Com_Init(const Com_ConfigType* ConfigPtr)
 Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
 {
     if ((com_initialized == FALSE) || (com_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_SEND_SIGNAL, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
-    if ((SignalId >= com_config->signalCount) || (SignalDataPtr == NULL_PTR)) {
+    if (SignalId >= com_config->signalCount) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_SEND_SIGNAL, DET_E_PARAM_VALUE);
+        return E_NOT_OK;
+    }
+
+    if (SignalDataPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_SEND_SIGNAL, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     const Com_SignalConfigType* sig = &com_config->signalConfig[SignalId];
+
+    SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
 
     /* Copy signal value to shadow buffer */
     switch (sig->Type) {
@@ -89,6 +101,7 @@ Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataP
         *((sint16*)sig->ShadowBuffer) = *((const sint16*)SignalDataPtr);
         break;
     default:
+        SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
         return E_NOT_OK;
     }
 
@@ -110,20 +123,30 @@ Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataP
         com_tx_pending[sig->PduId] = TRUE;
     }
 
+    SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
     return E_OK;
 }
 
 Std_ReturnType Com_ReceiveSignal(Com_SignalIdType SignalId, void* SignalDataPtr)
 {
     if ((com_initialized == FALSE) || (com_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RECEIVE_SIGNAL, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
-    if ((SignalId >= com_config->signalCount) || (SignalDataPtr == NULL_PTR)) {
+    if (SignalId >= com_config->signalCount) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RECEIVE_SIGNAL, DET_E_PARAM_VALUE);
+        return E_NOT_OK;
+    }
+
+    if (SignalDataPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RECEIVE_SIGNAL, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     const Com_SignalConfigType* sig = &com_config->signalConfig[SignalId];
+
+    SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
 
     /* Copy from shadow buffer to caller */
     switch (sig->Type) {
@@ -138,9 +161,11 @@ Std_ReturnType Com_ReceiveSignal(Com_SignalIdType SignalId, void* SignalDataPtr)
         *((sint16*)SignalDataPtr) = *((const sint16*)sig->ShadowBuffer);
         break;
     default:
+        SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
         return E_NOT_OK;
     }
 
+    SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
     return E_OK;
 }
 
@@ -149,20 +174,26 @@ void Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr)
     uint8 i;
 
     if ((com_initialized == FALSE) || (com_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RX_INDICATION, DET_E_UNINIT);
         return;
     }
 
     if ((PduInfoPtr == NULL_PTR) || (PduInfoPtr->SduDataPtr == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RX_INDICATION, DET_E_PARAM_POINTER);
         return;
     }
 
     if (PduInfoPtr->SduLength == 0u) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RX_INDICATION, DET_E_PARAM_VALUE);
         return;
     }
 
     if (ComRxPduId >= COM_MAX_PDUS) {
+        Det_ReportError(DET_MODULE_COM, 0u, COM_API_RX_INDICATION, DET_E_PARAM_VALUE);
         return;
     }
+
+    SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
 
     /* Reset RX deadline counter — fresh data arrived */
     com_rx_timeout_cnt[ComRxPduId] = 0u;
@@ -190,6 +221,8 @@ void Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr)
             }
         }
     }
+
+    SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
 }
 
 void Com_MainFunction_Tx(void)
@@ -204,14 +237,20 @@ void Com_MainFunction_Tx(void)
     for (i = 0u; i < com_config->txPduCount; i++) {
         PduIdType pdu_id = com_config->txPduConfig[i].PduId;
 
+        SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
         if ((pdu_id < COM_MAX_PDUS) && (com_tx_pending[pdu_id] == TRUE)) {
             PduInfoType pdu_info;
             pdu_info.SduDataPtr = com_tx_pdu_buf[pdu_id];
             pdu_info.SduLength  = com_config->txPduConfig[i].Dlc;
+            SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
 
             if (PduR_Transmit(pdu_id, &pdu_info) == E_OK) {
+                SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
                 com_tx_pending[pdu_id] = FALSE;
+                SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
             }
+        } else {
+            SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
         }
     }
 }
@@ -236,6 +275,8 @@ void Com_MainFunction_Rx(void)
         if ((pdu_id >= COM_MAX_PDUS) || (timeout == 0u)) {
             continue;
         }
+
+        SchM_Enter_Com_COM_EXCLUSIVE_AREA_0();
 
         if (com_rx_timeout_cnt[pdu_id] < 0xFFFFu) {
             com_rx_timeout_cnt[pdu_id]++;
@@ -269,5 +310,7 @@ void Com_MainFunction_Rx(void)
                 com_rx_pdu_buf[pdu_id][j] = 0u;
             }
         }
+
+        SchM_Exit_Com_COM_EXCLUSIVE_AREA_0();
     }
 }

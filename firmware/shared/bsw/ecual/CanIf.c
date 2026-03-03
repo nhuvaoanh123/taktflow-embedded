@@ -10,6 +10,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "CanIf.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -21,6 +22,7 @@ static boolean canif_initialized = FALSE;
 void CanIf_Init(const CanIf_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_INIT, DET_E_PARAM_POINTER);
         canif_initialized = FALSE;
         canif_config = NULL_PTR;
         return;
@@ -35,14 +37,17 @@ Std_ReturnType CanIf_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
     Can_PduType can_pdu;
 
     if ((canif_initialized == FALSE) || (canif_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_TRANSMIT, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (PduInfoPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_TRANSMIT, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     if (TxPduId >= canif_config->txPduCount) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_TRANSMIT, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
@@ -64,10 +69,12 @@ void CanIf_RxIndication(Can_IdType CanId, const uint8* SduPtr, uint8 Dlc)
     uint8 i;
 
     if ((canif_initialized == FALSE) || (canif_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_RX_INDICATION, DET_E_UNINIT);
         return;
     }
 
     if (SduPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_CANIF, 0u, CANIF_API_RX_INDICATION, DET_E_PARAM_POINTER);
         return;
     }
 

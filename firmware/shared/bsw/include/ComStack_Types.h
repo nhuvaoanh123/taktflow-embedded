@@ -15,8 +15,8 @@
 /* PDU identifier type */
 typedef uint16 PduIdType;
 
-/* PDU length type */
-typedef uint8 PduLengthType;
+/* PDU length type (uint16 to support ISO-TP payloads >255 bytes) */
+typedef uint16 PduLengthType;
 
 /* PDU info structure -- passed through the COM stack */
 typedef struct {

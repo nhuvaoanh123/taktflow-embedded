@@ -10,6 +10,8 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Rte.h"
+#include "SchM.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -112,14 +114,22 @@ void Rte_Init(const Rte_ConfigType* ConfigPtr)
     uint8 i;
 
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_INIT, DET_E_PARAM_POINTER);
         rte_initialized = FALSE;
         rte_config = NULL_PTR;
         return;
     }
 
     /* Bounds check: reject configs that exceed static array limits */
-    if ((ConfigPtr->signalCount > RTE_MAX_SIGNALS) ||
-        (ConfigPtr->runnableCount > RTE_MAX_RUNNABLES)) {
+    if (ConfigPtr->signalCount > RTE_MAX_SIGNALS) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_INIT, DET_E_PARAM_VALUE);
+        rte_initialized = FALSE;
+        rte_config = NULL_PTR;
+        return;
+    }
+
+    if (ConfigPtr->runnableCount > RTE_MAX_RUNNABLES) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_INIT, DET_E_PARAM_VALUE);
         rte_initialized = FALSE;
         rte_config = NULL_PTR;
         return;
@@ -153,16 +163,21 @@ void Rte_Init(const Rte_ConfigType* ConfigPtr)
 Std_ReturnType Rte_Write(Rte_SignalIdType SignalId, uint32 Data)
 {
     if (rte_initialized == FALSE) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_WRITE, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     /* Dual bounds check: configured count AND static buffer limit */
     if ((SignalId >= rte_config->signalCount) ||
         (SignalId >= RTE_MAX_SIGNALS)) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_WRITE, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
+    SchM_Enter_Rte_RTE_EXCLUSIVE_AREA_0();
     rte_signal_buffer[SignalId] = Data;
+    SchM_Exit_Rte_RTE_EXCLUSIVE_AREA_0();
+
     return E_OK;
 }
 
@@ -175,20 +190,26 @@ Std_ReturnType Rte_Write(Rte_SignalIdType SignalId, uint32 Data)
 Std_ReturnType Rte_Read(Rte_SignalIdType SignalId, uint32* DataPtr)
 {
     if (rte_initialized == FALSE) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_READ, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (DataPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_READ, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     /* Dual bounds check: configured count AND static buffer limit */
     if ((SignalId >= rte_config->signalCount) ||
         (SignalId >= RTE_MAX_SIGNALS)) {
+        Det_ReportError(DET_MODULE_RTE, 0u, RTE_API_READ, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
+    SchM_Enter_Rte_RTE_EXCLUSIVE_AREA_0();
     *DataPtr = rte_signal_buffer[SignalId];
+    SchM_Exit_Rte_RTE_EXCLUSIVE_AREA_0();
+
     return E_OK;
 }
 

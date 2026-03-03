@@ -13,6 +13,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "E2E.h"
+#include "Det.h"
 
 /* ---- CRC-8/SAE-J1850 Lookup Table ----
  * Polynomial: 0x1D, Init: 0xFF, XOR-out: 0xFF
@@ -106,16 +107,29 @@ Std_ReturnType E2E_Protect(const E2E_ConfigType* Config,
     uint8 crc;
 
     /* Defensive input validation */
-    if ((Config == NULL_PTR) || (State == NULL_PTR) || (DataPtr == NULL_PTR)) {
+    if (Config == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_PROTECT, DET_E_PARAM_POINTER);
+        return E_NOT_OK;
+    }
+
+    if (State == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_PROTECT, DET_E_PARAM_POINTER);
+        return E_NOT_OK;
+    }
+
+    if (DataPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_PROTECT, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
     if (Length < E2E_PAYLOAD_OFFSET) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_PROTECT, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
     /* Verify length matches configured DataLength */
     if (Length != Config->DataLength) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_PROTECT, DET_E_PARAM_VALUE);
         return E_NOT_OK;
     }
 
@@ -147,16 +161,29 @@ E2E_CheckStatusType E2E_Check(const E2E_ConfigType* Config,
     uint8 delta;
 
     /* Defensive input validation */
-    if ((Config == NULL_PTR) || (State == NULL_PTR) || (DataPtr == NULL_PTR)) {
+    if (Config == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_CHECK, DET_E_PARAM_POINTER);
+        return E2E_STATUS_ERROR;
+    }
+
+    if (State == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_CHECK, DET_E_PARAM_POINTER);
+        return E2E_STATUS_ERROR;
+    }
+
+    if (DataPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_CHECK, DET_E_PARAM_POINTER);
         return E2E_STATUS_ERROR;
     }
 
     if (Length < E2E_PAYLOAD_OFFSET) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_CHECK, DET_E_PARAM_VALUE);
         return E2E_STATUS_ERROR;
     }
 
     /* Verify length matches configured DataLength */
     if (Length != Config->DataLength) {
+        Det_ReportError(DET_MODULE_E2E, 0u, E2E_API_CHECK, DET_E_PARAM_VALUE);
         return E2E_STATUS_ERROR;
     }
 

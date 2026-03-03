@@ -13,6 +13,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "IoHwAb.h"
+#include "Det.h"
 
 /* ---- Internal State ---- */
 
@@ -101,6 +102,7 @@ static Std_ReturnType iohwab_read_adc(uint8 adcGroup, uint16* rawValue)
 void IoHwAb_Init(const IoHwAb_ConfigType* ConfigPtr)
 {
     if (ConfigPtr == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_INIT, DET_E_PARAM_POINTER);
         iohwab_initialized = FALSE;
         iohwab_config = NULL_PTR;
         return;
@@ -115,10 +117,12 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
     uint8 cs_channel;
 
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Angle == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -142,10 +146,12 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
 Std_ReturnType IoHwAb_ReadSteeringAngle(uint16* Angle)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Angle == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -161,10 +167,12 @@ Std_ReturnType IoHwAb_ReadMotorCurrent(uint16* Current_mA)
     Std_ReturnType ret;
 
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Current_mA == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -191,10 +199,12 @@ Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC)
     Std_ReturnType ret;
 
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Temp_dC == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -219,10 +229,12 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
     Std_ReturnType ret;
 
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Voltage_mV == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -246,6 +258,7 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
 Std_ReturnType IoHwAb_SetMotorPWM(uint8 Direction, uint16 DutyCycle)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_SET_ACTUATOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
@@ -286,6 +299,7 @@ Std_ReturnType IoHwAb_SetMotorPWM(uint8 Direction, uint16 DutyCycle)
 Std_ReturnType IoHwAb_SetSteeringServoPWM(uint16 DutyCycle)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_SET_ACTUATOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
@@ -301,6 +315,7 @@ Std_ReturnType IoHwAb_SetSteeringServoPWM(uint16 DutyCycle)
 Std_ReturnType IoHwAb_SetBrakeServoPWM(uint16 DutyCycle)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_SET_ACTUATOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
@@ -316,10 +331,12 @@ Std_ReturnType IoHwAb_SetBrakeServoPWM(uint16 DutyCycle)
 Std_ReturnType IoHwAb_ReadEStop(uint8* State)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (State == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -331,10 +348,12 @@ Std_ReturnType IoHwAb_ReadEStop(uint8* State)
 Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Count == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
@@ -347,10 +366,12 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
 Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
         return E_NOT_OK;
     }
 
     if (Dir == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 
