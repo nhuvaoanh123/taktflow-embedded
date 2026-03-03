@@ -69,22 +69,33 @@ void Swc_RzcSensorFeeder_MainFunction(void)
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_TEMP,      &motor_temp);
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_BATTERY_VOLTAGE, &battery_voltage);
 
-    /* Inject into MCAL ADC stubs.
-     * Plant-sim sends raw values in engineering units (mA, 0.1C, mV).
-     * ADC stubs store 16-bit values that IoHwAb reads and scales.
-     * No reverse-scaling needed here — IoHwAb handles ADC-to-engineering
-     * conversion, and the injected value IS the ADC reading. */
-    Adc_Posix_InjectValue(RZC_MOTOR_CURRENT_ADC_GROUP,
-                          RZC_MOTOR_CURRENT_ADC_CH,
-                          (uint16)motor_current);
+    /* Inject into MCAL ADC stubs with reverse-scaling.
+     * Plant-sim sends engineering units; IoHwAb reads raw ADC and
+     * scales to engineering units.  We must reverse the IoHwAb
+     * formulas so the round-trip produces the correct value.
+     *
+     * IoHwAb formulas (VREF=3300, ADC_MAX=4095):
+     *   Current_mA  = raw * 3300 / 4095     → raw = mA  * 4095 / 3300
+     *   Temp_dC     = raw * 1000 / 4095     → raw = dC  * 4095 / 1000
+     *   Voltage_mV  = raw * 3300 * 4 / 4095 → raw = mV  * 4095 / 13200
+     */
+    {
+        uint16 raw_current = (uint16)(((uint32)motor_current * 4095u) / 3300u);
+        uint16 raw_temp    = (uint16)(((uint32)motor_temp    * 4095u) / 1000u);
+        uint16 raw_batt    = (uint16)(((uint32)battery_voltage * 4095u) / 13200u);
 
-    Adc_Posix_InjectValue(RZC_MOTOR_TEMP_ADC_GROUP,
-                          RZC_MOTOR_TEMP_ADC_CH,
-                          (uint16)motor_temp);
+        Adc_Posix_InjectValue(RZC_MOTOR_CURRENT_ADC_GROUP,
+                              RZC_MOTOR_CURRENT_ADC_CH,
+                              raw_current);
 
-    Adc_Posix_InjectValue(RZC_BATTERY_VOLTAGE_ADC_GROUP,
-                          RZC_BATTERY_VOLTAGE_ADC_CH,
-                          (uint16)battery_voltage);
+        Adc_Posix_InjectValue(RZC_MOTOR_TEMP_ADC_GROUP,
+                              RZC_MOTOR_TEMP_ADC_CH,
+                              raw_temp);
+
+        Adc_Posix_InjectValue(RZC_BATTERY_VOLTAGE_ADC_GROUP,
+                              RZC_BATTERY_VOLTAGE_ADC_CH,
+                              raw_batt);
+    }
 #else
     (void)SensorFeeder_Initialized;
 #endif
