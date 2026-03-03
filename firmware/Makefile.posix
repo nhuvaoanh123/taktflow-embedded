@@ -128,7 +128,8 @@ ifeq ($(TARGET),fzc)
 endif
 
 # --- ECU-specific sources ---
-ECU_SRCS = $(wildcard $(TARGET)/src/*.c) $(wildcard $(TARGET)/cfg/*.c)
+ECU_SRCS_ALL = $(wildcard $(TARGET)/src/*.c) $(wildcard $(TARGET)/cfg/*.c)
+ECU_SRCS = $(filter-out %_stm32.c %_tms570.c,$(ECU_SRCS_ALL))
 
 # --- All application sources ---
 APP_SRCS = $(BSW_SRCS) $(ECU_SRCS)
