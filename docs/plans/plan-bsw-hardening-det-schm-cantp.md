@@ -348,13 +348,32 @@ typedef enum {
 6. Verify existing E2E tests still pass (no regression from SchM no-ops)
 7. Run full 8-scenario E2E test suite — all tests reach verdict
 
+### Test Runner Fix (2026-03-03)
+
+E2E tests initially failed with "CVC did not reach RUN within 60s" for all scenarios. Root cause: **3 bugs in test runner MQTT monitoring**.
+
+1. **paho-mqtt v2.1 callback signature** — `message_callback_add` in v2.x passes 4 args `(client, userdata, msg, properties)`, but our `_on_message` only accepted 3. Silent TypeError swallowed by paho. Fix: added `properties=None` default parameter.
+
+2. **Missing `on_connect` re-subscription** — After MQTT reconnect, subscriptions were lost. Fix: added `_subscribe()` method + `on_mqtt_connect()` callback wired through `app.py`.
+
+3. **Monitor reset order** — `_monitor.reset()` was called BEFORE `_reset()` (container restart). During restart, CVC continues running for ~20s sending VehicleState=1, polluting the monitor with stale state. `_wait_for_run()` returned immediately on stale state, then CVC actually restarted into INIT. Fix: reset monitor AFTER `_reset()` returns.
+
+After fix: CVC correctly reaches RUN, DTCs are received, state transitions tracked. Pinned `paho-mqtt==2.1.0` in requirements.txt.
+
+Lessons learned: `docs/reference/lessons-learned/infrastructure/PROCESS-paho-mqtt-v2-callback-compat.md`
+
+### E2E Test Results (post-fix)
+
+CVC reaches RUN for all scenarios. DTCs are broadcast and received by test runner. However, **all 8 scenarios still FAIL** because CVC's Vehicle State Manager does not transition RUN→SAFE_STOP when fault DTCs are received. This is a firmware behavior gap, not a test runner issue. CVC VSM fault reaction logic is needed as a separate task.
+
 ### DONE Criteria
 - [x] ECU wiring complete (CVC CanTp init + routing)
 - [ ] Multi-frame UDS response works end-to-end
 - [ ] SecurityAccess handshake succeeds
 - [ ] DET errors visible in logs
-- [ ] All 8 E2E tests reach verdict (no regression)
-- [ ] CI green
+- [x] All 8 E2E tests reach verdict — CVC reaches RUN, DTCs received (verdicts FAIL due to missing VSM fault reaction)
+- [x] CI green (all 3 workflows passing)
+- [ ] CVC VSM fault→SAFE_STOP transition (separate task — firmware gap)
 
 ---
 
