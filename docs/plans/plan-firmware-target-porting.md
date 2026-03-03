@@ -11,7 +11,7 @@
 |-------|------|--------|
 | F0 | Toolchain Setup + Blinky | DONE (code) — toolchain install is manual |
 | F1 | Target Build System | DONE — all 3 ECUs build+link (2026-03-03) |
-| F1.5 | CVC UART Debug Logging | IN PROGRESS |
+| F1.5 | CVC UART Debug Logging | DONE (2026-03-03) — boot log verified on Nucleo |
 | F2 | MCAL CAN Driver (first sign of life) | PENDING |
 | F3 | Remaining MCAL Drivers | PENDING |
 | F4 | Per-ECU Init + Self-Tests + MPU + WDG | PENDING |
@@ -281,10 +281,10 @@ No Makefile changes needed — USART2 is bare-metal register access. POSIX build
 4. Observe boot log -> self-test -> BswM RUN -> main loop entry
 
 ### DONE criteria
-- [ ] CVC firmware builds for STM32 with SysTick + UART
-- [ ] POSIX build unbroken
-- [ ] Flash to Nucleo, UART output visible in serial terminal
-- [ ] Boot sequence visible: init -> self-test -> RUN -> main loop
+- [x] CVC firmware builds for STM32 with SysTick + UART (18,308 bytes, 3% flash)
+- [x] POSIX build unbroken (syntax-verified)
+- [x] Flash to Nucleo, UART output visible in serial terminal (COM7, pyserial)
+- [x] Boot sequence visible: init -> self-test -> RUN -> main loop
 
 ---
 
