@@ -1,9 +1,11 @@
 # Hardware Assembly Workbook — Taktflow Zonal Vehicle Platform
 
-> **Companion to**: `docs/plans/plan-hardware-bringup.md` (high-level plan with phase tracking)
 > **Purpose**: Step-by-step physical assembly instructions for a HW-beginner
 > **Created**: 2026-02-23
+> **Last Updated**: 2026-03-03
 > **Convention**: Every action is atomic — pick up, measure, wire, verify. Nothing is assumed.
+>
+> **See also**: [`plan-hardware-bringup.md`](plan-hardware-bringup.md) for project overview, time estimates, risk assessment, phase dependencies, and safety rules. This workbook covers execution only.
 
 ---
 
@@ -909,6 +911,79 @@ Verify each watchdog with the same 3-point test.
 
 ---
 
+## Step 4.5: Preemptive ADC/GPIO Overvoltage Protection
+
+> **Goal**: Protect all MCU analog/digital inputs from accidental overvoltage before connecting any sensor. Do this BEFORE Phase 5.
+
+**Why now**: A miswired sensor or loose jumper can put 12V on a 3.3V ADC pin. The Zener + resistor clamp costs ~€0.10 per channel and takes 5 minutes to add. Replacing a dead Nucleo costs €16 and a weekend.
+
+### 4.5.1 Install Zener Clamps on RZC ADC Pins (Minimum 4 Channels)
+
+**GATHER**: 4-6x BZX84C3V3 Zener diodes (BOM #55), 4-6x 100R resistors (BOM #52), small perfboard strip or breadboard.
+
+**TOOLS**: Soldering iron, solder, multimeter, bench PSU (set to 5V for testing).
+
+**DO**:
+1. For each ADC channel listed below, build this protection circuit:
+
+```
+Sensor output → [100R series resistor] → junction → MCU ADC pin
+                                            |
+                                     BZX84C3V3 Zener
+                                     (cathode to junction,
+                                      anode to GND)
+                                            |
+                                           GND
+```
+
+2. Solder the Zener + 100R pairs onto a small perfboard strip near the RZC Nucleo, or use breadboard for initial testing.
+
+**Channels to protect (minimum — install on all 4)**:
+
+| ECU | Pin | Signal | Risk Source |
+|-----|-----|--------|-------------|
+| RZC | PA0 (CN7-28) | ACS723 current sense | Sensor fault, miswire |
+| RZC | PA1 (CN7-30) | NTC motor temperature | Divider miswire |
+| RZC | PA2 (CN10-35) | NTC board temperature | Divider miswire |
+| RZC | PA3 (CN10-37) | Battery voltage (47k/10k divider) | 12V proximity |
+
+**Optional additional channels** (lower risk, 3.3V-only signals):
+
+| ECU | Pin | Signal | Risk |
+|-----|-----|--------|------|
+| CVC | PA4 (CN7-32) | SPI CS1 (digital, 3.3V) | Low — SPI is 3.3V only |
+| FZC | PA3 (CN10-37) | Lidar UART RX | Low — UART is 3.3V logic |
+
+---
+
+### 4.5.2 Verify Each Zener Clamp
+
+**TOOLS**: Bench PSU, multimeter.
+
+**DO** (for each protected channel):
+1. Set bench PSU to **5V** (simulating overvoltage).
+2. Connect PSU (+) through the 100R resistor to the junction point (where the Zener cathode connects).
+3. Connect PSU (-) to GND.
+4. Measure voltage at the junction (ADC pin side).
+
+**MEASURE**: Junction voltage should read **≤ 3.6V** (Zener is clamping).
+
+5. Now set bench PSU to **3.3V** (normal operating voltage).
+6. Measure voltage at the junction.
+
+**MEASURE**: Junction voltage should read **~3.2V** (Zener inactive, small drop across 100R).
+
+| Channel | 5V test (≤3.6V?) | 3.3V test (~3.2V?) | Pass? |
+|---------|-------------------|---------------------|-------|
+| RZC PA0 | ___V | ___V | [ ] |
+| RZC PA1 | ___V | ___V | [ ] |
+| RZC PA2 | ___V | ___V | [ ] |
+| RZC PA3 | ___V | ___V | [ ] |
+
+**WRONG**: If junction reads 5V during the 5V test, the Zener is not conducting — check polarity (cathode must face the junction/signal side, anode to GND). If junction reads 0V during the 3.3V test, the Zener may be shorted — replace it.
+
+---
+
 ## Step 5: Sensors
 
 > **Goal**: Each sensor reads valid data through the MCU.
@@ -1121,6 +1196,7 @@ The TFMini-S sends 9-byte frames at ~100Hz. Parse bytes 2-3 (little-endian, dist
 | [ ] E-stop: PC13 LOW when resting, HIGH when pressed | |
 | [ ] E-stop: fail-safe on wire disconnect (reads HIGH) | |
 | [ ] All 4 watchdogs: reset MCU when WDI stops toggling | |
+| [ ] Zener clamps on RZC PA0-PA3: all 4 verified (clamp at ≤3.6V) | |
 | [ ] CVC pedal sensors: both read 14-bit angle, change with magnet | |
 | [ ] FZC steering sensor: reads angle | |
 | [ ] FZC lidar: distance readings at 115200 baud | |

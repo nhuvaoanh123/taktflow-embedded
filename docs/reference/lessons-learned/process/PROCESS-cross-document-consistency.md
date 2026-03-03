@@ -90,6 +90,18 @@ After finding 10 inconsistencies, we established a review checklist:
 
 ---
 
+## 8. Companion Docs Drift into Duplication Without Clear Ownership
+
+**Date:** 2026-03-03
+
+Hardware bringup had two docs — a high-level plan (703 lines) and a step-by-step workbook (1443 lines). The workbook was created as a "companion" but both grew independently, covering the same phases with similar detail. Phases 0-7 had full wiring instructions, verification tables, and solder steps in BOTH files.
+
+**Fix:** Assigned clear roles — plan = strategy/overview (context, estimates, risk, safety rules, brief phase summaries), workbook = execution (all step-by-step assembly). Plan went from 703 to 294 lines. Cross-references added in both directions.
+
+**Lesson:** When creating a companion doc, define ownership boundaries upfront — which file owns what content. "Plan = why/when, Workbook = how" prevents duplication. If both files can answer the same question, one of them shouldn't.
+
+---
+
 ## Key Takeaways
 
 | Topic | Lesson |
@@ -100,3 +112,4 @@ After finding 10 inconsistencies, we established a review checklist:
 | Pin maps | Review against all modules before hardware arrives |
 | Single source | If a value exists in 2 places, one is wrong |
 | Cross-doc review | Per-doc review catches content; cross-doc review catches consistency |
+| Companion docs | Define ownership boundaries upfront — plan=why/when, workbook=how |

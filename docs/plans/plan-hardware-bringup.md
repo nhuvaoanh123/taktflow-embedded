@@ -2,7 +2,7 @@
 
 > **Status**: Phase 0 PARTIAL — Inventory Confirmed 2026-02-27, gap items pending
 > **Created**: 2026-02-23
-> **Last Updated**: 2026-03-01
+> **Last Updated**: 2026-03-03
 > **Builder Profile**: Solo, SW-strong / HW-beginner
 > **Estimated Completion**: ~4 weekends (40-60 hours hands-on)
 
@@ -57,7 +57,7 @@ This plan is written for someone who is strong on the SW side but less experienc
 
 ## Reference Files
 
-- **`docs/plans/plan-hardware-bringup-workbook.md`** — **Detailed step-by-step assembly workbook** (companion to this plan)
+- **`docs/plans/plan-hardware-bringup-workbook.md`** — **Detailed step-by-step assembly workbook** (all wiring/soldering/verification instructions live here)
 - `hardware/bom.md` — **Full BOM with delivery status (single source of truth)**
 - `hardware/bom-list.md` — Core 29-item quick reference
 - `hardware/procurement-validation.md` — What was actually bought
@@ -69,508 +69,99 @@ This plan is written for someone who is strong on the SW side but less experienc
 
 ---
 
-## Phase 0: Gap Closure & Inventory Check (Before You Touch a Soldering Iron)
+## Phase Summaries
 
-### 0.1 Physical Inventory
-
-Lay out every component you received. Check against BOM #1-29 using the `procurement-validation.md` snapshot. Physically verify quantity and condition.
-
-### 0.2 Critical Gaps
-
-> All gap items and their delivery status are tracked in [`hardware/bom.md`](../../hardware/bom.md).
-> Before starting Phase 0, verify all P0-priority items show **Delivered** status in the BOM.
+> **Detailed step-by-step assembly instructions for every phase**: see [`plan-hardware-bringup-workbook.md`](plan-hardware-bringup-workbook.md)
 >
-> **Critical items for Phase 0**: BOM #36 (Schottky diode), #37-39 (fuses), #43 (100nF caps)
-> **Critical items for Phase 1**: BOM #42 (6V regulators), #45-48 (electrolytic caps), #49-53 (resistors), #55 (Zener diodes)
+> This section provides phase goals, key decisions, and critical notes only. The workbook has the full GATHER/TOOLS/DO/MEASURE/WRONG/FIX steps.
 
-### 0.4 Solder Bridge Modifications (Do Before Mounting)
+### Phase 0: Gap Closure & Inventory Check
 
-Do these on the Nucleo boards **BEFORE** mounting to the base plate:
+> **Goal**: All parts verified, solder bridges removed, boards labeled. Before you touch a soldering iron.
 
-| Board | Bridge | Action | Tool | Why |
-|-------|--------|--------|------|-----|
-| **FZC Nucleo** | SB63 | Remove | Soldering iron + solder wick | Free PA2 for lidar UART TX |
-| **FZC Nucleo** | SB65 | Remove | Soldering iron + solder wick | Free PA3 for lidar UART RX |
-| **RZC Nucleo** | SB63 | Remove | Soldering iron + solder wick | Free PA2 for ADC board temp |
-| **RZC Nucleo** | SB65 | Remove | Soldering iron + solder wick | Free PA3 for ADC battery voltage |
-| CVC Nucleo | SB21 | Remove (optional) | Soldering iron + solder wick | Disconnect PA5 from onboard LED to avoid SPI SCK interference |
+- Verify all BOM items physically against [`hardware/bom.md`](../../hardware/bom.md)
+- **Critical items**: BOM #36 (Schottky), #37-39 (fuses), #43 (100nF caps) — cannot start without these
+- **Critical items for Phase 1**: BOM #42 (6V regulators), #45-48 (electrolytic caps), #49-53 (resistors), #55 (Zener diodes)
+- Remove solder bridges: FZC SB63/SB65, RZC SB63/SB65, optionally CVC SB21
+- After SB63/SB65 removal: ST-LINK VCP lost — use SWO (PB3) or LPUART1 for debug printf
+- Label all 4 boards (CVC, FZC, RZC, SC) before mounting
 
-**How to remove a solder bridge**: Put flux on the bridge. Touch it with a clean soldering iron tip. The solder should wick onto the iron. Verify with multimeter in continuity mode — no beep = bridge removed.
-
-**After SB63/SB65 removal**: You lose the ST-LINK virtual COM port (USART2). Use SWO (PB3) or LPUART1 (PG7/PG8 morpho pins) for debug printf.
-
-### 0.5 Label Your Boards
-
-Use masking tape + marker. Write clearly on each Nucleo:
-- **CVC** (Central Vehicle Computer)
-- **FZC** (Front Zone Controller)
-- **RZC** (Rear Zone Controller)
-
-And on the LaunchPad:
-- **SC** (Safety Controller)
-
-This prevents wiring to the wrong board.
-
-### 0.6 Tools Needed
-
-- Soldering iron + solder + flux + solder wick
-- **Helping hands / PCB holder** (~€10) — essential for soldering, you can't hold board + wire + iron with 2 hands
-- Multimeter (continuity, DC voltage, resistance modes)
-- Oscilloscope (critical for CAN and timing verification)
-- Wire strippers for 16-22 AWG
-- Small screwdrivers (for screw terminals)
-- USB cables: 3x micro-USB (Nucleo), 1x micro-USB (LaunchPad XDS110)
-- Masking tape + marker (for labeling boards and wires)
-
----
-
-## Phase 1: Base Plate & Power Distribution
+### Phase 1: Base Plate & Power Distribution
 
 > **Goal**: 12V in, 5V/3.3V out, all rails verified. No ECUs connected yet.
 
-### 1.1 Prepare the Base Plate
+- Layout: CVC — FZC — RZC — SC left-to-right, CAN bus along top edge, PSU at left rear
+- Power path: PSU → SB560 Schottky → 10A fuse → 12V MAIN RAIL → buck converters → 5V/3.3V
+- Star ground point: single screw terminal block, all ground returns converge here
+- **Pass criteria**: 12V rail 11.5-12.0V, 5V rail 4.9-5.1V, 3.3V rail 3.2-3.4V
 
-- Cut plywood/acrylic to ~400x300mm (or use what you have)
-- Plan layout (left-to-right): CVC — FZC — RZC — SC, with CAN bus along the top edge
-- Motor/BTS7960 at the right end near RZC
-- E-stop + relay + fault LEDs at the front edge (operator side)
-- PSU entry point at the left rear corner
+### Phase 2: Mount ECU Boards & Individual Power-Up
 
-### 1.2 Mount Buck Converters
+> **Goal**: Each board boots independently via USB, then from 12V. No inter-board wiring.
 
-Mount the two LM2596 modules on the base plate:
+- Mount on M3 nylon standoffs (10mm)
+- USB boot test each board individually, then wire 12V to Nucleo VIN (CN7-24)
+- SC stays on USB power (independent of kill relay — safety requirement)
+- **Pass criteria**: All 4 boards boot, Nucleo 3V3 output reads 3.2-3.4V
 
-1. **12V → 5V module**: Adjust the potentiometer BEFORE connecting load. Connect 12V input, measure output with multimeter, turn pot until you read 5.0V.
-2. **12V → 3.3V module** (or TSR 2-2433N if using that): Same process, set to 3.3V.
+### Phase 3: CAN Bus Wiring
 
-If using the TSR 2-2433N (24V→3.3V, 2A): these are fixed output, no adjustment needed. Just verify input voltage range is compatible (TSR 2-2433N accepts 4.6V-36V input → fine for 12V).
+> **Goal**: All 4 ECUs + Pi see each other on a 500 kbps CAN bus.
 
-### 1.3 Wire Power Distribution Bus
+- **Note (2026-02-27)**: 4× TJA1051 + 1× SN65HVD230 on hand. TJA1051 for all STM32 nodes is simplest.
+- All STM32 ECUs: TXD → PA12 (CN10-12), RXD → PA11 (CN10-14), STB → GND
+- SC: TXD → DCAN1TX (J5), RXD → DCAN1RX (J5), Rs → GND
+- Trunk: 22AWG twisted pair (yellow=CAN_H, green=CAN_L), stubs < 100mm
+- 120R termination at CVC end and SC end only (60 ohm total)
+- **Pass criteria**: `candump` shows frames from all 4 ECUs, termination = 60 ohm, rest voltage ~2.5V
 
-```
-PSU + (red 16AWG) → [SB560 Schottky anode→cathode] → [10A fuse] → 12V MAIN RAIL screw terminal
-PSU - (black 16AWG) → STAR GROUND POINT (single screw terminal block)
-```
+### Phase 4: Safety Chain
 
-From 12V MAIN RAIL, branch out (18AWG each):
-- To 5V buck converter input
-- To 3.3V buck converter input
-- Leave 3 drops for Nucleo Vin (don't connect yet)
-- Leave 1 drop for LaunchPad (don't connect yet)
-- To kill relay coil circuit area (don't wire relay yet)
+> **Goal**: Kill relay works, E-stop works, watchdogs reset MCUs. MUST work before any actuator.
 
-### 1.4 Verify — Power Rails (No Load)
+- Kill relay: IRLZ44N MOSFET (10k pull-down = fail-safe OFF) → 12V relay → 30A fuse → actuator rail
+- E-stop: NC button → RC debounce (10k + 100nF) → CVC PC13 (internal pull-up)
+- Watchdogs: TPS3823DBVR (SOT-23-5) on each ECU — 100nF on CT sets ~1.6s timeout
+- **Critical**: RZC watchdog uses **PB4** (not PB0 — PB0 is motor R_EN)
+- **Pass criteria**: Relay fail-safe on SC power loss, E-stop fail-safe on wire break, watchdog resets MCU on hang
 
-| Test | Expected | Tool |
-|------|----------|------|
-| 12V rail at screw terminal (PSU set to 12.0V) | 11.5-12.0V (after Schottky drop) | Multimeter DC voltage |
-| 5V rail at buck output | 4.9-5.1V | Multimeter |
-| 3.3V rail at buck output | 3.2-3.4V | Multimeter |
-| Reverse polarity: swap PSU leads briefly | 0V on all rails, nothing smokes | Visual (if no Schottky, DO NOT do this) |
-| 5V rail ripple (optional) | < 50mV p-p | Oscilloscope, AC coupled, 20MHz BW limit |
-| 3.3V rail ripple (optional) | < 30mV p-p | Oscilloscope |
+### Phase 4.6: ADC Zener Protection (Do Before Phase 5)
 
-**STOP if any voltage is wrong. Debug before proceeding.**
+> **Goal**: Protect MCU analog inputs from overvoltage before connecting any sensor.
 
----
+- BZX84C3V3 Zener + 100R series resistor on each ADC channel
+- **Minimum**: RZC PA0 (current), PA1 (motor temp), PA2 (board temp), PA3 (battery V)
+- **Pass criteria**: 5V applied through 100R → junction reads ≤3.6V (clamping)
 
-## Phase 2: Mount ECU Boards & Individual Power-Up
-
-> **Goal**: Each board boots independently via USB. No inter-board wiring yet.
-
-### 2.1 Mount Boards on Base Plate
-
-Use M3 nylon standoffs (10mm) under each board. Screw down firmly. Layout:
-
-```
-[PSU entry]
-                [CVC]    [FZC]    [RZC]    [SC]
-                  |        |        |        |
-    ============ CAN BUS ROUTE (top edge) ============
-
-[E-stop] [Relay] [LEDs]   [Motor area]   [BTS7960]
-```
-
-### 2.2 Individual USB Power-Up Test
-
-For each board, one at a time:
-1. Connect only USB cable (no 12V yet)
-2. Verify it powers up (green LED on Nucleo, XDS110 LED on LaunchPad)
-3. Verify your PC sees the ST-LINK (for Nucleo) or XDS110 (for LaunchPad)
-4. Flash a simple "blink" or "hello" firmware to confirm programming works
-5. Disconnect USB
-
-| Board | USB Port | Expected |
-|-------|----------|----------|
-| CVC Nucleo | Micro-USB (CN1) | LD2 blinks (default factory firmware) |
-| FZC Nucleo | Micro-USB (CN1) | LD2 blinks |
-| RZC Nucleo | Micro-USB (CN1) | LD2 blinks |
-| SC LaunchPad | Micro-USB (XDS110) | LED on LaunchPad blinks (factory demo) |
-
-### 2.3 Connect 12V to ECU Boards
-
-Now wire 12V main rail (18AWG) to each Nucleo Vin pin:
-- **CVC**: Red wire to CN7 pin 24 (VIN), Black to CN7 pin 20 (GND)
-- **FZC**: Same morpho pins
-- **RZC**: Same morpho pins
-- **SC**: Via LaunchPad 3.3V/5V input headers OR keep on USB power (simplest for bench)
-
-**Verify each board still boots with 12V** (unplug USB first to test standalone):
-- Nucleo green LED should light up
-- Measure 3.3V on Nucleo CN7 pin 16 (3V3 output) → should read 3.2-3.4V
-
----
-
-## Phase 3: CAN Bus Wiring
-
-> **Goal**: All 4 ECUs + Pi can see each other on a 500 kbps CAN bus.
-
-### 3.1 Solder CAN Transceivers onto Perfboard/Breadboard
-
-**Note (2026-02-27):** With 4× TJA1051 + 1× SN65HVD230 on hand, you can use TJA1051 for all 4 nodes (keeping SN65HVD230 as spare) or keep the original assignment below. Either works — TJA1051 for STM32 nodes is simpler (identical modules).
-
-**For each STM32 ECU (CVC, FZC, RZC):**
-1. Mount TJA1051 module on breadboard/perfboard near the Nucleo
-2. Wire: VCC → external 3.3V rail, GND → ground, 100nF cap on VCC
-3. Wire: TXD → PA12 (FDCAN1_TX, CN10-12 on Nucleo)
-4. Wire: RXD → PA11 (FDCAN1_RX, CN10-14 on Nucleo)
-5. Wire: STB → GND (always active)
-
-**For SC:**
-1. Mount SN65HVD230 module near the LaunchPad
-2. Wire: VCC → 3.3V, GND → ground, 100nF cap on VCC
-3. Wire: TXD → DCAN1TX (J5 edge connector on LaunchPad)
-4. Wire: RXD → DCAN1RX (J5 edge connector)
-5. Wire: Rs → GND (full speed, no slope control)
-
-### 3.2 Run the CAN Bus Trunk
-
-Using 22AWG twisted pair (yellow = CAN_H, green = CAN_L):
-1. Run a continuous trunk wire along the top edge of the base plate
-2. At each ECU location, T-tap the trunk to a 3-position screw terminal (CAN_H, CAN_L, CAN_GND)
-3. Keep stub wires from trunk to each transceiver < 100mm
-4. Install 120R termination resistor at CVC end (across CAN_H and CAN_L)
-5. Install 120R termination resistor at SC end
-
-### 3.3 Connect Pi + CANable
-
-1. Plug CANable #1 into Raspberry Pi USB
-2. T-tap from CAN bus trunk to CANable (< 100mm stub)
-3. Plug CANable #2 into your development PC (for analysis/simulated ECUs)
-4. T-tap from trunk
-
-### 3.4 Verify — CAN Bus Electrical
-
-| Test | Expected | Tool |
-|------|----------|------|
-| Termination resistance (CAN_H to CAN_L, all power OFF) | 60 ohm (two 120R in parallel) | Multimeter resistance mode |
-| CAN_H and CAN_L at rest (power ON, no traffic) | Both at ~2.5V | Multimeter DC |
-| CAN_H dominant level (during TX) | ~3.5V | Oscilloscope |
-| CAN_L dominant level (during TX) | ~1.5V | Oscilloscope |
-| Differential (CAN_H - CAN_L) during dominant | ~2.0V | Oscilloscope (math channel) |
-
-### 3.5 Verify — CAN Bus Communication
-
-Flash a minimal CAN TX firmware on CVC that sends a heartbeat frame (ID 0x010) every 100ms.
-
-1. On your PC with CANable #2, run: `candump can0` (Linux) or use a CAN analyzer tool (Windows)
-2. You should see 0x010 frames arriving at 10 Hz
-3. Flash CAN RX firmware on another Nucleo — verify it receives the frames
-4. Repeat for each ECU until all 4 can TX and RX on the bus
-5. Test Pi: `candump can0` on the Pi should also show all traffic
-
-**Common CAN problems and fixes:**
-- No traffic at all → check termination (60 ohm?), check TX/RX not swapped
-- Intermittent errors → check decoupling caps on transceivers, check wire connections
-- Bus-off → check bit timing matches between STM32 and TMS570 (both 500 kbps, 80% sample point)
-
----
-
-## Phase 4: Safety Chain
-
-> **Goal**: Kill relay works, E-stop works, watchdogs reset MCUs. This must work before connecting any actuator.
-
-### 4.1 Wire the Kill Relay Circuit
-
-Follow the schematic in `hw-design.md` Section 5.4.2 exactly:
-
-```
-12V Main Rail → Relay Coil (+) → Relay Coil (-) → IRLZ44N Drain
-                  ↕ 1N4007 flyback (cathode to +)
-IRLZ44N Source → GND
-IRLZ44N Gate ← 100R resistor ← SC GIO_A0 (J3-1)
-               ↓
-             10k resistor → GND (pull-down)
-```
-
-Relay contact (SPST-NO):
-- Common → 12V main rail
-- NO → 12V actuator rail (via 30A fuse)
-
-### 4.2 Verify Kill Relay
-
-| Test | How | Expected |
-|------|-----|----------|
-| Default state (SC not powered) | Measure voltage on actuator rail | 0V (relay open) |
-| SC powered, GIO_A0 = LOW (default) | Measure actuator rail | 0V (relay open) |
-| SC drives GIO_A0 = HIGH | Measure actuator rail | ~12V (relay closed, click sound) |
-| SC drives GIO_A0 = LOW | Measure actuator rail + listen | 0V within 10ms (relay opens, click) |
-| Pull USB from SC (power loss) | Measure actuator rail | 0V (fail-safe: 10k pulls gate low) |
-| Relay dropout time | Oscilloscope on actuator rail, trigger on GIO_A0 falling | < 10ms from GIO_A0 LOW to rail = 0V |
-
-### 4.3 Wire E-Stop Button
-
-```
-PC13 (CVC CN7-23) ← 10k series resistor ← junction
-                                            ↓
-                                        100nF cap → GND
-                                            ↓
-                                     NC E-Stop button → GND
-```
-
-Internal pull-up on PC13 (enabled in firmware).
-
-### 4.4 Verify E-Stop
-
-| Test | Expected |
-|------|----------|
-| Button NOT pressed (resting) | PC13 = LOW (0V, button shorts to GND) |
-| Button PRESSED (locked) | PC13 = HIGH (~3.3V, button opens, pull-up takes over) |
-| Wire disconnected | PC13 = HIGH (fail-safe: same as pressed) |
-
-### 4.5 Wire & Verify Watchdogs (One at a Time)
-
-For each ECU, solder TPS3823 onto SOT-23-5 breakout board:
-
-```
-Pin 1 (VDD) → 3.3V + 100nF cap
-Pin 2 (GND) → GND
-Pin 3 (WDI) → WDT GPIO (see table below)
-Pin 4 (RESET) → MCU NRST pin + 100nF cap
-Pin 5 (CT) → 100nF cap → GND (sets 1.6s timeout)
-Pin 6 (MR) → 3.3V (no manual reset)
-```
-
-| ECU | WDI GPIO | MCU NRST Location |
-|-----|----------|-------------------|
-| CVC | PB0 (CN10-31) | CN7 pin 14 (NRST) |
-| FZC | PB0 (CN10-31) | CN7 pin 14 (NRST) |
-| RZC | **PB4** (CN10-27) — NOT PB0! | CN7 pin 14 (NRST) |
-| SC | GIO_A5 (J3-6) | nRST on LaunchPad |
-
-**Verify each watchdog:**
-1. Power up ECU with no firmware toggling WDI → MCU should reset every ~1.6s (oscilloscope on NRST shows periodic low pulses)
-2. Flash firmware that toggles WDI every 500ms → MCU stays running, no resets
-3. Flash firmware that hangs after 5 seconds → watchdog resets MCU at ~1.6s after hang
-
----
-
-## Phase 4.6: Preemptive ADC/GPIO Overvoltage Protection (Do Before Phase 5)
-
-> **Goal**: Protect all MCU analog/digital inputs from accidental overvoltage before connecting any sensor. Uses BZX84C3V3 Zener diodes (BOM #55) and 100R series resistors (BOM #52).
-
-**Why now**: A miswired sensor or loose jumper can put 12V on a 3.3V ADC pin. The Zener + resistor clamp costs €0.10 per channel and takes 5 minutes to add. Replacing a dead Nucleo costs €16 and a weekend.
-
-**Protection circuit (per ADC channel)**:
-
-```
-Sensor output → [100R series resistor] → junction → MCU ADC pin
-                                            |
-                                     BZX84C3V3 Zener
-                                     (cathode to junction,
-                                      anode to GND)
-                                            |
-                                           GND
-```
-
-At normal operation (0-3.3V signal), the Zener is reverse-biased and invisible. If voltage exceeds ~3.6V, the Zener clamps it. The 100R resistor limits current through the Zener to safe levels (at 12V: (12-3.3)/100 = 87mA, well within BZX84C3V3's 300mW rating).
-
-**Channels to protect (install Zener + 100R on each)**:
-
-| ECU | Pin | Signal | Risk Source |
-|-----|-----|--------|-------------|
-| RZC | PA0 (CN7-28) | ACS723 current sense | Sensor fault, miswire |
-| RZC | PA1 | NTC motor temperature | Divider miswire |
-| RZC | PA2 | NTC board temperature | Divider miswire |
-| RZC | PA3 (CN10-37) | Battery voltage (47k/10k divider) | Already has Zener in design — verify installed |
-| CVC | PA4 (CN7-32) | SPI CS1 (digital, 3.3V) | Optional — SPI is 3.3V only |
-| FZC | PA3 (CN10-37) | Lidar UART RX | Optional — UART is 3.3V logic |
-
-**Minimum protection (4 Zeners + 4 × 100R)**: RZC PA0, PA1, PA2, PA3. These are the channels most exposed to 12V wiring proximity.
-
-**Verification**: After installing each Zener, measure voltage at the ADC pin with multimeter while applying 5V from bench PSU through the 100R. Should read ≤3.6V (Zener clamping). Then apply 3.3V — should read ~3.2V (Zener inactive, small drop across 100R).
-
-**Parts needed**: 4-6× BZX84C3V3 (BOM #55), 4-6× 100R resistors (BOM #52). Check bom.md for availability. Solder onto small perfboard strip near each Nucleo, or use breadboard for initial testing.
-
----
-
-## Phase 5: Sensors
+### Phase 5: Sensors
 
 > **Goal**: Each sensor reads valid data through the MCU.
 
-### 5.1 AS5048A Angle Sensors (CVC: 2 pedal sensors, FZC: 1 steering)
+- AS5048A angle sensors: CVC SPI1 (2× pedal, CS=PA4/PA15), FZC SPI2 (1× steering, CS=PB12). Mode 1 (CPOL=0, CPHA=1).
+- TFMini-S lidar: FZC USART2 (PA2/PA3, 115200 baud). Requires SB63/SB65 removed.
+- ACS723 current: RZC PA0. 0A = ~1.65V (ADC ~2048).
+- NTC thermistors: RZC PA1/PA2. 25°C = ~1.65V.
+- Battery voltage divider: RZC PA3. 12V → 2.11V (47k/10k).
+- OLED: CVC I2C1 (PB8/PB9, 4.7k pull-ups). Address 0x3C.
 
-**CVC pedal sensors on SPI1:**
-- SCK → PA5 (CN10-11)
-- MISO → PA6 (CN10-13)
-- MOSI → PA7 (CN10-15)
-- CS1 → PA4 (CN7-32) + 10k pull-up to 3.3V
-- CS2 → PA15 (CN7-17) + 10k pull-up to 3.3V
-- Sensor VDD → external 3.3V + 100nF cap each
-- Mount diametric magnet on pedal shaft, align over sensor IC
+### Phase 6: Actuators
 
-**FZC steering sensor on SPI2:**
-- SCK → PB13 (CN10-30)
-- MISO → PB14 (CN10-28)
-- MOSI → PB15 (CN10-26)
-- CS → PB12 (CN10-16) + 10k pull-up to 3.3V
-- Sensor VDD → external 3.3V + 100nF cap
+> **Goal**: Motor spins, servos move. Only after Phase 4 is verified!
 
-**Verify**: Flash SPI read firmware. Read AS5048A angle register (address 0x3FFF). Rotate magnet — value should change 0-16383 (14-bit) for a full revolution. If stuck at 0 or 0x3FFF → check SPI mode (must be Mode 1: CPOL=0, CPHA=1), check CS wiring, check MISO/MOSI not swapped.
+- 6V regulator: 12V actuator rail (kill-relay gated) → LM7806 → 470uF → servo bus
+- Steering servo: FZC PA0 (TIM2_CH1), 6V, 3A fuse
+- Brake servo: FZC PA1 (TIM2_CH2), 6V, 3A fuse
+- Motor: RZC BTS7960 (RPWM=PA8, LPWM=PA9, R_EN=PB0 + 10k pull-down, L_EN=PB1 + 10k pull-down)
+- **Critical**: 10k pull-downs on R_EN/L_EN prevent unintended motor operation during MCU reset
 
-### 5.2 TFMini-S Lidar (FZC)
+### Phase 7: Full Integration & HW-SW Handoff
 
-- VCC (red) → external 5V rail (NOT Nucleo 5V)
-- GND (black) → GND
-- TX (white, sensor output) → PA3 (CN10-37, USART2_RX on FZC)
-- RX (green, sensor input) → PA2 (CN10-35, USART2_TX on FZC)
-- **Remember**: SB63 and SB65 must be removed on FZC!
+> **Goal**: End-to-end pedal-to-motor working. Firmware reads all sensors, controls all actuators over CAN.
 
-**Verify**: Configure USART2 at 115200 baud, 8N1. TFMini-S sends 9-byte frames at ~100Hz. Parse distance value from bytes 2-3 (little-endian, in cm). Point at wall → reading should match approximate distance.
-
-### 5.3 ACS723 Current Sensor (RZC)
-
-- IP+ / IP- → in series with motor power (or just leave floating for now, reads 0A)
-- VCC → 3.3V + 100nF cap
-- VIOUT → PA0 (CN7-28, ADC1_IN1) via 1nF + 100nF filter
-- GND → analog GND
-
-**Verify**: Read ADC. At 0A current, output should be ~VCC/2 = 1.65V = ADC value ~2048 (12-bit).
-
-### 5.4 NTC Thermistors (RZC)
-
-Wire voltage divider (per `hw-design.md` Section 5.3.4):
-- 10k fixed resistor: 3.3V → resistor → junction
-- NTC: junction → NTC → GND
-- 100nF cap: junction → GND
-- ADC: junction → PA1 (motor temp) or PA2 (board temp)
-
-**Verify**: At room temp (~25C), NTC = 10k, divider output = 1.65V, ADC = ~2048.
-
-### 5.5 Battery Voltage Monitor (RZC)
-
-- 47k resistor: 12V rail → junction
-- 10k resistor: junction → GND
-- 100nF cap: junction → GND
-- BZX84C3V3 Zener: junction → GND (protection)
-- ADC: junction → PA3 (CN10-37, ADC1_IN4)
-
-**Verify**: At 12V input, divider output = 12 * 10/(47+10) = 2.11V, ADC = ~2612.
-
-### 5.6 OLED Display (CVC)
-
-- SCL → PB8 (CN10-3) + 4.7k pull-up to 3.3V
-- SDA → PB9 (CN10-5) + 4.7k pull-up to 3.3V
-- VCC → 3.3V + 10uF bulk cap + 100nF
-- GND → GND
-
-**Verify**: Flash I2C scan firmware. Should find device at address 0x3C. Then flash SSD1306 driver — display should show text.
-
----
-
-## Phase 6: Actuators
-
-> **Goal**: Motor spins, servos move. Only after safety chain (Phase 4) is verified!
-
-### 6.1 Wire 6V Regulator for Servos
-
-```
-12V Actuator Rail (after kill relay + 30A fuse) → 6V regulator input
-6V regulator output → 470uF bulk cap → servo power bus
-```
-
-**Verify**: Close kill relay (SC GIO_A0 HIGH), measure 6V regulator output = 5.8-6.2V.
-
-### 6.2 Steering Servo (FZC)
-
-- Signal (orange) → PA0 (CN7-28, TIM2_CH1)
-- VCC (red) → 6V regulator output (via 3A fuse)
-- GND (brown) → GND
-
-**Verify**: Flash PWM firmware: 50Hz, sweep 1.0ms-2.0ms pulse width. Servo should sweep 0-180 degrees. Center at 1.5ms = 90 degrees.
-
-### 6.3 Brake Servo (FZC)
-
-- Signal → PA1 (CN7-30, TIM2_CH2)
-- VCC → 6V (shared bus, via separate 3A fuse)
-- GND → GND
-
-**Verify**: Same as steering servo test.
-
-### 6.4 BTS7960 Motor Driver (RZC)
-
-- RPWM → PA8 (CN10-23, TIM1_CH1)
-- LPWM → PA9 (CN10-21, TIM1_CH2)
-- R_EN → PB0 (CN10-31) + 10k pull-down to GND
-- L_EN → PB1 (CN10-24) + 10k pull-down to GND
-- B+ → 12V actuator rail (via kill relay + 30A fuse)
-- B- → GND (star ground, 16AWG)
-- M+ / M- → DC motor terminals
-
-**Verify:**
-1. With enables LOW → motor should NOT spin (pull-downs keep it off)
-2. Set R_EN HIGH, apply 10% duty on RPWM → motor spins slowly in one direction
-3. Set L_EN HIGH, apply 10% duty on LPWM → motor spins other direction
-4. Ramp up to 50% duty → motor speeds up
-5. Open kill relay → motor stops immediately (12V removed)
-6. Check oscilloscope: PWM at 20kHz, clean edges, no ringing
-
----
-
-## Phase 7: Full Integration & HW-SW Handoff
-
-> **Goal**: Firmware reads all sensors and controls all actuators over CAN. End-to-end pedal-to-motor working.
-
-### 7.1 Flash Real Firmware
-
-Flash the actual ECU firmware (from completed phases 6-9 when ready):
-- **CVC**: Pedal reading → CAN TX torque request + vehicle state + E-stop monitoring
-- **FZC**: Steering/brake servo control + lidar + buzzer
-- **RZC**: Motor control + current/temp monitoring
-- **SC**: Heartbeat monitoring → kill relay control + fault LEDs
-
-### 7.2 Integration Test Sequence
-
-| # | Test | Pass Criteria |
-|---|------|--------------|
-| 1 | CAN heartbeats | All 4 ECUs send heartbeats at 100ms; visible on candump |
-| 2 | Pedal → CAN | Push pedal → CVC SPI reads angle → CAN frame 0x101 (TorqueReq) changes |
-| 3 | CAN → Motor | TorqueReq arrives at RZC → BTS7960 PWM changes → motor speed matches request |
-| 4 | Lidar → CAN | Object in front of TFMini-S → CAN frame with distance updates |
-| 5 | Safety heartbeat timeout | Unplug CVC USB → SC detects missing heartbeat → kill relay opens within FTTI |
-| 6 | E-stop | Press E-stop → CVC detects → sends emergency CAN → SC opens relay |
-| 7 | Watchdog | Flash hang firmware on CVC → TPS3823 resets CVC → SC detects heartbeat gap → relay opens |
-| 8 | Fault LEDs | Unplug FZC → SC lights FZC fault LED (GIO_A2) + system LED (GIO_A4) |
-| 9 | OLED | Vehicle state displayed on CVC OLED: speed, torque, system status |
-| 10 | Pi gateway | Pi candump shows all traffic; MQTT publish to cloud if configured |
-
-### 7.3 HSR Open Items to Close During Bring-Up
-
-| ID | What to Measure | Tool | Document Result In |
-|----|----------------|------|--------------------|
-| HSR-O-001 | Kill relay dropout time | Oscilloscope (GIO_A0 vs actuator rail) | hw-safety-reqs.md |
-| HSR-O-002 | ACS723 sensitivity at room temp | Multimeter + known load | hw-safety-reqs.md |
-| HSR-O-005 | TPS3823 POR pulse width on NRST | Oscilloscope (trigger on power-up) | hw-safety-reqs.md |
-
-### 7.4 Endurance Test
-
-Run the full system for 30 minutes:
-- Pedal inputs cycling
-- Motor running at varying speeds
-- Monitor CAN bus for errors (`candump -e`)
-- Monitor MCU temperatures via NTC
-- Monitor for watchdog resets (should be zero)
-- Monitor for CAN bus-off events (should be zero)
+- Flash production firmware on all 4 ECUs
+- 10-point integration test: heartbeats, pedal→motor, lidar, safety timeout, E-stop, watchdog, fault LEDs, OLED, Pi gateway
+- HSR open items to measure: relay dropout time (HSR-O-001), ACS723 sensitivity (HSR-O-002), TPS3823 POR pulse (HSR-O-005)
+- 30-minute endurance test: zero CAN errors, zero watchdog resets, stable temps and voltages
 
 ---
 
