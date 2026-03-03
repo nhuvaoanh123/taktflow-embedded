@@ -228,6 +228,9 @@ class DashboardTestRunner:
         self.last_result: dict | None = None
 
         # Subscribe to MQTT for verdict monitoring
+        self._mqtt.subscribe("taktflow/can/#", qos=0)
+        self._mqtt.subscribe("taktflow/anomaly/#", qos=0)
+        self._mqtt.subscribe("taktflow/alerts/#", qos=0)
         self._mqtt.message_callback_add("taktflow/can/#", self._on_message)
         self._mqtt.message_callback_add("taktflow/anomaly/#", self._on_message)
         self._mqtt.message_callback_add("taktflow/alerts/#", self._on_message)
