@@ -520,13 +520,13 @@ void test_TX_brake_max_in_shutdown(void)
     TEST_ASSERT_EQUAL_UINT8(100u, mock_com_sent_u8[7]);
 }
 
-/** @verifies SWR-CVC-017 — TX sends steer=center (4500 raw) in SAFE_STOP state.
- *  DBC: raw = (angle_deg + 45.0) / 0.01, so 0 deg = 4500 raw */
+/** @verifies SWR-CVC-017 — TX sends steer=center (0 deg) in SAFE_STOP state.
+ *  Plain degrees encoding: 0 = center, no DBC scaling */
 void test_TX_steer_center_in_safe_stop(void)
 {
     mock_vehicle_state = CVC_STATE_SAFE_STOP;
     Swc_CvcCom_TransmitSchedule(0u);
-    TEST_ASSERT_EQUAL_INT16(4500, mock_com_sent_s16[6]);
+    TEST_ASSERT_EQUAL_INT16(0, mock_com_sent_s16[6]);
 }
 
 /* ==================================================================
