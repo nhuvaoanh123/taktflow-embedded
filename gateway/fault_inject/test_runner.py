@@ -291,6 +291,24 @@ class DashboardTestRunner:
         log.info("[TEST %s] Stop requested", self._run_id)
         return True
 
+    def _wait_for_run(self, run_id: str, timeout: float = 60.0) -> bool:
+        """Poll MQTT verdict monitor until vehicle_state == 1 (RUN).
+
+        Returns True if RUN was reached within timeout, False otherwise.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self._stop_requested:
+                return False
+            if self._monitor.vehicle_state == 1:
+                log.info("[TEST %s] CVC reached RUN", run_id)
+                return True
+            time.sleep(0.5)
+        log.warning("[TEST %s] CVC did not reach RUN within %.0fs (state=%d/%s)",
+                    run_id, timeout, self._monitor.vehicle_state,
+                    VEHICLE_STATES.get(self._monitor.vehicle_state, "UNKNOWN"))
+        return False
+
     def _run_suite(self, specs: list[TestSpec], run_id: str):
         """Execute the test suite (runs in daemon thread)."""
         start_time = time.time()
@@ -304,10 +322,31 @@ class DashboardTestRunner:
 
                 self._publish_progress(run_id, len(specs), idx, spec, "preparing", results, start_time)
 
-                # Prep: reset + normal_drive to establish baseline
+                # Prep: reset containers, then wait for CVC to reach RUN
                 log.info("[TEST %s] Resetting for scenario: %s", run_id, spec.id)
                 self._reset()
-                time.sleep(2.0)  # allow reset to propagate
+                self._monitor.reset()  # clear stale state before waiting
+
+                if not self._wait_for_run(run_id):
+                    # CVC didn't reach RUN — skip this test
+                    log.warning("[TEST %s] Skipping %s — CVC not in RUN", run_id, spec.id)
+                    results.append({
+                        "id": spec.id,
+                        "label": spec.label,
+                        "sg": spec.sg,
+                        "asil": spec.asil,
+                        "he": spec.he,
+                        "description": spec.description,
+                        "injection": spec.injection,
+                        "passed": False,
+                        "duration_sec": 0,
+                        "verdicts": [{"description": "CVC did not reach RUN state",
+                                      "expected": "vehicle_state == RUN",
+                                      "observed": f"vehicle_state == {VEHICLE_STATES.get(self._monitor.vehicle_state, 'UNKNOWN')}",
+                                      "passed": False, "elapsed_ms": 0}],
+                    })
+                    self._publish_progress(run_id, len(specs), idx + 1, spec, "done", results, start_time)
+                    continue
 
                 if spec.prep and spec.prep != "reset":
                     self._trigger(spec.prep)
