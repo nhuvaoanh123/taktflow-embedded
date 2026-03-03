@@ -159,8 +159,8 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 | 10 | Motor temp NTC | ADC1_IN2 | PA1 | AN | A1 | CN7-30 | AN | 0-3.3V | NTC 10k divider (100nF) | RZC_MOT_TEMP | A |
 | 11 | Board temp NTC | ADC1_IN3 | PA2 | AN | -- | CN10-35 | AN | 0-3.3V | NTC 10k divider (100nF) | RZC_BRD_TEMP | QM |
 | 12 | Battery voltage | ADC1_IN4 | PA3 | AN | A2 | CN10-37 | AN | 0-3.3V | 47k/10k divider (100nF + Zener) | RZC_VBAT | QM |
-| 13 | BTS7960 IS_R | ADC1_IN15 | PB15 | AN | -- | CN10-26 | AN | 0-3.3V | BTS7960 R_IS (current sense backup) | RZC_ISR | A |
-| 14 | BTS7960 IS_L | ADC1_IN5 | PA4 | AN | -- | CN7-32 | AN | 0-3.3V | BTS7960 L_IS (current sense backup) | RZC_ISL | A |
+| 13 | BTS7960 IS_R | ADC2_IN15 | PB15 | AN | -- | CN10-26 | AN | 0-3.3V | BTS7960 R_IS (current sense backup) | RZC_ISR | A |
+| 14 | BTS7960 IS_L | ADC2_IN17 | PA4 | AN | -- | CN7-32 | AN | 0-3.3V | BTS7960 L_IS (current sense backup) | RZC_ISL | A |
 | 15 | WDT Feed | GPIO | PB4 | -- | D5 | CN10-27 | OUT | 3.3V | TPS3823 WDI | RZC_WDT_WDI | D |
 | 16 | Status LED Green | GPIO | PB5 | -- | D4 | CN10-29 | OUT | 3.3V | Green LED + 330R | RZC_LED_GRN | QM |
 | 17 | Status LED Red | GPIO | PB3 | -- | D3 | CN10-25 | OUT | 3.3V | Red LED + 330R | RZC_LED_RED | QM |
@@ -264,7 +264,8 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 | AF6 | TIM1 | PA8 (CH1), PA9 (CH2) -- RZC motor PWM |
 | AF7 | USART2 | PA2 (TX), PA3 (RX) -- FZC lidar UART |
 | AF9 | FDCAN1 | PA11 (RX), PA12 (TX) -- all STM32 ECUs |
-| AN | ADC1 | PA0-PA4, PB15 -- RZC analog inputs |
+| AN | ADC1 | PA0-PA3 -- RZC analog inputs (IN1-IN4) |
+| AN | ADC2 | PA4 (IN17), PB15 (IN15) -- RZC BTS7960 current sense |
 
 ### 8.2 Cross-ECU Pin Commonality
 

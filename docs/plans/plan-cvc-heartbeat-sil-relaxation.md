@@ -1,7 +1,7 @@
 # Plan: CVC Heartbeat Timeout Relaxation for SIL
 
 **Date:** 2026-03-03
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ## Context
 
@@ -45,7 +45,7 @@ Logic: wider window + higher error tolerance absorbs Docker jitter. MinOk values
 |-------|------|--------|
 | 0 | Add `#ifndef`/`PLATFORM_POSIX` guards to `Cvc_Cfg.h` | DONE |
 | 1 | Verify tests pass locally | DONE |
-| 2 | Commit, push, deploy, verify no flapping | PENDING |
+| 2 | Commit, push, deploy, verify no flapping | DONE |
 
 ## Phase 0: Modify `Cvc_Cfg.h`
 

@@ -30,7 +30,7 @@ MCU_FLAGS  = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 # --- Compiler flags ---
 CFLAGS  = $(MCU_FLAGS)
 CFLAGS += -Wall -Wextra -Werror -std=c99
-CFLAGS += -DPLATFORM_STM32 -DSTM32G474xx -DUSE_HAL_DRIVER
+CFLAGS += -DPLATFORM_STM32 -DSTM32G474xx -DUSE_HAL_DRIVER -DUSE_NUCLEO_64 -DCANTP_ENABLED
 CFLAGS += -fdata-sections -ffunction-sections
 
 # --- Build mode (default: debug for bring-up phase) ---
@@ -65,15 +65,19 @@ RTE_DIR       = $(BSW_DIR)/rte
 BUILD_DIR     = build/stm32
 
 # --- CubeMX generated project paths ---
-CUBEMX_DIR    = target/stm32/cubemx
+# CubeMX output lives alongside .ioc at repo root (project location locked).
+# All 3 ECUs share the same STM32G474RETx chip; CVC's output provides
+# HAL/CMSIS/linker/startup. Per-ECU differences (hal_msp, interrupts)
+# only matter when implementing real peripherals (Phase F2+).
+CUBEMX_DIR    = ../cubecvccfg
 HAL_DIR       = $(CUBEMX_DIR)/Drivers/STM32G4xx_HAL_Driver
 CMSIS_DIR     = $(CUBEMX_DIR)/Drivers/CMSIS
-CUBEMX_INC    = $(CUBEMX_DIR)/Inc
-CUBEMX_SRC    = $(CUBEMX_DIR)/Src
+CUBEMX_INC    = $(CUBEMX_DIR)/Core/Inc
+CUBEMX_SRC    = $(CUBEMX_DIR)/Core/Src
 
 # --- Linker script and startup ---
-LDSCRIPT      = $(CUBEMX_DIR)/STM32G474RETx_FLASH.ld
-STARTUP       = $(CUBEMX_DIR)/startup_stm32g474retx.s
+LDSCRIPT      = $(CUBEMX_DIR)/STM32G474XX_FLASH.ld
+STARTUP       = $(CUBEMX_DIR)/startup_stm32g474xx.s
 
 # --- Include paths ---
 CFLAGS += -I$(BSW_DIR)/include
@@ -87,6 +91,8 @@ CFLAGS += -I$(TARGET)/include
 # CubeMX / HAL include paths
 CFLAGS += -I$(CUBEMX_INC)
 CFLAGS += -I$(HAL_DIR)/Inc
+CFLAGS += -I$(HAL_DIR)/Inc/Legacy
+CFLAGS += -I$(CUBEMX_DIR)/Drivers/BSP/STM32G4xx_Nucleo
 CFLAGS += -I$(CMSIS_DIR)/Device/ST/STM32G4xx/Include
 CFLAGS += -I$(CMSIS_DIR)/Include
 
@@ -122,6 +128,9 @@ BSW_SRCS = \
     $(SERVICES_DIR)/WdgM.c \
     $(SERVICES_DIR)/BswM.c \
     $(SERVICES_DIR)/NvM.c \
+    $(SERVICES_DIR)/Det.c \
+    $(SERVICES_DIR)/SchM.c \
+    $(SERVICES_DIR)/CanTp.c \
     $(RTE_DIR)/Rte.c
 
 # --- FZC additionally needs Uart MCAL ---
@@ -130,29 +139,34 @@ ifeq ($(TARGET),fzc)
   BSW_SRCS += $(MCAL_TARGET)/Uart_Hw_STM32.c
 endif
 
-# --- CubeMX HAL sources (add only the drivers we use) ---
-# TODO:HARDWARE — Adjust this list after CubeMX project is generated.
-# For now, include the core HAL files. CubeMX will generate the full list.
+# --- CubeMX HAL sources (matching CubeMX-generated Makefile) ---
 HAL_SRCS = \
     $(HAL_DIR)/Src/stm32g4xx_hal.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_cortex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_rcc.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_rcc_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_gpio.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_exti.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_pwr.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_pwr_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_fdcan.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_spi.c \
-    $(HAL_DIR)/Src/stm32g4xx_hal_adc.c \
-    $(HAL_DIR)/Src/stm32g4xx_hal_adc_ex.c \
-    $(HAL_DIR)/Src/stm32g4xx_hal_tim.c \
-    $(HAL_DIR)/Src/stm32g4xx_hal_tim_ex.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_spi_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_dma.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_dma_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_i2c.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_i2c_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_uart.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_uart_ex.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_usart.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_usart_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_flash.c \
-    $(HAL_DIR)/Src/stm32g4xx_hal_flash_ex.c
+    $(HAL_DIR)/Src/stm32g4xx_hal_flash_ex.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_flash_ramfunc.c
+
+# Nucleo BSP
+BSP_SRCS = \
+    $(CUBEMX_DIR)/Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
 
 # CubeMX-generated init code
 CUBEMX_SRCS = \
@@ -165,7 +179,7 @@ ECU_SRCS_ALL = $(wildcard $(TARGET)/src/*.c) $(wildcard $(TARGET)/cfg/*.c)
 ECU_SRCS = $(filter-out %_posix.c,$(ECU_SRCS_ALL))
 
 # --- All application sources ---
-APP_SRCS = $(BSW_SRCS) $(HAL_SRCS) $(CUBEMX_SRCS) $(ECU_SRCS)
+APP_SRCS = $(BSW_SRCS) $(HAL_SRCS) $(BSP_SRCS) $(CUBEMX_SRCS) $(ECU_SRCS)
 
 # --- Object files ---
 APP_OBJS  = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))

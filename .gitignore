@@ -47,3 +47,14 @@ tools/misra/*.txt
 
 # Dependencies
 node_modules/
+
+# CubeMX generated code (regenerate from .ioc files)
+cubecvccfg/*
+!cubecvccfg/cubeCVCcfg.ioc
+cubeFZCcfg/*
+!cubeFZCcfg/cubeFZCcfg.ioc
+cuberzccfg/*
+!cuberzccfg/cubeRZCcfg.ioc
+
+# Datasheets (copyrighted, not redistributable)
+hardware/datasheets/

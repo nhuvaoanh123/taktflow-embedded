@@ -28,7 +28,7 @@
 #define AHB2_PERIPH_BASE    (PERIPH_BASE + 0x08000000u)
 #define GPIOA_BASE          (AHB2_PERIPH_BASE + 0x00000000u)
 
-#define RCC_BASE            (PERIPH_BASE + 0x01021000u) /* AHB1: 0x40021000 */
+#define RCC_BASE            (PERIPH_BASE + 0x00021000u) /* AHB1: 0x40021000 */
 #define RCC_AHB2ENR         (*(volatile uint32_t *)(RCC_BASE + 0x4Cu))
 
 #define SYSTICK_BASE        ((uint32_t)0xE000E010u)
@@ -169,6 +169,20 @@ static void led_init(void)
 static void led_toggle(void)
 {
     GPIOA_ODR ^= (1u << LED_PIN);
+}
+
+/* ==================================================================
+ * SystemInit — called by startup assembly before main()
+ * ================================================================== */
+
+/**
+ * @brief  System initialization stub — use default HSI 16 MHz clock.
+ * @note   CubeMX startup_stm32g474xx.s calls this before main().
+ *         We intentionally leave clocks at reset defaults for the blinky.
+ */
+void SystemInit(void)
+{
+    /* No clock configuration needed — HSI 16 MHz is sufficient for LED blink */
 }
 
 /* ==================================================================
