@@ -142,6 +142,22 @@ def _init_mqtt() -> paho_mqtt.Client:
         paho_mqtt.CallbackAPIVersion.VERSION2,
         client_id="taktflow-fault-inject",
     )
+
+    def _on_connect(client, userdata, flags, rc, properties=None):
+        rc_val = rc.value if hasattr(rc, 'value') else rc
+        if rc_val == 0:
+            log.info("MQTT connected to %s:%d", host, port)
+            # Re-subscribe test runner topics on reconnect
+            if _test_runner is not None:
+                _test_runner.on_mqtt_connect(client, userdata, flags, rc, properties)
+        else:
+            log.error("MQTT connect failed: rc=%s", rc)
+
+    def _on_disconnect(client, userdata, flags, rc, properties=None):
+        log.warning("MQTT disconnected (rc=%s) — will auto-reconnect", rc)
+
+    client.on_connect = _on_connect
+    client.on_disconnect = _on_disconnect
     client.connect_async(host, port, keepalive=30)
     client.loop_start()
     log.info("MQTT client connecting to %s:%d", host, port)

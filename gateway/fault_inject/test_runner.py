@@ -227,16 +227,32 @@ class DashboardTestRunner:
         self._run_id: str = ""
         self.last_result: dict | None = None
 
-        # Subscribe to MQTT for verdict monitoring
-        self._mqtt.subscribe("taktflow/can/#", qos=0)
-        self._mqtt.subscribe("taktflow/anomaly/#", qos=0)
-        self._mqtt.subscribe("taktflow/alerts/#", qos=0)
+        # Register per-topic callbacks (persistent across reconnects)
         self._mqtt.message_callback_add("taktflow/can/#", self._on_message)
         self._mqtt.message_callback_add("taktflow/anomaly/#", self._on_message)
         self._mqtt.message_callback_add("taktflow/alerts/#", self._on_message)
 
-    def _on_message(self, client, userdata, msg):
-        """Forward MQTT messages to the verdict monitor."""
+        # Subscribe (also re-subscribe on reconnect via on_connect)
+        self._subscribe()
+
+    def _subscribe(self):
+        """Subscribe to MQTT topics for verdict monitoring."""
+        self._mqtt.subscribe("taktflow/can/#", qos=0)
+        self._mqtt.subscribe("taktflow/anomaly/#", qos=0)
+        self._mqtt.subscribe("taktflow/alerts/#", qos=0)
+        log.info("Test runner subscribed to MQTT verdict topics")
+
+    def on_mqtt_connect(self, client, userdata, flags, rc, properties=None):
+        """Re-subscribe on reconnect (called from app.py on_connect)."""
+        if rc == 0 or (hasattr(rc, 'value') and rc.value == 0):
+            log.info("Test runner: MQTT connected — re-subscribing")
+            self._subscribe()
+
+    def _on_message(self, client, userdata, msg, properties=None):
+        """Forward MQTT messages to the verdict monitor.
+
+        Accepts optional properties arg for paho-mqtt v2.1+ VERSION2 compat.
+        """
         topic = msg.topic
         payload = msg.payload.decode("utf-8", errors="replace")
         self._monitor.on_mqtt_message(topic, payload)
@@ -325,10 +341,12 @@ class DashboardTestRunner:
 
                 self._publish_progress(run_id, len(specs), idx, spec, "preparing", results, start_time)
 
-                # Prep: reset containers, then wait for CVC to reach RUN
+                # Prep: clear monitor state, then reset containers, then wait for RUN.
+                # Monitor reset BEFORE container restart so we don't erase
+                # VehicleState messages that arrive during/after the restart.
                 log.info("[TEST %s] Resetting for scenario: %s", run_id, spec.id)
+                self._monitor.reset()
                 self._reset()
-                self._monitor.reset()  # clear stale state before waiting
 
                 if not self._wait_for_run(run_id):
                     # CVC didn't reach RUN — skip this test
