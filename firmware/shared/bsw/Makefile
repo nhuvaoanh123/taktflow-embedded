@@ -19,7 +19,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -std=c99 -pedantic -g
-CFLAGS += -DUNIT_TEST
+CFLAGS += -DUNIT_TEST -DCANTP_ENABLED
 CFLAGS += -Iinclude -Itest/unity
 
 # Source directories

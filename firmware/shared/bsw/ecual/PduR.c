@@ -60,9 +60,11 @@ void PduR_CanIfRxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
                 Dcm_RxIndication(upper_id, PduInfoPtr);
                 break;
 
+#ifdef CANTP_ENABLED
             case PDUR_DEST_CANTP:
                 CanTp_RxIndication(upper_id, PduInfoPtr);
                 break;
+#endif
 
             default:
                 /* Unknown destination — discard */

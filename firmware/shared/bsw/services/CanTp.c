@@ -203,6 +203,8 @@ void CanTp_MainFunction(void)
             return;  /* Wait for STmin to elapse */
         }
         CanTp_SendNextCF();
+    } else {
+        /* MISRA 15.7: terminal else — no action for other TX states */
     }
 }
 

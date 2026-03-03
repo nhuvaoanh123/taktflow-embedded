@@ -25,7 +25,7 @@
 
 # --- Toolchain ---
 CC      = gcc
-CFLAGS  = -Wall -Wextra -Werror -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_POSIX
+CFLAGS  = -Wall -Wextra -Werror -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_POSIX -DCANTP_ENABLED
 LDFLAGS =
 
 # --- Coverage flags (set by coverage target) ---

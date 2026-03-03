@@ -20,8 +20,10 @@
 /** Destination module for routing */
 typedef enum {
     PDUR_DEST_COM   = 0u,
-    PDUR_DEST_DCM   = 1u,
-    PDUR_DEST_CANTP = 2u    /**< Route through ISO-TP transport layer */
+    PDUR_DEST_DCM   = 1u
+#ifdef CANTP_ENABLED
+    , PDUR_DEST_CANTP = 2u    /**< Route through ISO-TP transport layer */
+#endif
 } PduR_DestType;
 
 /** Single routing table entry */
@@ -40,7 +42,9 @@ typedef struct {
 /* ---- Upper-layer callbacks (provided by Com, Dcm, CanTp) ---- */
 extern void Com_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
 extern void Dcm_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
+#ifdef CANTP_ENABLED
 extern void CanTp_RxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr);
+#endif
 
 /* ---- Lower-layer interface (provided by CanIf) ---- */
 extern Std_ReturnType CanIf_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr);

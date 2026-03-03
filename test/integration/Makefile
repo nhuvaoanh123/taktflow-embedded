@@ -57,14 +57,17 @@ BSW_COM_STACK = $(ECUAL_DIR)/CanIf.c $(ECUAL_DIR)/PduR.c $(SERVICES_DIR)/Com.c
 # Safety services (Dem depends on NvM for persistence)
 BSW_SAFETY = $(SERVICES_DIR)/WdgM.c $(SERVICES_DIR)/BswM.c $(SERVICES_DIR)/Dem.c $(SERVICES_DIR)/NvM.c
 
-# Diagnostics
-BSW_DIAG = $(SERVICES_DIR)/Dcm.c $(SERVICES_DIR)/Dem.c $(SERVICES_DIR)/NvM.c
+# Diagnostics (Dcm depends on BswM for ECUReset)
+BSW_DIAG = $(SERVICES_DIR)/Dcm.c $(SERVICES_DIR)/Dem.c $(SERVICES_DIR)/NvM.c $(SERVICES_DIR)/BswM.c
 
 # E2E protection
 BSW_E2E = $(SERVICES_DIR)/E2E.c
 
 # RTE
 BSW_RTE = $(RTE_DIR)/Rte.c
+
+# DET + SchM (required by all BSW modules after hardening)
+BSW_CORE = $(SERVICES_DIR)/Det.c $(SERVICES_DIR)/SchM.c
 
 # --- Test source files ---
 TEST_SRCS = $(wildcard test_int_*.c)
@@ -128,47 +131,47 @@ test-safety: $(TEST_SAFETY)
 # =============================================================================
 
 # INT-003: E2E protect -> transmit -> receive -> check (ASIL D)
-$(BUILD_DIR)/test_int_e2e_chain_asild: test_int_e2e_chain_asild.c $(BSW_E2E) $(BSW_COM_STACK) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_e2e_chain_asild: test_int_e2e_chain_asild.c $(BSW_E2E) $(BSW_COM_STACK) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-004: DEM error report -> DCM DTC readout (ASIL C)
-$(BUILD_DIR)/test_int_dem_to_dcm_asilc: test_int_dem_to_dcm_asilc.c $(BSW_DIAG) $(ECUAL_DIR)/PduR.c $(ECUAL_DIR)/CanIf.c $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_dem_to_dcm_asilc: test_int_dem_to_dcm_asilc.c $(BSW_DIAG) $(ECUAL_DIR)/PduR.c $(ECUAL_DIR)/CanIf.c $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-005: WdgM checkpoint -> deadline violation -> BswM safe state (ASIL D)
-$(BUILD_DIR)/test_int_wdgm_supervision_asild: test_int_wdgm_supervision_asild.c $(BSW_SAFETY) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_wdgm_supervision_asild: test_int_wdgm_supervision_asild.c $(BSW_SAFETY) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-006: BswM mode transitions propagate to all dependent modules (ASIL C)
-$(BUILD_DIR)/test_int_bswm_mode_asilc: test_int_bswm_mode_asilc.c $(SERVICES_DIR)/BswM.c $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_bswm_mode_asilc: test_int_bswm_mode_asilc.c $(SERVICES_DIR)/BswM.c $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-007: Critical fault -> all actuators to safe state (ASIL D)
-$(BUILD_DIR)/test_int_safe_state_asild: test_int_safe_state_asild.c $(BSW_SAFETY) $(BSW_RTE) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_safe_state_asild: test_int_safe_state_asild.c $(BSW_SAFETY) $(BSW_RTE) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-008: ECU heartbeat timeout -> degraded mode (ASIL D)
-$(BUILD_DIR)/test_int_heartbeat_loss_asild: test_int_heartbeat_loss_asild.c $(BSW_SAFETY) $(BSW_RTE) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_heartbeat_loss_asild: test_int_heartbeat_loss_asild.c $(BSW_SAFETY) $(BSW_RTE) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-010: Current sensor -> threshold -> motor shutdown -> DEM (ASIL D)
-$(BUILD_DIR)/test_int_overcurrent_chain_asild: test_int_overcurrent_chain_asild.c $(BSW_SAFETY) $(BSW_RTE) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_overcurrent_chain_asild: test_int_overcurrent_chain_asild.c $(BSW_SAFETY) $(BSW_RTE) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-011: CAN message matrix verification (ASIL C)
-$(BUILD_DIR)/test_int_can_matrix_asilc: test_int_can_matrix_asilc.c $(BSW_COM_STACK) $(BSW_E2E) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_can_matrix_asilc: test_int_can_matrix_asilc.c $(BSW_COM_STACK) $(BSW_E2E) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-012: Signal routing full stack (ASIL C)
-$(BUILD_DIR)/test_int_signal_routing_asilc: test_int_signal_routing_asilc.c $(BSW_COM_STACK) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_signal_routing_asilc: test_int_signal_routing_asilc.c $(BSW_COM_STACK) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-013/014: E2E CRC corruption and sequence gap detection (ASIL D)
-$(BUILD_DIR)/test_int_e2e_faults_asild: test_int_e2e_faults_asild.c $(BSW_E2E) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_e2e_faults_asild: test_int_e2e_faults_asild.c $(BSW_E2E) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # INT-015: CAN bus-off recovery (ASIL D)
-$(BUILD_DIR)/test_int_can_busoff_asild: test_int_can_busoff_asild.c $(BSW_COM_STACK) $(UNITY_SRC) | $(BUILD_DIR)
+$(BUILD_DIR)/test_int_can_busoff_asild: test_int_can_busoff_asild.c $(BSW_COM_STACK) $(BSW_CORE) $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COV_CFLAGS) $(INCLUDES) $^ -o $@ $(COV_LDFLAGS)
 
 # =============================================================================
