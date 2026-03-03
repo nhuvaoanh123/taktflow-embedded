@@ -53,6 +53,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | File | Topic | Date | Status |
 |------|-------|------|--------|
 | [PROCESS-hardware-procurement.md](hardware/PROCESS-hardware-procurement.md) | Hardware procurement — BOM management, datasheet verification, budget | 2026-03-01 | Closed |
+| [PROCESS-stm32-cubemx-bringup.md](hardware/PROCESS-stm32-cubemx-bringup.md) | STM32 CubeMX bringup — board selection, HSE 24 MHz, FDCAN bit timing, clock tree | 2026-03-03 | Open |
 
 ### Security
 
