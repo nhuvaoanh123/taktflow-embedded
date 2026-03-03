@@ -87,9 +87,9 @@ typedef uint8           Std_ReturnType;
 #define FZC_BRAKE_OSCILLATION_DELTA_THRESH  30u
 #define FZC_BRAKE_OSCILLATION_DEBOUNCE       4u
 
-/* Com TX PDU IDs */
-#define FZC_COM_TX_BRAKE_FAULT      3u
-#define FZC_COM_TX_MOTOR_CUTOFF     4u
+/* Com TX Signal IDs (NOT PDU IDs — see Com_Cfg_Fzc.c signal table) */
+#define FZC_COM_SIG_TX_BRAKE_FAULT      6u
+#define FZC_COM_SIG_TX_MOTOR_CUTOFF     7u
 
 /* ==================================================================
  * Swc_Brake Config Type (mirrors header)
@@ -650,7 +650,7 @@ void test_Motor_cutoff_com_send(void)
     /* Run one more cycle to trigger Com_SendSignal for cutoff */
     run_cycles(100u, 1u);
 
-    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_TX_MOTOR_CUTOFF] > 0u);
+    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_SIG_TX_MOTOR_CUTOFF] > 0u);
 }
 
 /** @verifies SWR-FZC-012 -- No cutoff when no fault present */
@@ -666,7 +666,7 @@ void test_No_cutoff_without_fault(void)
     TEST_ASSERT_EQUAL_UINT32(0u, cutoff);
 
     /* No Com_SendSignal for motor cutoff (brake fault status is sent every cycle) */
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_signal_count[FZC_COM_TX_MOTOR_CUTOFF]);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_signal_count[FZC_COM_SIG_TX_MOTOR_CUTOFF]);
 }
 
 /* ==================================================================
@@ -1144,8 +1144,8 @@ void test_Brake_fault_sent_on_CAN(void)
 
     /* Normal operation — fault = 0 but still sent cyclically */
     run_cycles(50u, 3u);
-    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_TX_BRAKE_FAULT] > 0u);
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_com_signal_data[FZC_COM_TX_BRAKE_FAULT]);
+    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_SIG_TX_BRAKE_FAULT] > 0u);
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_com_signal_data[FZC_COM_SIG_TX_BRAKE_FAULT]);
 
     /* Trigger oscillation fault */
     mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
@@ -1158,7 +1158,7 @@ void test_Brake_fault_sent_on_CAN(void)
     Swc_Brake_MainFunction();
 
     /* Fault code transmitted on CAN */
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, mock_com_signal_data[FZC_COM_TX_BRAKE_FAULT]);
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, mock_com_signal_data[FZC_COM_SIG_TX_BRAKE_FAULT]);
 }
 
 /** @verifies SWR-FZC-010

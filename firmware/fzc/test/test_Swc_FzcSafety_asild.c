@@ -58,8 +58,8 @@ typedef uint8           Std_ReturnType;
 #define FZC_SIG_MOTOR_CUTOFF        29u
 #define FZC_SIG_SELF_TEST_RESULT    33u
 
-/* Com TX PDU IDs (from Fzc_Cfg.h) */
-#define FZC_COM_TX_MOTOR_CUTOFF      4u
+/* Com TX Signal IDs (from Fzc_Cfg.h — NOT PDU IDs!) */
+#define FZC_COM_SIG_TX_MOTOR_CUTOFF  7u
 
 /* Vehicle state values (from Fzc_Cfg.h) */
 #define FZC_STATE_INIT               0u

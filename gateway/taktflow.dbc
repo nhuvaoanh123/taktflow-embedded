@@ -137,14 +137,13 @@ BO_ 769 Motor_Current: 8 RZC
  SG_ OvercurrentFlag : 34|1@1+ (1,0) [0|1] "" SC,CVC,ICU
  SG_ TorqueEcho : 35|8@1+ (1,0) [0|100] "%" SC,CVC,ICU
 
-BO_ 770 Motor_Temperature: 6 RZC
+BO_ 770 Motor_Temperature: 8 RZC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" CVC,ICU
  SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" CVC,ICU
  SG_ E2E_CRC8 : 8|8@1+ (1,0) [0|255] "" CVC,ICU
- SG_ WindingTemp1_C : 16|8@1+ (1,-40) [-40|215] "degC" CVC,ICU
- SG_ WindingTemp2_C : 24|8@1+ (1,-40) [-40|215] "degC" CVC,ICU
- SG_ DeratingPercent : 32|8@1+ (1,0) [0|100] "%" CVC,ICU
- SG_ TempFaultStatus : 40|4@1+ (1,0) [0|15] "" CVC,ICU
+ SG_ WindingTemp1_C : 16|16@1+ (0.1,0) [0|200.0] "degC" CVC,ICU
+ SG_ WindingTemp2_C : 32|16@1+ (0.1,0) [0|200.0] "degC" CVC,ICU
+ SG_ DeratingPercent : 48|8@1+ (1,0) [0|100] "%" CVC,ICU
 
 BO_ 771 Battery_Status: 6 RZC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" CVC,ICU

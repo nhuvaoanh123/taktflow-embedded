@@ -344,7 +344,7 @@ void Swc_Brake_MainFunction(void)
     if (Brake_CutoffSending == TRUE) {
         if (Brake_CutoffCounter < Brake_CfgPtr->cutoffRepeatCount) {
             cutoff_data = 1u;
-            (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_data);
+            (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_data);
             Brake_CutoffCounter++;
         } else {
             Brake_CutoffSending = FALSE;
@@ -360,7 +360,7 @@ void Swc_Brake_MainFunction(void)
     /* Cyclic TX of brake fault status so CVC always has current value */
     {
         uint32 fault_tx = (uint32)Brake_Fault;
-        (void)Com_SendSignal(FZC_COM_TX_BRAKE_FAULT, &fault_tx);
+        (void)Com_SendSignal(FZC_COM_SIG_TX_BRAKE_FAULT, &fault_tx);
     }
 
     if (Brake_CutoffSending == TRUE) {

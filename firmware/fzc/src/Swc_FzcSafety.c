@@ -124,20 +124,24 @@ void Swc_FzcSafety_MainFunction(void)
     }
 
     /* ----------------------------------------------------------
-     * Step 2b: Steering fault → motor cutoff (safety architecture)
-     *          A steering fault means the vehicle cannot be safely
-     *          steered. Motor cutoff is the correct safety response
-     *          (SS-MOTOR-OFF per SG-003). This propagates via
-     *          CAN 0x211 → CVC → VehicleState → SAFE_STOP.
+     * Step 2b: Motor cutoff aggregation (safety architecture)
+     *          A steering or brake fault means the vehicle cannot be
+     *          safely operated. Motor cutoff is the correct safety
+     *          response (SS-MOTOR-OFF per SG-003). This propagates
+     *          via CAN 0x211 → CVC → VehicleState → SAFE_STOP.
+     *
+     *          Read-modify-write: Brake SWC (higher priority) may
+     *          have already set motor_cutoff=1 in RTE. We must
+     *          preserve that value, not blindly overwrite to 0.
      * ---------------------------------------------------------- */
-    if (steer_fault != 0u) {
+    if ((steer_fault != 0u) || (brake_fault != 0u)) {
         uint32 cutoff_val = 1u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
-        (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_val);
+        (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
     } else {
         uint32 cutoff_val = 0u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 0u);
-        (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_val);
+        (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
     }
 
     /* ----------------------------------------------------------

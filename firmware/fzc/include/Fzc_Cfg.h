@@ -55,6 +55,15 @@
 #define FZC_COM_TX_LIDAR           5u   /* CAN 0x220 */
 
 /* ====================================================================
+ * Com TX Signal IDs (index into Com signal config table)
+ * NOTE: These are SIGNAL IDs, not PDU IDs. Com_SendSignal() takes a
+ * signal ID.  The PDU IDs above are for PduR_Transmit() / CanIf.
+ * ==================================================================== */
+
+#define FZC_COM_SIG_TX_BRAKE_FAULT     6u   /* sig_tx_brake_fault  in Com_Cfg_Fzc.c */
+#define FZC_COM_SIG_TX_MOTOR_CUTOFF    7u   /* sig_tx_motor_cutoff in Com_Cfg_Fzc.c */
+
+/* ====================================================================
  * Com RX PDU IDs
  * ==================================================================== */
 
