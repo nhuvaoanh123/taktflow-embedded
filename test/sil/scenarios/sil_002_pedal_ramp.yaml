@@ -30,8 +30,8 @@ setup:
     description: "Clear residual state and ensure clean start"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Wait for system to reach RUN before applying torque"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization before applying torque"
 
 steps:
   - action: inject_scenario

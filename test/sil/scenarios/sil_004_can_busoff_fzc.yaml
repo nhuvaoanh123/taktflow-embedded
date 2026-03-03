@@ -31,8 +31,8 @@ setup:
     description: "Clear residual fault state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure all ECUs are running normally"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization to ensure all ECUs are running normally"
   - action: verify_heartbeat
     ecu: fzc
     can_id: 0x011

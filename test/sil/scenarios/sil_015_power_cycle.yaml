@@ -33,8 +33,8 @@ setup:
     description: "Start from clean state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization"
 
   # Generate a DTC before power cycle to verify persistence
   - action: inject_scenario
@@ -47,8 +47,8 @@ setup:
     description: "Clear active fault but DTC should be stored"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Return to RUN before power cycle"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization before power cycle"
 
 steps:
   # Phase 1: Start normal operation

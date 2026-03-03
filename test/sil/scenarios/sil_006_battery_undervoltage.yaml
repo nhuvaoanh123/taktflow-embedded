@@ -32,8 +32,8 @@ setup:
     description: "Clear residual fault state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN with normal battery voltage"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization with normal battery voltage"
 
 steps:
   - action: inject_scenario

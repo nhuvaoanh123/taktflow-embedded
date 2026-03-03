@@ -30,8 +30,8 @@ setup:
     description: "Clear any prior fault state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN before E-Stop test"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization before E-Stop test"
   - action: inject_scenario
     name: normal_drive
     description: "Establish active motor output (50% torque) as pre-condition"

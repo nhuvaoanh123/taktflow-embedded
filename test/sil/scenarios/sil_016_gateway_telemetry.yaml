@@ -33,8 +33,8 @@ setup:
 steps:
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Wait for system to reach RUN state with CAN traffic active"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization with CAN traffic active"
   - action: wait
     seconds: 6
     description: "Wait for at least one gateway telemetry publish cycle (5s interval)"

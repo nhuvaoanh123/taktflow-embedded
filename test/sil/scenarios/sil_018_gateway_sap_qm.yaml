@@ -31,8 +31,8 @@ setup:
 steps:
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Wait for system to reach RUN state"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization"
   - action: inject_fault
     type: overcurrent
     value: 22.0

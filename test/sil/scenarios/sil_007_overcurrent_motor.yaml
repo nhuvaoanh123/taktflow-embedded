@@ -31,8 +31,8 @@ setup:
     description: "Clear residual fault state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN before overcurrent injection"
+    timeout: 15
+    description: "Wait for INIT hold (10s SIL) + E2E SM stabilization + Docker jitter"
 
 steps:
   - action: inject_scenario

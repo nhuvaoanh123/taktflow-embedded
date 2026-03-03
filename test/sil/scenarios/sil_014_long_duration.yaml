@@ -31,8 +31,8 @@ setup:
     description: "Start from clean idle state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization"
   - action: record_baseline
     metric: battery_soc
     description: "Record initial battery SOC for monotonic decrease check"

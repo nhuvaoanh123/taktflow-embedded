@@ -31,8 +31,8 @@ setup:
     description: "Start from clean state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure system is in RUN"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization"
 
 steps:
   # Phase 1: Trigger SAFE_STOP
@@ -52,8 +52,8 @@ steps:
     description: "Allow reset to propagate"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Wait for recovery: SAFE_STOP -> INIT -> RUN"
+    timeout: 15
+    description: "Wait for recovery: SAFE_STOP -> INIT -> RUN (INIT hold 10s + E2E stabilization)"
 
 verdicts:
   - type: vehicle_state

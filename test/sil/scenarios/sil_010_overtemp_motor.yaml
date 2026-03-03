@@ -31,8 +31,8 @@ setup:
     description: "Clear residual state and ensure motor is cold"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "System must be in RUN before thermal test"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization before thermal test"
 
 steps:
   - action: inject_scenario

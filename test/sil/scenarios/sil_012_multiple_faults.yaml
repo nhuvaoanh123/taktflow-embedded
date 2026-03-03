@@ -32,8 +32,8 @@ setup:
     description: "Clear all prior fault state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "Ensure clean RUN state before multi-fault injection"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization before multi-fault injection"
 
 steps:
   - action: inject_scenario

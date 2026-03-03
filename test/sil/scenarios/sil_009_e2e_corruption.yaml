@@ -32,8 +32,8 @@ setup:
     description: "Clear residual state"
   - action: wait_state
     state: RUN
-    timeout: 10
-    description: "System must be in RUN for E2E test"
+    timeout: 15
+    description: "Wait for INIT hold (10s) + E2E stabilization for E2E test"
   - action: record_baseline
     metric: motor_rpm
     description: "Record current motor RPM as baseline (should be 0 at idle)"
