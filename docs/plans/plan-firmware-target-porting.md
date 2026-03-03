@@ -11,6 +11,7 @@
 |-------|------|--------|
 | F0 | Toolchain Setup + Blinky | DONE (code) — toolchain install is manual |
 | F1 | Target Build System | DONE — all 3 ECUs build+link (2026-03-03) |
+| F1.5 | CVC UART Debug Logging | IN PROGRESS |
 | F2 | MCAL CAN Driver (first sign of life) | PENDING |
 | F3 | Remaining MCAL Drivers | PENDING |
 | F4 | Per-ECU Init + Self-Tests + MPU + WDG | PENDING |
@@ -217,6 +218,73 @@ firmware/rzc/src/rzc_hw_stm32.c                      (stub)
 - [x] MISRA check passes on new stub files (all 10 files verified clean)
 - [x] All stubs compile with `-Wall -Wextra -Werror -std=c99` (syntax-verified)
 - [x] MISRA suppressions updated for STM32 hw files (Rule 8.4)
+
+---
+
+## Phase F1.5: CVC UART Debug Logging (Nucleo bring-up)
+
+**Goal**: Flash actual CVC firmware to Nucleo, watch it boot and run via UART serial terminal.
+**Scope**: Implement SysTick timing (via HAL) + UART debug output — minimum viable "sign of life".
+**Depends on**: F1 complete (confirmed), Nucleo + data USB cable (confirmed).
+
+### Context
+
+The blinky proves toolchain->flash->hardware works. But the actual CVC firmware (17KB, full BSW stack) can't run yet because `Main_Hw_GetTick()` returns 0 — the main loop never advances. Two things are needed:
+
+1. **SysTick timer** — so the main loop's 1ms/10ms/100ms scheduling works
+2. **UART debug output** — so we can see what's happening (no CAN bus yet)
+
+Clock stays at HSI 16 MHz (no PLL needed for debug). CAN/SPI/I2C stubs still return E_OK.
+
+### Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| SysTick source | `HAL_Init()` + `HAL_GetTick()` | CubeMX `stm32g4xx_it.c` already defines `SysTick_Handler` calling `HAL_IncTick()`. Using HAL avoids duplicate ISR symbol. |
+| GetTick conversion | `HAL_GetTick() * 1000u` (ms->us) | main.c scheduling uses microseconds. Overflow after ~49 days — fine for debug. |
+| UART approach | Bare-metal USART2 register access | Simpler than HAL_UART for TX-only. No HAL UART init complexity. PA2=TX, AF7, 115200@16MHz. |
+| Clock | HSI 16 MHz (no PLL) | Simplest for debug bring-up. PLL config comes in F2 with real peripherals. |
+
+### Steps
+
+1. **`cvc_hw_stm32.c`**: Replace timing stubs with HAL-based implementations. Add bare-metal USART2 TX init + boot banner.
+2. **`main.c`**: Add `DBG_LOG` macro (guarded by `#ifdef PLATFORM_STM32`) + ~6 print calls at init milestones.
+3. **Build verification**: `make -f Makefile.stm32 TARGET=cvc` compiles cleanly.
+
+### Expected UART Output
+
+```
+=== CVC Boot (HSI 16 MHz) ===
+BSW init: 17 modules OK
+SWC init: 7 modules OK
+Self-test: SPI=PASS CAN=PASS OLED=PASS RAM=PASS
+BswM: STARTUP -> RUN
+SysTick: 1ms — entering main loop
+```
+
+After entering the main loop, heartbeat/comm timeout messages come from SIL_DIAG macros (compiled out on STM32 by default). The boot sequence above is sufficient to prove the firmware runs.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `firmware/cvc/src/cvc_hw_stm32.c` | HAL_Init, HAL_GetTick, WFI, UART init+write, boot banner |
+| `firmware/cvc/src/main.c` | Add `DBG_LOG` macro + ~6 print calls at init milestones |
+
+No Makefile changes needed — USART2 is bare-metal register access. POSIX build unaffected (all additions guarded by `#ifdef PLATFORM_STM32`).
+
+### Verification
+
+1. `make -f Makefile.stm32 TARGET=cvc` — builds without errors
+2. Flash CVC via CubeProgrammer: `STM32_Programmer_CLI -c port=SWD -w build/stm32/cvc.bin 0x08000000 -v -rst`
+3. Open serial terminal at **115200 baud, 8N1** on Nucleo COM port
+4. Observe boot log -> self-test -> BswM RUN -> main loop entry
+
+### DONE criteria
+- [ ] CVC firmware builds for STM32 with SysTick + UART
+- [ ] POSIX build unbroken
+- [ ] Flash to Nucleo, UART output visible in serial terminal
+- [ ] Boot sequence visible: init -> self-test -> RUN -> main loop
 
 ---
 

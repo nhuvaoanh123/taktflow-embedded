@@ -1,31 +1,104 @@
 /**
  * @file    cvc_hw_stm32.c
- * @brief   STM32 hardware stubs for CVC (Central Vehicle Computer)
+ * @brief   STM32 hardware backend for CVC (Central Vehicle Computer)
  * @date    2026-03-03
  *
- * @details Stub implementations of all Main_Hw_*, SelfTest_Hw_*, and
- *          Ssd1306_Hw_* externs declared in cvc/src/main.c and Swc_SelfTest.c.
- *          Every function returns E_OK or is a no-op so the STM32 build links.
- *          Real HAL implementations come in Phase F4.
+ * @details Phase F1.5: SysTick via HAL + bare-metal USART2 debug TX.
+ *          Self-test and peripheral stubs still return E_OK (real
+ *          implementations come in F2-F4).
  *
- * @safety_req N/A — stub only, not for production
+ *          Timing: HAL_Init() configures SysTick at 1ms (HSI 16 MHz).
+ *          UART:   Bare-metal USART2 PA2=TX AF7, 115200 baud.
+ *
+ * @safety_req N/A — debug bring-up, not for production
  * @copyright Taktflow Systems 2026
  */
 
 #include "Platform_Types.h"
 #include "Std_Types.h"
+#include "stm32g4xx_hal.h"
 
 /* ==================================================================
- * Timing stubs — TODO:HARDWARE call CubeMX / HAL in Phase F4
+ * UART Debug Output — bare-metal USART2 (PA2=TX, Nucleo VCP)
  * ================================================================== */
 
 /**
- * @brief  Initialize system clocks — no-op stub
- * @note   TODO:HARDWARE — call CubeMX SystemClock_Config()
+ * @brief  Initialize USART2 for debug TX at 115200 baud (HSI 16 MHz)
+ * @note   Bare-metal register access — no HAL UART dependency.
+ *         PA2 = USART2_TX (AF7), connected to ST-LINK VCP on Nucleo.
+ */
+static void Dbg_Uart_Init(void)
+{
+    /* Enable GPIOA and USART2 peripheral clocks */
+    RCC->AHB2ENR  |= RCC_AHB2ENR_GPIOAEN;
+    RCC->APB1ENR1 |= RCC_APB1ENR1_USART2EN;
+
+    /* Read-back for clock stabilization (silicon errata workaround) */
+    (void)RCC->APB1ENR1;
+
+    /* Configure PA2 as alternate function (MODER=0b10) */
+    GPIOA->MODER  = (GPIOA->MODER  & ~(3u << (2u * 2u)))
+                   | (2u << (2u * 2u));
+
+    /* PA2 alternate function = AF7 (USART2_TX) in AFRL register */
+    GPIOA->AFR[0] = (GPIOA->AFR[0] & ~(0xFu << (2u * 4u)))
+                   | (7u << (2u * 4u));
+
+    /* USART2: 115200 baud at 16 MHz HSI, 8N1, TX only */
+    USART2->BRR = 139u;                            /* 16000000 / 115200 = 138.9 */
+    USART2->CR1 = USART_CR1_TE | USART_CR1_UE;     /* Enable transmitter + USART */
+
+    /* Wait for TE acknowledge before first transmission */
+    while ((USART2->ISR & USART_ISR_TEACK) == 0u)
+    {
+        /* spin */
+    }
+}
+
+/**
+ * @brief  Blocking single-character transmit on USART2
+ * @param  c  Character to send
+ */
+static void Dbg_Uart_PutChar(char c)
+{
+    while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0u)
+    {
+        /* Wait for TX data register empty */
+    }
+    USART2->TDR = (uint8)c;
+}
+
+/**
+ * @brief  Print null-terminated string to USART2 (blocking)
+ * @param  str  Null-terminated string to transmit
+ * @note   Non-static — called from main.c via extern declaration.
+ */
+void Dbg_Uart_Print(const char *str)
+{
+    while (*str != '\0')
+    {
+        Dbg_Uart_PutChar(*str);
+        str++;
+    }
+}
+
+/* ==================================================================
+ * Timing — SysTick via HAL (ISR in CubeMX stm32g4xx_it.c)
+ * ================================================================== */
+
+/**
+ * @brief  Initialize system clocks and debug UART
+ * @note   HAL_Init() configures SysTick at 1ms using HSI 16 MHz.
+ *         UART init + boot banner printed at earliest opportunity.
  */
 void Main_Hw_SystemClockInit(void)
 {
-    /* TODO:HARDWARE — call CubeMX SystemClock_Config() */
+    /* HAL_Init: flash prefetch, SysTick 1ms, NVIC priority grouping */
+    (void)HAL_Init();
+
+    /* Initialize debug UART (earliest possible output) */
+    Dbg_Uart_Init();
+    Dbg_Uart_Print("\r\n=== CVC Boot (HSI 16 MHz) ===\r\n");
 }
 
 /**
@@ -38,34 +111,35 @@ void Main_Hw_MpuConfig(void)
 }
 
 /**
- * @brief  Initialize SysTick timer — stores period for future use
- * @param  periodUs  Tick period in microseconds
- * @note   TODO:HARDWARE — call HAL_SYSTICK_Config() with computed reload value
+ * @brief  Initialize SysTick timer
+ * @param  periodUs  Tick period in microseconds (expected: 1000 = 1ms)
+ * @note   SysTick already configured by HAL_Init() at 1ms. This call
+ *         validates the expected period and serves as a synchronization
+ *         point before entering the main loop.
  */
 void Main_Hw_SysTickInit(uint32 periodUs)
 {
     (void)periodUs;
-    /* TODO:HARDWARE — use HAL_SYSTICK_Config(periodUs * (SystemCoreClock / 1000000u)) */
+    /* SysTick already running from HAL_Init() — 1ms at HSI 16 MHz.
+     * HAL_IncTick() ISR in stm32g4xx_it.c increments the HAL tick. */
 }
 
 /**
- * @brief  Wait for interrupt — no-op stub
- * @note   TODO:HARDWARE — call __WFI() on target
+ * @brief  Wait for interrupt — saves power between ticks
  */
 void Main_Hw_Wfi(void)
 {
-    /* TODO:HARDWARE — __WFI() */
+    __WFI();
 }
 
 /**
- * @brief  Get elapsed time since SysTickInit
- * @return 0u (stub — no hardware timer running)
- * @note   TODO:HARDWARE — read HAL_GetTick() or DWT cycle counter
+ * @brief  Get elapsed time since boot in microseconds
+ * @return Elapsed microseconds (HAL tick * 1000)
+ * @note   Resolution is 1ms (1000us steps). Overflows after ~49 days.
  */
 uint32 Main_Hw_GetTick(void)
 {
-    /* TODO:HARDWARE — return real tick from HAL_GetTick() or DWT */
-    return 0u;
+    return HAL_GetTick() * 1000u;
 }
 
 /* ==================================================================

@@ -50,6 +50,17 @@
 #include "Swc_CvcCom.h"
 
 /* ==================================================================
+ * Debug Logging (STM32 UART — compiled out on POSIX)
+ * ================================================================== */
+
+#ifdef PLATFORM_STM32
+extern void Dbg_Uart_Print(const char *str);
+#define DBG_LOG(msg)  Dbg_Uart_Print(msg)
+#else
+#define DBG_LOG(msg)  ((void)0)
+#endif
+
+/* ==================================================================
  * External Configuration (defined in cfg/ files)
  * ================================================================== */
 
@@ -275,6 +286,7 @@ static uint8 Main_RunSelfTest(void)
     /* SPI loopback test */
     if (Main_Hw_SpiLoopbackTest() != E_OK)
     {
+        DBG_LOG("Self-test: SPI=FAIL\r\n");
         Dem_ReportErrorStatus(CVC_DTC_SELF_TEST_FAIL, DEM_EVENT_STATUS_FAILED);
         return CVC_SELF_TEST_FAIL;
     }
@@ -282,6 +294,7 @@ static uint8 Main_RunSelfTest(void)
     /* CAN loopback test */
     if (Main_Hw_CanLoopbackTest() != E_OK)
     {
+        DBG_LOG("Self-test: CAN=FAIL\r\n");
         Dem_ReportErrorStatus(CVC_DTC_SELF_TEST_FAIL, DEM_EVENT_STATUS_FAILED);
         return CVC_SELF_TEST_FAIL;
     }
@@ -296,10 +309,12 @@ static uint8 Main_RunSelfTest(void)
     /* RAM pattern test */
     if (Main_Hw_RamPatternTest() != E_OK)
     {
+        DBG_LOG("Self-test: RAM=FAIL\r\n");
         Dem_ReportErrorStatus(CVC_DTC_SELF_TEST_FAIL, DEM_EVENT_STATUS_FAILED);
         return CVC_SELF_TEST_FAIL;
     }
 
+    DBG_LOG("Self-test: SPI=PASS CAN=PASS OLED=PASS RAM=PASS\r\n");
     return CVC_SELF_TEST_PASS;
 }
 
@@ -348,6 +363,7 @@ int main(void)
     Dio_Init();
     IoHwAb_Init(&iohwab_config);
     Rte_Init(&cvc_rte_config);
+    DBG_LOG("BSW init: 17 modules OK\r\n");
 
     /* ---- Step 3: SWC initialization ---- */
     (void)Ssd1306_Init();
@@ -357,6 +373,7 @@ int main(void)
     Swc_Heartbeat_Init();
     Swc_Dashboard_Init();
     Swc_CvcCom_Init();
+    DBG_LOG("SWC init: 7 modules OK\r\n");
 
     /* ---- Step 4: Self-test sequence ---- */
     self_test_result = Main_RunSelfTest();
@@ -377,10 +394,12 @@ int main(void)
     if (self_test_result == CVC_SELF_TEST_PASS)
     {
         (void)BswM_RequestMode(0u, BSWM_RUN);
+        DBG_LOG("BswM: STARTUP -> RUN\r\n");
     }
 
     /* ---- Step 7: Start SysTick (1ms period = 1000us) ---- */
     Main_Hw_SysTickInit(1000u);
+    DBG_LOG("SysTick: 1ms — entering main loop\r\n");
 
     /* ---- Step 8: Main loop ---- */
     for (;;)
