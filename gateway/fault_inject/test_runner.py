@@ -255,6 +255,10 @@ class DashboardTestRunner:
         """
         topic = msg.topic
         payload = msg.payload.decode("utf-8", errors="replace")
+        # Diagnostic: log VehicleState messages during test runs
+        if self._running and "Vehicle_State" in topic:
+            log.info("[MQTT-RX] %s = %s (monitor.state=%d)",
+                     topic, payload, self._monitor.vehicle_state)
         self._monitor.on_mqtt_message(topic, payload)
 
     @property
@@ -391,6 +395,11 @@ class DashboardTestRunner:
                     time.sleep(0.2)  # poll at 5Hz
 
                 # Evaluate verdicts
+                log.info("[TEST %s] Verdict eval: state=%d/%s dtcs=%s ts_keys=%s",
+                         run_id, self._monitor.vehicle_state,
+                         VEHICLE_STATES.get(self._monitor.vehicle_state, "?"),
+                         [hex(d) for d in self._monitor.dtcs_seen],
+                         list(self._monitor._state_change_ts.keys()))
                 verdict_results = []
                 for check in spec.verdicts:
                     v = self._monitor.check_verdict(check, inject_time)
