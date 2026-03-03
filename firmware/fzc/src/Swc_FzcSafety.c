@@ -134,6 +134,10 @@ void Swc_FzcSafety_MainFunction(void)
         uint32 cutoff_val = 1u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
         (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_val);
+    } else {
+        uint32 cutoff_val = 0u;
+        (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 0u);
+        (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_val);
     }
 
     /* ----------------------------------------------------------

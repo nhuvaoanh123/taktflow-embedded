@@ -104,6 +104,13 @@ extern void            Swc_Steering_MainFunction(void);
 extern Std_ReturnType  Swc_Steering_GetAngle(sint16* angle);
 
 /* ==================================================================
+ * Helper: convert degrees (-45..+45) to 14-bit SPI raw (0-16383)
+ * Matches plant-sim encoding: raw = ((deg + 45) * 16383) / 90
+ * ================================================================== */
+
+#define DEG_TO_RAW(deg) ((sint16)((((sint32)(deg) + 45) * 16383) / 90))
+
+/* ==================================================================
  * Mock: IoHwAb_ReadSteeringAngle
  * ================================================================== */
 
@@ -244,7 +251,7 @@ void setUp(void)
 
     /* Reset IoHwAb mock */
     mock_iohwab_result     = E_OK;
-    mock_iohwab_angle      = 0;
+    mock_iohwab_angle      = DEG_TO_RAW(0);
     mock_iohwab_read_count = 0u;
 
     /* Reset PWM mock */
@@ -307,7 +314,8 @@ static void run_cycles(sint16 cmd_angle, sint16 fb_angle, uint16 count)
     for (i = 0u; i < count; i++) {
         /* Write commanded angle to RTE signal for Swc_Steering to read */
         mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)cmd_angle);
-        mock_iohwab_angle = fb_angle;
+        /* Feedback angle arrives as 14-bit SPI raw from IoHwAb */
+        mock_iohwab_angle = DEG_TO_RAW(fb_angle);
         Swc_Steering_MainFunction();
     }
 }
@@ -334,7 +342,7 @@ void test_Init_valid_config(void)
     /* Init already called in setUp. Verify module is operational
      * by running one cycle with valid data. */
     mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)((sint16)0));
-    mock_iohwab_angle = 0;
+    mock_iohwab_angle = DEG_TO_RAW(0);
     Swc_Steering_MainFunction();
 
     /* PWM should be written (center = 1500us) */
@@ -523,7 +531,7 @@ void test_Rate_limit_caps_increase(void)
 
     /* Command jumps to +30 degrees — should be rate-limited */
     mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)((sint16)30));
-    mock_iohwab_angle = 0;
+    mock_iohwab_angle = DEG_TO_RAW(0);
     Swc_Steering_MainFunction();
 
     /* After 1 cycle: current angle should be at most 0.3 deg from 0
@@ -978,7 +986,7 @@ void test_FaultInj_cmd_timeout_exact_boundary(void)
     uint16 i;
     for (i = 0u; i < 70u; i++) {
         mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)((sint16)(10 + (sint16)(i % 2u))));
-        mock_iohwab_angle = 10;
+        mock_iohwab_angle = DEG_TO_RAW(10);
         Swc_Steering_MainFunction();
     }
 

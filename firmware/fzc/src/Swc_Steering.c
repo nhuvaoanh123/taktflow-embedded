@@ -324,7 +324,10 @@ void Swc_Steering_MainFunction(void)
     {
         uint16 raw_angle = 0U;
         ret = IoHwAb_ReadSteeringAngle(&raw_angle);
-        actual_angle = (sint16)raw_angle;
+        /* Convert 14-bit SPI raw (0-16383) to degrees (-45..+45).
+         * Formula: deg = (raw * 90 + half) / 16383 - 45
+         * The +8191 rounds to nearest integer degree. */
+        actual_angle = (sint16)((((sint32)raw_angle * 90) + 8191) / 16383 - 45);
     }
 
     if (ret != E_OK) {
