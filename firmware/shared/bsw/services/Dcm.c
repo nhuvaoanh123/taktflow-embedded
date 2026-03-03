@@ -85,7 +85,7 @@ static void dcm_send_response(const uint8* data, PduLengthType length)
         return;
     }
 
-    pdu_info.SduDataPtr = (uint8*)(uintptr_t)data;
+    pdu_info.SduDataPtr = (uint8*)data;  /* cast away const for AUTOSAR PduInfoType */
     pdu_info.SduLength  = length;
 
     if (length > 7u) {

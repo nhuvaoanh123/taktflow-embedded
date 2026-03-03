@@ -82,4 +82,9 @@ uint8 SchM_GetNestingDepth(void);
 
 #endif /* PLATFORM_POSIX && !UNIT_TEST */
 
+/* ---- Test Helpers ---- */
+#if defined(UNIT_TEST)
+boolean SchM_Test_IsIrqDisabled(void);
+#endif
+
 #endif /* SCHM_H */
