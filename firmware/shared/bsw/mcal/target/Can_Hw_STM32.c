@@ -220,9 +220,9 @@ boolean Can_Hw_Receive(Can_IdType* id, uint8* data, uint8* dlc)
     *id = (Can_IdType)rxHeader.Identifier;
 
     /* Convert HAL DLC constant back to byte count.
-     * HAL DLC constants: FDCAN_DLC_BYTES_0=0x00000000 through
-     * FDCAN_DLC_BYTES_8=0x00080000, shifted by 16 bits. */
-    dlcRaw = (rxHeader.DataLength >> 16u) & 0xFu;
+     * STM32G4 HAL: FDCAN_DLC_BYTES_0..8 = 0..8 (raw DLC code).
+     * Classic CAN: DLC 0-8 maps 1:1 to byte count. */
+    dlcRaw = rxHeader.DataLength;
     if (dlcRaw > 8u)
     {
         dlcRaw = 8u;
@@ -319,12 +319,13 @@ Std_ReturnType Can_Hw_LoopbackTest(void)
     uint32 start;
     uint8 i;
 
-    /* Step 1-2: Stop and switch to loopback mode */
+    /* Step 1-2: DeInit (reset HAL state machine) and switch to loopback */
     (void)HAL_FDCAN_Stop(&hfdcan1);
+    (void)HAL_FDCAN_DeInit(&hfdcan1);
 
     if (Can_Hw_InitMode(FDCAN_MODE_INTERNAL_LOOPBACK) != E_OK)
     {
-        /* Restore normal mode before returning */
+        (void)HAL_FDCAN_DeInit(&hfdcan1);
         (void)Can_Hw_InitMode(FDCAN_MODE_NORMAL);
         return E_NOT_OK;
     }
@@ -332,6 +333,7 @@ Std_ReturnType Can_Hw_LoopbackTest(void)
     /* Step 3: Start and transmit test frame */
     if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
     {
+        (void)HAL_FDCAN_DeInit(&hfdcan1);
         (void)Can_Hw_InitMode(FDCAN_MODE_NORMAL);
         return E_NOT_OK;
     }
@@ -339,6 +341,7 @@ Std_ReturnType Can_Hw_LoopbackTest(void)
     if (Can_Hw_Transmit(CAN_LB_TEST_ID, can_lb_test_data, CAN_LB_TEST_DLC) != E_OK)
     {
         (void)HAL_FDCAN_Stop(&hfdcan1);
+        (void)HAL_FDCAN_DeInit(&hfdcan1);
         (void)Can_Hw_InitMode(FDCAN_MODE_NORMAL);
         return E_NOT_OK;
     }
@@ -365,6 +368,7 @@ Std_ReturnType Can_Hw_LoopbackTest(void)
                 {
                     /* Step 6-7: Restore normal mode, leave stopped */
                     (void)HAL_FDCAN_Stop(&hfdcan1);
+                    (void)HAL_FDCAN_DeInit(&hfdcan1);
                     (void)Can_Hw_InitMode(FDCAN_MODE_NORMAL);
                     return E_OK;
                 }
@@ -374,6 +378,7 @@ Std_ReturnType Can_Hw_LoopbackTest(void)
 
     /* Timeout — restore normal mode */
     (void)HAL_FDCAN_Stop(&hfdcan1);
+    (void)HAL_FDCAN_DeInit(&hfdcan1);
     (void)Can_Hw_InitMode(FDCAN_MODE_NORMAL);
     return E_NOT_OK;
 }
