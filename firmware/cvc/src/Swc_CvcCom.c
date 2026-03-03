@@ -24,6 +24,7 @@
 #include "Com.h"
 #include "Rte.h"
 #include "Swc_VehicleState.h"
+#include "PduR.h"
 
 #define CVC_SAFE_BRAKE_CMD   100u   /**< Max brake for safe-state TX */
 
@@ -254,6 +255,58 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
             /* Transmit is handled by the caller after E2E protect.
              * Mark the slot as due for transmission. */
         }
+    }
+
+    /* ---- TX: 0x100 Vehicle State (E2E protected, cyclic) ---- */
+    {
+        uint8  txBuf[8];
+        uint8  j;
+        uint32 faultSig;
+        uint8  faultMask = 0u;
+        PduInfoType pdu_info;
+
+        pdu_info.SduDataPtr = txBuf;
+        pdu_info.SduLength  = 8u;
+
+        for (j = 0u; j < 8u; j++) { txBuf[j] = 0u; }
+
+        /* Byte 2: Vehicle state */
+        txBuf[2] = Swc_VehicleState_GetState();
+
+        /* Byte 3: Fault mask (composed from individual RTE signals) */
+        (void)Rte_Read(CVC_SIG_ESTOP_ACTIVE, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x01u; }
+        (void)Rte_Read(CVC_SIG_SC_RELAY_KILL, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x02u; }
+        (void)Rte_Read(CVC_SIG_MOTOR_CUTOFF, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x04u; }
+        (void)Rte_Read(CVC_SIG_BRAKE_FAULT, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x08u; }
+        (void)Rte_Read(CVC_SIG_STEERING_FAULT, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x10u; }
+        (void)Rte_Read(CVC_SIG_PEDAL_FAULT, &faultSig);
+        if (faultSig != 0u) { faultMask |= 0x20u; }
+        (void)Rte_Read(CVC_SIG_FZC_COMM_STATUS, &faultSig);
+        if (faultSig == CVC_COMM_TIMEOUT) { faultMask |= 0x40u; }
+        (void)Rte_Read(CVC_SIG_RZC_COMM_STATUS, &faultSig);
+        if (faultSig == CVC_COMM_TIMEOUT) { faultMask |= 0x80u; }
+        txBuf[3] = faultMask;
+
+        /* Byte 4: Torque limit (scaled from 0-1000 RTE to 0-100%) */
+        {
+            uint32 torque = 0u;
+            (void)Rte_Read(CVC_SIG_TORQUE_REQUEST, &torque);
+            txBuf[4] = (uint8)(torque / 10u);
+        }
+
+        /* Write FaultMask to RTE for other consumers */
+        (void)Rte_Write(CVC_SIG_FAULT_MASK, (uint32)faultMask);
+
+        /* E2E protect: CRC-8 + alive counter (TX index 2 = 0x100) */
+        (void)Swc_CvcCom_E2eProtect(2u, txBuf, 8u);
+
+        /* Transmit via PduR -> CanIf -> CAN 0x100 */
+        (void)PduR_Transmit(CVC_COM_TX_VEHICLE_STATE, &pdu_info);
     }
 
     /* Publish steering and brake commands.

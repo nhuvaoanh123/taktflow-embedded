@@ -585,9 +585,6 @@ void Swc_VehicleState_MainFunction(void)
     /* ---- Step 6: Write current state to RTE ---- */
     (void)Rte_Write(CVC_SIG_VEHICLE_STATE, (uint32)current_state);
 
-    /* ---- Step 7: Publish vehicle state to Com -> CAN 0x100 ---- */
-    {
-        uint8 tx_state = current_state;
-        (void)Com_SendSignal(4u, &tx_state);  /* Signal 4 = vehicle_state */
-    }
+    /* NOTE: CAN 0x100 TX is handled by Swc_CvcCom_TransmitSchedule
+     * with full E2E protection and fault mask composition. */
 }

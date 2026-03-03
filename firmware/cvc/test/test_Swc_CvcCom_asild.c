@@ -33,22 +33,41 @@ typedef uint8           Std_ReturnType;
 #define FALSE       0u
 #define NULL_PTR    ((void*)0)
 
-/* CVC config constants (mirrors Cvc_Cfg.h) needed by new bridge/TX code */
-#define CVC_SIG_BRAKE_FAULT       30u
-#define CVC_SIG_SC_RELAY_KILL     31u
-#define CVC_SIG_MOTOR_CUTOFF      28u
-#define CVC_SIG_STEERING_FAULT    29u
+/* CVC config constants (mirrors Cvc_Cfg.h) needed by bridge/TX code */
+#define CVC_SIG_PEDAL_FAULT       19u
+#define CVC_SIG_VEHICLE_STATE     20u
+#define CVC_SIG_TORQUE_REQUEST    21u
+#define CVC_SIG_ESTOP_ACTIVE      22u
 #define CVC_SIG_FZC_COMM_STATUS   23u
 #define CVC_SIG_RZC_COMM_STATUS   24u
-#define CVC_SIG_TORQUE_REQUEST    21u
+#define CVC_SIG_FAULT_MASK        26u
+#define CVC_SIG_MOTOR_CUTOFF      28u
+#define CVC_SIG_STEERING_FAULT    29u
+#define CVC_SIG_BRAKE_FAULT       30u
+#define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
+
+/* Com TX PDU IDs (mirrors Cvc_Cfg.h) */
+#define CVC_COM_TX_VEHICLE_STATE   2u
 
 /* Vehicle state constants (mirrors Cvc_Cfg.h) */
 #define CVC_STATE_INIT        0u
 #define CVC_STATE_RUN         1u
 #define CVC_STATE_SAFE_STOP   4u
 #define CVC_STATE_SHUTDOWN    5u
+
+/* ==================================================================
+ * ComStack Types (mirrors ComStack_Types.h / PduR.h)
+ * ================================================================== */
+
+typedef uint16 PduIdType;
+typedef uint16 PduLengthType;
+
+typedef struct {
+    uint8          *SduDataPtr;
+    PduLengthType   SduLength;
+} PduInfoType;
 
 /* ==================================================================
  * E2E Types (mirrors BSW E2E.h)
@@ -223,6 +242,28 @@ E2E_CheckStatusType E2E_Check(const E2E_ConfigType* Config,
 }
 
 /* ==================================================================
+ * Mock: PduR_Transmit
+ * ================================================================== */
+
+static uint8  mock_pdur_tx_call_count;
+static uint16 mock_pdur_tx_last_pdu_id;
+static uint8  mock_pdur_tx_last_data[8];
+static uint16 mock_pdur_tx_last_length;
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    mock_pdur_tx_call_count++;
+    mock_pdur_tx_last_pdu_id = TxPduId;
+    if (PduInfoPtr != NULL_PTR && PduInfoPtr->SduDataPtr != NULL_PTR)
+    {
+        mock_pdur_tx_last_length = PduInfoPtr->SduLength;
+        (void)memcpy(mock_pdur_tx_last_data, PduInfoPtr->SduDataPtr,
+                     (PduInfoPtr->SduLength <= 8u) ? PduInfoPtr->SduLength : 8u);
+    }
+    return E_OK;
+}
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 
@@ -237,6 +278,12 @@ void setUp(void)
     mock_vehicle_state = CVC_STATE_RUN;
     (void)memset(mock_com_sent_u8, 0, sizeof(mock_com_sent_u8));
     (void)memset(mock_com_sent_s16, 0, sizeof(mock_com_sent_s16));
+    (void)memset(mock_rte_signals, 0, sizeof(mock_rte_signals));
+
+    mock_pdur_tx_call_count = 0u;
+    mock_pdur_tx_last_pdu_id = 0xFFFFu;
+    mock_pdur_tx_last_length = 0u;
+    (void)memset(mock_pdur_tx_last_data, 0, sizeof(mock_pdur_tx_last_data));
 
     Swc_CvcCom_Init();
 }
@@ -531,5 +578,7 @@ int main(void)
 #define COM_H
 #define RTE_H
 #define SWC_VEHICLESTATE_H
+#define PDUR_H
+#define COMSTACK_TYPES_H
 
 #include "../src/Swc_CvcCom.c"
