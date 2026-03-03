@@ -16,7 +16,8 @@
 #include "Det.h"
 
 #if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-#include <stdio.h>  /* cppcheck-suppress misra-c2012-21.6 ; SIL_DIAG stderr output */
+/* cppcheck-suppress misra-c2012-21.6 ; SIL_DIAG stderr output only */
+#include <stdio.h>
 #endif
 
 /* ---- Internal State ---- */

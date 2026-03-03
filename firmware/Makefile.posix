@@ -119,6 +119,9 @@ BSW_SRCS = \
     $(SERVICES_DIR)/WdgM.c \
     $(SERVICES_DIR)/BswM.c \
     $(SERVICES_DIR)/NvM.c \
+    $(SERVICES_DIR)/Det.c \
+    $(SERVICES_DIR)/SchM.c \
+    $(SERVICES_DIR)/CanTp.c \
     $(RTE_DIR)/Rte.c
 
 # --- FZC additionally needs Uart MCAL ---
