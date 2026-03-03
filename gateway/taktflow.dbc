@@ -146,10 +146,12 @@ BO_ 770 Motor_Temperature: 6 RZC
  SG_ DeratingPercent : 32|8@1+ (1,0) [0|100] "%" CVC,ICU
  SG_ TempFaultStatus : 40|4@1+ (1,0) [0|15] "" CVC,ICU
 
-BO_ 771 Battery_Status: 4 RZC
- SG_ BatteryVoltage_mV : 0|16@1+ (1,0) [0|20000] "mV" CVC,ICU
- SG_ BatterySOC : 16|8@1+ (1,0) [0|100] "%" CVC,ICU
- SG_ BatteryStatus : 24|4@1+ (1,0) [0|4] "" CVC,ICU
+BO_ 771 Battery_Status: 6 RZC
+ SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" CVC,ICU
+ SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" CVC,ICU
+ SG_ E2E_CRC8 : 8|8@1+ (1,0) [0|255] "" CVC,ICU
+ SG_ BatteryVoltage_mV : 16|16@1+ (1,0) [0|20000] "mV" CVC,ICU
+ SG_ BatteryStatus : 32|8@1+ (1,0) [0|4] "" CVC,ICU
 
 BO_ 848 Body_Control_Cmd: 4 CVC
  SG_ HeadlightCmd : 0|2@1+ (1,0) [0|2] "" BCM
