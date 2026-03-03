@@ -38,6 +38,7 @@
 #include "Com.h"
 #include "PduR.h"
 #include "Dem.h"
+#include "Swc_RzcSafety.h"
 
 /* ==================================================================
  * Constants
@@ -304,6 +305,10 @@ void Swc_RzcCom_Receive(void)
     {
         return;
     }
+
+    /* Notify safety module that COM RX cycle is running.
+     * Resets the CAN silence counter — prevents false CAN-loss latch. */
+    Swc_RzcSafety_NotifyCanRx();
 
     /* --- 0x001 E-stop broadcast --- */
     estop_raw = 0u;

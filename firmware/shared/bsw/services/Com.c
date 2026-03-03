@@ -23,6 +23,12 @@ static boolean com_tx_pending[COM_MAX_PDUS];
 /* RX PDU buffers */
 static uint8  com_rx_pdu_buf[COM_MAX_PDUS][COM_PDU_SIZE];
 
+/* RX deadline monitoring: cycles since last Com_RxIndication per PDU */
+static uint16 com_rx_timeout_cnt[COM_MAX_PDUS];
+
+/* RX deadline monitoring period: 10ms per cycle (matches RTE scheduler) */
+#define COM_RX_CYCLE_MS   10u
+
 /* ---- Private Helpers ---- */
 
 static uint8 com_get_byte_offset(uint8 bitPosition)
@@ -52,6 +58,7 @@ void Com_Init(const Com_ConfigType* ConfigPtr)
             com_rx_pdu_buf[i][j] = 0u;
         }
         com_tx_pending[i] = FALSE;
+        com_rx_timeout_cnt[i] = 0u;
     }
 
     com_initialized = TRUE;
@@ -157,6 +164,9 @@ void Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr)
         return;
     }
 
+    /* Reset RX deadline counter — fresh data arrived */
+    com_rx_timeout_cnt[ComRxPduId] = 0u;
+
     /* Store received PDU data */
     for (i = 0u; (i < PduInfoPtr->SduLength) && (i < COM_PDU_SIZE); i++) {
         com_rx_pdu_buf[ComRxPduId][i] = PduInfoPtr->SduDataPtr[i];
@@ -201,6 +211,62 @@ void Com_MainFunction_Tx(void)
 
             if (PduR_Transmit(pdu_id, &pdu_info) == E_OK) {
                 com_tx_pending[pdu_id] = FALSE;
+            }
+        }
+    }
+}
+
+void Com_MainFunction_Rx(void)
+{
+    uint8 i;
+    uint8 j;
+
+    if ((com_initialized == FALSE) || (com_config == NULL_PTR)) {
+        return;
+    }
+
+    /* RX deadline monitoring: for each configured RX PDU with a non-zero
+     * timeout, increment the cycle counter. If the counter exceeds the
+     * configured timeout, replace shadow buffer signals with initial
+     * values (zero) — matches AUTOSAR ComRxDataTimeoutAction = REPLACE. */
+    for (i = 0u; i < com_config->rxPduCount; i++) {
+        PduIdType pdu_id   = com_config->rxPduConfig[i].PduId;
+        uint16    timeout  = com_config->rxPduConfig[i].TimeoutMs;
+
+        if ((pdu_id >= COM_MAX_PDUS) || (timeout == 0u)) {
+            continue;
+        }
+
+        if (com_rx_timeout_cnt[pdu_id] < 0xFFFFu) {
+            com_rx_timeout_cnt[pdu_id]++;
+        }
+
+        if ((com_rx_timeout_cnt[pdu_id] * COM_RX_CYCLE_MS) >= timeout) {
+            /* Timeout: zero-fill shadow buffers for all signals on this PDU */
+            for (j = 0u; j < com_config->signalCount; j++) {
+                const Com_SignalConfigType* sig = &com_config->signalConfig[j];
+
+                if (sig->PduId == pdu_id) {
+                    switch (sig->Type) {
+                    case COM_UINT8:
+                    case COM_BOOL:
+                        *((uint8*)sig->ShadowBuffer) = 0u;
+                        break;
+                    case COM_UINT16:
+                        *((uint16*)sig->ShadowBuffer) = 0u;
+                        break;
+                    case COM_SINT16:
+                        *((sint16*)sig->ShadowBuffer) = 0;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+
+            /* Also clear the PDU buffer */
+            for (j = 0u; j < COM_PDU_SIZE; j++) {
+                com_rx_pdu_buf[pdu_id][j] = 0u;
             }
         }
     }

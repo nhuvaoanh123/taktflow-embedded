@@ -22,4 +22,11 @@ void Swc_RzcSafety_Init(void);
 void Swc_RzcSafety_MainFunction(void);
 uint8 Swc_RzcSafety_GetStatus(void);
 
+/**
+ * @brief  Notify that a CAN message was successfully received
+ * @note   Called by the COM layer on every valid RX cycle.
+ *         Resets the CAN silence counter to prevent false CAN-loss latch.
+ */
+void Swc_RzcSafety_NotifyCanRx(void);
+
 #endif /* SWC_RZC_SAFETY_H */

@@ -22,9 +22,11 @@ extern void Swc_Lidar_MainFunction(void);
 extern void Swc_Heartbeat_MainFunction(void);
 extern void Swc_Buzzer_MainFunction(void);
 extern void Com_MainFunction_Tx(void);
+extern void Com_MainFunction_Rx(void);
 extern void Can_MainFunction_Read(void);
 extern void Can_MainFunction_BusOff(void);
 extern void Swc_FzcCom_Receive(void);
+extern void Swc_FzcCanMonitor_Check(void);
 extern void Swc_FzcCom_TransmitSchedule(void);
 
 /* ==================================================================
@@ -80,16 +82,18 @@ static const Rte_SignalConfigType fzc_signal_config[FZC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType fzc_runnable_config[] = {
     /* func,                           periodMs, priority, seId */
-    { Can_MainFunction_Read,              10u,      10u,    0xFFu },  /* CAN RX first           */
+    { Can_MainFunction_Read,              10u,      11u,    0xFFu },  /* CAN RX first           */
+    { Com_MainFunction_Rx,                10u,      10u,    0xFFu },  /* COM RX deadline monitor */
     { Swc_FzcCom_Receive,                 10u,       9u,    0xFFu },  /* Com→RTE bridge         */
     { Swc_Steering_MainFunction,          10u,       8u,    0u    },  /* Steering highest SWC   */
     { Swc_Brake_MainFunction,             10u,       7u,    1u    },  /* Brake control          */
     { Swc_Lidar_MainFunction,             10u,       6u,    2u    },  /* Lidar processing       */
     { Swc_Heartbeat_MainFunction,         10u,       5u,    3u    },  /* Heartbeat TX           */
     { Swc_Buzzer_MainFunction,            10u,       4u,    4u    },  /* Buzzer                 */
-    { Swc_FzcCom_TransmitSchedule,        10u,       3u,    0xFFu },  /* Fault/lidar TX schedule*/
-    { Com_MainFunction_Tx,                10u,       2u,    0xFFu },  /* COM TX (after all SWCs)*/
-    { Can_MainFunction_BusOff,            10u,       1u,    0xFFu },  /* Bus-off check          */
+    { Swc_FzcCanMonitor_Check,            10u,       3u,    0xFFu },  /* CAN bus loss detection */
+    { Swc_FzcCom_TransmitSchedule,        10u,       2u,    0xFFu },  /* Fault/lidar TX schedule*/
+    { Com_MainFunction_Tx,                10u,       1u,    0xFFu },  /* COM TX (after all SWCs)*/
+    { Can_MainFunction_BusOff,            10u,       0u,    0xFFu },  /* Bus-off check          */
 };
 
 #define FZC_RUNNABLE_COUNT  (sizeof(fzc_runnable_config) / sizeof(fzc_runnable_config[0]))

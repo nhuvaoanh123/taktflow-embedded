@@ -72,14 +72,28 @@
  * Heartbeat Timing (in 10ms ticks)
  * ================================================================== */
 
-#define SC_HB_TIMEOUT_TICKS         10u    /* 100ms = 2x 50ms heartbeat period (SG-008 FTTI) */
-#define SC_HB_CONFIRM_TICKS         3u     /* 30ms additional confirmation */
+#ifndef SC_HB_TIMEOUT_TICKS
+  #ifdef PLATFORM_POSIX
+    #define SC_HB_TIMEOUT_TICKS     30u    /* 300ms — Docker CPU jitter margin (3x bare metal) */
+  #else
+    #define SC_HB_TIMEOUT_TICKS     10u    /* 100ms = 2x 50ms heartbeat period (SG-008 FTTI) */
+  #endif
+#endif
+#ifndef SC_HB_CONFIRM_TICKS
+  #ifdef PLATFORM_POSIX
+    #define SC_HB_CONFIRM_TICKS     5u     /* 50ms — wider confirmation for SIL scheduling */
+  #else
+    #define SC_HB_CONFIRM_TICKS     3u     /* 30ms additional confirmation */
+  #endif
+#endif
 #define SC_HB_RECOVERY_THRESHOLD    3u     /* 3 consecutive HBs before canceling timeout */
 #define SC_HB_ALIVE_MAX             15u    /* 4-bit alive counter max */
-#ifdef PLATFORM_POSIX
-#define SC_HB_STARTUP_GRACE_TICKS  1500u   /* 15s grace for SIL — sequential Docker restarts need margin */
-#else
-#define SC_HB_STARTUP_GRACE_TICKS  500u    /* 5s grace — must >= CVC INIT hold (500 ticks) */
+#ifndef SC_HB_STARTUP_GRACE_TICKS
+  #ifdef PLATFORM_POSIX
+    #define SC_HB_STARTUP_GRACE_TICKS  1500u   /* 15s grace for SIL — sequential Docker restarts need margin */
+  #else
+    #define SC_HB_STARTUP_GRACE_TICKS  500u    /* 5s grace — must >= CVC INIT hold (500 ticks) */
+  #endif
 #endif
 
 /* ==================================================================

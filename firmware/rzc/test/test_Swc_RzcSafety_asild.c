@@ -126,6 +126,7 @@ typedef uint8           boolean;
 extern void  Swc_RzcSafety_Init(void);
 extern void  Swc_RzcSafety_MainFunction(void);
 extern uint8 Swc_RzcSafety_GetStatus(void);
+extern void  Swc_RzcSafety_NotifyCanRx(void);
 
 /* ==================================================================
  * Mock: Rte_Read
@@ -568,6 +569,46 @@ void test_Estop_escalates_to_fault(void)
 }
 
 /* ==================================================================
+ * SWR-RZC-024: CAN Silence Counter Reset via NotifyCanRx
+ * ================================================================== */
+
+/** @verifies SWR-RZC-024 -- NotifyCanRx resets silence counter, prevents latch */
+void test_CAN_silence_reset_on_notify_rx(void)
+{
+    mock_can_bus_off = CAN_ERRORSTATE_ACTIVE;
+
+    /* Run 15 cycles (150ms) — approaching but not at threshold */
+    run_cycles(15u);
+
+    /* Notify RX — this must reset the silence counter */
+    Swc_RzcSafety_NotifyCanRx();
+
+    /* Run 15 more cycles (150ms) — total 300ms elapsed, but counter
+     * was reset at 150ms, so only 150ms since last RX. No latch. */
+    run_cycles(15u);
+
+    /* Motor should NOT be disabled — silence counter was reset */
+    uint32 mask = mock_rte_signals[RZC_SIG_FAULT_MASK];
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_CAN) == 0u);
+
+    uint32 status = mock_rte_signals[RZC_SIG_SAFETY_STATUS];
+    TEST_ASSERT_EQUAL_UINT32((uint32)SAFETY_STATUS_OK, status);
+}
+
+/** @verifies SWR-RZC-024 -- Without NotifyCanRx, silence still latches at 200ms */
+void test_CAN_silence_latches_without_notify_rx(void)
+{
+    mock_can_bus_off = CAN_ERRORSTATE_ACTIVE;
+
+    /* Run 21 cycles (210ms) without any NotifyCanRx call */
+    run_cycles(21u);
+
+    /* Motor SHOULD be disabled — silence counter exceeded threshold */
+    uint32 mask = mock_rte_signals[RZC_SIG_FAULT_MASK];
+    TEST_ASSERT_TRUE((mask & (uint32)RZC_FAULT_CAN) != 0u);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -594,6 +635,10 @@ int main(void)
 
     /* SWR-RZC-023: Safety status output */
     RUN_TEST(test_Safety_status_output);
+
+    /* SWR-RZC-024: CAN silence counter reset via NotifyCanRx */
+    RUN_TEST(test_CAN_silence_reset_on_notify_rx);
+    RUN_TEST(test_CAN_silence_latches_without_notify_rx);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_All_faults_simultaneously);

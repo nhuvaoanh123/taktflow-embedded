@@ -531,5 +531,10 @@ int main(void)
 #define RTE_H
 #define COM_H
 #define PDUR_H
+#define SWC_FZC_CAN_MONITOR_H
+
+/* Mock: Swc_FzcCanMonitor_NotifyRx (called by Swc_FzcCom_Receive) */
+static uint8 mock_canmon_notify_count;
+void Swc_FzcCanMonitor_NotifyRx(void) { mock_canmon_notify_count++; }
 
 #include "../src/Swc_FzcCom.c"

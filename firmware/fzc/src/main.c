@@ -53,6 +53,7 @@
 #include "Swc_Heartbeat.h"
 #include "Swc_FzcCom.h"
 #include "Swc_FzcSafety.h"
+#include "Swc_FzcCanMonitor.h"
 #include "Swc_Buzzer.h"
 
 /* ==================================================================
@@ -339,6 +340,7 @@ int main(void)
     Swc_Lidar_Init(&lidar_config);
     Swc_Heartbeat_Init();
     Swc_FzcCom_Init();
+    Swc_FzcCanMonitor_Init();
     Swc_FzcSafety_Init();
     Swc_Buzzer_Init();
 

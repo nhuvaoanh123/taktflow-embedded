@@ -22,6 +22,7 @@ extern void Swc_EStop_MainFunction(void);
 extern void Swc_Heartbeat_MainFunction(void);
 extern void Swc_Dashboard_MainFunction(void);
 extern void Com_MainFunction_Tx(void);
+extern void Com_MainFunction_Rx(void);
 extern void Can_MainFunction_Read(void);
 extern void Can_MainFunction_BusOff(void);
 
@@ -74,7 +75,8 @@ static const Rte_SignalConfigType cvc_signal_config[CVC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType cvc_runnable_config[] = {
     /* func,                           periodMs, priority, seId */
-    { Can_MainFunction_Read,              10u,      8u,     0xFFu },  /* CAN RX first            */
+    { Can_MainFunction_Read,              10u,      9u,     0xFFu },  /* CAN RX first            */
+    { Com_MainFunction_Rx,                10u,      8u,     0xFFu },  /* COM RX deadline monitor */
     { Swc_EStop_MainFunction,             10u,      7u,     2u    },  /* E-stop highest SWC prio */
     { Swc_Pedal_MainFunction,             10u,      6u,     0u    },  /* Pedal processing        */
     { Swc_VehicleState_MainFunction,      10u,      5u,     1u    },  /* State machine           */

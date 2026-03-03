@@ -76,5 +76,6 @@ Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataP
 Std_ReturnType Com_ReceiveSignal(Com_SignalIdType SignalId, void* SignalDataPtr);
 void           Com_RxIndication(PduIdType ComRxPduId, const PduInfoType* PduInfoPtr);
 void           Com_MainFunction_Tx(void);
+void           Com_MainFunction_Rx(void);
 
 #endif /* COM_H */

@@ -18,6 +18,9 @@ misra-c2012-21.8:*/*_hw_posix.c
 misra-c2012-21.10:*/*_hw_posix.c
 misra-c2012-17.7:*/*_hw_posix.c
 misra-c2012-8.4:*/*_hw_posix.c
+misra-c2012-8.4:*/*_hw_stm32.c
+misra-c2012-8.4:*/*_hw_tms570.c
+misra-c2012-8.4:*/*_Hw_STM32.c
 misra-c2012-8.4:*/cfg/*.c
 misra-c2012-8.5
 misra-c2012-11.5:*/Com.c

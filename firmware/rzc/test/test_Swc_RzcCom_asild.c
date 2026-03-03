@@ -56,6 +56,11 @@ typedef struct {
 #define DEM_H
 #define WDGM_H
 #define IOHWAB_H
+#define SWC_RZC_SAFETY_H
+
+/* Mock: Swc_RzcSafety_NotifyCanRx (called by Swc_RzcCom_Receive) */
+static uint8 mock_safety_notify_count;
+void Swc_RzcSafety_NotifyCanRx(void) { mock_safety_notify_count++; }
 
 /* ==================================================================
  * RZC signal IDs (from Rzc_Cfg.h -- redefined locally for test isolation)

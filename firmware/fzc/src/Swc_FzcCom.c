@@ -35,6 +35,7 @@
 #include "Rte.h"
 #include "Com.h"
 #include "PduR.h"
+#include "Swc_FzcCanMonitor.h"
 
 /* ==================================================================
  * Constants
@@ -205,6 +206,10 @@ void Swc_FzcCom_Receive(void)
     if (FzcCom_Initialized != TRUE) {
         return;
     }
+
+    /* Notify CAN monitor that COM RX cycle is running.
+     * Resets the silence counter — prevents false CAN-loss latch. */
+    Swc_FzcCanMonitor_NotifyRx();
 
     /* NOTE: Com_ReceiveSignal reads extracted signal values from shadow
      * buffers (not raw PDU bytes).  The previous E2E check at signal level

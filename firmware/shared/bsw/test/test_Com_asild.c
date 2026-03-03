@@ -309,19 +309,50 @@ void test_Com_MainFunction_Tx_pdur_fail(void)
 }
 
 /** @verifies SWR-BSW-016
- *  Equivalence class: RX timeout — signal not received within deadline
- *  After enough MainFunction cycles without RX, timeout should be flagged */
-void test_Com_RxTimeout_no_reception(void)
+ *  Equivalence class: RX timeout — shadow buffers zeroed after deadline
+ *  RX PDU 0 has 100ms timeout (10 cycles at 10ms). After 10 cycles of
+ *  Com_MainFunction_Rx without RxIndication, shadow buffers must be zeroed. */
+void test_Com_RxTimeout_zeros_shadow_buffers(void)
 {
-    /* RX PDU 0 has 100ms timeout. Without any RxIndication, after
-     * enough TX main cycles, the RX timeout condition should trigger.
-     * At minimum, no crash should occur. */
+    /* Pre-load signal buffer with known value */
+    sig_torque_buf = 0xAAu;
+    sig_motor_status_buf = 0xBBu;
+
+    /* Run 11 RX main cycles without any RxIndication — exceeds 100ms timeout */
     uint16 i;
-    for (i = 0u; i < 20u; i++) {
-        Com_MainFunction_Tx();
+    for (i = 0u; i < 11u; i++) {
+        Com_MainFunction_Rx();
     }
-    /* No crash — timeout handling is implementation-specific */
-    TEST_ASSERT_TRUE(TRUE);
+
+    /* Shadow buffers for signals on PDU 0 must be zeroed (AUTOSAR REPLACE) */
+    TEST_ASSERT_EQUAL_HEX8(0x00u, sig_torque_buf);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, sig_motor_status_buf);
+}
+
+/** @verifies SWR-BSW-016
+ *  Equivalence class: RX indication resets timeout counter — no false timeout */
+void test_Com_RxTimeout_reset_by_indication(void)
+{
+    /* Run 5 cycles (50ms) — halfway to 100ms timeout */
+    uint16 i;
+    for (i = 0u; i < 5u; i++) {
+        Com_MainFunction_Rx();
+    }
+
+    /* Receive a valid PDU — resets timeout counter */
+    uint8 data[] = {0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00};
+    PduInfoType pdu = { data, 8u };
+    Com_RxIndication(0u, &pdu);
+
+    /* Run 5 more cycles — total since reset is only 50ms, within 100ms timeout */
+    for (i = 0u; i < 5u; i++) {
+        Com_MainFunction_Rx();
+    }
+
+    /* Signal at bit 16 (byte 2) should still hold received value, not zeroed */
+    uint8 val = 0u;
+    Com_ReceiveSignal(2u, &val);
+    TEST_ASSERT_EQUAL_HEX8(0xAAu, val);
 }
 
 /** @verifies SWR-BSW-015
@@ -368,7 +399,8 @@ int main(void)
     RUN_TEST(test_Com_SendSignal_max_value);
     RUN_TEST(test_Com_SendSignal_zero_value);
     RUN_TEST(test_Com_MainFunction_Tx_pdur_fail);
-    RUN_TEST(test_Com_RxTimeout_no_reception);
+    RUN_TEST(test_Com_RxTimeout_zeros_shadow_buffers);
+    RUN_TEST(test_Com_RxTimeout_reset_by_indication);
     RUN_TEST(test_Com_MultipleSignals_same_pdu);
 
     return UNITY_END();

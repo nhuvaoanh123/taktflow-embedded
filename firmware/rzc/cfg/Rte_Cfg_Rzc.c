@@ -24,6 +24,7 @@ extern void Swc_TempMonitor_MainFunction(void);
 extern void Swc_Battery_MainFunction(void);
 extern void Swc_Heartbeat_MainFunction(void);
 extern void Com_MainFunction_Tx(void);
+extern void Com_MainFunction_Rx(void);
 extern void Can_MainFunction_BusOff(void);
 extern void Swc_RzcSafety_MainFunction(void);   /* WatchdogFeed */
 extern void Swc_RzcCom_Receive(void);            /* CAN RX bridge */
@@ -86,10 +87,11 @@ static const Rte_SignalConfigType rzc_signal_config[RZC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType rzc_runnable_config[] = {
     /* func,                              periodMs, priority, seId */
-    { Swc_CurrentMonitor_MainFunction,       1u,      7u,     0u    },  /* Current monitor (1kHz) */
-    { Swc_Motor_MainFunction,               10u,      6u,     1u    },  /* Motor control          */
-    { Swc_Encoder_MainFunction,             10u,      6u,     2u    },  /* Encoder processing     */
-    { Can_MainFunction_Read,                10u,      5u,     0xFFu },  /* CAN RX                 */
+    { Swc_CurrentMonitor_MainFunction,       1u,      9u,     0u    },  /* Current monitor (1kHz) */
+    { Swc_Motor_MainFunction,               10u,      8u,     1u    },  /* Motor control          */
+    { Swc_Encoder_MainFunction,             10u,      8u,     2u    },  /* Encoder processing     */
+    { Can_MainFunction_Read,                10u,      7u,     0xFFu },  /* CAN RX                 */
+    { Com_MainFunction_Rx,                  10u,      6u,     0xFFu },  /* COM RX deadline monitor */
     { Swc_RzcCom_Receive,                   10u,      5u,     0xFFu },  /* Com→RTE bridge (after CAN RX) */
     { Swc_RzcCom_TransmitSchedule,          10u,      4u,     0xFFu },  /* Motor/battery TX schedule */
     { Com_MainFunction_Tx,                  10u,      3u,     0xFFu },  /* COM TX (after all SWCs) */
