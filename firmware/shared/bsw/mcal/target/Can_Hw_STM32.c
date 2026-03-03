@@ -88,9 +88,19 @@ static Std_ReturnType Can_Hw_ConfigureFilter(void)
  */
 static Std_ReturnType Can_Hw_InitMode(uint32 mode)
 {
+    /* Select FDCAN kernel clock: PCLK1 (170 MHz).
+     * Reset default is HSE which is NOT enabled in our config. */
+    {
+        RCC_PeriphCLKInitTypeDef pclk = {0};
+        pclk.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
+        pclk.FdcanClockSelection  = RCC_FDCANCLKSOURCE_PCLK1;
+        (void)HAL_RCCEx_PeriphCLKConfig(&pclk);
+    }
+
     /* FDCAN1 configuration: classic CAN, 500 kbps @ 170 MHz PCLK1
      * Bit time = PSC * (1 + Seg1 + Seg2) = 17 * (1 + 15 + 4) = 340
-     * Baudrate = 170,000,000 / 340 = 500,000 bps */
+     * Baudrate = 170,000,000 / 340 = 500,000 bps
+     * SJW=4 to handle HSI ±1% tolerance between independent ECUs. */
     hfdcan1.Instance                  = FDCAN1;
     hfdcan1.Init.ClockDivider         = FDCAN_CLOCK_DIV1;
     hfdcan1.Init.FrameFormat          = FDCAN_FRAME_CLASSIC;
@@ -99,7 +109,7 @@ static Std_ReturnType Can_Hw_InitMode(uint32 mode)
     hfdcan1.Init.TransmitPause        = DISABLE;
     hfdcan1.Init.ProtocolException    = DISABLE;
     hfdcan1.Init.NominalPrescaler     = 17u;
-    hfdcan1.Init.NominalSyncJumpWidth = 1u;
+    hfdcan1.Init.NominalSyncJumpWidth = 4u;
     hfdcan1.Init.NominalTimeSeg1      = 15u;
     hfdcan1.Init.NominalTimeSeg2      = 4u;
     hfdcan1.Init.DataPrescaler        = 1u;

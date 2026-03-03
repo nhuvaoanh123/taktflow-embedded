@@ -12,7 +12,7 @@
 | F0 | Toolchain Setup + Blinky | DONE (code) — toolchain install is manual |
 | F1 | Target Build System | DONE — all 3 ECUs build+link (2026-03-03) |
 | F1.5 | CVC UART Debug Logging | DONE (2026-03-03) — boot log verified on Nucleo |
-| F2 | MCAL CAN Driver (first sign of life) | IN PROGRESS — code written (2026-03-03) |
+| F2 | MCAL CAN Driver (first sign of life) | DONE (2026-03-04) — CVC↔FZC CAN bring-up verified on real STM32 hardware |
 | F3 | Remaining MCAL Drivers | PENDING |
 | F4 | Per-ECU Init + Self-Tests + MPU + WDG | PENDING |
 | F5 | SC TMS570 Target | PENDING |
