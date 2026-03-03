@@ -3,12 +3,12 @@
  * @brief   STM32 hardware backend for CVC (Central Vehicle Computer)
  * @date    2026-03-03
  *
- * @details Phase F1.5: SysTick via HAL + bare-metal USART2 debug TX.
- *          Self-test and peripheral stubs still return E_OK (real
- *          implementations come in F2-F4).
+ * @details Phase F2: PLL 170 MHz, bare-metal USART2 debug TX, SysTick via
+ *          HAL, CAN loopback self-test wiring. All other self-test and
+ *          peripheral stubs still return E_OK (real implementations F3-F4).
  *
- *          Timing: HAL_Init() configures SysTick at 1ms (HSI 16 MHz).
- *          UART:   Bare-metal USART2 PA2=TX AF7, 115200 baud.
+ *          Clock: HSI 16 MHz → PLL (M/4 × N85 / R2) = 170 MHz
+ *          UART:  Bare-metal USART2 PA2=TX AF7, 115200 baud @ 170 MHz
  *
  * @safety_req N/A — debug bring-up, not for production
  * @copyright Taktflow Systems 2026
@@ -19,11 +19,79 @@
 #include "stm32g4xx_hal.h"
 
 /* ==================================================================
+ * Error Handler — required by CubeMX HAL_FDCAN_MspInit()
+ * ================================================================== */
+
+/**
+ * @brief  Error handler — infinite loop, watchdog will reset
+ * @note   Called by HAL init functions on failure. Declared in
+ *         cubecvccfg/Core/Inc/main.h, defined here (CubeMX main.c
+ *         is NOT in the build).
+ */
+void Error_Handler(void)
+{
+    __disable_irq();
+    for (;;)
+    {
+        /* Watchdog will reset. TODO:HARDWARE — toggle LED for visual indicator */
+    }
+}
+
+/* ==================================================================
+ * System Clock Configuration — PLL 170 MHz
+ * ================================================================== */
+
+/**
+ * @brief  Configure system clocks: HSI 16 MHz → PLL → 170 MHz
+ * @note   Derived from CubeMX cubecvccfg/Core/Src/main.c:136-176.
+ *         Voltage Scale 1 Boost, Flash latency 4 WS,
+ *         APB1/APB2 divider = 1 (both 170 MHz).
+ */
+static void Ecu_SystemClock_Config(void)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+    /* Voltage scaling for 170 MHz operation */
+    (void)HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+
+    /* HSI 16 MHz → PLL: PLLM/4 × PLLN=85 / PLLR/2 = 170 MHz */
+    RCC_OscInitStruct.OscillatorType       = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.HSIState             = RCC_HSI_ON;
+    RCC_OscInitStruct.HSICalibrationValue  = RCC_HSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.PLL.PLLState         = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource        = RCC_PLLSOURCE_HSI;
+    RCC_OscInitStruct.PLL.PLLM             = RCC_PLLM_DIV4;
+    RCC_OscInitStruct.PLL.PLLN             = 85u;
+    RCC_OscInitStruct.PLL.PLLP             = RCC_PLLP_DIV2;
+    RCC_OscInitStruct.PLL.PLLQ             = RCC_PLLQ_DIV2;
+    RCC_OscInitStruct.PLL.PLLR             = RCC_PLLR_DIV2;
+
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    /* AHB/APB1/APB2 all at 170 MHz (divider = 1) */
+    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+                                     | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+    {
+        Error_Handler();
+    }
+}
+
+/* ==================================================================
  * UART Debug Output — bare-metal USART2 (PA2=TX, Nucleo VCP)
  * ================================================================== */
 
 /**
- * @brief  Initialize USART2 for debug TX at 115200 baud (HSI 16 MHz)
+ * @brief  Initialize USART2 for debug TX at 115200 baud (PLL 170 MHz)
  * @note   Bare-metal register access — no HAL UART dependency.
  *         PA2 = USART2_TX (AF7), connected to ST-LINK VCP on Nucleo.
  */
@@ -44,8 +112,9 @@ static void Dbg_Uart_Init(void)
     GPIOA->AFR[0] = (GPIOA->AFR[0] & ~(0xFu << (2u * 4u)))
                    | (7u << (2u * 4u));
 
-    /* USART2: 115200 baud at 16 MHz HSI, 8N1, TX only */
-    USART2->BRR = 139u;                            /* 16000000 / 115200 = 138.9 */
+    /* USART2: 115200 baud at 170 MHz APB1, 8N1, TX only
+     * BRR = 170000000 / 115200 = 1475.7 ≈ 1476 */
+    USART2->BRR = 1476u;
     USART2->CR1 = USART_CR1_TE | USART_CR1_UE;     /* Enable transmitter + USART */
 
     /* Wait for TE acknowledge before first transmission */
@@ -87,8 +156,10 @@ void Dbg_Uart_Print(const char *str)
  * ================================================================== */
 
 /**
- * @brief  Initialize system clocks and debug UART
- * @note   HAL_Init() configures SysTick at 1ms using HSI 16 MHz.
+ * @brief  Initialize system clocks, SysTick, and debug UART
+ * @note   HAL_Init() configures SysTick at 1ms (initially at HSI 16 MHz).
+ *         Ecu_SystemClock_Config() switches to PLL 170 MHz, which
+ *         internally reconfigures SysTick for the new frequency.
  *         UART init + boot banner printed at earliest opportunity.
  */
 void Main_Hw_SystemClockInit(void)
@@ -96,9 +167,12 @@ void Main_Hw_SystemClockInit(void)
     /* HAL_Init: flash prefetch, SysTick 1ms, NVIC priority grouping */
     (void)HAL_Init();
 
-    /* Initialize debug UART (earliest possible output) */
+    /* Switch to PLL 170 MHz — SysTick auto-reconfigured */
+    Ecu_SystemClock_Config();
+
+    /* Initialize debug UART at 170 MHz clock rate */
     Dbg_Uart_Init();
-    Dbg_Uart_Print("\r\n=== CVC Boot (HSI 16 MHz) ===\r\n");
+    Dbg_Uart_Print("\r\n=== CVC Boot (PLL 170 MHz) ===\r\n");
 }
 
 /**
@@ -113,14 +187,14 @@ void Main_Hw_MpuConfig(void)
 /**
  * @brief  Initialize SysTick timer
  * @param  periodUs  Tick period in microseconds (expected: 1000 = 1ms)
- * @note   SysTick already configured by HAL_Init() at 1ms. This call
- *         validates the expected period and serves as a synchronization
- *         point before entering the main loop.
+ * @note   SysTick already configured by HAL_Init() and reconfigured by
+ *         HAL_RCC_ClockConfig() for 170 MHz. This call serves as a
+ *         synchronization point before entering the main loop.
  */
 void Main_Hw_SysTickInit(uint32 periodUs)
 {
     (void)periodUs;
-    /* SysTick already running from HAL_Init() — 1ms at HSI 16 MHz.
+    /* SysTick running at 1ms from HAL_Init() + PLL 170 MHz.
      * HAL_IncTick() ISR in stm32g4xx_it.c increments the HAL tick. */
 }
 
@@ -158,14 +232,13 @@ Std_ReturnType Main_Hw_SpiLoopbackTest(void)
 }
 
 /**
- * @brief  CAN loopback self-test — stub returns E_OK
- * @return E_OK
- * @note   TODO:HARDWARE — perform real CAN loopback via HAL_CAN
+ * @brief  CAN loopback self-test — delegates to Can_Hw_LoopbackTest()
+ * @return E_OK if loopback verified, E_NOT_OK on failure
  */
 Std_ReturnType Main_Hw_CanLoopbackTest(void)
 {
-    /* TODO:HARDWARE — real CAN loopback test */
-    return E_OK;
+    extern Std_ReturnType Can_Hw_LoopbackTest(void);
+    return Can_Hw_LoopbackTest();
 }
 
 /**
@@ -217,11 +290,12 @@ Std_ReturnType SelfTest_Hw_SpiLoopback(void)
 /**
  * @brief  Periodic CAN loopback self-test — stub returns E_OK
  * @return E_OK
- * @note   TODO:HARDWARE — periodic CAN loopback via HAL
+ * @note   Too disruptive for periodic use (stops CAN bus).
+ *         Phase F4 uses error counter monitoring instead.
  */
 Std_ReturnType SelfTest_Hw_CanLoopback(void)
 {
-    /* TODO:HARDWARE — real periodic CAN loopback */
+    /* Stub — periodic CAN loopback too disruptive. F4 uses error counters. */
     return E_OK;
 }
 

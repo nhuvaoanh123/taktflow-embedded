@@ -56,6 +56,32 @@
 #ifdef PLATFORM_STM32
 extern void Dbg_Uart_Print(const char *str);
 #define DBG_LOG(msg)  Dbg_Uart_Print(msg)
+
+/**
+ * @brief  Print decimal uint32 to debug UART (for periodic status)
+ * @param  val  Value to print
+ */
+static void Dbg_PrintU32(uint32 val)
+{
+    char buf[11]; /* max "4294967295\0" */
+    char *p = &buf[10];
+    *p = '\0';
+    if (val == 0u)
+    {
+        p--;
+        *p = '0';
+    }
+    else
+    {
+        while (val > 0u)
+        {
+            p--;
+            *p = (char)('0' + (char)(val % 10u));
+            val /= 10u;
+        }
+    }
+    Dbg_Uart_Print(p);
+}
 #else
 #define DBG_LOG(msg)  ((void)0)
 #endif
@@ -339,6 +365,9 @@ int main(void)
     uint32 last_1ms_us   = 0u;
     uint32 last_10ms_us  = 0u;
     uint32 last_100ms_us = 0u;
+#ifdef PLATFORM_STM32
+    uint32 last_5s_us    = 0u;
+#endif
     uint8  self_test_result;
 
     /* ---- Step 1: Hardware initialization ---- */
@@ -347,6 +376,7 @@ int main(void)
 
     /* ---- Step 2: BSW module initialization (order matters) ---- */
     Can_Init(&can_config);
+    DBG_LOG("CAN: FDCAN1 init OK\r\n");
     CanIf_Init(&canif_config);
     PduR_Init(&cvc_pdur_config);
     CanTp_Init(&cantp_config);
@@ -434,6 +464,35 @@ int main(void)
             WdgM_MainFunction();
             Dem_MainFunction();
         }
+
+#ifdef PLATFORM_STM32
+        /* 5s debug task: CAN communication status print */
+        if ((tick_us - last_5s_us) >= 5000000u)
+        {
+            uint32 fzc_comm = 0u;
+            uint32 rzc_comm = 0u;
+            uint8  tec = 0u;
+            uint8  rec = 0u;
+
+            last_5s_us = tick_us;
+
+            (void)Rte_Read(CVC_SIG_FZC_COMM_STATUS, &fzc_comm);
+            (void)Rte_Read(CVC_SIG_RZC_COMM_STATUS, &rzc_comm);
+            (void)Can_GetErrorCounters(0u, &tec, &rec);
+
+            Dbg_Uart_Print("[");
+            Dbg_PrintU32(tick_us / 1000000u);
+            Dbg_Uart_Print("s] CVC: FZC=");
+            Dbg_Uart_Print((fzc_comm == CVC_COMM_OK) ? "OK" : "TIMEOUT");
+            Dbg_Uart_Print(" RZC=");
+            Dbg_Uart_Print((rzc_comm == CVC_COMM_OK) ? "OK" : "TIMEOUT");
+            Dbg_Uart_Print(" TEC=");
+            Dbg_PrintU32((uint32)tec);
+            Dbg_Uart_Print(" REC=");
+            Dbg_PrintU32((uint32)rec);
+            Dbg_Uart_Print("\r\n");
+        }
+#endif
     }
 
     /* MISRA: unreachable but satisfies compiler */

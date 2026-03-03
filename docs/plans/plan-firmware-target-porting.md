@@ -12,7 +12,7 @@
 | F0 | Toolchain Setup + Blinky | DONE (code) — toolchain install is manual |
 | F1 | Target Build System | DONE — all 3 ECUs build+link (2026-03-03) |
 | F1.5 | CVC UART Debug Logging | DONE (2026-03-03) — boot log verified on Nucleo |
-| F2 | MCAL CAN Driver (first sign of life) | PENDING |
+| F2 | MCAL CAN Driver (first sign of life) | IN PROGRESS — code written (2026-03-03) |
 | F3 | Remaining MCAL Drivers | PENDING |
 | F4 | Per-ECU Init + Self-Tests + MPU + WDG | PENDING |
 | F5 | SC TMS570 Target | PENDING |
@@ -322,10 +322,17 @@ No Makefile changes needed — USART2 is bare-metal register access. POSIX build
 - CAN loopback self-test passes at startup
 
 ### DONE criteria
-- [ ] CVC heartbeat visible on `candump` at 500kbps
-- [ ] E2E CRC-8 and alive counter present in frame bytes 0-1
-- [ ] CAN loopback self-test passes
-- [ ] No bus-off errors after 5 minutes
+- [x] CVC builds for STM32 with PLL 170 MHz + FDCAN1 + loopback (25,280 bytes, 4.8% flash)
+- [x] FZC builds for STM32 with PLL 170 MHz + FDCAN1 + loopback (22,752 bytes, 4.3% flash)
+- [x] RZC build unbroken (Error_Handler added, 2026-03-03)
+- [x] Zero compiler warnings on all 3 ECU builds
+- [x] POSIX build unaffected (all changes in platform-specific files or #ifdef guards)
+- [x] CAN loopback self-test implemented (internal FDCAN loopback mode)
+- [x] 5s periodic comm status debug print (CVC: FZC/RZC status + TEC/REC; FZC: CAN monitor + TEC/REC)
+- [ ] CVC heartbeat visible on `candump` at 500kbps (needs hardware verification)
+- [ ] E2E CRC-8 and alive counter present in frame bytes 0-1 (needs hardware verification)
+- [ ] CAN loopback self-test passes on hardware
+- [ ] No bus-off errors after 5 minutes (needs hardware verification)
 - [ ] MISRA clean
 
 ---

@@ -16,6 +16,23 @@
 #include "Std_Types.h"
 
 /* ==================================================================
+ * Error Handler — required by CubeMX HAL_FDCAN_MspInit()
+ * ================================================================== */
+
+/**
+ * @brief  Error handler — infinite loop, watchdog will reset
+ * @note   Required by shared HAL MspInit code. Real implementation
+ *         comes in Phase F4 when RZC gets full bring-up.
+ */
+void Error_Handler(void)
+{
+    for (;;)
+    {
+        /* Watchdog will reset */
+    }
+}
+
+/* ==================================================================
  * Timing stubs — TODO:HARDWARE call CubeMX / HAL in Phase F4
  * ================================================================== */
 
