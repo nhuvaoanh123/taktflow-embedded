@@ -223,6 +223,26 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: IoHwAb_ReadBrakePosition
+ * ================================================================== */
+
+static uint8   mock_iohwab_brake_fail;
+
+Std_ReturnType IoHwAb_ReadBrakePosition(uint16* pos)
+{
+    if (pos == NULL_PTR) {
+        return E_NOT_OK;
+    }
+    if (mock_iohwab_brake_fail != 0u) {
+        return E_NOT_OK;
+    }
+    /* Simulate brake actuator tracking PWM command.
+     * PWM duty is 0-100, IoHwAb returns 0-1000 (= duty * 10). */
+    *pos = (uint16)(mock_pwm_last_duty * 10u);
+    return E_OK;
+}
+
+/* ==================================================================
  * Include SWC under test (source inclusion for test build)
  * ================================================================== */
 
@@ -242,6 +262,9 @@ void setUp(void)
     mock_pwm_last_channel = 0xFFu;
     mock_pwm_last_duty    = 0u;
     mock_pwm_call_count   = 0u;
+
+    /* Reset IoHwAb mock */
+    mock_iohwab_brake_fail = 0u;
 
     /* Reset RTE mock */
     mock_rte_read_count        = 0u;

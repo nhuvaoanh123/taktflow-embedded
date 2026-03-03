@@ -423,12 +423,10 @@ void test_RzcCom_transmit_motor_data_10ms(void)
     /* Run 1 cycle: 4 PDUs should be transmitted via PduR_Transmit */
     Swc_RzcCom_TransmitSchedule();
 
-#ifdef PLATFORM_POSIX
-    /* In SIL, ALL sensor TX is skipped (plant sim is the sole authority
-     * for motor, current, temperature, and battery CAN messages). */
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_pdur_tx_count);
-#else
-    /* On target: 4 PduR_Transmit calls: motor_status, motor_current,
+    /* RZC is sole authority for sensor telemetry in both SIL and target.
+     * In SIL: sensor feeder injects plant-sim physics into MCAL ADC stubs,
+     * RZC reads via IoHwAb and transmits just like real hardware.
+     * 4 PduR_Transmit calls: motor_status, motor_current,
      * motor_temp, battery_status */
     TEST_ASSERT_EQUAL_UINT8(4u, mock_pdur_tx_count);
 
@@ -446,7 +444,6 @@ void test_RzcCom_transmit_motor_data_10ms(void)
     /* Verify battery status PDU (0x303) — battery_mV low byte in byte 2 */
     TEST_ASSERT_EQUAL_UINT8((uint8)(12000u & 0xFFu),
                             mock_pdur_tx_data[RZC_COM_TX_BATTERY_STATUS][2]);
-#endif
 }
 
 /* ==================================================================
