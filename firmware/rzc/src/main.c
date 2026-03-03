@@ -32,6 +32,7 @@
  * BSW Module Headers
  * ================================================================== */
 
+#include "Adc.h"
 #include "Can.h"
 #include "CanIf.h"
 #include "Com.h"
@@ -133,8 +134,24 @@ static const PduR_ConfigType rzc_pdur_config = {
     .routingCount = (uint8)(sizeof(rzc_pdur_routing) / sizeof(rzc_pdur_routing[0])),
 };
 
+/** ADC group configuration — motor current, motor temp, battery voltage */
+static const Adc_GroupConfigType adc_groups[] = {
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 0: motor current */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 1: motor temp    */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 2: battery volt  */
+};
+
+static const Adc_ConfigType adc_config = {
+    .numGroups  = 3u,
+    .groups     = adc_groups,
+    .resolution = 12u,
+};
+
 /** IoHwAb channel mapping for RZC */
 static const IoHwAb_ConfigType iohwab_config = {
+    .MotorCurrentAdcGroup = 0u,  /* ADC group for motor current (ACS723)    */
+    .MotorTempAdcGroup    = 1u,  /* ADC group for motor temperature (NTC)   */
+    .BatteryVoltAdcGroup  = 2u,  /* ADC group for battery voltage (divider) */
     .MotorPwmRpwmCh  = 0u,   /* TIM1_CH1 (PA8) — BTS7960 RPWM (forward) */
     .MotorPwmLpwmCh  = 1u,   /* TIM1_CH2 (PA9) — BTS7960 LPWM (reverse) */
     .MotorCurrentAdcCh = 0u,  /* ADC1_CH0 (PA0) — ACS723 output           */
@@ -299,6 +316,7 @@ int main(void)
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&rzc_dcm_config);
+    Adc_Init(&adc_config);
     IoHwAb_Init(&iohwab_config);
     Rte_Init(&rzc_rte_config);
 

@@ -30,6 +30,7 @@
  * BSW Module Headers
  * ================================================================== */
 
+#include "Adc.h"
 #include "Can.h"
 #include "CanIf.h"
 #include "Com.h"
@@ -41,6 +42,7 @@
 #include "Dcm.h"
 #include "Rte.h"
 #include "IoHwAb.h"
+#include "Spi.h"
 #include "Uart.h"
 
 /* ==================================================================
@@ -171,6 +173,29 @@ static const PduR_RoutingTableType fzc_pdur_routing[] = {
 static const PduR_ConfigType fzc_pdur_config = {
     .routingTable = fzc_pdur_routing,
     .routingCount = (uint8)(sizeof(fzc_pdur_routing) / sizeof(fzc_pdur_routing[0])),
+};
+
+/** SPI driver configuration — AS5048A steering angle sensor */
+static const Spi_ConfigType spi_config = {
+    .clockSpeed   = 1000000u,   /* 1 MHz SPI clock              */
+    .cpol         = 0u,         /* Clock idle low                */
+    .cpha         = 1u,         /* Sample on trailing edge       */
+    .dataWidth    = 16u,        /* 16-bit transfers              */
+    .numChannels  = 1u,         /* Ch 0: steering                */
+};
+
+/** ADC group configuration — brake position feedback */
+static const Adc_GroupConfigType adc_groups[] = {
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 0: (unused)        */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 1: (unused)        */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 2: (unused)        */
+    { .numChannels = 1u, .triggerSource = 0u },  /* Group 3: brake position  */
+};
+
+static const Adc_ConfigType adc_config = {
+    .numGroups  = 4u,
+    .groups     = adc_groups,
+    .resolution = 12u,
 };
 
 /** IoHwAb channel mapping for FZC */
@@ -377,10 +402,12 @@ int main(void)
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&fzc_dcm_config);
+    Spi_Init(&spi_config);
+    Adc_Init(&adc_config);
     IoHwAb_Init(&iohwab_config);
     Uart_Init(&uart_config);   /* UART for TFMini-S lidar */
     Rte_Init(&fzc_rte_config);
-    DBG_LOG("BSW init: 12 modules OK\r\n");
+    DBG_LOG("BSW init: 14 modules OK\r\n");
 
     /* ---- Step 3: SWC initialization ---- */
     Swc_Steering_Init(&steering_config);
