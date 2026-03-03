@@ -41,10 +41,10 @@ typedef enum {
 } E2E_CheckStatusType;
 
 /* ====================================================================
- * Include source under test
+ * Include header under test (source linked by Makefile)
  * ==================================================================== */
 
-#include "../services/E2E_Sm.c"
+#include "../services/E2E_Sm.h"
 
 /* ====================================================================
  * Test configuration — typical heartbeat
