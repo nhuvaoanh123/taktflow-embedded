@@ -49,6 +49,7 @@ typedef struct {
     uint8   MotorCurrentAdcGroup;   /**< ADC group for motor current (ACS723) */
     uint8   MotorTempAdcGroup;      /**< ADC group for motor temperature    */
     uint8   BatteryVoltAdcGroup;    /**< ADC group for battery voltage      */
+    uint8   BrakePositionAdcGroup;  /**< ADC group for brake position feedback */
 
     /* PWM channels */
     uint8   MotorPwmChannel;        /**< PWM channel for BTS7960 motor      */
@@ -140,6 +141,13 @@ Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC);
  * @return E_OK on success, E_NOT_OK on null pointer / ADC failure
  */
 Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV);
+
+/**
+ * @brief  Read brake position feedback via ADC (potentiometer)
+ * @param  Position  Output: raw ADC counts (0..1000 maps to 0-100% duty)
+ * @return E_OK on success, E_NOT_OK on null pointer / ADC failure
+ */
+Std_ReturnType IoHwAb_ReadBrakePosition(uint16* Position);
 
 /**
  * @brief  Set motor PWM output and direction (BTS7960 H-bridge)

@@ -64,6 +64,23 @@
 
 #define RZC_COM_RX_ESTOP           0u   /* CAN 0x001 */
 #define RZC_COM_RX_VEHICLE_TORQUE  1u   /* CAN 0x100 — Vehicle_State + Torque */
+#define RZC_COM_RX_VIRT_SENSORS    2u   /* CAN 0x401 — virtual sensors from plant-sim */
+
+/* ====================================================================
+ * Com Signal IDs for Virtual Sensors (RX from plant-sim, SIL only)
+ * ==================================================================== */
+
+#define RZC_COM_SIG_RX_VIRT_MOTOR_CURRENT   18u  /* uint16 LE, mA */
+#define RZC_COM_SIG_RX_VIRT_MOTOR_TEMP      19u  /* uint16 LE, 0.1°C */
+#define RZC_COM_SIG_RX_VIRT_BATTERY_VOLTAGE 20u  /* uint16 LE, mV */
+
+/* ADC group/channel mapping for virtual sensor injection (SIL) */
+#define RZC_MOTOR_CURRENT_ADC_GROUP    0u
+#define RZC_MOTOR_CURRENT_ADC_CH       0u
+#define RZC_MOTOR_TEMP_ADC_GROUP       1u
+#define RZC_MOTOR_TEMP_ADC_CH          0u
+#define RZC_BATTERY_VOLTAGE_ADC_GROUP  2u
+#define RZC_BATTERY_VOLTAGE_ADC_CH     0u
 
 /* ====================================================================
  * DTC Event IDs (Dem_EventIdType)

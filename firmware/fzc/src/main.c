@@ -55,6 +55,7 @@
 #include "Swc_FzcSafety.h"
 #include "Swc_FzcCanMonitor.h"
 #include "Swc_Buzzer.h"
+#include "Swc_FzcSensorFeeder.h"
 
 /* ==================================================================
  * Debug Logging (STM32 UART — compiled out on POSIX)
@@ -148,6 +149,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     { 0x100u, FZC_COM_RX_VEHICLE_STATE,    8u, FALSE },  /* Vehicle state      */
     { 0x102u, FZC_COM_RX_STEER_CMD,        8u, FALSE },  /* Steering command   */
     { 0x103u, FZC_COM_RX_BRAKE_CMD,        8u, FALSE },  /* Brake command      */
+    { 0x400u, FZC_COM_RX_VIRT_SENSORS,     8u, FALSE },  /* Virtual sensors (SIL) */
 };
 
 static const CanIf_ConfigType canif_config = {
@@ -163,6 +165,7 @@ static const PduR_RoutingTableType fzc_pdur_routing[] = {
     { FZC_COM_RX_VEHICLE_STATE,  PDUR_DEST_COM, FZC_COM_RX_VEHICLE_STATE  },
     { FZC_COM_RX_STEER_CMD,      PDUR_DEST_COM, FZC_COM_RX_STEER_CMD      },
     { FZC_COM_RX_BRAKE_CMD,      PDUR_DEST_COM, FZC_COM_RX_BRAKE_CMD      },
+    { FZC_COM_RX_VIRT_SENSORS,   PDUR_DEST_COM, FZC_COM_RX_VIRT_SENSORS   },
 };
 
 static const PduR_ConfigType fzc_pdur_config = {
@@ -172,14 +175,15 @@ static const PduR_ConfigType fzc_pdur_config = {
 
 /** IoHwAb channel mapping for FZC */
 static const IoHwAb_ConfigType iohwab_config = {
-    .SteeringSpiChannel  = 0u,   /* SPI1 for AS5048A angle sensor */
-    .SteeringCsChannel   = 0u,   /* CS pin for AS5048A            */
-    .SteeringSpiSequence = 0u,
-    .SteeringServoPwmCh  = 0u,   /* TIM2_CH1 (PA0) steering servo */
-    .BrakeServoPwmCh     = 1u,   /* TIM2_CH2 (PA1) brake servo    */
-    .EStopDioChannel     = 2u,
-    .BuzzerDioChannel    = 8u,   /* PB8 buzzer output             */
-    .WdiDioChannel       = 0u,   /* PB0 TPS3823 WDI pin           */
+    .SteeringSpiChannel   = 0u,   /* SPI1 for AS5048A angle sensor */
+    .SteeringCsChannel    = 0u,   /* CS pin for AS5048A            */
+    .SteeringSpiSequence  = 0u,
+    .SteeringServoPwmCh   = 0u,   /* TIM2_CH1 (PA0) steering servo */
+    .BrakeServoPwmCh      = 1u,   /* TIM2_CH2 (PA1) brake servo    */
+    .BrakePositionAdcGroup = 3u,  /* ADC group 3: brake potentiometer feedback */
+    .EStopDioChannel      = 2u,
+    .BuzzerDioChannel     = 8u,   /* PB8 buzzer output             */
+    .WdiDioChannel        = 0u,   /* PB0 TPS3823 WDI pin           */
 };
 
 /** UART configuration for TFMini-S lidar (115200 baud, 8N1) */
@@ -387,7 +391,8 @@ int main(void)
     Swc_FzcCanMonitor_Init();
     Swc_FzcSafety_Init();
     Swc_Buzzer_Init();
-    DBG_LOG("SWC init: 8 modules OK\r\n");
+    Swc_FzcSensorFeeder_Init();
+    DBG_LOG("SWC init: 9 modules OK\r\n");
 
     /* ---- Step 4: Self-test sequence (7 items, SWR-FZC-025) ---- */
     self_test_result = Main_RunSelfTest();

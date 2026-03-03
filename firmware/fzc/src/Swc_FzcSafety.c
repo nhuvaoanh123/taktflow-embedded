@@ -33,6 +33,7 @@
 
 #include "Rte.h"
 #include "IoHwAb.h"
+#include "Com.h"
 #include "Dem.h"
 
 /* ==================================================================
@@ -120,6 +121,19 @@ void Swc_FzcSafety_MainFunction(void)
     if ((Safety_SelfTestDone == TRUE) &&
         (self_test_result == FZC_SELF_TEST_FAIL)) {
         fault_mask |= FZC_FAULT_SELF_TEST;
+    }
+
+    /* ----------------------------------------------------------
+     * Step 2b: Steering fault → motor cutoff (safety architecture)
+     *          A steering fault means the vehicle cannot be safely
+     *          steered. Motor cutoff is the correct safety response
+     *          (SS-MOTOR-OFF per SG-003). This propagates via
+     *          CAN 0x211 → CVC → VehicleState → SAFE_STOP.
+     * ---------------------------------------------------------- */
+    if (steer_fault != 0u) {
+        uint32 cutoff_val = 1u;
+        (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
+        (void)Com_SendSignal(FZC_COM_TX_MOTOR_CUTOFF, &cutoff_val);
     }
 
     /* ----------------------------------------------------------

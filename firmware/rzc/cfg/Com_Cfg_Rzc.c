@@ -48,6 +48,11 @@ static uint8  sig_rx_estop_active;
 static uint8  sig_rx_vehicle_state;
 static sint16 sig_rx_torque_cmd;
 
+/* RX virtual sensor buffers (SIL: from plant-sim via CAN 0x401) */
+static uint16 sig_rx_virt_motor_current;
+static uint16 sig_rx_virt_motor_temp;
+static uint16 sig_rx_virt_battery_voltage;
+
 /* ==================================================================
  * Signal Configuration Table
  * Maps signal ID -> bit position, size, type, parent PDU, shadow buffer
@@ -86,6 +91,11 @@ static const Com_SignalConfigType rzc_signal_config[] = {
     /* RX signals — Vehicle + Torque PDU */
     { 16u,   16u,     8u, COM_UINT8,  RZC_COM_RX_VEHICLE_TORQUE,     &sig_rx_vehicle_state  },
     { 17u,   24u,    16u, COM_SINT16, RZC_COM_RX_VEHICLE_TORQUE,     &sig_rx_torque_cmd     },
+
+    /* RX virtual sensor signals (CAN 0x401 — no E2E, raw payload) */
+    { 18u,    0u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_current  },
+    { 19u,   16u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_temp     },
+    { 20u,   32u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_battery_voltage},
 };
 
 #define RZC_COM_SIGNAL_COUNT  (sizeof(rzc_signal_config) / sizeof(rzc_signal_config[0]))
@@ -115,6 +125,7 @@ static const Com_RxPduConfigType rzc_rx_pdu_config[] = {
     /* pduId,                       dlc, timeoutMs */
     { RZC_COM_RX_ESTOP,               8u,  150u },   /* 3x heartbeat period        */
     { RZC_COM_RX_VEHICLE_TORQUE,      8u,  100u },   /* 100ms vehicle/torque timeout*/
+    { RZC_COM_RX_VIRT_SENSORS,        8u,  100u },   /* Virtual sensors from plant-sim */
 };
 
 #define RZC_COM_RX_PDU_COUNT  (sizeof(rzc_rx_pdu_config) / sizeof(rzc_rx_pdu_config[0]))

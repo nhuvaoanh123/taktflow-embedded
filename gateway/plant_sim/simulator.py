@@ -47,6 +47,10 @@ TX_MOTOR_TEMP = 0x302
 TX_BATTERY_STATUS = 0x303
 TX_DTC_BROADCAST = 0x500
 
+# Virtual sensor CAN IDs (plant-sim → ECU sensor feeders, SIL only, no E2E)
+TX_FZC_VIRTUAL_SENSORS = 0x400   # steering angle, brake pos, brake current
+TX_RZC_VIRTUAL_SENSORS = 0x401   # motor current, motor temp, battery voltage
+
 # DTC codes (from defect_catalog.py — must match SAP QM mock)
 DTC_OVERCURRENT = 0xE301
 DTC_STEER_FAULT = 0xE201
@@ -459,6 +463,61 @@ class PlantSimulator:
         self.bus.send(can.Message(arbitration_id=TX_LIDAR_DISTANCE,
                                   data=data, is_extended_id=False))
 
+    def _tx_fzc_virtual_sensors(self):
+        """Send FZC virtual sensor data (0x400) every 10ms. No E2E.
+
+        Plant-sim physics → this CAN message → FZC sensor feeder SWC →
+        MCAL injection → IoHwAb → SWC fault detection.
+        """
+        payload = bytearray(8)
+
+        # Bytes 0-1: steering_angle (uint16 LE, 14-bit SPI format 0-16383)
+        # Steering model gives actual_angle in degrees (-45..+45).
+        # Convert to 14-bit SPI format: (angle + 45) / 90 * 16383
+        angle_deg = self.steering.actual_angle
+        angle_raw = int((angle_deg + 45.0) / 90.0 * 16383.0)
+        angle_raw = max(0, min(16383, angle_raw))
+        struct.pack_into('<H', payload, 0, angle_raw)
+
+        # Bytes 2-3: brake_position (uint16 LE, 0-1000 ADC counts)
+        # Brake model gives position_int (0-100%), map to ADC counts 0-1000
+        brake_pos = int(self.brake.position_int * 10)
+        brake_pos = max(0, min(1000, brake_pos))
+        struct.pack_into('<H', payload, 2, brake_pos)
+
+        # Bytes 4-5: brake_current (uint16 LE, mA)
+        brake_current_ma = self.brake.servo_current_ma
+        struct.pack_into('<H', payload, 4, min(65535, brake_current_ma))
+
+        # Bytes 6-7: reserved
+        self.bus.send(can.Message(arbitration_id=TX_FZC_VIRTUAL_SENSORS,
+                                  data=bytes(payload), is_extended_id=False))
+
+    def _tx_rzc_virtual_sensors(self):
+        """Send RZC virtual sensor data (0x401) every 10ms. No E2E.
+
+        Plant-sim physics → this CAN message → RZC sensor feeder SWC →
+        ADC injection → IoHwAb → SWC fault detection.
+        """
+        payload = bytearray(8)
+
+        # Bytes 0-1: motor_current (uint16 LE, mA)
+        current_ma = self.motor.current_ma_int
+        struct.pack_into('<H', payload, 0, min(65535, current_ma))
+
+        # Bytes 2-3: motor_temp (uint16 LE, 0.1°C units, 0-2000 = 0-200.0°C)
+        temp_dc = int(self.motor.temp_c * 10)
+        temp_dc = max(0, min(2000, temp_dc))
+        struct.pack_into('<H', payload, 2, temp_dc)
+
+        # Bytes 4-5: battery_voltage (uint16 LE, mV)
+        batt_mv = self.battery.voltage_mv
+        struct.pack_into('<H', payload, 4, min(65535, batt_mv))
+
+        # Bytes 6-7: reserved
+        self.bus.send(can.Message(arbitration_id=TX_RZC_VIRTUAL_SENSORS,
+                                  data=bytes(payload), is_extended_id=False))
+
     async def run(self):
         """Main simulation loop at 100 Hz."""
         self.bus = can.interface.Bus(channel=self.channel,
@@ -565,29 +624,21 @@ class PlantSimulator:
                     log.info("Vehicle state -> RUN (faults cleared)")
 
                 # TX schedule
-                # Every 10ms: motor current, lidar
-                self._tx_motor_current()
+                # Every 10ms: lidar, virtual sensors
                 self._tx_lidar_distance()
+                self._tx_fzc_virtual_sensors()
+                self._tx_rzc_virtual_sensors()
 
-                # Every 20ms: motor status
-                # Note: steering status (0x200) and brake status (0x201) broadcasts
-                # removed — FZC firmware is the sole authority for these CAN IDs.
-                # The plant sim keeps its internal steering/brake models for physics
-                # constraints only.
-                if self._tick % 2 == 0:
-                    self._tx_motor_status()
+                # Note: Motor status (0x300), motor current (0x301), motor
+                # temperature (0x302), and battery status (0x303) broadcasts
+                # removed — RZC firmware is the sole authority for these CAN
+                # IDs.  Plant-sim sends virtual sensor data (0x401) which the
+                # RZC sensor feeder injects into MCAL ADC stubs, so RZC SWCs
+                # read real physics values and transmit correct telemetry.
 
-                # Every 100ms: motor temperature, DTC check
-                # Note: vehicle state broadcast removed — CVC firmware is the
-                # sole authority for CAN 0x100 (Vehicle_State).  The plant sim
-                # keeps its internal state machine for physics constraints only.
+                # Every 100ms: DTC check
                 if self._tick % 10 == 0:
-                    self._tx_motor_temp()
                     self._check_and_send_dtcs()
-
-                # Every 1000ms: battery
-                if self._tick % 100 == 0:
-                    self._tx_battery_status()
 
                 self._tick += 1
 

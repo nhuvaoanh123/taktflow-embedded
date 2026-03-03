@@ -62,6 +62,19 @@
 #define FZC_COM_RX_VEHICLE_STATE   1u   /* CAN 0x100 */
 #define FZC_COM_RX_STEER_CMD       2u   /* CAN 0x102 */
 #define FZC_COM_RX_BRAKE_CMD       3u   /* CAN 0x103 */
+#define FZC_COM_RX_VIRT_SENSORS    4u   /* CAN 0x400 — virtual sensors from plant-sim */
+
+/* ====================================================================
+ * Com Signal IDs for Virtual Sensors (RX from plant-sim, SIL only)
+ * ==================================================================== */
+
+#define FZC_COM_SIG_RX_VIRT_STEER_ANGLE   14u  /* uint16 LE, 14-bit SPI format */
+#define FZC_COM_SIG_RX_VIRT_BRAKE_POS     15u  /* uint16 LE, 0-1000 ADC counts */
+#define FZC_COM_SIG_RX_VIRT_BRAKE_CURRENT 16u  /* uint16 LE, mA               */
+
+/* ADC group/channel for brake position injection (SIL) */
+#define FZC_BRAKE_ADC_GROUP    3u   /* Must match iohwab_config.BrakePositionAdcGroup */
+#define FZC_BRAKE_ADC_CHANNEL  0u   /* Channel 0 within the group */
 
 /* ====================================================================
  * DTC Event IDs (Dem_EventIdType)

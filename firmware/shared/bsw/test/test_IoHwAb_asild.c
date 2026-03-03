@@ -156,7 +156,8 @@ void setUp(void)
     test_config.SteeringSpiSequence  = 1u;
     test_config.MotorCurrentAdcGroup = 0u;
     test_config.MotorTempAdcGroup    = 1u;
-    test_config.BatteryVoltAdcGroup  = 2u;
+    test_config.BatteryVoltAdcGroup   = 2u;
+    test_config.BrakePositionAdcGroup = 3u;
     test_config.MotorPwmChannel      = 0u;
     test_config.SteeringServoPwmCh   = 1u;
     test_config.BrakeServoPwmCh      = 2u;

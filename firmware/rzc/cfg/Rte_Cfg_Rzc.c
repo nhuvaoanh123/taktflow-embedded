@@ -29,6 +29,7 @@ extern void Can_MainFunction_BusOff(void);
 extern void Swc_RzcSafety_MainFunction(void);   /* WatchdogFeed */
 extern void Swc_RzcCom_Receive(void);            /* CAN RX bridge */
 extern void Swc_RzcCom_TransmitSchedule(void);   /* CAN TX schedule */
+extern void Swc_RzcSensorFeeder_MainFunction(void); /* Virtual sensor injection (SIL) */
 
 /* ==================================================================
  * Signal Configuration Table
@@ -87,14 +88,15 @@ static const Rte_SignalConfigType rzc_signal_config[RZC_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType rzc_runnable_config[] = {
     /* func,                              periodMs, priority, seId */
-    { Swc_CurrentMonitor_MainFunction,       1u,      9u,     0u    },  /* Current monitor (1kHz) */
-    { Swc_Motor_MainFunction,               10u,      8u,     1u    },  /* Motor control          */
-    { Swc_Encoder_MainFunction,             10u,      8u,     2u    },  /* Encoder processing     */
-    { Can_MainFunction_Read,                10u,      7u,     0xFFu },  /* CAN RX                 */
-    { Com_MainFunction_Rx,                  10u,      6u,     0xFFu },  /* COM RX deadline monitor */
-    { Swc_RzcCom_Receive,                   10u,      5u,     0xFFu },  /* Com→RTE bridge (after CAN RX) */
-    { Swc_RzcCom_TransmitSchedule,          10u,      4u,     0xFFu },  /* Motor/battery TX schedule */
-    { Com_MainFunction_Tx,                  10u,      3u,     0xFFu },  /* COM TX (after all SWCs) */
+    { Swc_CurrentMonitor_MainFunction,       1u,     11u,     0u    },  /* Current monitor (1kHz) */
+    { Swc_Motor_MainFunction,               10u,     10u,     1u    },  /* Motor control          */
+    { Swc_Encoder_MainFunction,             10u,     10u,     2u    },  /* Encoder processing     */
+    { Can_MainFunction_Read,                10u,      9u,     0xFFu },  /* CAN RX                 */
+    { Com_MainFunction_Rx,                  10u,      8u,     0xFFu },  /* COM RX deadline monitor */
+    { Swc_RzcCom_Receive,                   10u,      7u,     0xFFu },  /* Com→RTE bridge (after CAN RX) */
+    { Swc_RzcSensorFeeder_MainFunction,     10u,      6u,     0xFFu },  /* Virtual sensor inject (SIL) */
+    { Swc_RzcCom_TransmitSchedule,          10u,      5u,     0xFFu },  /* Motor/battery TX schedule */
+    { Com_MainFunction_Tx,                  10u,      4u,     0xFFu },  /* COM TX (after all SWCs) */
     { Swc_TempMonitor_MainFunction,        100u,      4u,     3u    },  /* Temperature monitor    */
     { Swc_Battery_MainFunction,            100u,      4u,     4u    },  /* Battery monitor        */
     { Swc_Heartbeat_MainFunction,           50u,      3u,     5u    },  /* Heartbeat TX/RX        */

@@ -284,8 +284,18 @@ void Swc_Brake_MainFunction(void)
         }
     }
 
-    /* Update position (simulated: position = commanded duty) */
-    Brake_Position = brake_cmd;
+    /* Read actual brake position from sensor (IoHwAb -> ADC).
+     * In SIL: ADC returns value injected by Swc_FzcSensorFeeder.
+     * On real HW: ADC reads physical potentiometer feedback. */
+    {
+        uint16 raw_pos = 0u;
+        Std_ReturnType pos_ret = IoHwAb_ReadBrakePosition(&raw_pos);
+        if (pos_ret == E_OK) {
+            /* IoHwAb returns 0-1000 (ADC counts), scale to 0-100% */
+            Brake_Position = (uint8)(raw_pos / 10u);
+        }
+        /* If read fails, keep previous Brake_Position (fail-safe: stale value) */
+    }
 
     /* ----------------------------------------------------------
      * Step 7: Fault handling — force full brake on any fault

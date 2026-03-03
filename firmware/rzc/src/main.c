@@ -56,6 +56,7 @@
 #include "Swc_Heartbeat.h"
 #include "Swc_RzcCom.h"
 #include "Swc_RzcSafety.h"
+#include "Swc_RzcSensorFeeder.h"
 
 /* ==================================================================
  * External Configuration (defined in cfg/ files)
@@ -110,6 +111,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     /* canId,  upperPduId,                  dlc, isExtended */
     { 0x001u, RZC_COM_RX_ESTOP,           8u, FALSE },  /* E-stop broadcast     */
     { 0x100u, RZC_COM_RX_VEHICLE_TORQUE,  8u, FALSE },  /* Vehicle_State+Torque */
+    { 0x401u, RZC_COM_RX_VIRT_SENSORS,   8u, FALSE },  /* Virtual sensors (SIL)*/
 };
 
 static const CanIf_ConfigType canif_config = {
@@ -123,6 +125,7 @@ static const CanIf_ConfigType canif_config = {
 static const PduR_RoutingTableType rzc_pdur_routing[] = {
     { RZC_COM_RX_ESTOP,          PDUR_DEST_COM, RZC_COM_RX_ESTOP          },
     { RZC_COM_RX_VEHICLE_TORQUE, PDUR_DEST_COM, RZC_COM_RX_VEHICLE_TORQUE },
+    { RZC_COM_RX_VIRT_SENSORS,   PDUR_DEST_COM, RZC_COM_RX_VIRT_SENSORS   },
 };
 
 static const PduR_ConfigType rzc_pdur_config = {
@@ -308,6 +311,7 @@ int main(void)
     Swc_Heartbeat_Init();
     Swc_RzcCom_Init();
     Swc_RzcSafety_Init();
+    Swc_RzcSensorFeeder_Init();
 
     /* ---- Step 4: Self-test sequence (8 items, SWR-RZC-025) ---- */
     self_test_result = Main_RunSelfTest();

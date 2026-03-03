@@ -375,13 +375,10 @@ void Swc_RzcCom_TransmitSchedule(void)
         return;
     }
 
-    /* In SIL (PLATFORM_POSIX), the plant simulator is the sole authority
-     * for sensor-derived CAN messages (motor speed, current, temperature,
-     * battery voltage).  POSIX ADC/encoder stubs return 0, producing
-     * wrong values that conflict with the plant sim's physics model and
-     * cause dashboard flickering (alternating 0 and real value).
-     * On real hardware, the RZC owns these broadcasts via real sensors. */
-#ifndef PLATFORM_POSIX
+    /* RZC is the sole authority for sensor-derived CAN messages (0x300-0x303).
+     * In SIL, the RzcSensorFeeder injects plant-sim physics values into
+     * MCAL ADC stubs, so SWC sensor reads return correct values.
+     * On real hardware, real ADC/encoder drivers provide the data. */
     {
         uint32 torque_echo;
         uint32 speed_rpm;
@@ -467,7 +464,6 @@ void Swc_RzcCom_TransmitSchedule(void)
         (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
         (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
     }
-#endif /* !PLATFORM_POSIX */
 
     /* Heartbeat TX handled by Swc_Heartbeat_MainFunction (50ms via RTE) */
 }

@@ -255,6 +255,35 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
     return E_OK;
 }
 
+Std_ReturnType IoHwAb_ReadBrakePosition(uint16* Position)
+{
+    uint16 raw_adc;
+    Std_ReturnType ret;
+
+    if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_UNINIT);
+        return E_NOT_OK;
+    }
+
+    if (Position == NULL_PTR) {
+        Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
+        return E_NOT_OK;
+    }
+
+    ret = iohwab_read_adc(iohwab_config->BrakePositionAdcGroup, &raw_adc);
+    if (ret != E_OK) {
+        return E_NOT_OK;
+    }
+
+    /*
+     * Brake position potentiometer: 0..4095 ADC maps to 0..1000 counts.
+     * 1000 counts = 100% brake, scaling: (raw * 1000) / ADC_MAX.
+     */
+    *Position = (uint16)(((uint32)raw_adc * 1000u) / IOHWAB_ADC_MAX_RAW);
+
+    return E_OK;
+}
+
 Std_ReturnType IoHwAb_SetMotorPWM(uint8 Direction, uint16 DutyCycle)
 {
     if ((iohwab_initialized == FALSE) || (iohwab_config == NULL_PTR)) {
