@@ -55,7 +55,11 @@ typedef uint8           Std_ReturnType;
 #define DEM_EVENT_STATUS_FAILED      1u
 
 /* Additional signal IDs used by Swc_FzcSafety.c (from Fzc_Cfg.h) */
+#define FZC_SIG_MOTOR_CUTOFF        29u
 #define FZC_SIG_SELF_TEST_RESULT    33u
+
+/* Com TX PDU IDs (from Fzc_Cfg.h) */
+#define FZC_COM_TX_MOTOR_CUTOFF      4u
 
 /* Vehicle state values (from Fzc_Cfg.h) */
 #define FZC_STATE_INIT               0u
@@ -178,6 +182,23 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: Com_SendSignal
+ * ================================================================== */
+
+typedef uint8 Com_SignalIdType;
+
+static uint8   mock_com_send_count;
+static uint8   mock_com_last_signal_id;
+
+Std_ReturnType Com_SendSignal(Com_SignalIdType SignalId, const void* SignalDataPtr)
+{
+    mock_com_send_count++;
+    mock_com_last_signal_id = SignalId;
+    (void)SignalDataPtr;
+    return E_OK;
+}
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 
@@ -209,6 +230,10 @@ void setUp(void)
         mock_dem_event_reported[i] = 0u;
         mock_dem_event_status[i]   = 0xFFu;
     }
+
+    /* Reset Com mock */
+    mock_com_send_count    = 0u;
+    mock_com_last_signal_id = 0xFFu;
 
     Swc_FzcSafety_Init();
 }
@@ -599,6 +624,7 @@ int main(void)
 #define FZC_CFG_H
 #define RTE_H
 #define IOHWAB_H
+#define COM_H
 #define DEM_H
 
 #include "../src/Swc_FzcSafety.c"
