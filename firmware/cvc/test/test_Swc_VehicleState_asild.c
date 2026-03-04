@@ -429,6 +429,63 @@ void test_DEGRADED_to_RUN_on_fault_cleared(void)
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 }
 
+/** @verifies SWR-CVC-011 — FAULT_CLEARED blocked when motor_cutoff active */
+void test_FAULT_CLEARED_blocked_by_motor_cutoff(void)
+{
+    /* Get to DEGRADED via motor cutoff confirmation */
+    get_to_run();
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_com_rx_values[14u] = 1u;
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+
+    /* pedal_fault = 0, but motor_cutoff = 1 → must NOT clear to RUN */
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 0u;
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_com_rx_values[14u] = 1u;
+    Swc_VehicleState_MainFunction();
+
+    /* Still DEGRADED (or escalated to SAFE_STOP) — NOT RUN */
+    TEST_ASSERT_TRUE(Swc_VehicleState_GetState() != CVC_STATE_RUN);
+}
+
+/** @verifies SWR-CVC-011 — FAULT_CLEARED blocked when brake_fault active */
+void test_FAULT_CLEARED_blocked_by_brake_fault(void)
+{
+    /* Get to DEGRADED via pedal fault, then set brake_fault active */
+    get_to_run();
+    Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+
+    /* pedal_fault = 0, brake_fault = 1 (not yet confirmed) → must NOT clear */
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 0u;
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
+    mock_com_rx_values[13u] = 1u;  /* Com signal 13 = brake_fault */
+    Swc_VehicleState_MainFunction();
+
+    /* Should NOT bounce to RUN with brake_fault pending */
+    TEST_ASSERT_TRUE(Swc_VehicleState_GetState() != CVC_STATE_RUN);
+}
+
+/** @verifies SWR-CVC-011 — FAULT_CLEARED fires when all DEGRADED faults zero */
+void test_FAULT_CLEARED_when_all_faults_zero(void)
+{
+    /* Get to DEGRADED via pedal fault */
+    get_to_run();
+    Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+
+    /* All faults zero → FAULT_CLEARED → RUN */
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 0u;
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 0u;
+    mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 0u;
+    Swc_VehicleState_MainFunction();
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+}
+
 /** @verifies SWR-CVC-011 — DEGRADED -> SAFE_STOP on E-stop */
 void test_DEGRADED_to_SAFE_STOP_on_estop(void)
 {
@@ -880,8 +937,9 @@ void test_DEGRADED_to_SAFE_STOP_on_motor_cutoff(void)
     Swc_VehicleState_OnEvent(CVC_EVT_PEDAL_FAULT_SINGLE);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 
-    /* Motor cutoff in DEGRADED -> escalate to SAFE_STOP (3-cycle confirmation) */
-    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 1u;  /* Keep pedal fault to prevent FAULT_CLEARED */
+    /* Motor cutoff in DEGRADED -> escalate to SAFE_STOP (3-cycle confirmation).
+     * motor_cutoff=1 blocks FAULT_CLEARED by itself (no pedal workaround needed). */
+    mock_rte_signals[CVC_SIG_PEDAL_FAULT] = 1u;  /* Redundant with fix but doesn't hurt */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
     mock_com_rx_values[14u] = 1u;  /* Com signal 14 = motor_cutoff */
     Swc_VehicleState_MainFunction();
@@ -1205,6 +1263,9 @@ int main(void)
 
     /* SWR-CVC-011: DEGRADED transitions */
     RUN_TEST(test_DEGRADED_to_RUN_on_fault_cleared);
+    RUN_TEST(test_FAULT_CLEARED_blocked_by_motor_cutoff);
+    RUN_TEST(test_FAULT_CLEARED_blocked_by_brake_fault);
+    RUN_TEST(test_FAULT_CLEARED_when_all_faults_zero);
     RUN_TEST(test_DEGRADED_to_SAFE_STOP_on_estop);
     RUN_TEST(test_DEGRADED_to_LIMP_on_CAN_timeout);
 

@@ -533,8 +533,17 @@ void Swc_VehicleState_MainFunction(void)
         }
     }
 
-    /* Fault cleared — when in DEGRADED and no pedal fault */
-    if ((current_state == CVC_STATE_DEGRADED) && (pedal_fault == 0u))
+    /* Fault cleared — when in DEGRADED and ALL DEGRADED-causing faults
+     * are clear. Must check every fault that can trigger DEGRADED:
+     *   - pedal_fault  (EVT_PEDAL_FAULT_SINGLE -> DEGRADED)
+     *   - motor_cutoff (EVT_MOTOR_CUTOFF -> DEGRADED)
+     * Also check brake_fault for robustness: if brake_fault is non-zero
+     * but not yet confirmed, premature clear would bounce RUN->SAFE_STOP
+     * instead of the correct DEGRADED->SAFE_STOP path. */
+    if ((current_state == CVC_STATE_DEGRADED) &&
+        (pedal_fault == 0u) &&
+        (motor_cutoff == 0u) &&
+        (brake_fault == 0u))
     {
         Swc_VehicleState_OnEvent(CVC_EVT_FAULT_CLEARED);
     }
