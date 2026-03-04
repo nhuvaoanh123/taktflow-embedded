@@ -401,9 +401,13 @@ void test_RzcCom_receive_torque_timeout_100ms_zero(void)
  * SWR-RZC-027: CAN Message Transmission
  * ================================================================== */
 
-/** @verifies SWR-RZC-027 -- Motor data transmitted via PduR_Transmit every cycle */
+/** @verifies SWR-RZC-027 -- Motor status+current transmitted every cycle,
+ *  motor_temp paced to 100ms (offset 3), battery to 1s (offset 7).
+ *  FDCAN TX FIFO = 3 slots, max 2 frames/cycle from this SWC. */
 void test_RzcCom_transmit_motor_data_10ms(void)
 {
+    uint8 i;
+
     /* Set some known values in RTE */
     mock_rte_signals[RZC_SIG_TORQUE_ECHO]   = 42u;
     mock_rte_signals[RZC_SIG_ENCODER_SPEED] = 1500u;
@@ -420,15 +424,10 @@ void test_RzcCom_transmit_motor_data_10ms(void)
 
     mock_pdur_tx_count = 0u;
 
-    /* Run 1 cycle: 4 PDUs should be transmitted via PduR_Transmit */
+    /* First cycle: only motor_status + motor_current (2 PduR calls).
+     * motor_temp fires at cycle%10==3, battery at cycle%100==7. */
     Swc_RzcCom_TransmitSchedule();
-
-    /* RZC is sole authority for sensor telemetry in both SIL and target.
-     * In SIL: sensor feeder injects plant-sim physics into MCAL ADC stubs,
-     * RZC reads via IoHwAb and transmits just like real hardware.
-     * 4 PduR_Transmit calls: motor_status, motor_current,
-     * motor_temp, battery_status */
-    TEST_ASSERT_EQUAL_UINT8(4u, mock_pdur_tx_count);
+    TEST_ASSERT_EQUAL_UINT8(2u, mock_pdur_tx_count);
 
     /* Verify motor status PDU (0x300) — torque_echo in byte 2 */
     TEST_ASSERT_EQUAL_UINT8(42u, mock_pdur_tx_data[RZC_COM_TX_MOTOR_STATUS][2]);
@@ -437,11 +436,21 @@ void test_RzcCom_transmit_motor_data_10ms(void)
     TEST_ASSERT_EQUAL_UINT8((uint8)(5000u & 0xFFu),
                             mock_pdur_tx_data[RZC_COM_TX_MOTOR_CURRENT][2]);
 
-    /* Verify motor temp PDU (0x302) — temp1 low byte in byte 2 */
+    /* Run 2 more cycles to reach offset 3 (motor_temp) */
+    for (i = 0u; i < 2u; i++) {
+        Swc_RzcCom_TransmitSchedule();
+    }
+
+    /* Verify motor temp PDU (0x302) was sent at cycle 3 */
     TEST_ASSERT_EQUAL_UINT8((uint8)(650u & 0xFFu),
                             mock_pdur_tx_data[RZC_COM_TX_MOTOR_TEMP][2]);
 
-    /* Verify battery status PDU (0x303) — battery_mV low byte in byte 2 */
+    /* Run 4 more cycles to reach offset 7 (battery) */
+    for (i = 0u; i < 4u; i++) {
+        Swc_RzcCom_TransmitSchedule();
+    }
+
+    /* Verify battery status PDU (0x303) was sent at cycle 7 */
     TEST_ASSERT_EQUAL_UINT8((uint8)(12000u & 0xFFu),
                             mock_pdur_tx_data[RZC_COM_TX_BATTERY_STATUS][2]);
 }

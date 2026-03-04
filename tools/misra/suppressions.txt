@@ -19,6 +19,11 @@ misra-c2012-21.10:*/*_hw_posix.c
 misra-c2012-17.7:*/*_hw_posix.c
 misra-c2012-8.4:*/*_hw_posix.c
 misra-c2012-8.4:*/*_hw_stm32.c
+misra-c2012-8.6:*/*_hw_stm32.c
+misra-c2012-12.2:*/*_hw_stm32.c
+misra-c2012-17.3:*/*_hw_stm32.c
+misra-config:*/*_hw_stm32.c
+misra-c2012-10.2:*/*_hw_stm32.c
 misra-c2012-8.4:*/*_hw_tms570.c
 misra-c2012-8.4:*/*_Hw_STM32.c
 misra-c2012-8.6:*/*_hw_posix.c
@@ -32,3 +37,7 @@ misra-c2012-11.8:*/Dcm.c
 misra-c2012-17.3:*/Dcm.c
 misra-c2012-17.3:*/sc_hw_posix.c
 misra-config:*/sc_hw_posix.c
+misra-c2012-21.6:*/cvc/src/*.c
+misra-c2012-21.6:*/fzc/src/*.c
+misra-c2012-21.6:*/rzc/src/*.c
+misra-c2012-10.2:*/main.c

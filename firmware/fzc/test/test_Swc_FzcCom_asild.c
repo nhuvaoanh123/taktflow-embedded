@@ -415,19 +415,25 @@ void test_FzcCom_transmit_steering_status_10ms(void)
     TEST_ASSERT_TRUE(mock_com_tx_count >= 2u);
 }
 
-/** @verifies SWR-FZC-027 — Event-driven brake fault TX via PduR_Transmit */
+/** @verifies SWR-FZC-027 — Brake fault TX via PduR_Transmit at 100ms (offset 3).
+ *  FDCAN TX FIFO = 3 slots, brake_fault paced to avoid FIFO overflow. */
 void test_FzcCom_transmit_event_driven_brake_fault(void)
 {
+    uint8 i;
+
     /* Set brake fault active in RTE */
     mock_rte_signals[FZC_SIG_BRAKE_FAULT] = 1u;
 
     mock_pdur_tx_count = 0u;
 
-    /* Single cycle should trigger event-driven TX via PduR_Transmit */
-    Swc_FzcCom_TransmitSchedule();
+    /* Brake fault is paced to 100ms (offset 3): run 3 cycles to reach it.
+     * Cycles: counter=1, 2, 3 — offset 3 fires on counter==3. */
+    for (i = 0u; i < 3u; i++) {
+        Swc_FzcCom_TransmitSchedule();
+    }
 
     /* assert: brake fault PDU was sent via PduR_Transmit */
-    TEST_ASSERT_TRUE(mock_pdur_tx_count >= 1u);
+    TEST_ASSERT_TRUE(mock_pdur_tx_sent[FZC_COM_TX_BRAKE_FAULT]);
 
     /* Verify brake fault data byte */
     TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_tx_pdu_data[FZC_COM_TX_BRAKE_FAULT][2]);
@@ -453,14 +459,19 @@ void test_FzcCom_transmit_brake_position_10ms(void)
  * ================================================================== */
 
 /** @verifies SWR-FZC-027
- *  Equivalence class: brake fault PDU always sent, even when NO_FAULT.
- *  Prevents stale shadow buffer in CVC after fault clears. */
+ *  Equivalence class: brake fault PDU always sent at 100ms (offset 3),
+ *  even when NO_FAULT. Prevents stale CVC shadow buffer. */
 void test_FzcCom_transmit_brake_fault_sent_when_no_fault(void)
 {
+    uint8 i;
+
     /* brake fault = NO_FAULT (0) */
     mock_rte_signals[FZC_SIG_BRAKE_FAULT] = FZC_BRAKE_NO_FAULT;
 
-    Swc_FzcCom_TransmitSchedule();
+    /* Run 3 cycles to reach offset 3 (brake_fault pacing) */
+    for (i = 0u; i < 3u; i++) {
+        Swc_FzcCom_TransmitSchedule();
+    }
 
     /* assert: brake fault PDU was transmitted (cyclic, not event-driven) */
     TEST_ASSERT_EQUAL_UINT8(TRUE, mock_pdur_tx_sent[FZC_COM_TX_BRAKE_FAULT]);
@@ -469,14 +480,19 @@ void test_FzcCom_transmit_brake_fault_sent_when_no_fault(void)
 }
 
 /** @verifies SWR-FZC-027
- *  Equivalence class: motor cutoff PDU always sent, even when inactive.
- *  Prevents stale shadow buffer in CVC after motor cutoff clears. */
+ *  Equivalence class: motor cutoff PDU always sent at 100ms (offset 7),
+ *  even when inactive. Prevents stale CVC shadow buffer. */
 void test_FzcCom_transmit_motor_cutoff_sent_when_inactive(void)
 {
+    uint8 i;
+
     /* motor cutoff = 0 (inactive) */
     mock_rte_signals[FZC_SIG_MOTOR_CUTOFF] = 0u;
 
-    Swc_FzcCom_TransmitSchedule();
+    /* Run 7 cycles to reach offset 7 (motor_cutoff pacing) */
+    for (i = 0u; i < 7u; i++) {
+        Swc_FzcCom_TransmitSchedule();
+    }
 
     /* assert: motor cutoff PDU was transmitted (cyclic, not event-driven) */
     TEST_ASSERT_EQUAL_UINT8(TRUE, mock_pdur_tx_sent[FZC_COM_TX_MOTOR_CUTOFF]);
