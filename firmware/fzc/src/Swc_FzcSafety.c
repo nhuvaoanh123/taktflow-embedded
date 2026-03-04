@@ -36,6 +36,14 @@
 #include "Com.h"
 #include "Dem.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define FSAFE_DIAG(fmt, ...) (void)fprintf(stderr, "[FSAFE] " fmt "\n", ##__VA_ARGS__)
+#else
+#define FSAFE_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * Constants
  * ================================================================== */
@@ -138,6 +146,9 @@ void Swc_FzcSafety_MainFunction(void)
         uint32 cutoff_val = 1u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
         (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
+        FSAFE_DIAG("CUTOFF=1 sf=%u bf=%u lf=%u mask=0x%02X",
+                   (unsigned)steer_fault, (unsigned)brake_fault,
+                   (unsigned)lidar_fault, (unsigned)fault_mask);
     } else {
         uint32 cutoff_val = 0u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 0u);

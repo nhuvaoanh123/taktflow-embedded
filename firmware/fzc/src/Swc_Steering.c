@@ -40,6 +40,14 @@
 #include "Rte.h"
 #include "Dem.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define STR_DIAG(fmt, ...) (void)fprintf(stderr, "[STEER] " fmt "\n", ##__VA_ARGS__)
+#else
+#define STR_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * Constants
  * ================================================================== */
@@ -104,6 +112,11 @@ static uint8    Steering_FaultEpisodeCount;
 
 /** First valid steering command received (timeout armed only after TRUE) */
 static uint8    Steering_FirstCmdReceived;
+
+#ifdef SIL_DIAG
+/** Diagnostic cycle counter for startup tracing */
+static uint16   Steering_DiagCycle;
+#endif
 
 /* ==================================================================
  * Private Helper: Absolute difference of sint16 values
@@ -250,6 +263,9 @@ void Swc_Steering_Init(const Swc_Steering_ConfigType* ConfigPtr)
     Steering_PwmDisableLevel    = 0u;
     Steering_FaultEpisodeCount  = 0u;
     Steering_FirstCmdReceived   = FALSE;
+#ifdef SIL_DIAG
+    Steering_DiagCycle          = 0u;
+#endif
 
     Steering_Initialized        = TRUE;
 }
@@ -335,6 +351,17 @@ void Swc_Steering_MainFunction(void)
         new_fault = FZC_STEER_SPI_FAIL;
     }
 
+#ifdef SIL_DIAG
+    Steering_DiagCycle++;
+    if (Steering_DiagCycle <= 100u) {
+        STR_DIAG("c=%u cmd=%d act=%d latch=%u fault=%u",
+                 (unsigned)Steering_DiagCycle,
+                 (int)cmd_angle, (int)actual_angle,
+                 (unsigned)Steering_FaultLatched,
+                 (unsigned)Steering_Fault);
+    }
+#endif
+
     /* ----------------------------------------------------------
      * Step 4: Range check on command angle (-45..+45)
      * ---------------------------------------------------------- */
@@ -355,8 +382,16 @@ void Swc_Steering_MainFunction(void)
 
         if (plaus_diff >= (uint16)Steering_CfgPtr->plausThreshold) {
             Steering_PlausDebounce++;
+            STR_DIAG("PLAUS cmd=%d act=%d diff=%u deb=%u/%u",
+                     (int)cmd_angle, (int)actual_angle,
+                     (unsigned)plaus_diff,
+                     (unsigned)Steering_PlausDebounce,
+                     (unsigned)Steering_CfgPtr->plausDebounce);
             if (Steering_PlausDebounce >= Steering_CfgPtr->plausDebounce) {
                 new_fault = FZC_STEER_PLAUSIBILITY;
+                STR_DIAG("!! PLAUS FAULT cmd=%d act=%d diff=%u",
+                         (int)cmd_angle, (int)actual_angle,
+                         (unsigned)plaus_diff);
             }
         } else {
             Steering_PlausDebounce = 0u;
