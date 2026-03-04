@@ -372,6 +372,7 @@ CPPCHECK_FLAGS = \
     --suppress=unreadVariable \
     --suppress=knownConditionTrueFalse \
     --suppress=badBitmaskCheck \
+    --suppress=normalCheckLevelMaxBranches \
     --suppressions-list=$(MISRA_SUPPR) \
     --inline-suppr \
     --error-exitcode=1

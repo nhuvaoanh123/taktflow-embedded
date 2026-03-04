@@ -506,18 +506,14 @@ int main(void)
                 Dbg_Uart_Print(" Ra=");
                 Dbg_PrintU32((uint32)rzc_alive);
             }
-            /* Debug: show total CAN RX count and per-ID heartbeat counters */
-            {
-                extern volatile uint32 g_can_rx_count;
-                extern volatile uint32 g_can_rx_012_count;
-                extern volatile uint32 g_can_rx_011_count;
-                Dbg_Uart_Print(" rx=");
-                Dbg_PrintU32(g_can_rx_count);
-                Dbg_Uart_Print(" h11=");
-                Dbg_PrintU32(g_can_rx_011_count);
-                Dbg_Uart_Print(" h12=");
-                Dbg_PrintU32(g_can_rx_012_count);
-            }
+            /* Debug: show total CAN RX count and per-ID heartbeat counters
+             * (variables declared extern in Can.h, included at file scope) */
+            Dbg_Uart_Print(" rx=");
+            Dbg_PrintU32(g_can_rx_count);
+            Dbg_Uart_Print(" h11=");
+            Dbg_PrintU32(g_can_rx_011_count);
+            Dbg_Uart_Print(" h12=");
+            Dbg_PrintU32(g_can_rx_012_count);
             Dbg_Uart_Print("\r\n");
         }
 #endif

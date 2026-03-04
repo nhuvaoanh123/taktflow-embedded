@@ -468,7 +468,7 @@ int main(void)
         /* 5s debug task: CAN error counter + heartbeat alive print */
         if ((tick_us - last_5s_us) >= 5000000u)
         {
-            extern volatile uint32 g_can_tx_busy_count;
+            /* g_can_tx_busy_count declared extern in Can.h (included at file scope) */
             uint8 tec = 0u;
             uint8 rec = 0u;
             uint8 err_state = 0u;
