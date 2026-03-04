@@ -40,7 +40,19 @@ extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
 
 void Swc_FzcSensorFeeder_Init(void)
 {
-    /* Stateless — no initialization needed */
+#ifdef PLATFORM_POSIX
+    /* Inject safe center values immediately so that SWC fault detection
+     * sees nominal sensor readings from the very first cycle — before
+     * plant-sim has started sending CAN 0x400.
+     * Without this, Com shadow buffers are zero-initialized:
+     *   steer_angle=0 → SPI raw 0 → actual_angle=-45° → 45° deviation
+     *   from cmd_angle=0° → false steering plausibility fault → motor_cutoff
+     *   → CVC SAFE_STOP during INIT hold time.
+     * Center steering: 8191 = 14-bit midpoint → 0° actual angle.
+     * Brake: 0 raw ADC = no brake applied (matches idle cmd=0). */
+    Spi_Posix_InjectAngle(8191u);
+    Adc_Posix_InjectValue(FZC_BRAKE_ADC_GROUP, FZC_BRAKE_ADC_CHANNEL, 0u);
+#endif
 }
 
 /* ==================================================================
