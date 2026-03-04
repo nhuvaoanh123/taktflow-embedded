@@ -40,6 +40,7 @@ typedef uint8 Std_ReturnType;
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
+#define CVC_SIG_BATTERY_STATUS    32u
 
 /* ==================================================================
  * Vehicle State / Event / Comm definitions (from Cvc_Cfg.h)
@@ -68,7 +69,9 @@ typedef uint8 Std_ReturnType;
 #define CVC_EVT_MOTOR_CUTOFF       11u
 #define CVC_EVT_BRAKE_FAULT        12u
 #define CVC_EVT_STEERING_FAULT     13u
-#define CVC_EVT_COUNT              14u
+#define CVC_EVT_BATTERY_WARN      14u
+#define CVC_EVT_BATTERY_CRIT      15u
+#define CVC_EVT_COUNT             16u
 
 #define CVC_COMM_OK                 0u
 #define CVC_COMM_TIMEOUT            1u
@@ -83,6 +86,19 @@ typedef uint8 Std_ReturnType;
   #endif
 #endif
 
+/* Phase 1: SAFE_STOP fault latching */
+#define CVC_SAFE_STOP_RECOVERY_CYCLES   200u
+#define CVC_FAULT_UNLATCH_CYCLES        300u
+#define CVC_LATCH_IDX_ESTOP             0u
+#define CVC_LATCH_IDX_SC_KILL           1u
+#define CVC_LATCH_IDX_MOTOR_CUTOFF      2u
+#define CVC_LATCH_IDX_BRAKE             3u
+#define CVC_LATCH_IDX_STEERING          4u
+#define CVC_LATCH_IDX_PEDAL_DUAL        5u
+#define CVC_LATCH_IDX_CAN_DUAL          6u
+#define CVC_LATCH_IDX_BATTERY_CRIT      7u
+#define CVC_LATCH_COUNT                 8u
+
 /* ECU IDs (from Cvc_Cfg.h) */
 #define CVC_ECU_ID_CVC              0x01u
 
@@ -95,6 +111,7 @@ typedef uint8 Std_ReturnType;
 #define CVC_DTC_MOTOR_CUTOFF_RX     9u
 #define CVC_DTC_BRAKE_FAULT_RX     10u
 #define CVC_DTC_STEERING_FAULT_RX  11u
+#define CVC_DTC_BATT_UNDERVOLT    13u
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_FAILED     1u
@@ -110,7 +127,7 @@ typedef uint8 Std_ReturnType;
  * Mock: RTE signal store
  * ================================================================== */
 
-static uint32 mock_rte_signals[32];
+static uint32 mock_rte_signals[48];
 static Std_ReturnType mock_rte_read_return;
 static Std_ReturnType mock_rte_write_return;
 
@@ -121,7 +138,7 @@ static uint8  mock_rte_write_call_count;
 
 Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr)
 {
-    if ((DataPtr == NULL_PTR) || (SignalId >= 32u))
+    if ((DataPtr == NULL_PTR) || (SignalId >= 48u))
     {
         return E_NOT_OK;
     }
@@ -131,7 +148,7 @@ Std_ReturnType Rte_Read(uint16 SignalId, uint32* DataPtr)
 
 Std_ReturnType Rte_Write(uint16 SignalId, uint32 Data)
 {
-    if (SignalId >= 32u)
+    if (SignalId >= 48u)
     {
         return E_NOT_OK;
     }
@@ -244,7 +261,7 @@ void setUp(void)
     uint8 i;
 
     /* Clear RTE signal store */
-    for (i = 0u; i < 32u; i++)
+    for (i = 0u; i < 48u; i++)
     {
         mock_rte_signals[i] = 0u;
     }
@@ -984,22 +1001,33 @@ void test_SAFE_STOP_recovery_when_all_faults_clear(void)
     mock_rte_signals[CVC_SIG_BRAKE_FAULT]     = 0u;
     mock_rte_signals[CVC_SIG_STEERING_FAULT]  = 0u;
     mock_rte_signals[CVC_SIG_PEDAL_FAULT]     = 0u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;  /* NORMAL */
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
 
-    /* Run 49 cycles — should NOT recover yet */
-    for (i = 0u; i < 49u; i++)
+    /* Unlatch: 300 cycles + Recovery: 199 cycles = 499 total — NOT yet */
+    for (i = 0u; i < 499u; i++)
     {
         Swc_VehicleState_MainFunction();
     }
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
-    /* 50th cycle — recovery triggers, transitions to INIT */
+    /* 500th cycle — recovery triggers, transitions to INIT */
     Swc_VehicleState_MainFunction();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
 
-    /* self_test_pass_pending should be set — next MF with heartbeats OK → RUN */
-    Swc_VehicleState_MainFunction();
+    /* Need full INIT hold before INIT->RUN (init_hold_counter reset to 0) */
+    for (i = 0u; i <= CVC_INIT_HOLD_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+#ifdef PLATFORM_POSIX
+    for (i = 0u; i < CVC_POST_INIT_GRACE_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+#endif
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 }
 
@@ -1015,11 +1043,13 @@ void test_SAFE_STOP_no_recovery_when_fault_persists(void)
 
     /* Motor cutoff still active — recovery blocked */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
 
-    /* Run 100 cycles — should NOT recover */
-    for (i = 0u; i < 100u; i++)
+    /* Run 600 cycles — should NOT recover */
+    for (i = 0u; i < 600u; i++)
     {
         Swc_VehicleState_MainFunction();
     }
@@ -1036,28 +1066,41 @@ void test_SAFE_STOP_recovery_counter_resets_on_fault(void)
     Swc_VehicleState_OnEvent(CVC_EVT_CAN_TIMEOUT_DUAL);
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
-    /* All clear for 40 cycles */
+    /* All clear — set signals */
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    for (i = 0u; i < 40u; i++)
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;
+
+    /* Unlatch phase: 300 cycles clears CAN_DUAL latch */
+    for (i = 0u; i < 300u; i++)
     {
         Swc_VehicleState_MainFunction();
     }
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
-    /* Fault appears briefly — resets counter */
+    /* Recovery hold: 100 cycles (half of 200) */
+    for (i = 0u; i < 100u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+
+    /* Fault appears briefly — resets recovery hold counter */
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 1u;
     Swc_VehicleState_MainFunction();
     mock_rte_signals[CVC_SIG_BRAKE_FAULT] = 0u;
 
-    /* Need another 50 clear cycles from scratch */
-    for (i = 0u; i < 49u; i++)
+    /* Need another 200 recovery hold cycles from scratch (brake latch not set
+     * because brake didn't trigger the SAFE_STOP entry — only instantaneous
+     * guard resets the recovery counter) */
+    for (i = 0u; i < 199u; i++)
     {
         Swc_VehicleState_MainFunction();
     }
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
-    /* 50th cycle — NOW it recovers */
+    /* 200th cycle — NOW it recovers */
     Swc_VehicleState_MainFunction();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
 }
