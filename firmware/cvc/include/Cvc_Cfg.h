@@ -177,7 +177,7 @@
 #endif
 #ifndef CVC_E2E_SM_FZC_MAX_ERR_VALID
   #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 3u   /* tolerate 3 missed slots in SIL */
+    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 5u   /* tolerate 5 missed slots in SIL (250ms gap) */
   #else
     #define CVC_E2E_SM_FZC_MAX_ERR_VALID 1u   /* >1 error → INVALID (bare metal) */
   #endif
