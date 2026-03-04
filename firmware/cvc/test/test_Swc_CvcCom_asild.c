@@ -45,6 +45,7 @@ typedef uint8           Std_ReturnType;
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
+#define CVC_SIG_BATTERY_STATUS    32u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
 
