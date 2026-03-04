@@ -212,12 +212,11 @@ static uint16 init_hold_counter;
 /** @brief  SAFE_STOP recovery counter — counts all-clear cycles before recovery */
 static uint16 safe_stop_clear_count;
 
-#ifdef PLATFORM_POSIX
-/** @brief  SIL-only: post-INIT grace counter — suppresses ConfirmFault after
- *          INIT->RUN to absorb stale brake_fault / motor_cutoff from zone
- *          controllers that haven't settled yet after container restart. */
+/** @brief  Post-INIT grace counter — suppresses ConfirmFault and SC_KILL after
+ *          INIT->RUN to absorb stale fault signals from zone controllers.
+ *          Only set to non-zero on SIL (PLATFORM_POSIX).  On bare metal the
+ *          value stays at 0 (transparent — guards always pass). */
 static uint16 post_init_grace_counter;
-#endif
 
 /** @brief  Fault latch array — TRUE if that fault triggered SAFE_STOP */
 static uint8  fault_latched[CVC_LATCH_COUNT];
@@ -263,9 +262,7 @@ void Swc_VehicleState_Init(void)
     self_test_pass_pending = FALSE;
     init_hold_counter      = 0u;
     safe_stop_clear_count  = 0u;
-#ifdef PLATFORM_POSIX
     post_init_grace_counter = 0u;
-#endif
 
     for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
     {

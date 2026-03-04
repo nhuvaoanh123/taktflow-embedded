@@ -265,6 +265,9 @@ void setUp(void)
     {
         mock_rte_signals[i] = 0u;
     }
+    /* Battery status 0 = DISABLE_LOW (critical).  Default to NORMAL(2)
+     * so battery-fault logic does not interfere with unrelated tests. */
+    mock_rte_signals[CVC_SIG_BATTERY_STATUS] = 2u;
     mock_rte_read_return    = E_OK;
     mock_rte_write_return   = E_OK;
     mock_rte_write_last_id  = 0u;
