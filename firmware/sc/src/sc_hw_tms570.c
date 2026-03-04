@@ -140,19 +140,19 @@
 #define DCAN_IF2DATA            0x130u
 #define DCAN_IF2DATB            0x134u
 
-/** IF command register bits */
-#define DCAN_IFCMD_BUSY         (1u << 15u)  /* IF busy flag */
-#define DCAN_IFCMD_DATAB        (1u << 0u)   /* Access data B */
-#define DCAN_IFCMD_DATAA        (1u << 1u)   /* Access data A */
-#define DCAN_IFCMD_NEWDAT       (1u << 2u)   /* Access NewDat/IntPnd */
-#define DCAN_IFCMD_CLRINTPND    (1u << 3u)   /* Clear IntPnd */
-#define DCAN_IFCMD_CONTROL      (1u << 4u)   /* Access control bits */
-#define DCAN_IFCMD_ARB          (1u << 5u)   /* Access arbitration */
-#define DCAN_IFCMD_MASK         (1u << 6u)   /* Access mask */
-#define DCAN_IFCMD_WR           (1u << 7u)   /* Write (1) / Read (0) */
+/** IF command register bits (MISRA 12.2: use uint32 literal for shift) */
+#define DCAN_IFCMD_BUSY         ((uint32)1u << 15u)  /* IF busy flag */
+#define DCAN_IFCMD_DATAB        ((uint32)1u << 0u)   /* Access data B */
+#define DCAN_IFCMD_DATAA        ((uint32)1u << 1u)   /* Access data A */
+#define DCAN_IFCMD_NEWDAT       ((uint32)1u << 2u)   /* Access NewDat/IntPnd */
+#define DCAN_IFCMD_CLRINTPND    ((uint32)1u << 3u)   /* Clear IntPnd */
+#define DCAN_IFCMD_CONTROL      ((uint32)1u << 4u)   /* Access control bits */
+#define DCAN_IFCMD_ARB          ((uint32)1u << 5u)   /* Access arbitration */
+#define DCAN_IFCMD_MASK         ((uint32)1u << 6u)   /* Access mask */
+#define DCAN_IFCMD_WR           ((uint32)1u << 7u)   /* Write (1) / Read (0) */
 
 /** MCTL NewDat bit */
-#define DCAN_MCTL_NEWDAT        (1u << 15u)
+#define DCAN_MCTL_NEWDAT        ((uint32)1u << 15u)
 
 /* ==================================================================
  * Helper: volatile register access
@@ -163,13 +163,15 @@
  * The addresses are fixed hardware register addresses from the TRM. */
 static uint32 reg_read(uint32 base, uint32 offset)
 {
-    volatile uint32 *addr = (volatile uint32 *)((uint32)(base + offset)); /* PRQA S 0306 */
+    /* cppcheck-suppress misra-c2012-11.4 */
+    volatile const uint32 *addr = (volatile const uint32 *)(base + offset);
     return *addr;
 }
 
 static void reg_write(uint32 base, uint32 offset, uint32 value)
 {
-    volatile uint32 *addr = (volatile uint32 *)((uint32)(base + offset)); /* PRQA S 0306 */
+    /* cppcheck-suppress misra-c2012-11.4 */
+    volatile uint32 *addr = (volatile uint32 *)(base + offset);
     *addr = value;
 }
 
@@ -250,9 +252,9 @@ void gioSetDirection(uint8 port, uint8 pin, uint8 direction)
     dir_val = reg_read(GIO_BASE, dir_offset);
 
     if (direction != 0u) {
-        dir_val |= (1u << pin);
+        dir_val |= ((uint32)1u << (uint32)pin);
     } else {
-        dir_val &= ~(1u << pin);
+        dir_val &= ~((uint32)1u << (uint32)pin);
     }
 
     reg_write(GIO_BASE, dir_offset, dir_val);
@@ -284,9 +286,9 @@ void gioSetBit(uint8 port, uint8 pin, uint8 value)
     }
 
     if (value != 0u) {
-        reg_write(GIO_BASE, set_offset, (1u << pin));
+        reg_write(GIO_BASE, set_offset, ((uint32)1u << (uint32)pin));
     } else {
-        reg_write(GIO_BASE, clr_offset, (1u << pin));
+        reg_write(GIO_BASE, clr_offset, ((uint32)1u << (uint32)pin));
     }
 }
 
@@ -315,7 +317,7 @@ uint8 gioGetBit(uint8 port, uint8 pin)
 
     din_val = reg_read(GIO_BASE, din_offset);
 
-    return ((din_val >> pin) & 1u) != 0u ? 1u : 0u;
+    return ((din_val >> (uint32)pin) & 1u) != 0u ? 1u : 0u;
 }
 
 /* ==================================================================
@@ -476,7 +478,7 @@ void esm_enable_group1_channel(uint8 channel)
     if (channel > 31u) {
         return;
     }
-    reg_write(ESM_BASE, ESM_EEPAPR1, (1u << channel));
+    reg_write(ESM_BASE, ESM_EEPAPR1, ((uint32)1u << (uint32)channel));
 }
 
 /**
@@ -492,7 +494,7 @@ void esm_clear_flag(uint8 group, uint8 channel)
 
     if (group == 1u) {
         /* Write 1 to clear the flag in group 1 status register */
-        reg_write(ESM_BASE, ESM_SR4, (1u << channel));
+        reg_write(ESM_BASE, ESM_SR4, ((uint32)1u << (uint32)channel));
     } else {
         /* Group 2: no direct clear on some TMS570 variants —
          * cleared by ESM key register or hardware reset */
@@ -522,7 +524,7 @@ boolean esm_is_flag_set(uint8 group, uint8 channel)
         return FALSE;
     }
 
-    return ((status & (1u << channel)) != 0u) ? TRUE : FALSE;
+    return ((status & ((uint32)1u << (uint32)channel)) != 0u) ? TRUE : FALSE;
 }
 
 /* ==================================================================
@@ -674,11 +676,10 @@ void sc_sci_init(void)
 
     /* Configure: 1 stop bit, no parity, 8-bit char, async mode */
     reg_write(SCI_BASE, SCI_GCR1,
-              (1u << 25u) |   /* CLOCK (internal) */
-              (1u << 24u) |   /* SWnRST (out of reset) */
-              (1u << 5u)  |   /* TXENA */
-              (1u << 1u)  |   /* TIMING (async) */
-              (0u << 4u));    /* RXENA not needed for TX-only */
+              ((uint32)1u << 25u) |   /* CLOCK (internal) */
+              ((uint32)1u << 24u) |   /* SWnRST (out of reset) */
+              ((uint32)1u << 5u)  |   /* TXENA */
+              ((uint32)1u << 1u));    /* TIMING (async) */
 
     /* Baud rate: 75 MHz / (16 * 41) = ~114329 baud */
     reg_write(SCI_BASE, SCI_BRS, 40u);
@@ -686,7 +687,7 @@ void sc_sci_init(void)
     /* Re-enable TX after config */
     {
         uint32 gcr1 = reg_read(SCI_BASE, SCI_GCR1);
-        gcr1 |= (1u << 25u) | (1u << 24u) | (1u << 5u) | (1u << 1u);
+        gcr1 |= ((uint32)1u << 25u) | ((uint32)1u << 24u) | ((uint32)1u << 5u) | ((uint32)1u << 1u);
         reg_write(SCI_BASE, SCI_GCR1, gcr1);
     }
 }
@@ -735,7 +736,7 @@ void sc_sci_put_uint(uint32 val)
     }
 
     while (val > 0u) {
-        buf[i] = (char)('0' + (char)(val % 10u));
+        buf[i] = (char)((uint8)'0' + (uint8)(val % 10u));
         val /= 10u;
         i++;
     }
