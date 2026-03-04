@@ -63,6 +63,12 @@ static uint8   Safety_WdiToggle;     /* Alternates 0/1 for WDI pin */
 static uint8   Safety_Status;
 static uint8   Safety_SelfTestDone;
 
+/** @brief  Post-boot grace counter — suppresses motor cutoff assertion
+ *          after boot to absorb startup transients (SC E-Stop, lidar
+ *          timeout, brake stabilization).  Only set to non-zero on SIL
+ *          (PLATFORM_POSIX).  On bare metal stays at 0 (transparent). */
+static uint16  Safety_GraceCounter;
+
 /* ==================================================================
  * API: Swc_FzcSafety_Init
  * ================================================================== */
@@ -72,6 +78,12 @@ void Swc_FzcSafety_Init(void)
     Safety_WdiToggle    = 0u;
     Safety_Status       = SAFETY_STATUS_OK;
     Safety_SelfTestDone = FALSE;
+    Safety_GraceCounter = 0u;
+
+#ifdef PLATFORM_POSIX
+    Safety_GraceCounter = FZC_POST_INIT_GRACE_CYCLES;
+#endif
+
     Safety_Initialized  = TRUE;
 }
 
@@ -132,23 +144,45 @@ void Swc_FzcSafety_MainFunction(void)
     }
 
     /* ----------------------------------------------------------
-     * Step 2b: Motor cutoff aggregation (safety architecture)
+     * Step 2b: Decrement post-boot grace counter
+     * ---------------------------------------------------------- */
+    if (Safety_GraceCounter > 0u) {
+        Safety_GraceCounter--;
+    }
+
+    /* ----------------------------------------------------------
+     * Step 2c: Motor cutoff aggregation (safety architecture)
      *          A steering or brake fault means the vehicle cannot be
      *          safely operated. Motor cutoff is the correct safety
      *          response (SS-MOTOR-OFF per SG-003). This propagates
      *          via CAN 0x211 → CVC → VehicleState → SAFE_STOP.
+     *
+     *          During the post-boot grace period, suppress cutoff to
+     *          absorb startup transients (SC E-Stop, lidar timeout).
+     *          Faults are still recorded in fault_mask — only the
+     *          cutoff assertion is deferred.
      *
      *          Read-modify-write: Brake SWC (higher priority) may
      *          have already set motor_cutoff=1 in RTE. We must
      *          preserve that value, not blindly overwrite to 0.
      * ---------------------------------------------------------- */
     if ((steer_fault != 0u) || (brake_fault != 0u)) {
-        uint32 cutoff_val = 1u;
-        (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
-        (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
-        FSAFE_DIAG("CUTOFF=1 sf=%u bf=%u lf=%u mask=0x%02X",
-                   (unsigned)steer_fault, (unsigned)brake_fault,
-                   (unsigned)lidar_fault, (unsigned)fault_mask);
+        if (Safety_GraceCounter == 0u) {
+            uint32 cutoff_val = 1u;
+            (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);
+            (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
+            FSAFE_DIAG("CUTOFF=1 sf=%u bf=%u lf=%u mask=0x%02X",
+                       (unsigned)steer_fault, (unsigned)brake_fault,
+                       (unsigned)lidar_fault, (unsigned)fault_mask);
+        } else {
+            uint32 cutoff_val = 0u;
+            (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 0u);
+            (void)Com_SendSignal(FZC_COM_SIG_TX_MOTOR_CUTOFF, &cutoff_val);
+            FSAFE_DIAG("GRACE=%u sf=%u bf=%u lf=%u (cutoff suppressed)",
+                       (unsigned)Safety_GraceCounter,
+                       (unsigned)steer_fault, (unsigned)brake_fault,
+                       (unsigned)lidar_fault);
+        }
     } else {
         uint32 cutoff_val = 0u;
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 0u);

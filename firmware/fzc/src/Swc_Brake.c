@@ -35,6 +35,14 @@
 #include "Com.h"
 #include "Dem.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define BRAKE_DIAG(fmt, ...) (void)fprintf(stderr, "[BRAKE] " fmt "\n", ##__VA_ARGS__)
+#else
+#define BRAKE_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * Constants
  * ================================================================== */
@@ -354,6 +362,14 @@ void Swc_Brake_MainFunction(void)
     /* ----------------------------------------------------------
      * Step 9: Write RTE signals + send brake fault on CAN 0x210
      * ---------------------------------------------------------- */
+#ifdef SIL_DIAG
+    if (Brake_Fault != FZC_BRAKE_NO_FAULT) {
+        BRAKE_DIAG("cmd=%u pos=%u fault=%u latch=%u estop=%u auto=%u",
+                   (unsigned)brake_cmd, (unsigned)Brake_Position,
+                   (unsigned)Brake_Fault, (unsigned)Brake_FaultLatched,
+                   (unsigned)estop_active, (unsigned)Brake_AutoBrakeActive);
+    }
+#endif
     (void)Rte_Write(FZC_SIG_BRAKE_POS,   (uint32)Brake_Position);
     (void)Rte_Write(FZC_SIG_BRAKE_FAULT,  (uint32)Brake_Fault);
 

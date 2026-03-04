@@ -211,6 +211,18 @@ void Swc_Lidar_MainFunction(void)
         frame_received = TRUE;
         Lidar_TimeoutCounter = 0u;
     } else {
+#ifdef PLATFORM_POSIX
+        /* SIL: No physical TFMini-S sensor, UART POSIX stub returns 0
+         * bytes every cycle.  Inject a synthetic "clear" reading so the
+         * lidar SWC doesn't permanently fault.  Actual lidar scenarios
+         * use the fault-inject API to override via CAN-based injection.
+         * NOTE: This guard is transparent on bare metal (compiled out). */
+        raw_dist       = 500u;   /* 500 cm = well within CLEAR zone */
+        raw_signal     = 500u;   /* Good signal strength             */
+        parse_result   = E_OK;
+        frame_received = TRUE;
+        Lidar_TimeoutCounter = 0u;
+#else
         /* No valid frame — increment timeout */
         Lidar_TimeoutCounter++;
 
@@ -218,6 +230,7 @@ void Swc_Lidar_MainFunction(void)
         if (Lidar_ChecksumError == TRUE) {
             new_fault = 1u;
         }
+#endif /* PLATFORM_POSIX */
     }
 
     /* ----------------------------------------------------------
