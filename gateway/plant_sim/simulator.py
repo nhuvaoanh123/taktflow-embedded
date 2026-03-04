@@ -261,9 +261,10 @@ class PlantSimulator:
 
         elif arb_id == RX_STEER_COMMAND:
             if len(data) >= 4 and not self.estop_active:
-                raw = struct.unpack_from('<H', data, 2)[0]  # uint16 LE (DBC: unsigned)
-                angle = raw * 0.01 - 45.0  # DBC: factor=0.01, offset=-45.0
-                angle = max(-45.0, min(45.0, angle))
+                # CVC Com sends plain degrees as sint16 (no DBC scaling).
+                # 0 = center, +10 = 10° right, -10 = 10° left.
+                raw = struct.unpack_from('<h', data, 2)[0]  # sint16 LE
+                angle = max(-45.0, min(45.0, float(raw)))
                 self.steering.record_command(angle)
 
         elif arb_id == RX_BRAKE_COMMAND:

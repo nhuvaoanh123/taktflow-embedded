@@ -10,6 +10,7 @@ CRC-8 SAE J1850 (poly 0x1D, init 0xFF) computed over [data_id] + payload[2:].
 import json
 import logging
 import os
+import struct
 import time
 from typing import Optional
 
@@ -136,14 +137,12 @@ def _steer_frame(angle_deg: float, rate_limit: float = 10.0,
                  vehicle_state: int = 1) -> bytes:
     """Build a Steer_Command frame (0x102, 8 bytes).
 
-    SteerAngleCmd: 16-bit unsigned, scale 0.01, offset -45.0
-      raw = (angle_deg + 45.0) / 0.01
+    SteerAngleCmd: sint16 at bytes 2-3, plain degrees (no DBC scaling).
+    CVC Com sends 0 = center, +10 = 10° right, -10 = 10° left.
     """
     payload = bytearray(8)
-    raw = int((angle_deg + 45.0) / 0.01)
-    raw = max(0, min(9000, raw))  # -45 .. +45 deg
-    payload[2] = raw & 0xFF
-    payload[3] = (raw >> 8) & 0xFF
+    raw = max(-45, min(45, int(angle_deg)))
+    struct.pack_into('<h', payload, 2, raw)
     # SteerRateLimit: scale 0.2, byte 4
     payload[4] = max(0, min(255, int(rate_limit / 0.2)))
     # VehicleState: 4 bits at byte 5

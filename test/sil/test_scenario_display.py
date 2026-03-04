@@ -15,6 +15,7 @@ Each test simulates clicking a button on the dashboard:
 This tests the REAL pipeline: scenario CAN frames → plant sim → snapshot.
 """
 
+import struct
 import sys
 import os
 
@@ -115,8 +116,9 @@ class SimHarness:
 
         elif arb_id == 0x102:  # RX_STEER_COMMAND
             if len(data) >= 4 and not self.estop_active:
-                raw = data[2] | (data[3] << 8)
-                angle = max(-45.0, min(45.0, raw * 0.01 - 45.0))
+                # CVC Com sends plain degrees as sint16 (no DBC scaling)
+                raw = struct.unpack_from('<h', bytes(data), 2)[0]
+                angle = max(-45.0, min(45.0, float(raw)))
                 self.steering.record_command(angle)
 
         elif arb_id == 0x103:  # RX_BRAKE_COMMAND
