@@ -660,7 +660,7 @@ class ScenarioExecutor:
         if action == "reset":
             resp = requests.post(
                 f"{self._fault_api_url}/api/fault/reset",
-                timeout=10,
+                timeout=60,
             )
             resp.raise_for_status()
             log.info("  [STEP] Reset: %s", resp.json())
