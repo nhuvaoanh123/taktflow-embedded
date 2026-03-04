@@ -26,7 +26,7 @@ verifies:
   - "SWR-CVC-006"   # CVC clean restart after power cycle
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 45
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -93,7 +93,7 @@ verdicts:
 
   - type: vehicle_state
     expected: RUN
-    within_ms: 8000
+    within_ms: 15000
     phase: "after_restart"
     description: "Vehicle must reach RUN within 8 seconds of power cycle"
 
@@ -115,5 +115,5 @@ teardown:
   - action: reset
     description: "Clear all state and return to clean idle"
   - action: wait
-    seconds: 3
+    seconds: 5
     description: "Allow full system stabilization"

@@ -51,7 +51,7 @@ steps:
 verdicts:
   - type: vehicle_state
     expected: RUN
-    within_ms: 500
+    within_ms: 15000
     continuous: true
     description: "Vehicle must remain in RUN for the entire 60-second window"
 

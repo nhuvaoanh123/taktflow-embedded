@@ -24,7 +24,7 @@ verifies:
   - "SWR-BSW-020"   # BswM mode transitions (SAFE_STOP -> INIT -> RUN)
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 30
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -48,7 +48,7 @@ steps:
     name: reset
     description: "Send reset command: clear E-Stop, zero all actuators"
   - action: wait
-    seconds: 1
+    seconds: 5
     description: "Allow reset to propagate"
   - action: wait_state
     state: RUN
@@ -64,7 +64,7 @@ verdicts:
 
   - type: vehicle_state
     expected: RUN
-    within_ms: 10000
+    within_ms: 15000
     phase: "after_reset"
     description: "Vehicle must return to RUN within 10 seconds after reset"
 

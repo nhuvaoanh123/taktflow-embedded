@@ -25,7 +25,7 @@ verifies:
   - "SWR-BSW-017"   # Graceful shutdown on battery critical
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 30
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -76,5 +76,5 @@ teardown:
   - action: reset
     description: "Clear fault state; plant sim restores normal battery within ~1s"
   - action: wait
-    seconds: 3
+    seconds: 5
     description: "Allow battery voltage to recover to normal (plant sim default)"

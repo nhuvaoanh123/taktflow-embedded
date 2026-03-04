@@ -27,7 +27,7 @@ verifies:
   - "SWR-ALL-004"   # Flash Memory Utilization Below 80%
 aspice: "SWE.4"
 iso_reference: "ISO 26262 Part 6, Section 9 — Static Analysis"
-timeout_sec: 60
+timeout_sec: 90
 
 setup:
   - action: build

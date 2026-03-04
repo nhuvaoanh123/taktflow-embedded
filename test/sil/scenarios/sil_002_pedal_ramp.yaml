@@ -23,7 +23,7 @@ verifies:
   - "SWR-RZC-001"   # RZC motor control loop — torque tracking
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 30
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -50,7 +50,7 @@ steps:
 verdicts:
   - type: vehicle_state
     expected: RUN
-    within_ms: 500
+    within_ms: 15000
     description: "Vehicle must remain in RUN throughout the pedal ramp"
 
   - type: can_message

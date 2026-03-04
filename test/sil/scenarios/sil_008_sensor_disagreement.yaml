@@ -22,7 +22,7 @@ verifies:
   - "SWR-FZC-002"   # FZC steering rate-limit violation detection
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 20
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -69,5 +69,5 @@ teardown:
   - action: reset
     description: "Clear steering fault and return to idle"
   - action: wait
-    seconds: 2
+    seconds: 5
     description: "Allow fault state to clear"

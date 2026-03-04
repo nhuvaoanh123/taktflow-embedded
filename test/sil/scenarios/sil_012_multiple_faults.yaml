@@ -25,7 +25,7 @@ verifies:
   - "SWR-SC-002"    # Safety controller multi-fault prioritization
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 25
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -88,5 +88,5 @@ teardown:
   - action: reset
     description: "Clear all fault conditions"
   - action: wait
-    seconds: 3
+    seconds: 5
     description: "Allow complete fault state reset"

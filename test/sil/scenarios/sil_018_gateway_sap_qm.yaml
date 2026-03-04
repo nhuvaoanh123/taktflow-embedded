@@ -19,13 +19,13 @@ verifies:
   - "SWR-GW-006"   # 8D Report Template Generation
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 30
+timeout_sec: 90
 
 setup:
   - action: reset
     description: "Clear residual state and previous reports"
   - action: wait
-    seconds: 2
+    seconds: 5
     description: "Allow all containers and SAP QM mock API to initialize"
 
 steps:

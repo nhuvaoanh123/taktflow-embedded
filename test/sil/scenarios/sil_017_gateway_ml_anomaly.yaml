@@ -21,13 +21,13 @@ verifies:
   - "SWR-GW-004"   # ML Model Loading and Validation
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 40
+timeout_sec: 90
 
 setup:
   - action: reset
     description: "Clear residual state from previous test runs"
   - action: wait
-    seconds: 2
+    seconds: 5
     description: "Allow all containers to initialize and ML model to load"
 
 steps:

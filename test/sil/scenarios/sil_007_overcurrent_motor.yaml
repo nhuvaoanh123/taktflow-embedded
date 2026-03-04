@@ -24,7 +24,7 @@ verifies:
   - "SWR-BSW-016"   # Overcurrent fault handling chain
 aspice: "SWE.5"
 iso_reference: "ISO 26262 Part 6, Section 10"
-timeout_sec: 25
+timeout_sec: 90
 
 setup:
   - action: reset
@@ -75,5 +75,5 @@ teardown:
   - action: reset
     description: "Clear overcurrent condition and return to idle"
   - action: wait
-    seconds: 2
+    seconds: 5
     description: "Allow fault state to fully clear"
