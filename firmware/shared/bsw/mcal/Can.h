@@ -133,4 +133,11 @@ Std_ReturnType Can_GetErrorCounters(uint8 Controller, uint8* tec, uint8* rec);
  */
 Std_ReturnType Can_GetControllerErrorState(uint8 ControllerId, uint8* ErrorStatePtr);
 
+/* Debug counters (bring-up diagnostics — volatile, accessed from main.c) */
+extern volatile uint32 g_can_rx_count;
+extern volatile uint32 g_can_rx_last_id;
+extern volatile uint32 g_can_tx_busy_count;
+extern volatile uint32 g_can_rx_012_count;
+extern volatile uint32 g_can_rx_011_count;
+
 #endif /* CAN_H */

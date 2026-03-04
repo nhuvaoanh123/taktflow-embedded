@@ -69,6 +69,9 @@ typedef uint8           Std_ReturnType;
 #define FZC_SELF_TEST_PASS           1u
 #define FZC_SELF_TEST_FAIL           0u
 
+/* Post-INIT grace period (from Fzc_Cfg.h) */
+#define FZC_POST_INIT_GRACE_CYCLES   500u
+
 /* Fault mask bits */
 #define FZC_FAULT_NONE            0x00u
 #define FZC_FAULT_STEER             (1u << 0u)
