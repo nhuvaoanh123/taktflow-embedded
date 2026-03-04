@@ -1241,6 +1241,106 @@ void test_SC_kill_signal_zero_stays_run(void)
 }
 
 /* ==================================================================
+ * SWR-CVC-009: INIT Isolation — ConfirmFault suppressed during INIT
+ * ================================================================== */
+
+/** @verifies SWR-CVC-009
+ *  ConfirmFault suppressed during INIT: motor_cutoff=1 for 100 cycles
+ *  should NOT fire EVT_MOTOR_CUTOFF, state stays INIT.
+ *  Validates: zone-controller fault signals are absorbed during boot. */
+void test_ConfirmFault_suppressed_during_INIT(void)
+{
+    uint16 i;
+
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+
+    /* motor_cutoff=1 via RTE + Com confirms — would fire in RUN after 3 cycles */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_com_rx_values[14u] = 1u;
+    mock_dem_call_count = 0u;
+
+    /* Run 100 cycles — well past any confirmation threshold */
+    for (i = 0u; i < 100u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+
+    /* Must remain INIT — ConfirmFault should not have fired */
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+
+    /* No DTC should have been reported during INIT */
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dem_call_count);
+}
+
+/** @verifies SWR-CVC-009
+ *  Fault counters reset on INIT->RUN: motor_cutoff=1 during INIT,
+ *  then cleared before transition — no lingering counter from INIT. */
+void test_INIT_to_RUN_resets_fault_counters(void)
+{
+    uint16 i;
+
+    /* Phase 1: motor_cutoff=1 during INIT for 50 cycles */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_com_rx_values[14u] = 1u;
+    for (i = 0u; i < 50u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
+
+    /* Phase 2: Clear fault, set up transition to RUN */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 0u;
+    mock_com_rx_values[14u] = 0u;
+    mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
+    mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
+    Swc_VehicleState_OnEvent(CVC_EVT_SELF_TEST_PASS);
+
+    /* Complete INIT hold time */
+    for (i = 0u; i <= CVC_INIT_HOLD_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Phase 3: Run a few cycles with motor_cutoff=0 — must stay in RUN.
+     * If counters were not reset, lingering count from INIT could
+     * combine with noise to cause premature fault confirmation. */
+    mock_dem_call_count = 0u;
+    for (i = 0u; i < 10u; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_dem_call_count);
+}
+
+/** @verifies SWR-CVC-010
+ *  Real fault detection after RUN: motor_cutoff=1 after INIT->RUN
+ *  completes fresh 3-cycle confirmation → DEGRADED.
+ *  Validates: ConfirmFault works correctly once INIT is exited. */
+void test_real_fault_after_RUN_fresh_confirmation(void)
+{
+    /* Get to RUN */
+    get_to_run();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* Set motor_cutoff=1 + Com confirms */
+    mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
+    mock_com_rx_values[14u] = 1u;
+    mock_dem_call_count = 0u;
+
+    /* 2 cycles — not yet confirmed */
+    Swc_VehicleState_MainFunction();
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
+
+    /* 3rd cycle — confirmed, fires EVT_MOTOR_CUTOFF → DEGRADED */
+    Swc_VehicleState_MainFunction();
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
+    TEST_ASSERT_TRUE(mock_dem_call_count > 0u);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -1342,6 +1442,11 @@ int main(void)
     RUN_TEST(test_motor_cutoff_com_disagrees_no_transition);
     RUN_TEST(test_steering_fault_debounce_only);
     RUN_TEST(test_estop_immediate_no_debounce);
+
+    /* SWR-CVC-009: INIT isolation — ConfirmFault suppressed during INIT */
+    RUN_TEST(test_ConfirmFault_suppressed_during_INIT);
+    RUN_TEST(test_INIT_to_RUN_resets_fault_counters);
+    RUN_TEST(test_real_fault_after_RUN_fresh_confirmation);
 
     return UNITY_END();
 }

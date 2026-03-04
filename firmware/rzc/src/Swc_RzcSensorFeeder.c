@@ -27,6 +27,12 @@
 #ifdef PLATFORM_POSIX
 /* MCAL injection API — only exists in POSIX stub builds */
 extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
+
+/** @brief  Gate: hold nominal defaults until plant-sim sends real data.
+ *          Com shadow buffer initializes to 0; battery_voltage=0 triggers
+ *          false undervoltage fault (threshold = RZC_BATT_DISABLE_LOW_MV).
+ *          Any non-zero battery_voltage means plant-sim has started. */
+static uint8 SensorFeeder_DataValid;
 #endif
 
 /* ==================================================================
@@ -42,6 +48,18 @@ static uint8 SensorFeeder_Initialized;
 void Swc_RzcSensorFeeder_Init(void)
 {
     SensorFeeder_Initialized = 1u;
+
+#ifdef PLATFORM_POSIX
+    SensorFeeder_DataValid = 0u;
+    /* Inject nominal defaults before plant-sim starts sending 0x401.
+     * Motor current=0, motor temp=0 are safe (no overcurrent/overtemp).
+     * Battery voltage needs nominal value to prevent false undervoltage
+     * (RZC_BATT_DISABLE_LOW_MV = 8000 mV).
+     * Nominal: 12600 mV.  Reverse-scale: 12600 * 4095 / 13200 = 3909 raw ADC. */
+    Adc_Posix_InjectValue(RZC_BATTERY_VOLTAGE_ADC_GROUP,
+                          RZC_BATTERY_VOLTAGE_ADC_CH,
+                          3909u);
+#endif
 }
 
 /* ==================================================================
@@ -68,6 +86,22 @@ void Swc_RzcSensorFeeder_MainFunction(void)
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_CURRENT,   &motor_current);
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_TEMP,      &motor_temp);
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_BATTERY_VOLTAGE, &battery_voltage);
+
+    /* Hold nominal defaults until plant-sim sends real data on CAN 0x401.
+     * Com shadow buffer defaults to 0.  Plant-sim sends battery_voltage in
+     * mV (nominal ~12600) — any non-zero value means real data arrived. */
+    if (SensorFeeder_DataValid == 0u)
+    {
+        if (battery_voltage != 0u)
+        {
+            SensorFeeder_DataValid = 1u;
+        }
+        else
+        {
+            battery_voltage = 12600u; /* nominal 12.6V in mV */
+            /* motor_current=0, motor_temp=0 are safe (idle) */
+        }
+    }
 
     /* Inject into MCAL ADC stubs with reverse-scaling.
      * Plant-sim sends engineering units; IoHwAb reads raw ADC and

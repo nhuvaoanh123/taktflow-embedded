@@ -32,6 +32,12 @@
 extern void Spi_Posix_InjectAngle(uint16 angle);
 extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
 
+/** @brief  Gate: hold center defaults until plant-sim sends real data.
+ *          Com shadow buffer initializes to 0; steer_angle=0 maps to
+ *          -45° actual which triggers false steering plausibility fault.
+ *          Any non-zero steer_angle means plant-sim has started. */
+static uint8 SensorFeeder_DataValid;
+
 #endif /* PLATFORM_POSIX */
 
 /* ==================================================================
@@ -41,15 +47,14 @@ extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
 void Swc_FzcSensorFeeder_Init(void)
 {
 #ifdef PLATFORM_POSIX
+    SensorFeeder_DataValid = 0u;
     /* Inject safe center values immediately so that SWC fault detection
      * sees nominal sensor readings from the very first cycle — before
      * plant-sim has started sending CAN 0x400.
-     * Without this, Com shadow buffers are zero-initialized:
-     *   steer_angle=0 → SPI raw 0 → actual_angle=-45° → 45° deviation
-     *   from cmd_angle=0° → false steering plausibility fault → motor_cutoff
-     *   → CVC SAFE_STOP during INIT hold time.
      * Center steering: 8191 = 14-bit midpoint → 0° actual angle.
-     * Brake: 0 raw ADC = no brake applied (matches idle cmd=0). */
+     * Brake: 0 raw ADC = no brake applied (matches idle cmd=0).
+     * MainFunction will continue holding these defaults until
+     * SensorFeeder_DataValid flips to 1 (first non-zero steer_angle). */
     Spi_Posix_InjectAngle(8191u);
     Adc_Posix_InjectValue(FZC_BRAKE_ADC_GROUP, FZC_BRAKE_ADC_CHANNEL, 0u);
 #endif
@@ -69,17 +74,31 @@ void Swc_FzcSensorFeeder_MainFunction(void)
     (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_STEER_ANGLE, &steer_angle);
     (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_BRAKE_POS,   &brake_pos);
 
-    /* Inject steering angle into SPI POSIX stub.
-     * IoHwAb_ReadSteeringAngle() -> Spi_SyncTransmit() -> Spi_Hw_Transmit()
-     * will return this injected value (with small oscillation for stuck
-     * detection bypass). */
+    /* Hold center defaults until plant-sim sends real data on CAN 0x400.
+     * Com shadow buffer defaults to 0.  Plant-sim sends steer_angle=8191
+     * (center) in idle — any non-zero value means real data arrived.
+     * Edge case: plant-sim sends raw 0 (-45° full lock) — held as default
+     * until a subsequent non-zero frame, which is correct because -45°
+     * at boot is physically impossible (vehicle starts centered). */
+    if (SensorFeeder_DataValid == 0u)
+    {
+        if (steer_angle != 0u)
+        {
+            SensorFeeder_DataValid = 1u;
+        }
+        else
+        {
+            steer_angle = 8191u; /* 14-bit center = 0° steering */
+            /* brake_pos 0 = no brake — already correct for idle */
+        }
+    }
+
+    /* Inject steering angle into SPI POSIX stub. */
     Spi_Posix_InjectAngle((uint16)steer_angle);
 
     /* Inject brake position into ADC POSIX stub.
-     * IoHwAb_ReadBrakePosition() -> iohwab_read_adc(group 3) -> Adc_ReadGroup()
-     * will return this injected value.
      * Plant-sim sends 0-1000 (ADC counts). IoHwAb scales: (raw*1000)/4095.
-     * We need to reverse-scale: raw = (adc_counts * 4095) / 1000. */
+     * Reverse-scale: raw = (adc_counts * 4095) / 1000. */
     {
         uint16 raw_adc = (uint16)(((uint32)brake_pos * 4095u) / 1000u);
         Adc_Posix_InjectValue(FZC_BRAKE_ADC_GROUP, FZC_BRAKE_ADC_CHANNEL, raw_adc);

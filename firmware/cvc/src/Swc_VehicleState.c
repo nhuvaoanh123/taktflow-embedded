@@ -477,6 +477,18 @@ void Swc_VehicleState_MainFunction(void)
         {
             self_test_pass_pending = FALSE;
             current_state = CVC_STATE_RUN;
+
+            /* Reset ConfirmFault counters — ensure fresh detection from RUN.
+             * Defense-in-depth: counters should already be 0 (ConfirmFault
+             * is suppressed during INIT), but reset explicitly. */
+            {
+                uint8 fi;
+                for (fi = 0u; fi < CVC_FAULT_CONFIRM_COUNT; fi++)
+                {
+                    fault_confirm_count[fi] = 0u;
+                }
+            }
+
             (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_RUN);
             VSM_DIAG("INIT -> RUN (heartbeats confirmed)");
         }
@@ -548,21 +560,29 @@ void Swc_VehicleState_MainFunction(void)
         Swc_VehicleState_OnEvent(CVC_EVT_FAULT_CLEARED);
     }
 
-    /* ---- Step 4: Confirmed fault events (ISO 26262 confirmation-read) ---- */
-    Swc_VehicleState_ConfirmFault(
-        CVC_FAULT_IDX_MOTOR_CUTOFF, motor_cutoff,
-        CVC_FAULT_COM_MOTOR_CUTOFF, CVC_FAULT_E2E_MOTOR_CUTOFF,
-        CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
+    /* ---- Step 4: Confirmed fault events (ISO 26262 confirmation-read) ----
+     * Suppressed during INIT: zone controllers are booting and may send
+     * spurious fault signals.  The transition table maps these events to
+     * INVALID from INIT anyway, but running ConfirmFault wastes cycles
+     * and leaves counters at unpredictable values when INIT->RUN fires.
+     * Suppressing during INIT ensures counters start at 0 for RUN. */
+    if (current_state != CVC_STATE_INIT)
+    {
+        Swc_VehicleState_ConfirmFault(
+            CVC_FAULT_IDX_MOTOR_CUTOFF, motor_cutoff,
+            CVC_FAULT_COM_MOTOR_CUTOFF, CVC_FAULT_E2E_MOTOR_CUTOFF,
+            CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
 
-    Swc_VehicleState_ConfirmFault(
-        CVC_FAULT_IDX_BRAKE, brake_fault,
-        CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
-        CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
+        Swc_VehicleState_ConfirmFault(
+            CVC_FAULT_IDX_BRAKE, brake_fault,
+            CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
+            CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
 
-    Swc_VehicleState_ConfirmFault(
-        CVC_FAULT_IDX_STEERING, steering_fault,
-        CVC_FAULT_COM_STEERING, CVC_FAULT_E2E_STEERING,
-        CVC_DTC_STEERING_FAULT_RX, CVC_EVT_STEERING_FAULT);
+        Swc_VehicleState_ConfirmFault(
+            CVC_FAULT_IDX_STEERING, steering_fault,
+            CVC_FAULT_COM_STEERING, CVC_FAULT_E2E_STEERING,
+            CVC_DTC_STEERING_FAULT_RX, CVC_EVT_STEERING_FAULT);
+    }
 
     /* ---- Step 5: SAFE_STOP recovery when all faults clear ---- */
     if (current_state == CVC_STATE_SAFE_STOP)
