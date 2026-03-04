@@ -132,6 +132,7 @@ static const CanIf_TxPduConfigType canif_tx_config[] = {
     { 0x103u, CVC_COM_TX_BRAKE_CMD,      8u, 0u },  /* Brake command        */
     { 0x350u, CVC_COM_TX_BODY_CMD,       8u, 0u },  /* Body control         */
     { 0x7E8u, CVC_COM_TX_UDS_RSP,        8u, 0u },  /* UDS response         */
+    { 0x500u, CVC_COM_TX_DTC,           8u, 0u },  /* DTC broadcast        */
 };
 
 /** CanIf RX PDU routing: CAN ID → Com RX PDU */
@@ -144,6 +145,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     { 0x220u, CVC_COM_RX_LIDAR,         8u, FALSE },  /* Lidar distance     */
     { 0x301u, CVC_COM_RX_MOTOR_CURRENT, 8u, FALSE },  /* Motor current      */
     { 0x013u, CVC_COM_RX_SC_RELAY,      4u, FALSE },  /* SC relay status    */
+    { 0x303u, CVC_COM_RX_BATTERY_STATUS, 8u, FALSE }, /* Battery status     */
     { 0x7DFu, 0xFFu,                    8u, FALSE },  /* UDS functional req  */
     { 0x7E0u, 0xFEu,                    8u, FALSE },  /* UDS physical req    */
 };
@@ -164,6 +166,7 @@ static const PduR_RoutingTableType cvc_pdur_routing[] = {
     { CVC_COM_RX_LIDAR,         PDUR_DEST_COM, CVC_COM_RX_LIDAR         },
     { CVC_COM_RX_MOTOR_CURRENT, PDUR_DEST_COM, CVC_COM_RX_MOTOR_CURRENT },
     { CVC_COM_RX_SC_RELAY,      PDUR_DEST_COM, CVC_COM_RX_SC_RELAY      },
+    { CVC_COM_RX_BATTERY_STATUS, PDUR_DEST_COM, CVC_COM_RX_BATTERY_STATUS },
     { 0xFFu,                    PDUR_DEST_CANTP, 0u                      },
     { 0xFEu,                    PDUR_DEST_CANTP, 0u                      },
 };
@@ -383,7 +386,8 @@ int main(void)
     Com_Init(&cvc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);
-    Dem_SetEcuId(0x10u);  /* CVC ECU ID for DTC broadcasts */
+    Dem_SetEcuId(0x10u);                    /* CVC ECU ID for DTC broadcasts */
+    Dem_SetBroadcastPduId(CVC_COM_TX_DTC);  /* CanIf TX for CAN 0x500 */
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&cvc_dcm_config);

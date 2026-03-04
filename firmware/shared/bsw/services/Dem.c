@@ -61,6 +61,9 @@ static Dem_EventDataType dem_events[DEM_MAX_EVENTS];
 /* ECU source ID for DTC broadcast (set via Dem_SetEcuId, default 0x00) */
 static uint8 dem_ecu_id;
 
+/* CanIf TX PDU ID for DTC broadcast (set via Dem_SetBroadcastPduId) */
+static PduIdType dem_broadcast_pdu_id;
+
 /* ---- API Implementation ---- */
 
 void Dem_Init(const void* ConfigPtr)
@@ -75,6 +78,7 @@ void Dem_Init(const void* ConfigPtr)
         dem_broadcast_sent[i]           = 0u;
     }
     dem_ecu_id = 0u;
+    dem_broadcast_pdu_id = 0xFFFFu;  /* Unconfigured sentinel */
 
     /* Attempt to restore DTCs from NvM */
     (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
@@ -200,6 +204,11 @@ void Dem_SetDtcCode(Dem_EventIdType EventId, uint32 DtcCode)
     dem_dtc_codes[EventId] = DtcCode;
 }
 
+void Dem_SetBroadcastPduId(PduIdType TxPduId)
+{
+    dem_broadcast_pdu_id = TxPduId;
+}
+
 /* ==================================================================
  * API: Dem_MainFunction — periodic DTC broadcast on CAN 0x500
  *
@@ -252,8 +261,13 @@ void Dem_MainFunction(void)
 
             SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
 
-            /* Transmit via PduR -> CanIf -> CAN 0x500 (outside critical section) */
-            (void)PduR_Transmit(0x500u, &pdu_info);
+            /* Transmit via PduR -> CanIf -> CAN 0x500 (outside critical section).
+             * Guard: skip if broadcast PDU ID not configured (zone controller
+             * called Dem_Init but not Dem_SetBroadcastPduId yet). */
+            if (dem_broadcast_pdu_id != 0xFFFFu)
+            {
+                (void)PduR_Transmit(dem_broadcast_pdu_id, &pdu_info);
+            }
 
             /* Persist to NvM (outside critical section) */
             (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID,

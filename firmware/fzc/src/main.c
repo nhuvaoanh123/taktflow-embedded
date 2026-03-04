@@ -142,6 +142,7 @@ static const CanIf_TxPduConfigType canif_tx_config[] = {
     { 0x210u, FZC_COM_TX_BRAKE_FAULT,      8u, 0u },  /* Brake fault          */
     { 0x211u, FZC_COM_TX_MOTOR_CUTOFF,     8u, 0u },  /* Motor cutoff request */
     { 0x220u, FZC_COM_TX_LIDAR,            8u, 0u },  /* Lidar data           */
+    { 0x500u, FZC_COM_TX_DTC_BROADCAST,   8u, 0u },  /* DTC broadcast        */
 };
 
 /** CanIf RX PDU routing: CAN ID → Com RX PDU */
@@ -399,6 +400,27 @@ int main(void)
     Com_Init(&fzc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);
+    Dem_SetEcuId(FZC_ECU_ID);                              /* 0x02 — FZC ECU ID */
+    Dem_SetBroadcastPduId(FZC_COM_TX_DTC_BROADCAST);       /* CanIf TX for 0x500 */
+
+    /* Remap DTC codes from CVC-centric defaults to FZC-specific codes */
+    Dem_SetDtcCode(FZC_DTC_STEER_PLAUSIBILITY, 0x00D001u); /* Steering plausibility */
+    Dem_SetDtcCode(FZC_DTC_STEER_RANGE,        0x00D002u); /* Steering range */
+    Dem_SetDtcCode(FZC_DTC_STEER_RATE,         0x00D003u); /* Steering rate */
+    Dem_SetDtcCode(FZC_DTC_STEER_TIMEOUT,      0x00D004u); /* Steering timeout */
+    Dem_SetDtcCode(FZC_DTC_STEER_SPI_FAIL,     0x00D005u); /* SPI sensor fail */
+    Dem_SetDtcCode(FZC_DTC_BRAKE_FAULT,        0x00D101u); /* Brake fault */
+    Dem_SetDtcCode(FZC_DTC_BRAKE_TIMEOUT,      0x00D102u); /* Brake timeout */
+    Dem_SetDtcCode(FZC_DTC_BRAKE_PWM_FAIL,     0x00D103u); /* Brake PWM fail */
+    Dem_SetDtcCode(FZC_DTC_LIDAR_TIMEOUT,      0x00D201u); /* Lidar timeout */
+    Dem_SetDtcCode(FZC_DTC_LIDAR_CHECKSUM,     0x00D202u); /* Lidar checksum */
+    Dem_SetDtcCode(FZC_DTC_LIDAR_STUCK,        0x00D203u); /* Lidar stuck */
+    Dem_SetDtcCode(FZC_DTC_LIDAR_SIGNAL_LOW,   0x00D204u); /* Lidar signal low */
+    Dem_SetDtcCode(FZC_DTC_CAN_BUS_OFF,        0x00D301u); /* CAN bus-off */
+    Dem_SetDtcCode(FZC_DTC_SELF_TEST_FAIL,     0x00D401u); /* Self-test fail */
+    Dem_SetDtcCode(FZC_DTC_WATCHDOG_FAIL,      0x00D402u); /* Watchdog fail */
+    Dem_SetDtcCode(FZC_DTC_BRAKE_OSCILLATION,  0x00D104u); /* Brake oscillation */
+
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&fzc_dcm_config);
@@ -465,11 +487,12 @@ int main(void)
             Uart_MainFunction();
         }
 
-        /* 100ms tasks: WdgM */
+        /* 100ms tasks: WdgM, Dem (DTC broadcast) */
         if ((tick_us - last_100ms_us) >= 100000u)
         {
             last_100ms_us = tick_us;
             WdgM_MainFunction();
+            Dem_MainFunction();
         }
 
 #ifdef PLATFORM_STM32

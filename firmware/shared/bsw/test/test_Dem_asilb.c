@@ -62,6 +62,7 @@ void setUp(void)
         mock_pdur_last_data[i] = 0u;
     }
     Dem_Init(NULL_PTR);
+    Dem_SetBroadcastPduId(0x500u);  /* Configure broadcast so existing tests exercise TX path */
 }
 
 void tearDown(void) { }
@@ -456,6 +457,25 @@ void test_Dem_MainFunction_no_duplicate_broadcast(void)
     TEST_ASSERT_EQUAL(first_count, mock_pdur_called);
 }
 
+/** @verifies SWR-BSW-017 — broadcast guard */
+void test_Dem_MainFunction_no_broadcast_without_pdu_config(void)
+{
+    /* Re-init WITHOUT calling Dem_SetBroadcastPduId — simulate unconfigured ECU */
+    Dem_Init(NULL_PTR);
+    /* Do NOT call Dem_SetBroadcastPduId */
+
+    Dem_SetDtcCode(0u, 0xC00100u);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+    Dem_ReportErrorStatus(0u, DEM_EVENT_STATUS_FAILED);
+
+    mock_pdur_called = 0u;
+    Dem_MainFunction();
+
+    /* PduR_Transmit must NOT be called when broadcast PDU ID is unconfigured */
+    TEST_ASSERT_EQUAL(0u, mock_pdur_called);
+}
+
 /** @verifies SWR-BSW-018 */
 void test_Dem_SetDtcCode_invalid_id(void)
 {
@@ -500,6 +520,7 @@ int main(void)
     RUN_TEST(test_Dem_MainFunction_broadcasts_confirmed_dtc);
     RUN_TEST(test_Dem_MainFunction_no_broadcast_before_confirm);
     RUN_TEST(test_Dem_MainFunction_no_duplicate_broadcast);
+    RUN_TEST(test_Dem_MainFunction_no_broadcast_without_pdu_config);
     RUN_TEST(test_Dem_SetDtcCode_invalid_id);
 
     return UNITY_END();

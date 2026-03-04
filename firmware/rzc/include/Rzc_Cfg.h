@@ -57,6 +57,7 @@
 #define RZC_COM_TX_MOTOR_CURRENT   2u   /* CAN 0x301 */
 #define RZC_COM_TX_MOTOR_TEMP      3u   /* CAN 0x302 */
 #define RZC_COM_TX_BATTERY_STATUS  4u   /* CAN 0x303 */
+#define RZC_COM_TX_DTC_BROADCAST   5u   /* CAN 0x500 — DTC broadcast */
 
 /* ====================================================================
  * Com RX PDU IDs

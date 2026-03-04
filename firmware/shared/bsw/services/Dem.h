@@ -13,6 +13,7 @@
 #define DEM_H
 
 #include "Std_Types.h"
+#include "ComStack_Types.h"
 
 /* ---- Constants ---- */
 
@@ -56,6 +57,16 @@ void           Dem_MainFunction(void);
  * @param  EcuId  ECU identifier (e.g. 0x10=CVC, 0x20=FZC, 0x30=RZC)
  */
 void           Dem_SetEcuId(uint8 EcuId);
+
+/**
+ * @brief  Set the CanIf TX PDU ID for DTC broadcast transmission
+ * @param  TxPduId  CanIf TX PDU ID mapped to CAN 0x500
+ *
+ * @details Must be called after Dem_Init and before Dem_MainFunction.
+ *          If not called, Dem_MainFunction will skip PduR_Transmit
+ *          (guard against unconfigured broadcast on zone controllers).
+ */
+void           Dem_SetBroadcastPduId(PduIdType TxPduId);
 
 /**
  * @brief  Register a UDS DTC code for an event ID

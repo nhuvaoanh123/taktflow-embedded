@@ -350,10 +350,13 @@ void Swc_CvcCom_BridgeRxToRte(void)
 
     uint8  sc_relay_kill_val = 0u;
 
+    uint8  battery_status_val = 2u;  /* Default NORMAL if read fails */
+
     /* Read fault signals from Com shadow buffers */
     (void)Com_ReceiveSignal(13u, &brake_fault_val);      /* sig_rx_brake_fault */
     (void)Com_ReceiveSignal(14u, &motor_cutoff_val);     /* sig_rx_motor_cutoff */
     (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* sig_rx_sc_relay_kill */
+    (void)Com_ReceiveSignal(18u, &battery_status_val);   /* sig_rx_battery_status (CAN 0x303) */
 
     /* Bridge to RTE for VehicleState to consume.
      * Heartbeat comm status is owned exclusively by Swc_Heartbeat.c
@@ -361,6 +364,7 @@ void Swc_CvcCom_BridgeRxToRte(void)
     (void)Rte_Write(CVC_SIG_BRAKE_FAULT,    (uint32)brake_fault_val);
     (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF,   (uint32)motor_cutoff_val);
     (void)Rte_Write(CVC_SIG_SC_RELAY_KILL,  (uint32)sc_relay_kill_val);
+    (void)Rte_Write(CVC_SIG_BATTERY_STATUS, (uint32)battery_status_val);
 }
 
 /* ==================================================================

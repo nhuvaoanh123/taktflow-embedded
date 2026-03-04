@@ -36,7 +36,8 @@
 #define CVC_SIG_STEERING_FAULT    29u
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
-#define CVC_SIG_COUNT             32u
+#define CVC_SIG_BATTERY_STATUS    32u
+#define CVC_SIG_COUNT             33u
 
 /* ====================================================================
  * Com TX PDU IDs
@@ -50,6 +51,7 @@
 #define CVC_COM_TX_BRAKE_CMD       5u   /* CAN 0x103 */
 #define CVC_COM_TX_BODY_CMD        6u   /* CAN 0x350 */
 #define CVC_COM_TX_UDS_RSP         7u   /* CAN 0x7E8 */
+#define CVC_COM_TX_DTC             8u   /* CAN 0x500 — DTC broadcast */
 
 /* ====================================================================
  * Com RX PDU IDs
@@ -62,6 +64,7 @@
 #define CVC_COM_RX_LIDAR           4u   /* CAN 0x220 */
 #define CVC_COM_RX_MOTOR_CURRENT   5u   /* CAN 0x301 */
 #define CVC_COM_RX_SC_RELAY        6u   /* CAN 0x013 */
+#define CVC_COM_RX_BATTERY_STATUS  7u   /* CAN 0x303 */
 
 /* Com RX Signal IDs (for Com_ReceiveSignal — heartbeat alive counters) */
 #define CVC_COM_SIG_FZC_HB_ALIVE  9u   /* sig_rx_fzc_hb_alive */
@@ -262,9 +265,35 @@
 #define CVC_EVT_MOTOR_CUTOFF        11u
 #define CVC_EVT_BRAKE_FAULT         12u
 #define CVC_EVT_STEERING_FAULT      13u
-#define CVC_EVT_COUNT               14u
+#define CVC_EVT_BATTERY_WARN        14u
+#define CVC_EVT_BATTERY_CRIT        15u
+#define CVC_EVT_COUNT               16u
 
 /* Invalid/no transition sentinel */
 #define CVC_STATE_INVALID          0xFFu
+
+/* ====================================================================
+ * SAFE_STOP Recovery + Fault Latching
+ * ==================================================================== */
+
+/** @brief  Cycles with all faults clear before SAFE_STOP recovery.
+ *          200 × 10ms = 2 seconds. */
+#define CVC_SAFE_STOP_RECOVERY_CYCLES   200u
+
+/** @brief  Fault unlatch debounce: fault must be clear for this many
+ *          consecutive cycles before the latch releases.
+ *          300 × 10ms = 3 seconds of sustained clear. */
+#define CVC_FAULT_UNLATCH_CYCLES        300u
+
+/** @brief  Latch indices — one per fault that can trigger SAFE_STOP */
+#define CVC_LATCH_IDX_ESTOP             0u
+#define CVC_LATCH_IDX_SC_KILL           1u
+#define CVC_LATCH_IDX_MOTOR_CUTOFF      2u
+#define CVC_LATCH_IDX_BRAKE             3u
+#define CVC_LATCH_IDX_STEERING          4u
+#define CVC_LATCH_IDX_PEDAL_DUAL        5u
+#define CVC_LATCH_IDX_CAN_DUAL          6u
+#define CVC_LATCH_IDX_BATTERY_CRIT      7u
+#define CVC_LATCH_COUNT                 8u
 
 #endif /* CVC_CFG_H */

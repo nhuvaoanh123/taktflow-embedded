@@ -53,6 +53,7 @@
 #define FZC_COM_TX_BRAKE_FAULT     3u   /* CAN 0x210 */
 #define FZC_COM_TX_MOTOR_CUTOFF    4u   /* CAN 0x211 */
 #define FZC_COM_TX_LIDAR           5u   /* CAN 0x220 */
+#define FZC_COM_TX_DTC_BROADCAST   6u   /* CAN 0x500 — DTC broadcast */
 
 /* ====================================================================
  * Com TX Signal IDs (index into Com signal config table)

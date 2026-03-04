@@ -105,6 +105,7 @@ static const CanIf_TxPduConfigType canif_tx_config[] = {
     { 0x301u, RZC_COM_TX_MOTOR_CURRENT,   8u, 0u },  /* Motor current        */
     { 0x302u, RZC_COM_TX_MOTOR_TEMP,      8u, 0u },  /* Motor temperature    */
     { 0x303u, RZC_COM_TX_BATTERY_STATUS,  8u, 0u },  /* Battery status       */
+    { 0x500u, RZC_COM_TX_DTC_BROADCAST,  8u, 0u },  /* DTC broadcast        */
 };
 
 /** CanIf RX PDU routing: CAN ID → Com RX PDU */
@@ -313,6 +314,23 @@ int main(void)
     Com_Init(&rzc_com_config);
     E2E_Init();
     Dem_Init(NULL_PTR);
+    Dem_SetEcuId(RZC_ECU_ID);                              /* 0x03 — RZC ECU ID */
+    Dem_SetBroadcastPduId(RZC_COM_TX_DTC_BROADCAST);       /* CanIf TX for 0x500 */
+
+    /* Remap DTC codes from CVC-centric defaults to RZC-specific codes */
+    Dem_SetDtcCode(RZC_DTC_OVERCURRENT,    0x00E301u);     /* SG-001 overcurrent */
+    Dem_SetDtcCode(RZC_DTC_OVERTEMP,       0x00E302u);     /* Motor overtemp */
+    Dem_SetDtcCode(RZC_DTC_BATTERY,        0x00E401u);     /* SG-006 battery */
+    Dem_SetDtcCode(RZC_DTC_STALL,          0x00E303u);     /* Motor stall */
+    Dem_SetDtcCode(RZC_DTC_DIRECTION,      0x00E304u);     /* Direction mismatch */
+    Dem_SetDtcCode(RZC_DTC_SHOOT_THROUGH,  0x00E305u);     /* H-bridge shoot-through */
+    Dem_SetDtcCode(RZC_DTC_CAN_BUS_OFF,    0x00E601u);     /* CAN bus-off */
+    Dem_SetDtcCode(RZC_DTC_CMD_TIMEOUT,    0x00E602u);     /* Command timeout */
+    Dem_SetDtcCode(RZC_DTC_SELF_TEST_FAIL, 0x00E801u);     /* Self-test fail */
+    Dem_SetDtcCode(RZC_DTC_WATCHDOG_FAIL,  0x00E802u);     /* Watchdog fail */
+    Dem_SetDtcCode(RZC_DTC_ENCODER,        0x00E501u);     /* Encoder fault */
+    Dem_SetDtcCode(RZC_DTC_ZERO_CAL,       0x00E502u);     /* Zero-cal fail */
+
     WdgM_Init(&wdgm_config);
     BswM_Init(&bswm_config);
     Dcm_Init(&rzc_dcm_config);
@@ -372,11 +390,12 @@ int main(void)
             BswM_MainFunction();
         }
 
-        /* 100ms tasks: WdgM */
+        /* 100ms tasks: WdgM, Dem (DTC broadcast) */
         if ((tick_us - last_100ms_us) >= 100000u)
         {
             last_100ms_us = tick_us;
             WdgM_MainFunction();
+            Dem_MainFunction();
         }
     }
 

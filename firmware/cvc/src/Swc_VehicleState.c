@@ -43,7 +43,8 @@ static const char * const diag_event_names[CVC_EVT_COUNT] = {
     "CAN_TMO_S", "CAN_TMO_D",
     "ESTOP", "SC_KILL",
     "FAULT_CLR", "CAN_RESTORED", "VEH_STOPPED",
-    "MOTOR_CUTOFF", "BRAKE_FAULT", "STEER_FAULT"
+    "MOTOR_CUTOFF", "BRAKE_FAULT", "STEER_FAULT",
+    "BATT_WARN", "BATT_CRIT"
 };
 #else
 #define VSM_DIAG(fmt, ...) ((void)0)
@@ -91,7 +92,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
     },
     /* CVC_STATE_RUN */
     {
@@ -108,7 +111,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_DEGRADED,    /* EVT_MOTOR_CUTOFF       -> DEGRADED     */
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
-        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_DEGRADED,    /* EVT_BATTERY_WARN       -> DEGRADED     */
+        CVC_STATE_LIMP         /* EVT_BATTERY_CRIT       -> LIMP         */
     },
     /* CVC_STATE_DEGRADED */
     {
@@ -125,7 +130,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_SAFE_STOP,   /* EVT_MOTOR_CUTOFF       -> SAFE_STOP    */
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
-        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (already degraded) */
+        CVC_STATE_LIMP         /* EVT_BATTERY_CRIT       -> LIMP         */
     },
     /* CVC_STATE_LIMP */
     {
@@ -142,7 +149,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_SAFE_STOP,   /* EVT_MOTOR_CUTOFF       -> SAFE_STOP    */
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
-        CVC_STATE_SAFE_STOP    /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
+        CVC_STATE_SAFE_STOP    /* EVT_BATTERY_CRIT       -> SAFE_STOP    */
     },
     /* CVC_STATE_SAFE_STOP */
     {
@@ -159,7 +168,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SHUTDOWN,    /* EVT_VEHICLE_STOPPED    -> SHUTDOWN     */
         CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
     },
     /* CVC_STATE_SHUTDOWN */
     {
@@ -176,7 +187,9 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_MOTOR_CUTOFF       -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
     }
 };
 
@@ -206,8 +219,11 @@ static uint16 safe_stop_clear_count;
 static uint16 post_init_grace_counter;
 #endif
 
-/** @brief  Cycles required with all faults clear before SAFE_STOP recovery (500ms) */
-#define CVC_SAFE_STOP_RECOVERY_CYCLES   50u
+/** @brief  Fault latch array — TRUE if that fault triggered SAFE_STOP */
+static uint8  fault_latched[CVC_LATCH_COUNT];
+
+/** @brief  Per-fault unlatch debounce counter — counts consecutive clear cycles */
+static uint16 fault_unlatch_count[CVC_LATCH_COUNT];
 
 /* ==================================================================
  * Confirmation-read pattern — ISO 26262 debounce + fresh Com + E2E
@@ -254,6 +270,12 @@ void Swc_VehicleState_Init(void)
     for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
     {
         fault_confirm_count[i] = 0u;
+    }
+
+    for (i = 0u; i < CVC_LATCH_COUNT; i++)
+    {
+        fault_latched[i]       = FALSE;
+        fault_unlatch_count[i] = 0u;
     }
 }
 
@@ -323,6 +345,29 @@ void Swc_VehicleState_OnEvent(uint8 event)
                  diag_event_names[event],
                  diag_state_names[current_state]);
 #endif
+    }
+
+    /* Latch the fault that caused SAFE_STOP (prevents flapping recovery) */
+    if (next_state == CVC_STATE_SAFE_STOP)
+    {
+        uint8 latch_idx = 0xFFu;
+        switch (event)
+        {
+            case CVC_EVT_ESTOP:              latch_idx = CVC_LATCH_IDX_ESTOP;        break;
+            case CVC_EVT_SC_KILL:            latch_idx = CVC_LATCH_IDX_SC_KILL;      break;
+            case CVC_EVT_MOTOR_CUTOFF:       latch_idx = CVC_LATCH_IDX_MOTOR_CUTOFF; break;
+            case CVC_EVT_BRAKE_FAULT:        latch_idx = CVC_LATCH_IDX_BRAKE;        break;
+            case CVC_EVT_STEERING_FAULT:     latch_idx = CVC_LATCH_IDX_STEERING;     break;
+            case CVC_EVT_PEDAL_FAULT_DUAL:   latch_idx = CVC_LATCH_IDX_PEDAL_DUAL;   break;
+            case CVC_EVT_CAN_TIMEOUT_DUAL:   latch_idx = CVC_LATCH_IDX_CAN_DUAL;     break;
+            case CVC_EVT_BATTERY_CRIT:       latch_idx = CVC_LATCH_IDX_BATTERY_CRIT; break;
+            default: break;
+        }
+        if (latch_idx != 0xFFu)
+        {
+            fault_latched[latch_idx]       = TRUE;
+            fault_unlatch_count[latch_idx] = 0u;
+        }
     }
 
     /* Notify BswM of the new mode */
@@ -416,14 +461,15 @@ static void Swc_VehicleState_ConfirmFault(
  */
 void Swc_VehicleState_MainFunction(void)
 {
-    uint32 pedal_fault    = 0u;
-    uint32 estop_active   = 0u;
-    uint32 fzc_comm       = 0u;
-    uint32 rzc_comm       = 0u;
-    uint32 motor_cutoff   = 0u;
-    uint32 brake_fault    = 0u;
-    uint32 steering_fault = 0u;
-    uint32 sc_relay_kill  = 0u;
+    uint32 pedal_fault     = 0u;
+    uint32 estop_active    = 0u;
+    uint32 fzc_comm        = 0u;
+    uint32 rzc_comm        = 0u;
+    uint32 motor_cutoff    = 0u;
+    uint32 brake_fault     = 0u;
+    uint32 steering_fault  = 0u;
+    uint32 sc_relay_kill   = 0u;
+    uint32 battery_status  = 2u;  /* Default NORMAL if read fails */
 
     if (initialized != TRUE)
     {
@@ -439,6 +485,7 @@ void Swc_VehicleState_MainFunction(void)
     (void)Rte_Read(CVC_SIG_BRAKE_FAULT,      &brake_fault);
     (void)Rte_Read(CVC_SIG_STEERING_FAULT,   &steering_fault);
     (void)Rte_Read(CVC_SIG_SC_RELAY_KILL,   &sc_relay_kill);
+    (void)Rte_Read(CVC_SIG_BATTERY_STATUS, &battery_status);
 
 #ifdef SIL_DIAG
     {
@@ -563,17 +610,43 @@ void Swc_VehicleState_MainFunction(void)
         }
     }
 
+    /* Battery faults (SG-006) — derived directly from battery_status signal.
+     * Battery status codes from RZC: 0=DISABLE_LOW, 1=WARN_LOW,
+     * 2=NORMAL, 3=WARN_HIGH, 4=DISABLE_HIGH.
+     * WARN (1 or 3) -> EVT_BATTERY_WARN (RUN->DEGRADED)
+     * CRIT (0 or 4) -> EVT_BATTERY_CRIT (RUN->LIMP, LIMP->SAFE_STOP) */
+    if ((current_state == CVC_STATE_RUN) ||
+        (current_state == CVC_STATE_DEGRADED) ||
+        (current_state == CVC_STATE_LIMP))
+    {
+        if ((battery_status == 0u) || (battery_status == 4u))
+        {
+            Dem_ReportErrorStatus(CVC_DTC_BATT_UNDERVOLT, DEM_EVENT_STATUS_FAILED);
+            Swc_VehicleState_OnEvent(CVC_EVT_BATTERY_CRIT);
+        }
+        else if ((battery_status == 1u) || (battery_status == 3u))
+        {
+            Swc_VehicleState_OnEvent(CVC_EVT_BATTERY_WARN);
+        }
+        else
+        {
+            /* battery_status == 2 (NORMAL) — no action */
+        }
+    }
+
     /* Fault cleared — when in DEGRADED and ALL DEGRADED-causing faults
      * are clear. Must check every fault that can trigger DEGRADED:
-     *   - pedal_fault  (EVT_PEDAL_FAULT_SINGLE -> DEGRADED)
-     *   - motor_cutoff (EVT_MOTOR_CUTOFF -> DEGRADED)
+     *   - pedal_fault    (EVT_PEDAL_FAULT_SINGLE -> DEGRADED)
+     *   - motor_cutoff   (EVT_MOTOR_CUTOFF -> DEGRADED)
+     *   - battery_status (EVT_BATTERY_WARN -> DEGRADED) — must be NORMAL(2)
      * Also check brake_fault for robustness: if brake_fault is non-zero
      * but not yet confirmed, premature clear would bounce RUN->SAFE_STOP
      * instead of the correct DEGRADED->SAFE_STOP path. */
     if ((current_state == CVC_STATE_DEGRADED) &&
         (pedal_fault == 0u) &&
         (motor_cutoff == 0u) &&
-        (brake_fault == 0u))
+        (brake_fault == 0u) &&
+        (battery_status == 2u))
     {
         Swc_VehicleState_OnEvent(CVC_EVT_FAULT_CLEARED);
     }
@@ -630,25 +703,80 @@ void Swc_VehicleState_MainFunction(void)
         }
     }
 
-    /* ---- Step 5: SAFE_STOP recovery when all faults clear ---- */
+    /* ---- Step 5: SAFE_STOP recovery with fault latching ---- */
     if (current_state == CVC_STATE_SAFE_STOP)
     {
-        if ((estop_active == 0u) &&
-            (motor_cutoff == 0u) &&
-            (brake_fault == 0u) &&
-            (steering_fault == 0u) &&
-            (pedal_fault == 0u) &&
-            (sc_relay_kill == 0u) &&
-            (fzc_comm == CVC_COMM_OK) &&
-            (rzc_comm == CVC_COMM_OK))
+        /* Map latch indices to their raw signal values.
+         * 0 = fault clear, non-zero = fault still active. */
+        const uint32 raw_signals[CVC_LATCH_COUNT] = {
+            estop_active,   /* CVC_LATCH_IDX_ESTOP        */
+            sc_relay_kill,  /* CVC_LATCH_IDX_SC_KILL      */
+            motor_cutoff,   /* CVC_LATCH_IDX_MOTOR_CUTOFF */
+            brake_fault,    /* CVC_LATCH_IDX_BRAKE        */
+            steering_fault, /* CVC_LATCH_IDX_STEERING     */
+            pedal_fault,    /* CVC_LATCH_IDX_PEDAL_DUAL   */
+            ((fzc_comm == CVC_COMM_TIMEOUT) && (rzc_comm == CVC_COMM_TIMEOUT)) ? 1u : 0u,  /* CVC_LATCH_IDX_CAN_DUAL */
+            (battery_status != 2u) ? 1u : 0u  /* CVC_LATCH_IDX_BATTERY_CRIT — clear when NORMAL(2) */
+        };
+
+        uint8 all_latches_clear = TRUE;
+        uint8 li;
+
+        for (li = 0u; li < CVC_LATCH_COUNT; li++)
         {
-            safe_stop_clear_count++;
-            if (safe_stop_clear_count >= CVC_SAFE_STOP_RECOVERY_CYCLES)
+            if (fault_latched[li] == TRUE)
             {
-                safe_stop_clear_count  = 0u;
-                current_state          = CVC_STATE_INIT;
-                self_test_pass_pending = TRUE;
-                (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_STARTUP);
+                if (raw_signals[li] == 0u)
+                {
+                    fault_unlatch_count[li]++;
+                    if (fault_unlatch_count[li] >= CVC_FAULT_UNLATCH_CYCLES)
+                    {
+                        fault_latched[li]       = FALSE;
+                        fault_unlatch_count[li] = 0u;
+                        VSM_DIAG("UNLATCH idx=%u after %u cycles",
+                                 (unsigned)li, (unsigned)CVC_FAULT_UNLATCH_CYCLES);
+                    }
+                    else
+                    {
+                        all_latches_clear = FALSE;
+                    }
+                }
+                else
+                {
+                    fault_unlatch_count[li] = 0u;  /* Reset: fault still active */
+                    all_latches_clear = FALSE;
+                }
+            }
+        }
+
+        /* Standard recovery only after ALL latches cleared */
+        if (all_latches_clear == TRUE)
+        {
+            /* Defense in depth: check instantaneous signals */
+            if ((estop_active == 0u) &&
+                (motor_cutoff == 0u) &&
+                (brake_fault == 0u) &&
+                (steering_fault == 0u) &&
+                (pedal_fault == 0u) &&
+                (sc_relay_kill == 0u) &&
+                (fzc_comm == CVC_COMM_OK) &&
+                (rzc_comm == CVC_COMM_OK) &&
+                (battery_status == 2u))
+            {
+                safe_stop_clear_count++;
+                if (safe_stop_clear_count >= CVC_SAFE_STOP_RECOVERY_CYCLES)
+                {
+                    safe_stop_clear_count  = 0u;
+                    init_hold_counter      = 0u;  /* BUG FIX: force full INIT hold */
+                    current_state          = CVC_STATE_INIT;
+                    self_test_pass_pending = TRUE;
+                    (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_STARTUP);
+                    VSM_DIAG("SAFE_STOP -> INIT (recovery, latches clear)");
+                }
+            }
+            else
+            {
+                safe_stop_clear_count = 0u;
             }
         }
         else
