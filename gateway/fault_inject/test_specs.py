@@ -73,17 +73,18 @@ TEST_SPECS: list[TestSpec] = [
         label="E-Stop",
         scenario="estop",
         sg="SG-008", asil="C", he="HE-011/013",
-        description="Verifies emergency stop brings vehicle to SAFE_STOP within 200ms. "
-                    "Safety Goal SG-008: immediate halt on E-Stop activation.",
+        description="Verifies emergency stop brings vehicle to SAFE_STOP. "
+                    "Safety Goal SG-008: immediate halt on E-Stop activation. "
+                    "HW target: 200ms. SIL budget: 2000ms (Docker scheduling overhead).",
         injection="CAN frame EStop_Command (0x010) with EStop_Active=1",
         observe_sec=3.0,
         verdicts=[
             VerdictCheck(
-                description="Vehicle enters SAFE_STOP within 200ms",
+                description="Vehicle enters SAFE_STOP within 2000ms (SIL)",
                 check_type="vehicle_state",
                 expected="SAFE_STOP",
                 value=4,       # SAFE_STOP enum
-                timeout_ms=3000,
+                timeout_ms=2000,
             ),
         ],
     ),
