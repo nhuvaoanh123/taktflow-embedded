@@ -170,11 +170,17 @@ void Can_Hw_Stop(void)
  * @param  dlc   Data length (0..8)
  * @return E_OK on success, E_NOT_OK if TX FIFO full or invalid DLC
  */
+/** Maximum spin-wait iterations for TX FIFO drain (~300µs at 170 MHz).
+ *  One CAN frame at 500 kbps takes ~220µs. This gives ~1.5 frames of
+ *  drain time if the FIFO is full when we try to enqueue. */
+#define CAN_HW_TX_RETRY_LIMIT  5000u
+
 Std_ReturnType Can_Hw_Transmit(Can_IdType id, const uint8* data, uint8 dlc)
 {
     FDCAN_TxHeaderTypeDef txHeader;
     uint8 txData[8];
     uint8 i;
+    uint16 retry;
 
     if (dlc > 8u)
     {
@@ -197,12 +203,18 @@ Std_ReturnType Can_Hw_Transmit(Can_IdType id, const uint8* data, uint8 dlc)
         txData[i] = data[i];
     }
 
-    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData) != HAL_OK)
+    /* Try to enqueue; if FIFO full, spin-wait for a slot to free up.
+     * At 500 kbps a frame drains in ~220µs, so 5000 iterations (~300µs
+     * at 170 MHz) is enough for at least one slot to open. */
+    for (retry = 0u; retry < CAN_HW_TX_RETRY_LIMIT; retry++)
     {
-        return E_NOT_OK;
+        if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData) == HAL_OK)
+        {
+            return E_OK;
+        }
     }
 
-    return E_OK;
+    return E_NOT_OK;
 }
 
 /**
@@ -257,6 +269,15 @@ boolean Can_Hw_IsBusOff(void)
     }
 
     return (psr.BusOff != 0u) ? TRUE : FALSE;
+}
+
+/**
+ * @brief  Get FDCAN1 HAL state for debug diagnostics
+ * @return HAL_FDCAN_StateTypeDef: 0=RESET, 1=READY, 2=LISTENING, 3=ERROR
+ */
+uint8 Can_Hw_GetHalState(void)
+{
+    return (uint8)HAL_FDCAN_GetState(&hfdcan1);
 }
 
 /**

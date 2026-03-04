@@ -91,7 +91,7 @@ static const Rte_RunnableConfigType rzc_runnable_config[] = {
     { Swc_CurrentMonitor_MainFunction,       1u,     11u,     0u    },  /* Current monitor (1kHz) */
     { Swc_Motor_MainFunction,               10u,     10u,     1u    },  /* Motor control          */
     { Swc_Encoder_MainFunction,             10u,     10u,     2u    },  /* Encoder processing     */
-    { Can_MainFunction_Read,                10u,      9u,     0xFFu },  /* CAN RX                 */
+    { Can_MainFunction_Read,                 1u,      9u,     0xFFu },  /* CAN RX (1ms: FIFO=3)   */
     { Com_MainFunction_Rx,                  10u,      8u,     0xFFu },  /* COM RX deadline monitor */
     { Swc_RzcCom_Receive,                   10u,      7u,     0xFFu },  /* Com→RTE bridge (after CAN RX) */
     { Swc_RzcSensorFeeder_MainFunction,     10u,      6u,     0xFFu },  /* Virtual sensor inject (SIL) */

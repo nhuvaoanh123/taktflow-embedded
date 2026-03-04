@@ -84,6 +84,9 @@ static uint16  RzcCom_TorqueTimeout;
 /** Heartbeat TX cycle counter */
 static uint8   RzcCom_HbCycleCount;
 
+/** TransmitSchedule cycle counter (for motor_temp and battery pacing) */
+static uint16  RzcCom_TxScheduleCycle;
+
 /* ==================================================================
  * Private Helper: CRC-8 calculation (polynomial 0x1D)
  * ================================================================== */
@@ -177,9 +180,10 @@ void Swc_RzcCom_Init(void)
         RzcCom_RxFailCount[i] = 0u;
     }
 
-    RzcCom_TorqueTimeout = 0u;
-    RzcCom_HbCycleCount  = 0u;
-    RzcCom_Initialized   = TRUE;
+    RzcCom_TorqueTimeout   = 0u;
+    RzcCom_HbCycleCount    = 0u;
+    RzcCom_TxScheduleCycle = 0u;
+    RzcCom_Initialized     = TRUE;
 }
 
 /* ==================================================================
@@ -375,23 +379,27 @@ void Swc_RzcCom_TransmitSchedule(void)
         return;
     }
 
+    /* Increment TX schedule cycle counter (wraps at 1000) */
+    RzcCom_TxScheduleCycle++;
+    if (RzcCom_TxScheduleCycle >= 1000u)
+    {
+        RzcCom_TxScheduleCycle = 0u;
+    }
+
     /* RZC is the sole authority for sensor-derived CAN messages (0x300-0x303).
      * In SIL, the RzcSensorFeeder injects plant-sim physics values into
      * MCAL ADC stubs, so SWC sensor reads return correct values.
-     * On real hardware, real ADC/encoder drivers provide the data. */
+     * On real hardware, real ADC/encoder drivers provide the data.
+     *
+     * IMPORTANT: FDCAN TX FIFO has only 3 slots. Messages are paced across
+     * cycles to avoid FIFO overflow. Max 2 frames per cycle from this SWC,
+     * leaving 1 slot for heartbeat (0x012) from Swc_Heartbeat. */
     {
         uint32 torque_echo;
         uint32 speed_rpm;
         uint32 motor_dir;
         uint32 motor_enable;
         uint32 motor_fault;
-        uint32 current_ma;
-        uint32 overcurrent;
-        uint32 temp1_ddc;
-        uint32 temp2_ddc;
-        uint32 derating_pct;
-        uint32 battery_mv;
-        uint32 battery_status;
         uint8  pdu[8];
         uint8  i;
         PduInfoType pdu_info;
@@ -399,7 +407,7 @@ void Swc_RzcCom_TransmitSchedule(void)
         pdu_info.SduDataPtr = pdu;
         pdu_info.SduLength  = 8u;
 
-        /* --- 0x300 Motor Status: every cycle (RZCCOM_MSTATUS_PERIOD) --- */
+        /* --- 0x300 Motor Status: every cycle (10ms) --- */
         torque_echo  = 0u;
         speed_rpm    = 0u;
         motor_dir    = 0u;
@@ -421,48 +429,58 @@ void Swc_RzcCom_TransmitSchedule(void)
         (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_STATUS, pdu, 8u);
         (void)PduR_Transmit(RZC_COM_TX_MOTOR_STATUS, &pdu_info);
 
-        /* --- 0x301 Motor Current: every cycle --- */
-        current_ma  = 0u;
-        overcurrent = 0u;
-        (void)Rte_Read(RZC_SIG_CURRENT_MA, &current_ma);
-        (void)Rte_Read(RZC_SIG_OVERCURRENT, &overcurrent);
+        /* --- 0x301 Motor Current: every cycle (10ms) --- */
+        {
+            uint32 current_ma  = 0u;
+            uint32 overcurrent = 0u;
+            (void)Rte_Read(RZC_SIG_CURRENT_MA, &current_ma);
+            (void)Rte_Read(RZC_SIG_OVERCURRENT, &overcurrent);
 
-        for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
-        pdu[2] = (uint8)(current_ma & 0xFFu);
-        pdu[3] = (uint8)((current_ma >> 8u) & 0xFFu);
-        pdu[4] = (uint8)overcurrent;
-        (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, pdu, 8u);
-        (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
+            for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+            pdu[2] = (uint8)(current_ma & 0xFFu);
+            pdu[3] = (uint8)((current_ma >> 8u) & 0xFFu);
+            pdu[4] = (uint8)overcurrent;
+            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, pdu, 8u);
+            (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
+        }
 
-        /* --- 0x302 Motor Temp: every 10 cycles (100ms) --- */
-        temp1_ddc    = 0u;
-        temp2_ddc    = 0u;
-        derating_pct = 0u;
-        (void)Rte_Read(RZC_SIG_TEMP1_DC, &temp1_ddc);
-        (void)Rte_Read(RZC_SIG_TEMP2_DC, &temp2_ddc);
-        (void)Rte_Read(RZC_SIG_DERATING_PCT, &derating_pct);
+        /* --- 0x302 Motor Temp: every 10 cycles (100ms) ---
+         * Offset by 3 cycles to avoid collision with heartbeat (every 5th). */
+        if ((RzcCom_TxScheduleCycle % 10u) == 3u)
+        {
+            uint32 temp1_ddc    = 0u;
+            uint32 temp2_ddc    = 0u;
+            uint32 derating_pct = 0u;
+            (void)Rte_Read(RZC_SIG_TEMP1_DC, &temp1_ddc);
+            (void)Rte_Read(RZC_SIG_TEMP2_DC, &temp2_ddc);
+            (void)Rte_Read(RZC_SIG_DERATING_PCT, &derating_pct);
 
-        for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
-        pdu[2] = (uint8)(temp1_ddc & 0xFFu);
-        pdu[3] = (uint8)((temp1_ddc >> 8u) & 0xFFu);
-        pdu[4] = (uint8)(temp2_ddc & 0xFFu);
-        pdu[5] = (uint8)((temp2_ddc >> 8u) & 0xFFu);
-        pdu[6] = (uint8)derating_pct;
-        (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_TEMP, pdu, 8u);
-        (void)PduR_Transmit(RZC_COM_TX_MOTOR_TEMP, &pdu_info);
+            for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+            pdu[2] = (uint8)(temp1_ddc & 0xFFu);
+            pdu[3] = (uint8)((temp1_ddc >> 8u) & 0xFFu);
+            pdu[4] = (uint8)(temp2_ddc & 0xFFu);
+            pdu[5] = (uint8)((temp2_ddc >> 8u) & 0xFFu);
+            pdu[6] = (uint8)derating_pct;
+            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_TEMP, pdu, 8u);
+            (void)PduR_Transmit(RZC_COM_TX_MOTOR_TEMP, &pdu_info);
+        }
 
-        /* --- 0x303 Battery Status: every 100 cycles (1000ms) --- */
-        battery_mv     = 0u;
-        battery_status = 0u;
-        (void)Rte_Read(RZC_SIG_BATTERY_MV, &battery_mv);
-        (void)Rte_Read(RZC_SIG_BATTERY_STATUS, &battery_status);
+        /* --- 0x303 Battery Status: every 100 cycles (1000ms) ---
+         * Offset by 7 cycles to avoid collision with motor_temp and heartbeat. */
+        if ((RzcCom_TxScheduleCycle % 100u) == 7u)
+        {
+            uint32 battery_mv     = 0u;
+            uint32 battery_status = 0u;
+            (void)Rte_Read(RZC_SIG_BATTERY_MV, &battery_mv);
+            (void)Rte_Read(RZC_SIG_BATTERY_STATUS, &battery_status);
 
-        for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
-        pdu[2] = (uint8)(battery_mv & 0xFFu);
-        pdu[3] = (uint8)((battery_mv >> 8u) & 0xFFu);
-        pdu[4] = (uint8)battery_status;
-        (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
-        (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
+            for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
+            pdu[2] = (uint8)(battery_mv & 0xFFu);
+            pdu[3] = (uint8)((battery_mv >> 8u) & 0xFFu);
+            pdu[4] = (uint8)battery_status;
+            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
+            (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
+        }
     }
 
     /* Heartbeat TX handled by Swc_Heartbeat_MainFunction (50ms via RTE) */

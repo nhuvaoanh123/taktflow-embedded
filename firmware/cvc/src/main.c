@@ -494,6 +494,30 @@ int main(void)
             Dbg_PrintU32((uint32)tec);
             Dbg_Uart_Print(" REC=");
             Dbg_PrintU32((uint32)rec);
+
+            /* Debug: read raw Com alive counters for FZC and RZC */
+            {
+                uint8 fzc_alive = 0xFFu;
+                uint8 rzc_alive = 0xFFu;
+                (void)Com_ReceiveSignal(CVC_COM_SIG_FZC_HB_ALIVE, &fzc_alive);
+                (void)Com_ReceiveSignal(CVC_COM_SIG_RZC_HB_ALIVE, &rzc_alive);
+                Dbg_Uart_Print(" Fa=");
+                Dbg_PrintU32((uint32)fzc_alive);
+                Dbg_Uart_Print(" Ra=");
+                Dbg_PrintU32((uint32)rzc_alive);
+            }
+            /* Debug: show total CAN RX count and per-ID heartbeat counters */
+            {
+                extern volatile uint32 g_can_rx_count;
+                extern volatile uint32 g_can_rx_012_count;
+                extern volatile uint32 g_can_rx_011_count;
+                Dbg_Uart_Print(" rx=");
+                Dbg_PrintU32(g_can_rx_count);
+                Dbg_Uart_Print(" h11=");
+                Dbg_PrintU32(g_can_rx_011_count);
+                Dbg_Uart_Print(" h12=");
+                Dbg_PrintU32(g_can_rx_012_count);
+            }
             Dbg_Uart_Print("\r\n");
         }
 #endif

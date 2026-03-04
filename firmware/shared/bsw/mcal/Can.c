@@ -22,6 +22,17 @@ static Can_StateType can_state = CAN_CS_UNINIT;
 static uint8         can_controller_id = 0u;
 static boolean       can_bus_off_active = FALSE;
 
+/** Debug: total CAN RX frame counter (accessible from application) */
+volatile uint32 g_can_rx_count = 0u;
+/** Debug: last received CAN ID (for diagnostics) */
+volatile uint32 g_can_rx_last_id = 0xFFFFFFFFu;
+/** Debug: CAN TX busy (FIFO full) counter */
+volatile uint32 g_can_tx_busy_count = 0u;
+/** Debug: CAN RX counter for specific ID 0x012 (heartbeat trace) */
+volatile uint32 g_can_rx_012_count = 0u;
+/** Debug: CAN RX counter for specific ID 0x011 (FZC heartbeat trace) */
+volatile uint32 g_can_rx_011_count = 0u;
+
 /* ---- API Implementation ---- */
 
 void Can_Init(const Can_ConfigType* ConfigPtr)
@@ -129,6 +140,7 @@ Can_ReturnType Can_Write(uint8 Hth, const Can_PduType* PduInfo)
     SchM_Exit_Can_CAN_EXCLUSIVE_AREA_0();
 
     if (hw_ret != E_OK) {
+        g_can_tx_busy_count++;
         return CAN_BUSY;
     }
 
@@ -155,6 +167,10 @@ void Can_MainFunction_Read(void)
         if (received != TRUE) {
             break;
         }
+        g_can_rx_count++;
+        g_can_rx_last_id = (uint32)rx_id;
+        if (rx_id == (Can_IdType)0x012u) { g_can_rx_012_count++; }
+        if (rx_id == (Can_IdType)0x011u) { g_can_rx_011_count++; }
         CanIf_RxIndication(rx_id, rx_data, rx_dlc);
         msg_count++;
     }

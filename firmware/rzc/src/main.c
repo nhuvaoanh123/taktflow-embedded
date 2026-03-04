@@ -29,6 +29,43 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
+ * Debug Logging (STM32 UART — compiled out on POSIX)
+ * ================================================================== */
+
+#ifdef PLATFORM_STM32
+extern void Dbg_Uart_Print(const char *str);
+#define DBG_LOG(msg)  Dbg_Uart_Print(msg)
+
+/**
+ * @brief  Print decimal uint32 to debug UART (for periodic status)
+ * @param  val  Value to print
+ */
+static void Dbg_PrintU32(uint32 val)
+{
+    char buf[11]; /* max "4294967295\0" */
+    char *p = &buf[10];
+    *p = '\0';
+    if (val == 0u)
+    {
+        p--;
+        *p = '0';
+    }
+    else
+    {
+        while (val > 0u)
+        {
+            p--;
+            *p = (char)('0' + (char)(val % 10u));
+            val /= 10u;
+        }
+    }
+    Dbg_Uart_Print(p);
+}
+#else
+#define DBG_LOG(msg)  ((void)0)
+#endif
+
+/* ==================================================================
  * BSW Module Headers
  * ================================================================== */
 
@@ -76,6 +113,10 @@ extern void           Main_Hw_MpuConfig(void);
 extern void           Main_Hw_SysTickInit(uint32 periodUs);
 extern void           Main_Hw_Wfi(void);
 extern uint32         Main_Hw_GetTick(void);
+
+/* Debug diagnostic externs */
+extern uint8          Main_Hw_GetCanHalState(void);
+extern void           Main_Hw_DumpCanDiag(void);
 
 /* Self-test hardware externs */
 extern Std_ReturnType Main_Hw_Bts7960GpioTest(void);
@@ -301,6 +342,9 @@ int main(void)
     uint32 last_1ms_us   = 0u;
     uint32 last_10ms_us  = 0u;
     uint32 last_100ms_us = 0u;
+#ifdef PLATFORM_STM32
+    uint32 last_5s_us    = 0u;
+#endif
     uint8  self_test_result;
 
     /* ---- Step 1: Hardware initialization ---- */
@@ -308,7 +352,9 @@ int main(void)
     Main_Hw_MpuConfig();
 
     /* ---- Step 2: BSW module initialization (order matters) ---- */
+    DBG_LOG("BSW init start\r\n");
     Can_Init(&can_config);
+    DBG_LOG("CAN: FDCAN1 init OK\r\n");
     CanIf_Init(&canif_config);
     PduR_Init(&rzc_pdur_config);
     Com_Init(&rzc_com_config);
@@ -350,22 +396,42 @@ int main(void)
     Swc_RzcSensorFeeder_Init();
 
     /* ---- Step 4: Self-test sequence (8 items, SWR-RZC-025) ---- */
+    DBG_LOG("Self-test start\r\n");
     self_test_result = Main_RunSelfTest();
+    DBG_LOG(self_test_result == RZC_SELF_TEST_PASS ? "Self-test: PASS\r\n" : "Self-test: FAIL\r\n");
 
     /* Write self-test result to RTE for Swc_RzcSafety */
     (void)Rte_Write(RZC_SIG_SELF_TEST_RESULT, (uint32)self_test_result);
 
     /* ---- Step 5: Start CAN controller ---- */
     (void)Can_SetControllerMode(0u, CAN_CS_STARTED);
+    DBG_LOG("CAN: controller STARTED\r\n");
+
+#ifdef PLATFORM_STM32
+    /* Debug: test CAN TX immediately after start */
+    {
+        uint8 test_data[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x03, 0x00, 0x00, 0x00};
+        Can_PduType test_pdu;
+        test_pdu.id     = 0x012u;
+        test_pdu.length = 8u;
+        test_pdu.sdu    = test_data;
+        Can_ReturnType tx_result = Can_Write(0u, &test_pdu);
+        Dbg_Uart_Print("CAN TX test: ");
+        Dbg_Uart_Print((tx_result == CAN_OK) ? "OK\r\n" : "FAIL\r\n");
+        Main_Hw_DumpCanDiag();
+    }
+#endif
 
     /* ---- Step 6: Request BSW RUN mode (if self-test passed) ---- */
     if (self_test_result == RZC_SELF_TEST_PASS)
     {
         (void)BswM_RequestMode(0u, BSWM_RUN);
+        DBG_LOG("BswM: STARTUP -> RUN\r\n");
     }
 
     /* ---- Step 7: Start SysTick (1ms period = 1000us) ---- */
     Main_Hw_SysTickInit(1000u);
+    DBG_LOG("SysTick: 1ms — entering main loop\r\n");
 
     /* ---- Step 8: Main loop ---- */
     for (;;)
@@ -397,6 +463,40 @@ int main(void)
             WdgM_MainFunction();
             Dem_MainFunction();
         }
+
+#ifdef PLATFORM_STM32
+        /* 5s debug task: CAN error counter + heartbeat alive print */
+        if ((tick_us - last_5s_us) >= 5000000u)
+        {
+            extern volatile uint32 g_can_tx_busy_count;
+            uint8 tec = 0u;
+            uint8 rec = 0u;
+            uint8 err_state = 0u;
+            uint32 hb_alive = 0u;
+
+            last_5s_us = tick_us;
+
+            (void)Can_GetErrorCounters(0u, &tec, &rec);
+            (void)Can_GetControllerErrorState(0u, &err_state);
+            (void)Rte_Read(RZC_SIG_HEARTBEAT_ALIVE, &hb_alive);
+
+            Dbg_Uart_Print("[");
+            Dbg_PrintU32(tick_us / 1000000u);
+            Dbg_Uart_Print("s] RZC: TEC=");
+            Dbg_PrintU32((uint32)tec);
+            Dbg_Uart_Print(" REC=");
+            Dbg_PrintU32((uint32)rec);
+            Dbg_Uart_Print(" ERR=");
+            Dbg_PrintU32((uint32)err_state);
+            Dbg_Uart_Print(" HB=");
+            Dbg_PrintU32(hb_alive);
+            Dbg_Uart_Print(" HAL=");
+            Dbg_PrintU32((uint32)Main_Hw_GetCanHalState());
+            Dbg_Uart_Print(" TXbusy=");
+            Dbg_PrintU32(g_can_tx_busy_count);
+            Dbg_Uart_Print("\r\n");
+        }
+#endif
     }
 
     /* MISRA: unreachable but satisfies compiler */
