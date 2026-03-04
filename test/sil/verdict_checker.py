@@ -451,7 +451,8 @@ class MQTTMonitor:
         if rc_val == 0:
             self._connected = True
             client.subscribe("taktflow/#", qos=0)
-            log.info("MQTT monitor connected and subscribed to taktflow/#")
+            client.subscribe("vehicle/#", qos=0)
+            log.info("MQTT monitor connected and subscribed to taktflow/# and vehicle/#")
         else:
             log.warning("MQTT connect failed with rc=%s", rc)
 
@@ -504,6 +505,27 @@ class ScenarioExecutor:
 
         # Analysis results storage for build/static_analysis step actions
         self._analysis_results: dict[str, dict[str, Any]] = {}
+
+    def _fault_api_call(
+        self, method: str, url: str, **kwargs: Any
+    ) -> requests.Response:
+        """Call fault API with retry for post-restart resilience."""
+        max_retries = 3
+        timeout = kwargs.pop("timeout", 60)
+        for attempt in range(max_retries):
+            try:
+                resp = requests.request(method, url, timeout=timeout, **kwargs)
+                resp.raise_for_status()
+                return resp
+            except (requests.ConnectionError, requests.Timeout) as exc:
+                if attempt < max_retries - 1:
+                    log.warning(
+                        "  Fault API attempt %d/%d failed: %s — retrying in 3s",
+                        attempt + 1, max_retries, exc,
+                    )
+                    time.sleep(3)
+                else:
+                    raise
 
     def execute_scenario(self, scenario_path: Path) -> ScenarioResult:
         """Execute a single scenario YAML file and return the result.
@@ -565,6 +587,11 @@ class ScenarioExecutor:
         # Reset monitors again after setup to capture only scenario events
         self._can.reset()
         self._mqtt.reset()
+
+        # Re-synchronize vehicle state from live CAN before starting steps.
+        # CVC broadcasts 0x100 at 100Hz — wait for the first frame to arrive
+        # so _vehicle_state reflects reality, not the default INIT from reset().
+        self._can.wait_for_can_message(0x100, timeout_sec=3.0)
 
         # Record the observation start time
         observation_start = time.monotonic()
@@ -658,20 +685,18 @@ class ScenarioExecutor:
         log.debug("  Step: %s %s", action, step)
 
         if action == "reset":
-            resp = requests.post(
+            resp = self._fault_api_call(
+                "POST",
                 f"{self._fault_api_url}/api/fault/reset",
-                timeout=60,
             )
-            resp.raise_for_status()
             log.info("  [STEP] Reset: %s", resp.json())
 
         elif action == "inject_scenario":
             name = step["name"]
-            resp = requests.post(
+            resp = self._fault_api_call(
+                "POST",
                 f"{self._fault_api_url}/api/fault/scenario/{name}",
-                timeout=30,
             )
-            resp.raise_for_status()
             log.info("  [STEP] Injected scenario: %s", name)
 
         elif action == "wait":
@@ -699,8 +724,16 @@ class ScenarioExecutor:
         elif action == "docker_stop":
             container = step["container"]
             log.info("  [STEP] Stopping container: %s", container)
+            compose_file = (
+                Path(__file__).resolve().parent.parent.parent
+                / "docker" / "docker-compose.yml"
+            )
             subprocess.run(
-                ["docker", "stop", container],
+                [
+                    "docker", "compose",
+                    "-f", str(compose_file),
+                    "stop", container,
+                ],
                 timeout=30,
                 check=True,
                 capture_output=True,
@@ -709,8 +742,16 @@ class ScenarioExecutor:
         elif action == "docker_start":
             container = step["container"]
             log.info("  [STEP] Starting container: %s", container)
+            compose_file = (
+                Path(__file__).resolve().parent.parent.parent
+                / "docker" / "docker-compose.yml"
+            )
             subprocess.run(
-                ["docker", "start", container],
+                [
+                    "docker", "compose",
+                    "-f", str(compose_file),
+                    "start", container,
+                ],
                 timeout=30,
                 check=True,
                 capture_output=True,
@@ -828,12 +869,11 @@ class ScenarioExecutor:
             payload: dict[str, Any] = {}
             if value is not None:
                 payload["value"] = value
-            resp = requests.post(
+            resp = self._fault_api_call(
+                "POST",
                 f"{self._fault_api_url}/api/fault/scenario/{fault_type}",
                 json=payload if payload else None,
-                timeout=30,
             )
-            resp.raise_for_status()
             log.info("  [STEP] Fault injected: %s", resp.json())
 
         elif action == "build":

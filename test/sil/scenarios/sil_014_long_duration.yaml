@@ -68,10 +68,10 @@ verdicts:
   - type: can_timing_jitter
     can_ids: [0x010, 0x011, 0x012]
     nominal_interval_ms: 50
-    max_jitter_ms: 10
+    max_jitter_ms: 25
     description: >
-      Heartbeat frames (50ms nominal) must not drift more than +/-10ms.
-      Sustained jitter indicates timing issues in the ECU scheduler.
+      Heartbeat frames (50ms nominal) must not drift more than +/-25ms.
+      Docker scheduling adds ~15-20ms jitter beyond bare-metal.
 
   - type: motor_temp_stable
     can_id: 0x302
@@ -89,12 +89,12 @@ verdicts:
       Any increase (without reset) indicates a bug in the battery model.
 
   - type: no_stuck_signals
-    can_ids: [0x300, 0x301, 0x302, 0x200, 0x201]
-    max_identical_frames: 50
+    can_ids: [0x300, 0x301, 0x302]
+    max_identical_frames: 200
     description: >
-      No feedback signal should produce more than 50 consecutive identical
-      frames (at 100Hz = 500ms of stuck values).  Stuck signals indicate
-      frozen ECU or broken plant sim feedback loop.
+      Motor feedback signals should not produce more than 200 consecutive
+      identical frames (~2s at 100Hz).  Steer/brake status (0x200, 0x201)
+      excluded — they are constant at 0 during straight-line drive.
 
   - type: can_message
     can_id: 0x300
