@@ -76,6 +76,13 @@ typedef uint8 Std_ReturnType;
 /* INIT hold time — must match Cvc_Cfg.h */
 #define CVC_INIT_HOLD_CYCLES      500u
 
+/* SIL-only post-INIT grace period — must match Cvc_Cfg.h */
+#ifdef PLATFORM_POSIX
+  #ifndef CVC_POST_INIT_GRACE_CYCLES
+    #define CVC_POST_INIT_GRACE_CYCLES  300u
+  #endif
+#endif
+
 /* ECU IDs (from Cvc_Cfg.h) */
 #define CVC_ECU_ID_CVC              0x01u
 
@@ -298,6 +305,14 @@ static void get_to_run(void)
     {
         Swc_VehicleState_MainFunction();
     }
+#ifdef PLATFORM_POSIX
+    /* Drain the SIL post-INIT grace period so fault confirmation
+     * tests work immediately after get_to_run(). */
+    for (i = 0u; i < CVC_POST_INIT_GRACE_CYCLES; i++)
+    {
+        Swc_VehicleState_MainFunction();
+    }
+#endif
 }
 
 /* ==================================================================

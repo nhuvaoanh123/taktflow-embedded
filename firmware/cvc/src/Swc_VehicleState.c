@@ -199,6 +199,13 @@ static uint16 init_hold_counter;
 /** @brief  SAFE_STOP recovery counter — counts all-clear cycles before recovery */
 static uint16 safe_stop_clear_count;
 
+#ifdef PLATFORM_POSIX
+/** @brief  SIL-only: post-INIT grace counter — suppresses ConfirmFault after
+ *          INIT->RUN to absorb stale brake_fault / motor_cutoff from zone
+ *          controllers that haven't settled yet after container restart. */
+static uint16 post_init_grace_counter;
+#endif
+
 /** @brief  Cycles required with all faults clear before SAFE_STOP recovery (500ms) */
 #define CVC_SAFE_STOP_RECOVERY_CYCLES   50u
 
@@ -240,6 +247,9 @@ void Swc_VehicleState_Init(void)
     self_test_pass_pending = FALSE;
     init_hold_counter      = 0u;
     safe_stop_clear_count  = 0u;
+#ifdef PLATFORM_POSIX
+    post_init_grace_counter = 0u;
+#endif
 
     for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
     {
@@ -489,6 +499,14 @@ void Swc_VehicleState_MainFunction(void)
                 }
             }
 
+#ifdef PLATFORM_POSIX
+            /* SIL: start post-INIT grace period — zone controllers may still
+             * be sending stale brake_fault / motor_cutoff after container
+             * restart.  Suppress ConfirmFault for a few more seconds. */
+            post_init_grace_counter = CVC_POST_INIT_GRACE_CYCLES;
+            VSM_DIAG("post-INIT grace: %u cycles", (unsigned)post_init_grace_counter);
+#endif
+
             (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_RUN);
             VSM_DIAG("INIT -> RUN (heartbeats confirmed)");
         }
@@ -565,23 +583,51 @@ void Swc_VehicleState_MainFunction(void)
      * spurious fault signals.  The transition table maps these events to
      * INVALID from INIT anyway, but running ConfirmFault wastes cycles
      * and leaves counters at unpredictable values when INIT->RUN fires.
-     * Suppressing during INIT ensures counters start at 0 for RUN. */
-    if (current_state != CVC_STATE_INIT)
+     * Suppressing during INIT ensures counters start at 0 for RUN.
+     *
+     * SIL (PLATFORM_POSIX): also suppressed during post-INIT grace period.
+     * After Docker container restart, zone controllers may send stale
+     * brake_fault / motor_cutoff for a few seconds after CVC enters RUN.
+     * The grace counter counts down to zero then normal detection resumes. */
     {
-        Swc_VehicleState_ConfirmFault(
-            CVC_FAULT_IDX_MOTOR_CUTOFF, motor_cutoff,
-            CVC_FAULT_COM_MOTOR_CUTOFF, CVC_FAULT_E2E_MOTOR_CUTOFF,
-            CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
+        uint8 suppress_faults = FALSE;
 
-        Swc_VehicleState_ConfirmFault(
-            CVC_FAULT_IDX_BRAKE, brake_fault,
-            CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
-            CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
+        if (current_state == CVC_STATE_INIT)
+        {
+            suppress_faults = TRUE;
+        }
 
-        Swc_VehicleState_ConfirmFault(
-            CVC_FAULT_IDX_STEERING, steering_fault,
-            CVC_FAULT_COM_STEERING, CVC_FAULT_E2E_STEERING,
-            CVC_DTC_STEERING_FAULT_RX, CVC_EVT_STEERING_FAULT);
+#ifdef PLATFORM_POSIX
+        if (post_init_grace_counter > 0u)
+        {
+            post_init_grace_counter--;
+            suppress_faults = TRUE;
+#ifdef SIL_DIAG
+            if ((post_init_grace_counter % 100u) == 0u)
+            {
+                VSM_DIAG("post-INIT grace remaining: %u", (unsigned)post_init_grace_counter);
+            }
+#endif
+        }
+#endif
+
+        if (suppress_faults == FALSE)
+        {
+            Swc_VehicleState_ConfirmFault(
+                CVC_FAULT_IDX_MOTOR_CUTOFF, motor_cutoff,
+                CVC_FAULT_COM_MOTOR_CUTOFF, CVC_FAULT_E2E_MOTOR_CUTOFF,
+                CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
+
+            Swc_VehicleState_ConfirmFault(
+                CVC_FAULT_IDX_BRAKE, brake_fault,
+                CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
+                CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
+
+            Swc_VehicleState_ConfirmFault(
+                CVC_FAULT_IDX_STEERING, steering_fault,
+                CVC_FAULT_COM_STEERING, CVC_FAULT_E2E_STEERING,
+                CVC_DTC_STEERING_FAULT_RX, CVC_EVT_STEERING_FAULT);
+        }
     }
 
     /* ---- Step 5: SAFE_STOP recovery when all faults clear ---- */
