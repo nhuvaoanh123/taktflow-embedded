@@ -1009,14 +1009,16 @@ void test_SAFE_STOP_recovery_when_all_faults_clear(void)
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
 
-    /* Unlatch: 300 cycles + Recovery: 199 cycles = 499 total — NOT yet */
-    for (i = 0u; i < 499u; i++)
+    /* Unlatch fires on cycle 299 (count 0→300), which also starts
+     * safe_stop_clear_count at 1.  Recovery needs count=200, so fires
+     * on cycle 299+199 = 498.  Run 498 cycles (0-497) → NOT yet. */
+    for (i = 0u; i < 498u; i++)
     {
         Swc_VehicleState_MainFunction();
     }
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 
-    /* 500th cycle — recovery triggers, transitions to INIT */
+    /* 499th cycle (index 498) — recovery triggers, transitions to INIT */
     Swc_VehicleState_MainFunction();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
 
