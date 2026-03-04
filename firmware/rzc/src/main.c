@@ -29,6 +29,37 @@
 #include "Rzc_Cfg.h"
 
 /* ==================================================================
+ * BSW Module Headers (MISRA 20.1: all #includes before any code)
+ * ================================================================== */
+
+#include "Adc.h"
+#include "Can.h"
+#include "CanIf.h"
+#include "Com.h"
+#include "PduR.h"
+#include "E2E.h"
+#include "Dem.h"
+#include "WdgM.h"
+#include "BswM.h"
+#include "Dcm.h"
+#include "Rte.h"
+#include "IoHwAb.h"
+
+/* ==================================================================
+ * SWC Headers
+ * ================================================================== */
+
+#include "Swc_Motor.h"
+#include "Swc_CurrentMonitor.h"
+#include "Swc_Encoder.h"
+#include "Swc_TempMonitor.h"
+#include "Swc_Battery.h"
+#include "Swc_Heartbeat.h"
+#include "Swc_RzcCom.h"
+#include "Swc_RzcSafety.h"
+#include "Swc_RzcSensorFeeder.h"
+
+/* ==================================================================
  * Debug Logging (STM32 UART — compiled out on POSIX)
  * ================================================================== */
 
@@ -64,37 +95,6 @@ static void Dbg_PrintU32(uint32 val)
 #else
 #define DBG_LOG(msg)  ((void)0)
 #endif
-
-/* ==================================================================
- * BSW Module Headers
- * ================================================================== */
-
-#include "Adc.h"
-#include "Can.h"
-#include "CanIf.h"
-#include "Com.h"
-#include "PduR.h"
-#include "E2E.h"
-#include "Dem.h"
-#include "WdgM.h"
-#include "BswM.h"
-#include "Dcm.h"
-#include "Rte.h"
-#include "IoHwAb.h"
-
-/* ==================================================================
- * SWC Headers
- * ================================================================== */
-
-#include "Swc_Motor.h"
-#include "Swc_CurrentMonitor.h"
-#include "Swc_Encoder.h"
-#include "Swc_TempMonitor.h"
-#include "Swc_Battery.h"
-#include "Swc_Heartbeat.h"
-#include "Swc_RzcCom.h"
-#include "Swc_RzcSafety.h"
-#include "Swc_RzcSensorFeeder.h"
 
 /* ==================================================================
  * External Configuration (defined in cfg/ files)

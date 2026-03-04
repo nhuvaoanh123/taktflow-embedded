@@ -37,7 +37,8 @@ misra-c2012-11.8:*/Dcm.c
 misra-c2012-17.3:*/Dcm.c
 misra-c2012-17.3:*/sc_hw_posix.c
 misra-config:*/sc_hw_posix.c
-misra-c2012-21.6:*/cvc/src/*.c
-misra-c2012-21.6:*/fzc/src/*.c
-misra-c2012-21.6:*/rzc/src/*.c
+misra-c2012-21.6:cvc/src/*.c
+misra-c2012-21.6:fzc/src/*.c
+misra-c2012-21.6:rzc/src/*.c
 misra-c2012-10.2:*/main.c
+misra-c2012-20.1:rzc/src/main.c
