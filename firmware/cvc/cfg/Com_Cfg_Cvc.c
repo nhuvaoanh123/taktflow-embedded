@@ -37,7 +37,7 @@ static uint8  sig_rx_motor_cutoff;
 static uint16 sig_rx_lidar_dist;
 static uint16 sig_rx_motor_current;
 static uint8  sig_rx_sc_relay_kill;
-static uint8  sig_rx_battery_status;
+static uint8  sig_rx_battery_status = 2u;  /* NORMAL — prevents false BATT_CRIT in SIL */
 
 /* ==================================================================
  * Signal Configuration Table
@@ -105,7 +105,7 @@ static const Com_RxPduConfigType cvc_rx_pdu_config[] = {
     { CVC_COM_RX_LIDAR,           8u,  200u },   /* 5 Hz lidar updates   */
     { CVC_COM_RX_MOTOR_CURRENT,   8u,  200u },   /* 5 Hz motor feedback  */
     { CVC_COM_RX_SC_RELAY,        4u,  200u },   /* SC relay status      */
-    { CVC_COM_RX_BATTERY_STATUS,  8u,  500u },   /* Battery status (5Hz) */
+    { CVC_COM_RX_BATTERY_STATUS,  8u,    0u },   /* Battery status — timeout disabled (heartbeat covers RZC comm loss) */
 };
 
 #define CVC_COM_RX_PDU_COUNT  (sizeof(cvc_rx_pdu_config) / sizeof(cvc_rx_pdu_config[0]))
