@@ -244,10 +244,21 @@
 
 /* ==================================================================
  * DCAN1 Baud Rate Configuration (500 kbps from 75 MHz VCLK1)
+ *
+ * Bit time = (BRP + 1) * (1 + TSEG1 + TSEG2) / VCLK1
+ *          = 16 * 10 / 75 MHz = 2 us = 500 kbps
+ *
+ * SJW >= 4 required for internal oscillator tolerance (HSI ±1%
+ * per chip = ±2% relative between two nodes). Lesson from STM32
+ * CAN bring-up: SJW=1 fails at 500 kbps with HSI clocks.
+ *
+ * NOTE: Verify VCLK1 in HALCoGen clock tree after project creation.
+ * If VCLK1 differs from 75 MHz, recalculate BRP.
  * ================================================================== */
 
-#define SC_DCAN_BRP                 15u    /* Baud rate prescaler */
-#define SC_DCAN_TSEG1               7u     /* Time segment 1 */
-#define SC_DCAN_TSEG2               2u     /* Time segment 2 */
+#define SC_DCAN_BRP                 15u    /* Baud rate prescaler (BRP+1=16) */
+#define SC_DCAN_TSEG1               7u     /* Time segment 1 (prop + phase1) */
+#define SC_DCAN_TSEG2               2u     /* Time segment 2 (phase2) */
+#define SC_DCAN_SJW                 4u     /* Sync jump width (>=4 for osc tolerance) */
 
 #endif /* SC_CFG_H */

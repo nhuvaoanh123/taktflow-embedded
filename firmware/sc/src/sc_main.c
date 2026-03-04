@@ -53,6 +53,16 @@ extern void rtiClearTick(void);
 /** Set GIO pin direction (0=input, 1=output) */
 extern void gioSetDirection(uint8 port, uint8 pin, uint8 direction);
 
+#ifdef PLATFORM_TMS570
+/* ==================================================================
+ * External: SCI debug UART (from sc_hw_tms570.c)
+ * ================================================================== */
+
+extern void sc_sci_init(void);
+extern void sc_sci_puts(const char* str);
+extern void sc_sci_put_uint(uint32 val);
+#endif
+
 /* ==================================================================
  * Internal: Configure GIO pins
  * ================================================================== */
@@ -119,12 +129,21 @@ int main(void)
 {
     uint8 startup_result;
     boolean all_checks_ok;
+#ifdef PLATFORM_TMS570
+    uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
+#endif
 
     /* ---- 1. System initialization ---- */
     systemInit();           /* PLL to 300 MHz */
     gioInit();              /* GIO module init */
     sc_configure_gpio();    /* SC-specific pin config */
     rtiInit();              /* RTI 10ms tick timer */
+
+#ifdef PLATFORM_TMS570
+    /* ---- 1b. Debug UART init ---- */
+    sc_sci_init();
+    sc_sci_puts("=== SC Boot (TMS570LC43x) ===\r\n");
+#endif
 
     /* ---- 2. Module initialization ---- */
     SC_E2E_Init();
@@ -137,8 +156,23 @@ int main(void)
     SC_ESM_Init();
     SC_SelfTest_Init();
 
+#ifdef PLATFORM_TMS570
+    sc_sci_puts("Modules init: 9 OK\r\n");
+#endif
+
     /* ---- 3. Startup self-test (7 steps) ---- */
     startup_result = SC_SelfTest_Startup();
+
+#ifdef PLATFORM_TMS570
+    sc_sci_puts("BIST: ");
+    if (startup_result == 0u) {
+        sc_sci_puts("7/7 PASS\r\n");
+    } else {
+        sc_sci_puts("FAIL at step ");
+        sc_sci_put_uint((uint32)startup_result);
+        sc_sci_puts("\r\n");
+    }
+#endif
 
     if (startup_result != 0u) {
         /* Startup failed — blink failure pattern and halt */
@@ -148,6 +182,10 @@ int main(void)
 
     /* ---- 4. Startup passed — energize relay ---- */
     SC_Relay_Energize();
+
+#ifdef PLATFORM_TMS570
+    sc_sci_puts("SC_Relay: energized (MONITORING)\r\n");
+#endif
 
     /* ---- 5. Start RTI timer and enter main loop ---- */
     rtiStartCounter();
@@ -204,6 +242,23 @@ int main(void)
         if (SC_ESM_IsErrorActive() == TRUE) {
             all_checks_ok = FALSE;
         }
+
+#ifdef PLATFORM_TMS570
+        /* ---- Step 8b: Periodic debug status (every 5 seconds) ---- */
+        dbg_tick_counter++;
+        if (dbg_tick_counter >= 500u) {  /* 500 * 10ms = 5s */
+            dbg_tick_counter = 0u;
+            sc_sci_puts("[5s] SC: CVC=");
+            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_CVC) ? "TIMEOUT" : "OK");
+            sc_sci_puts(" FZC=");
+            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_FZC) ? "TIMEOUT" : "OK");
+            sc_sci_puts(" RZC=");
+            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_RZC) ? "TIMEOUT" : "OK");
+            sc_sci_puts(" relay=");
+            sc_sci_puts((SC_Relay_IsKilled() == FALSE) ? "ON" : "OFF");
+            sc_sci_puts("\r\n");
+        }
+#endif
 
         /* ---- Step 9: Watchdog Feed ---- */
         SC_Watchdog_Feed(all_checks_ok);

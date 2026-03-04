@@ -15,7 +15,7 @@
 | F2 | MCAL CAN Driver (first sign of life) | DONE (2026-03-04) — CVC↔FZC CAN bring-up verified on real STM32 hardware |
 | F3 | Remaining MCAL Drivers | PENDING |
 | F4 | Per-ECU Init + Self-Tests + MPU + WDG | PENDING |
-| F5 | SC TMS570 Target | PENDING |
+| F5 | SC TMS570 Target | IN PROGRESS — Makefile + hw driver + SCI debug done (2026-03-04) |
 | F6 | NvM Flash + Encoder | PENDING |
 | F7 | PIL + CI + Docs | PENDING |
 
@@ -388,17 +388,31 @@ No Makefile changes needed — USART2 is bare-metal register access. POSIX build
 
 **Goal**: SC runs on TMS570LC43x LaunchPad, monitors CAN heartbeats, controls kill relay.
 
+> **Detailed plan**: `plan-f5-sc-tms570-target-port.md`
+
 ### Steps
-1. Install HALCoGen, create TMS570LC43x project
+1. Install HALCoGen, create TMS570LC43x project → generate `halcogencfg/`
 2. Create `Makefile.tms570` (`-mcpu=cortex-r5`)
-3. Implement `sc_hw_tms570.c`
-4. Self-tests: lockstep BIST, RAM PBIST, flash CRC, DCAN loopback, GPIO readback
+3. Implement `sc_hw_tms570.c` (19 extern functions: GIO, RTI, DCAN1, ESM, self-test stubs)
+4. Add SCI debug UART to `sc_main.c` (boot banner + 5s heartbeat status)
+5. Update `sc_cfg.h` (SJW≥4 for DCAN bit timing)
+6. Self-tests: start as stubs, implement real DCAN loopback / GPIO readback / lamp test after CAN bring-up
+
+### Files created/modified (2026-03-04)
+- [x] `firmware/Makefile.tms570` — NEW (Cortex-R5 build, HALCoGen sources, UniFlash flash)
+- [x] `firmware/sc/src/sc_hw_tms570.c` — NEW (19 functions: GIO regs, RTI tick, DCAN1 msg objects, ESM, SCI UART, self-test stubs)
+- [x] `firmware/sc/include/sc_cfg.h` — MODIFIED (added SC_DCAN_SJW, improved baud rate comments)
+- [x] `firmware/sc/src/sc_main.c` — MODIFIED (SCI debug: boot banner, BIST result, 5s heartbeat status)
+- [ ] `halcogencfg/` — PENDING (manual HALCoGen GUI step)
 
 ### DONE criteria
-- [ ] SC boots, passes self-tests
-- [ ] Receives CVC heartbeat on DCAN1
-- [ ] Kill relay control works
-- [ ] Fault LEDs correct
+- [ ] HALCoGen project generated with DCAN1 + GIO + RTI + SCI + ESM
+- [ ] `make -f Makefile.tms570` builds to sc.elf (needs HALCoGen sources)
+- [ ] SC boots on LaunchPad, passes 7-step startup self-test
+- [ ] Receives CVC heartbeat on DCAN1 at 500 kbps (BRP=15, TSEG1=7, TSEG2=2, SJW=4)
+- [ ] Kill relay control works (GIO_A0)
+- [ ] Fault LEDs correct (GIO_A1/A2/A3/A4)
+- [ ] UART debug output visible on XDS110 virtual COM (115200 8N1)
 
 ---
 

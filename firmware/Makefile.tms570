@@ -1,0 +1,171 @@
+# =============================================================================
+# Makefile.tms570 — ARM Cortex-R5 target build for SC (Safety Controller)
+#
+# Builds SC bare-metal firmware using arm-none-eabi-gcc targeting
+# TMS570LC4357 (LAUNCHXL2-570LC43 LaunchPad). Uses HALCoGen-generated
+# init code and SC application sources with direct DCAN1/GIO/RTI/ESM access.
+#
+# Usage:
+#   make -f Makefile.tms570                Build SC firmware
+#   make -f Makefile.tms570 flash          Build and flash via UniFlash
+#   make -f Makefile.tms570 size           Report firmware size
+#   make -f Makefile.tms570 clean          Remove build artifacts
+#
+# Output:  build/tms570/sc.elf, build/tms570/sc.bin
+# =============================================================================
+
+# --- Toolchain ---
+PREFIX  = arm-none-eabi-
+CC      = $(PREFIX)gcc
+AS      = $(PREFIX)gcc -x assembler-with-cpp
+CP      = $(PREFIX)objcopy
+SZ      = $(PREFIX)size
+
+# --- MCU flags (TMS570LC4357 = Cortex-R5 with VFPv3) ---
+MCU_FLAGS  = -mcpu=cortex-r5 -marm -mfpu=vfpv3-d16 -mfloat-abi=hard
+
+# --- Compiler flags ---
+CFLAGS  = $(MCU_FLAGS)
+CFLAGS += -Wall -Wextra -Werror -std=c99
+CFLAGS += -DPLATFORM_TMS570
+CFLAGS += -fdata-sections -ffunction-sections
+
+# --- Build mode (default: debug for bring-up phase) ---
+ifdef RELEASE
+  CFLAGS += -Os -DNDEBUG
+else
+  CFLAGS += -Og -g3 -DDEBUG
+endif
+
+# --- Diagnostic logging (pass DIAG=1 to enable) ---
+ifdef DIAG
+  CFLAGS += -DSIL_DIAG
+endif
+
+# --- Directories ---
+SC_DIR        = sc
+HALCOGEN_DIR  = ../halcogencfg
+BUILD_DIR     = build/tms570
+
+# --- HALCoGen generated include paths ---
+CFLAGS += -I$(SC_DIR)/include
+CFLAGS += -I$(HALCOGEN_DIR)/include
+
+# --- Linker script (HALCoGen-generated) ---
+LDSCRIPT      = $(HALCOGEN_DIR)/source/sys_link.cmd
+
+# --- Linker flags ---
+LDFLAGS  = $(MCU_FLAGS)
+LDFLAGS += -T$(LDSCRIPT)
+LDFLAGS += -Wl,--gc-sections
+LDFLAGS += -Wl,-Map=$(BUILD_DIR)/sc.map,--cref
+LDFLAGS += --specs=nano.specs --specs=nosys.specs
+LDFLAGS += -lm
+
+# --- HALCoGen generated sources ---
+# These are created by HALCoGen GUI — if halcogencfg/ doesn't exist yet,
+# the build will fail with a clear message about missing HALCoGen project.
+HALCOGEN_SRCS = $(wildcard $(HALCOGEN_DIR)/source/*.c)
+
+# --- HALCoGen startup assembly ---
+HALCOGEN_ASM = $(wildcard $(HALCOGEN_DIR)/source/*.asm) \
+               $(wildcard $(HALCOGEN_DIR)/source/*.s)
+
+# --- SC application sources (exclude POSIX backend) ---
+SC_SRCS_ALL = $(wildcard $(SC_DIR)/src/*.c)
+SC_SRCS = $(filter-out %_posix.c,$(SC_SRCS_ALL))
+
+# --- All C sources ---
+APP_SRCS = $(HALCOGEN_SRCS) $(SC_SRCS)
+
+# --- Object files ---
+APP_OBJS  = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+ASM_OBJS  = $(patsubst %.asm,$(BUILD_DIR)/%.o,$(filter %.asm,$(HALCOGEN_ASM))) \
+            $(patsubst %.s,$(BUILD_DIR)/%.o,$(filter %.s,$(HALCOGEN_ASM)))
+ALL_OBJS  = $(APP_OBJS) $(ASM_OBJS)
+
+# --- Output files ---
+ELF = $(BUILD_DIR)/sc.elf
+BIN = $(BUILD_DIR)/sc.bin
+MAP = $(BUILD_DIR)/sc.map
+
+# --- Flash size budget (TMS570LC4357: < 80% of 3MB = 2457600 bytes) ---
+FLASH_BUDGET = 2457600
+
+# =============================================================================
+# Targets
+# =============================================================================
+
+.PHONY: all flash size clean check-halcogen
+
+all: check-halcogen $(BIN)
+	@echo "=== Built $(ELF) and $(BIN) ==="
+
+# --- Verify HALCoGen project exists ---
+check-halcogen:
+	@if [ ! -d "$(HALCOGEN_DIR)/source" ]; then \
+		echo "ERROR: HALCoGen project not found at $(HALCOGEN_DIR)/"; \
+		echo "Run HALCoGen GUI to generate TMS570LC43x init code first."; \
+		echo "See docs/plans/plan-f5-sc-tms570-target-port.md Phase F5.0"; \
+		exit 1; \
+	fi
+
+# --- Link ELF ---
+$(ELF): $(ALL_OBJS) | $(BUILD_DIR)
+	$(CC) $(ALL_OBJS) $(LDFLAGS) -o $@
+
+# --- Generate BIN from ELF ---
+$(BIN): $(ELF)
+	$(CP) -O binary $< $@
+
+# --- Compile C sources ---
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- Assemble HALCoGen startup (.asm) ---
+$(BUILD_DIR)/%.o: %.asm | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(AS) $(MCU_FLAGS) -c $< -o $@
+
+# --- Assemble HALCoGen startup (.s) ---
+$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(AS) $(MCU_FLAGS) -c $< -o $@
+
+# --- Build directory ---
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# --- Flash via UniFlash CLI ---
+# XDS110 debug probe is built into the LaunchPad.
+# Install UniFlash from TI or use CCS debug server.
+flash: $(BIN)
+	@echo "=== Flashing SC via UniFlash (XDS110) ==="
+	@echo "Manual: Open UniFlash, select TMS570LC4357, load $(BIN), flash."
+	@echo "CLI (if installed): dslite.sh --config=targetConfigs/TMS570LC43xx.ccxml $(ELF)"
+
+# --- Firmware size report ---
+size: $(ELF)
+	@echo "=== Firmware size: SC (TMS570) ==="
+	$(SZ) --format=berkeley $(ELF)
+	@echo ""
+	@echo "--- Section breakdown ---"
+	$(SZ) --format=sysv $(ELF) | head -20
+	@echo ""
+	@flash_used=$$($(SZ) --format=berkeley $(ELF) | tail -1 | awk '{print $$1 + $$2}'); \
+	echo "Flash used: $$flash_used bytes"; \
+	echo "Flash budget: $(FLASH_BUDGET) bytes (80% of 3MB)"; \
+	if [ $$flash_used -gt $(FLASH_BUDGET) ]; then \
+		echo "ERROR: Flash usage exceeds 80% budget!"; \
+		exit 1; \
+	else \
+		pct=$$(($$flash_used * 100 / 3145728)); \
+		echo "Flash utilization: $$pct%"; \
+		echo "OK: Within budget"; \
+	fi
+
+# --- Clean ---
+clean:
+	rm -rf $(BUILD_DIR)
+	@echo "=== Cleaned TMS570 build directory ==="
