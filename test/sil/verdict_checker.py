@@ -106,8 +106,9 @@ DEFAULT_SCENARIO_TIMEOUT_SEC = 60
 DEFAULT_STATE_WAIT_TIMEOUT_SEC = 10
 
 # Motor RPM byte positions in Motor_Status (0x300)
-MOTOR_RPM_BYTE_LO = 2
-MOTOR_RPM_BYTE_HI = 3
+# Layout: [E2E_CRC, E2E_Alive, torque_echo, rpm_lo, rpm_hi, dir, enable, fault]
+MOTOR_RPM_BYTE_LO = 3
+MOTOR_RPM_BYTE_HI = 4
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +350,7 @@ class CANBusMonitor:
                     self._vehicle_state = new_state
 
                 # Track motor RPM from 0x300
-                if arb_id == CAN_MOTOR_STATUS and len(msg.data) >= 4:
+                if arb_id == CAN_MOTOR_STATUS and len(msg.data) >= 5:
                     self._motor_rpm = (
                         msg.data[MOTOR_RPM_BYTE_LO]
                         | (msg.data[MOTOR_RPM_BYTE_HI] << 8)
@@ -1595,7 +1596,7 @@ class ScenarioExecutor:
         if observation_start > 0:
             history = self._can.get_message_history(CAN_MOTOR_STATUS)
             for ts, msg in history:
-                if ts >= observation_start and len(msg.data) >= 4:
+                if ts >= observation_start and len(msg.data) >= 5:
                     rpm = (
                         msg.data[MOTOR_RPM_BYTE_LO]
                         | (msg.data[MOTOR_RPM_BYTE_HI] << 8)
@@ -1854,7 +1855,7 @@ class ScenarioExecutor:
         # Extract RPM values from history
         rpms: list[int] = []
         for _, msg in history:
-            if len(msg.data) >= 4:
+            if len(msg.data) >= 5:
                 rpm = (
                     msg.data[MOTOR_RPM_BYTE_LO]
                     | (msg.data[MOTOR_RPM_BYTE_HI] << 8)
@@ -2163,7 +2164,7 @@ class ScenarioExecutor:
         # Extract temperature values (bytes 2-3, 16-bit LE, scale 0.1C)
         temps: list[float] = []
         for _, msg in history:
-            if len(msg.data) >= 4:
+            if len(msg.data) >= 5:
                 raw = msg.data[2] | (msg.data[3] << 8)
                 temp_c = raw * 0.1
                 temps.append(temp_c)
