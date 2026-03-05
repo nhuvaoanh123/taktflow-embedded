@@ -117,6 +117,7 @@ void Swc_RzcSafety_NotifyCanRx(void) { mock_safety_notify_count++; }
 
 #define RZC_COM_RX_ESTOP           0u
 #define RZC_COM_RX_VEHICLE_TORQUE  1u
+#define RZC_COM_RX_VIRT_SENSORS    2u
 
 #define RZC_E2E_HEARTBEAT_DATA_ID    0x04u
 #define RZC_E2E_MOTOR_STATUS_DATA_ID 0x0Eu
@@ -124,6 +125,7 @@ void Swc_RzcSafety_NotifyCanRx(void) { mock_safety_notify_count++; }
 #define RZC_E2E_MOTOR_TEMP_DATA_ID   0x10u
 #define RZC_E2E_BATTERY_DATA_ID      0x11u
 #define RZC_E2E_ESTOP_DATA_ID        0x00u
+#define RZC_E2E_VEHSTATE_DATA_ID     0x05u
 
 #define RZC_ECU_ID               0x03u
 
@@ -144,6 +146,7 @@ extern Std_ReturnType  Swc_RzcCom_E2eProtect(uint8 pduId, uint8 *data, uint8 len
 extern Std_ReturnType  Swc_RzcCom_E2eCheck(uint8 pduId, const uint8 *data, uint8 length);
 extern void            Swc_RzcCom_Receive(void);
 extern void            Swc_RzcCom_TransmitSchedule(void);
+extern Std_ReturnType  Rzc_E2eRxCheck(uint8 pduId, const uint8* data, uint8 length);
 
 /* ==================================================================
  * Mock: Rte_Read / Rte_Write
@@ -488,6 +491,43 @@ void test_RzcCom_transmit_motor_data_10ms(void)
 }
 
 /* ==================================================================
+ * SWR-RZC-020: Rzc_E2eRxCheck CanIf Callback
+ * ================================================================== */
+
+/** @verifies SWR-RZC-020 -- E2E-protected PDU with bad CRC returns E_NOT_OK */
+void test_Rzc_E2eRxCheck_vehicle_torque_bad_crc(void)
+{
+    uint8 bad_data[8] = {0xFFu, 0x01u, 0x03u, 0x00u, 0x64u, 0x00u, 0x00u, 0x00u};
+    Std_ReturnType result;
+
+    result = Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, bad_data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, result);
+}
+
+/** @verifies SWR-RZC-020 -- Non-E2E PDU (virtual sensors) always returns E_OK */
+void test_Rzc_E2eRxCheck_virt_sensors_always_ok(void)
+{
+    uint8 any_data[8] = {0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu};
+    Std_ReturnType result;
+
+    result = Rzc_E2eRxCheck(RZC_COM_RX_VIRT_SENSORS, any_data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(E_OK, result);
+}
+
+/** @verifies SWR-RZC-020 -- E-stop PDU with bad CRC returns E_NOT_OK */
+void test_Rzc_E2eRxCheck_estop_bad_crc(void)
+{
+    uint8 bad_data[8] = {0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu, 0x00u, 0x11u};
+    Std_ReturnType result;
+
+    result = Rzc_E2eRxCheck(RZC_COM_RX_ESTOP, bad_data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, result);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -508,6 +548,11 @@ int main(void)
 
     /* SWR-RZC-027: CAN Message Transmission */
     RUN_TEST(test_RzcCom_transmit_motor_data_10ms);
+
+    /* SWR-RZC-020: Rzc_E2eRxCheck CanIf Callback */
+    RUN_TEST(test_Rzc_E2eRxCheck_vehicle_torque_bad_crc);
+    RUN_TEST(test_Rzc_E2eRxCheck_virt_sensors_always_ok);
+    RUN_TEST(test_Rzc_E2eRxCheck_estop_bad_crc);
 
     return UNITY_END();
 }

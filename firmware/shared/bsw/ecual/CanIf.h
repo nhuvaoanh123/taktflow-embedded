@@ -37,12 +37,17 @@ typedef struct {
     uint8       Hth;            /**< Hardware transmit handle        */
 } CanIf_TxPduConfigType;
 
+/** Optional E2E RX validation callback.
+ *  Returns E_OK to accept frame, E_NOT_OK to drop it. */
+typedef Std_ReturnType (*CanIf_E2eRxCheckType)(uint8 PduId, const uint8* Data, uint8 Length);
+
 /** CanIf module configuration */
 typedef struct {
     const CanIf_TxPduConfigType*  txPduConfig;
     uint8                         txPduCount;
     const CanIf_RxPduConfigType*  rxPduConfig;
     uint8                         rxPduCount;
+    CanIf_E2eRxCheckType          e2eRxCheck;   /**< Optional E2E RX callback (NULL = no check) */
 } CanIf_ConfigType;
 
 /* ---- Upper-layer callbacks (provided by PduR) ---- */

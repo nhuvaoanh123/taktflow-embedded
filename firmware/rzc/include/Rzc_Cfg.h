@@ -111,6 +111,7 @@
 #define RZC_E2E_MOTOR_TEMP_DATA_ID   0x10u
 #define RZC_E2E_BATTERY_DATA_ID      0x11u
 #define RZC_E2E_ESTOP_DATA_ID        0x00u
+#define RZC_E2E_VEHSTATE_DATA_ID     0x05u   /* Matches CVC TX Data ID for 0x100 */
 
 /* ====================================================================
  * Motor Constants (ASIL D — BTS7960 H-Bridge)

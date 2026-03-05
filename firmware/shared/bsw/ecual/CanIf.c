@@ -81,6 +81,15 @@ void CanIf_RxIndication(Can_IdType CanId, const uint8* SduPtr, uint8 Dlc)
     /* Look up CAN ID in RX routing table */
     for (i = 0u; i < canif_config->rxPduCount; i++) {
         if (canif_config->rxPduConfig[i].CanId == CanId) {
+            /* Optional E2E RX check — drop frame if callback returns E_NOT_OK */
+            if (canif_config->e2eRxCheck != NULL_PTR) {
+                if (canif_config->e2eRxCheck(
+                        canif_config->rxPduConfig[i].UpperPduId,
+                        SduPtr, Dlc) != E_OK) {
+                    return;  /* E2E check failed — drop frame */
+                }
+            }
+
             /* Found — route to PduR */
             pdu_info.SduDataPtr = (uint8*)SduPtr; /* const-cast for AUTOSAR API */
             pdu_info.SduLength  = Dlc;

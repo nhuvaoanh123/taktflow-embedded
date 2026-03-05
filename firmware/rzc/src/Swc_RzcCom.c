@@ -197,8 +197,39 @@ static uint8 RzcCom_GetRxDataId(uint8 pduId)
     {
         case RZC_COM_RX_ESTOP:
             return RZC_E2E_ESTOP_DATA_ID;
+        case RZC_COM_RX_VEHICLE_TORQUE:
+            return RZC_E2E_VEHSTATE_DATA_ID;
         default:
             return 0x00u;
+    }
+}
+
+/* ==================================================================
+ * API: Rzc_E2eRxCheck — CanIf E2E callback
+ * ================================================================== */
+
+/**
+ * @brief  E2E RX validation callback for CanIf
+ *
+ * Only E2E-checks PDUs with configured Data IDs (0x001 E-stop, 0x100
+ * Vehicle_State). Virtual sensors (0x401) bypass E2E.
+ *
+ * @param  pduId   Upper-layer PDU ID
+ * @param  data    Pointer to received data
+ * @param  length  Data length
+ * @return E_OK to accept frame, E_NOT_OK to drop it
+ *
+ * @safety_req SWR-RZC-020
+ */
+Std_ReturnType Rzc_E2eRxCheck(uint8 pduId, const uint8* data, uint8 length)
+{
+    switch (pduId)
+    {
+        case RZC_COM_RX_ESTOP:
+        case RZC_COM_RX_VEHICLE_TORQUE:
+            return Swc_RzcCom_E2eCheck(pduId, data, length);
+        default:
+            return E_OK;  /* No E2E for this PDU */
     }
 }
 

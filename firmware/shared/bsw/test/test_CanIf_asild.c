@@ -74,6 +74,23 @@ void PduR_CanIfRxIndication(PduIdType RxPduId, const PduInfoType* PduInfoPtr)
 }
 
 /* ==================================================================
+ * Mock: E2E RX callback
+ * ================================================================== */
+
+static Std_ReturnType    mock_e2e_rx_result;
+static uint8             mock_e2e_rx_call_count;
+static uint8             mock_e2e_rx_last_pdu_id;
+
+static Std_ReturnType mock_e2e_rx_check(uint8 PduId, const uint8* Data, uint8 Length)
+{
+    (void)Data;
+    (void)Length;
+    mock_e2e_rx_call_count++;
+    mock_e2e_rx_last_pdu_id = PduId;
+    return mock_e2e_rx_result;
+}
+
+/* ==================================================================
  * Test fixtures
  * ================================================================== */
 
@@ -88,11 +105,15 @@ void setUp(void)
     mock_pdur_rx_pdu_id = 0xFFu;
     mock_pdur_rx_dlc = 0u;
     mock_pdur_rx_count = 0u;
+    mock_e2e_rx_result = E_OK;
+    mock_e2e_rx_call_count = 0u;
+    mock_e2e_rx_last_pdu_id = 0xFFu;
 
     canif_cfg.txPduConfig    = test_tx_config;
     canif_cfg.txPduCount     = 3u;
     canif_cfg.rxPduConfig    = test_rx_config;
     canif_cfg.rxPduCount     = 3u;
+    canif_cfg.e2eRxCheck     = NULL_PTR;
 
     CanIf_Init(&canif_cfg);
 }
@@ -312,6 +333,52 @@ void test_CanIf_RxIndication_before_init_discarded(void)
 }
 
 /* ==================================================================
+ * SWR-BSW-011: E2E RX Callback Tests
+ * ================================================================== */
+
+/** @verifies SWR-BSW-011 -- E2E callback returning E_OK allows frame through */
+void test_CanIf_RxIndication_e2e_callback_ok_routes_to_pdur(void)
+{
+    canif_cfg.e2eRxCheck = mock_e2e_rx_check;
+    mock_e2e_rx_result = E_OK;
+    CanIf_Init(&canif_cfg);
+
+    uint8 data[] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00};
+    CanIf_RxIndication(0x200u, data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_e2e_rx_call_count);
+    TEST_ASSERT_EQUAL(0u, mock_e2e_rx_last_pdu_id);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_rx_count);
+}
+
+/** @verifies SWR-BSW-011 -- E2E callback returning E_NOT_OK drops frame */
+void test_CanIf_RxIndication_e2e_callback_not_ok_drops_frame(void)
+{
+    canif_cfg.e2eRxCheck = mock_e2e_rx_check;
+    mock_e2e_rx_result = E_NOT_OK;
+    CanIf_Init(&canif_cfg);
+
+    uint8 data[] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00};
+    CanIf_RxIndication(0x200u, data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_e2e_rx_call_count);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_pdur_rx_count);  /* Frame dropped */
+}
+
+/** @verifies SWR-BSW-011 -- NULL E2E callback skips check, routes normally */
+void test_CanIf_RxIndication_null_e2e_callback_routes_normally(void)
+{
+    canif_cfg.e2eRxCheck = NULL_PTR;
+    CanIf_Init(&canif_cfg);
+
+    uint8 data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    CanIf_RxIndication(0x200u, data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_e2e_rx_call_count);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_pdur_rx_count);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -338,6 +405,11 @@ int main(void)
     RUN_TEST(test_CanIf_RxIndication_third_mapping);
     RUN_TEST(test_CanIf_RxIndication_multiple_messages_routed_correctly);
     RUN_TEST(test_CanIf_RxIndication_before_init_discarded);
+
+    /* E2E RX callback tests */
+    RUN_TEST(test_CanIf_RxIndication_e2e_callback_ok_routes_to_pdur);
+    RUN_TEST(test_CanIf_RxIndication_e2e_callback_not_ok_drops_frame);
+    RUN_TEST(test_CanIf_RxIndication_null_e2e_callback_routes_normally);
 
     return UNITY_END();
 }

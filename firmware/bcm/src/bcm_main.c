@@ -83,6 +83,7 @@ static const CanIf_ConfigType canif_config = {
     .txPduCount  = (uint8)(sizeof(canif_tx_config) / sizeof(canif_tx_config[0])),
     .rxPduConfig = canif_rx_config,
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
+    .e2eRxCheck  = NULL_PTR,
 };
 
 /** PduR RX routing: CanIf RX PDU ID → Com */

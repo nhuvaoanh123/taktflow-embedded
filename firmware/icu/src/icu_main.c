@@ -94,6 +94,7 @@ static const CanIf_ConfigType canif_config = {
     .txPduCount  = 0u,
     .rxPduConfig = canif_rx_config,
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
+    .e2eRxCheck  = NULL_PTR,
 };
 
 /** PduR routing: all RX PDUs route to Com (no DCM for ICU) */
