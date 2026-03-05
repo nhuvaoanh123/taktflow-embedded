@@ -85,15 +85,20 @@ void Dem_Init(const void* ConfigPtr)
     dem_broadcast_pdu_id = 0xFFFFu;  /* Unconfigured sentinel */
 
     /* Restore occurrence counters from NvM (persistence across power cycles).
-     * Clear runtime state — DTCs must be re-confirmed through fresh fault
-     * detection each lifecycle (AUTOSAR Dem_Init semantics). */
+     * WARNING: NvM_ReadBlock reads NVM_BLOCK_SIZE (1024) bytes, which overflows
+     * past dem_events (224 bytes) into adjacent statics (dem_broadcast_sent,
+     * dem_ecu_id, dem_broadcast_pdu_id). Clear ALL runtime state after restore.
+     * DTCs must be re-confirmed through fresh fault detection each lifecycle. */
     (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         dem_events[i].debounceCounter = 0;
         dem_events[i].statusByte      = 0u;
         /* occurrenceCounter preserved from NvM */
+        dem_broadcast_sent[i]         = 0u;
     }
+    dem_ecu_id = 0u;
+    dem_broadcast_pdu_id = 0xFFFFu;
 }
 
 void Dem_ReportErrorStatus(Dem_EventIdType EventId,
@@ -244,24 +249,9 @@ void Dem_MainFunction(void)
     uint8 pdu_data[8];
     PduInfoType pdu_info;
     uint32 dtc_code;
-#ifdef PLATFORM_POSIX
-    static uint8 dem_mf_log_count;
-#endif
 
     pdu_info.SduDataPtr = pdu_data;
     pdu_info.SduLength  = 8u;
-
-#ifdef PLATFORM_POSIX
-    /* Trace Dem_MainFunction entry (first 10 calls only) */
-    if (dem_mf_log_count < 10u) {
-        (void)fprintf(stderr, "[DEM-MF] call=%u ev5: status=0x%02X sent=%u ev15: status=0x%02X sent=%u pduId=%u\n",
-                dem_mf_log_count,
-                dem_events[5].statusByte, dem_broadcast_sent[5],
-                dem_events[15].statusByte, dem_broadcast_sent[15],
-                (unsigned)dem_broadcast_pdu_id);
-        dem_mf_log_count++;
-    }
-#endif
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
