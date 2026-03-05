@@ -158,11 +158,10 @@ void Swc_Heartbeat_MainFunction(void)
         /* Read current vehicle state from RTE */
         (void)Rte_Read(CVC_SIG_VEHICLE_STATE, &vehicle_state);
 
-        /* Build heartbeat PDU */
-        pdu[0] = alive_counter;
-        pdu[1] = CVC_ECU_ID_CVC;
-        pdu[2] = (uint8)vehicle_state;
-        /* pdu[3..7] reserved (zero) */
+        /* Build heartbeat PDU — bytes 0-1 reserved for E2E_Protect */
+        pdu[2] = CVC_ECU_ID_CVC;                    /* ECU_ID — byte 2 per DBC */
+        pdu[3] = (uint8)(vehicle_state & 0x0Fu);     /* OperatingMode — byte 3 low nibble */
+        /* pdu[4..7] reserved (zero) */
 
         /* E2E protect then transmit */
         (void)E2E_Protect(&hb_e2e_config, &hb_e2e_state, pdu, HB_PDU_LENGTH);

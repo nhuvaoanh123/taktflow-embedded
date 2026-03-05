@@ -342,13 +342,13 @@ void test_Heartbeat_TX_every_50ms(void)
 /** @verifies SWR-CVC-021 */
 void test_Heartbeat_Alive_counter_increments(void)
 {
-    /* First TX at cycle 5 */
+    /* First TX at cycle 5 — alive_counter increments after each TX */
     run_cycles(5u);
-    uint8 first_alive = mock_com_send_data[0];
+    uint8 first_alive = alive_counter;   /* internal counter (not in PDU — E2E manages byte 0) */
 
     /* Second TX at cycle 10 */
     run_cycles(5u);
-    uint8 second_alive = mock_com_send_data[0];
+    uint8 second_alive = alive_counter;
 
     TEST_ASSERT_EQUAL(first_alive + 1u, second_alive);
 }
@@ -366,10 +366,8 @@ void test_Heartbeat_Alive_counter_wraps_at_15(void)
     /* The alive counter should have wrapped: 0..15, 0 */
     /* Last sent alive = 15, next TX should wrap to 0 */
     run_cycles(5u);
-    /* After 17 TXes: 0,1,2,...,15,0,1 => index 16 = 0 (wrapped), index 17 = 1 */
-    /* Actually: 17th TX, alive was incremented after each send */
-    /* Let's just check the data byte wraps to low value */
-    TEST_ASSERT_TRUE(mock_com_send_data[0] <= CVC_HB_ALIVE_MAX);
+    /* Internal alive_counter wraps at CVC_HB_ALIVE_MAX (E2E manages byte 0) */
+    TEST_ASSERT_TRUE(alive_counter <= CVC_HB_ALIVE_MAX);
 }
 
 /** @verifies SWR-CVC-021 */
@@ -379,9 +377,9 @@ void test_Heartbeat_TX_data_includes_ecu_id_and_state(void)
 
     run_cycles(5u);
 
-    /* PDU layout: [alive_counter, ECU_ID, vehicle_state, 0,0,0,0,0] */
-    TEST_ASSERT_EQUAL(CVC_ECU_ID_CVC, mock_com_send_data[1]);
-    TEST_ASSERT_EQUAL(2u, mock_com_send_data[2]);
+    /* PDU layout: [E2E_byte0, E2E_CRC, ECU_ID, FaultStatus|OpMode, 0,0,0,0] */
+    TEST_ASSERT_EQUAL(CVC_ECU_ID_CVC, mock_com_send_data[2]);
+    TEST_ASSERT_EQUAL(2u, mock_com_send_data[3] & 0x0Fu);  /* OpMode in low nibble */
 }
 
 /** @verifies SWR-CVC-021 */
@@ -645,8 +643,8 @@ void test_Heartbeat_Alive_wrap_exact_boundary(void)
     /* 16th TX: counter was 15, next cycle resets to 0 */
     run_cycles(5u);
 
-    /* The alive counter in data byte should be <= CVC_HB_ALIVE_MAX */
-    TEST_ASSERT_TRUE(mock_com_send_data[0] <= CVC_HB_ALIVE_MAX);
+    /* Internal alive_counter wraps at CVC_HB_ALIVE_MAX (E2E manages byte 0) */
+    TEST_ASSERT_TRUE(alive_counter <= CVC_HB_ALIVE_MAX);
 }
 
 /* ------------------------------------------------------------------

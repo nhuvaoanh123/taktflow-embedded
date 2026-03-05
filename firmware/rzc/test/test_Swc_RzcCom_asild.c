@@ -44,6 +44,17 @@ typedef struct {
     uint8  SduLength;
 } PduInfoType;
 
+/* E2E types (must be before source inclusion) */
+typedef struct {
+    uint8  DataId;
+    uint8  MaxDeltaCounter;
+    uint8  DataLength;
+} E2E_ConfigType;
+
+typedef struct {
+    uint8  Counter;
+} E2E_StateType;
+
 /* Prevent BSW headers from redefining types when source is included */
 #define PLATFORM_TYPES_H
 #define STD_TYPES_H
@@ -54,6 +65,7 @@ typedef struct {
 #define COM_H
 #define PDUR_H
 #define DEM_H
+#define E2E_H
 #define WDGM_H
 #define IOHWAB_H
 #define SWC_RZC_SAFETY_H
@@ -230,6 +242,23 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: E2E_Protect (shared BSW E2E module)
+ * ================================================================== */
+
+static uint8 mock_e2e_protect_count;
+
+Std_ReturnType E2E_Protect(const E2E_ConfigType* config, E2E_StateType* state,
+                           uint8* data, uint8 length)
+{
+    (void)config;
+    (void)state;
+    (void)data;
+    (void)length;
+    mock_e2e_protect_count++;
+    return E_OK;
+}
+
+/* ==================================================================
  * Test Configuration
  * ================================================================== */
 
@@ -265,6 +294,8 @@ void setUp(void)
     mock_dem_call_count    = 0u;
     mock_dem_last_event_id = 0xFFu;
     mock_dem_last_status   = 0xFFu;
+
+    mock_e2e_protect_count = 0u;
 
     Swc_RzcCom_Init();
 }

@@ -96,6 +96,24 @@ typedef struct {
 #define FZC_ECU_ID                0x02u
 #define FZC_STATE_RUN               1u
 
+/* E2E types needed by Swc_FzcCom.c (shared BSW E2E) */
+typedef struct { uint8 DataId; uint8 MaxDeltaCounter; uint16 DataLength; } E2E_ConfigType;
+typedef struct { uint8 Counter; } E2E_StateType;
+
+/* ==================================================================
+ * Mock: E2E_Protect (shared BSW E2E — called by TransmitSchedule)
+ * ================================================================== */
+
+static uint8 mock_e2e_protect_count;
+
+Std_ReturnType E2E_Protect(const E2E_ConfigType* Config, E2E_StateType* State,
+                           uint8* DataPtr, uint16 Length)
+{
+    mock_e2e_protect_count++;
+    (void)Config; (void)State; (void)DataPtr; (void)Length;
+    return E_OK;
+}
+
 /* ==================================================================
  * Swc_FzcCom API declarations
  * ================================================================== */
@@ -235,6 +253,7 @@ void setUp(void)
     uint8 i;
     uint8 j;
 
+    mock_e2e_protect_count = 0u;
     mock_rte_write_count = 0u;
     for (i = 0u; i < MOCK_RTE_MAX_SIGNALS; i++) {
         mock_rte_signals[i] = 0u;
@@ -547,6 +566,7 @@ int main(void)
 #define RTE_H
 #define COM_H
 #define PDUR_H
+#define E2E_H
 #define SWC_FZC_CAN_MONITOR_H
 
 /* Mock: Swc_FzcCanMonitor_NotifyRx (called by Swc_FzcCom_Receive) */

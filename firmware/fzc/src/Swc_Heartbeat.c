@@ -28,6 +28,7 @@
 #include "Rte.h"
 #include "PduR.h"
 #include "Dem.h"
+#include "E2E.h"
 
 /* ==================================================================
  * Constants (derived from config — compile-time safe)
@@ -42,12 +43,13 @@ _Static_assert(FZC_HB_TX_PERIOD_MS % FZC_RTE_PERIOD_MS == 0u,
 _Static_assert(HB_PERIOD_CYCLES > 0u,
                "HB period cycles must be positive");
 
-/** Heartbeat TX data layout (8 bytes) */
-#define HB_BYTE_ALIVE       0u
-#define HB_BYTE_ECU_ID      1u
-#define HB_BYTE_STATE       2u
-#define HB_BYTE_FAULT_LO    3u
-#define HB_BYTE_FAULT_HI    4u
+/** Heartbeat TX data layout (8 bytes) — E2E-protected PDU
+ *  Bytes 0-1: E2E overhead (counter+dataid, CRC) — written by E2E_Protect
+ *  Byte 2:    ECU_ID
+ *  Byte 3:    [FaultStatus:4 | OperatingMode:4]
+ */
+#define HB_BYTE_ECU_ID       2u
+#define HB_BYTE_STATE_FAULT  3u
 
 /* ==================================================================
  * Module State
@@ -57,6 +59,17 @@ static uint8   Hb_Initialized;
 static uint8   Hb_CycleCounter;
 static uint8   Hb_AliveCounter;
 
+/** @brief E2E configuration for heartbeat TX protection
+ *  @safety_req SWR-FZC-021 */
+static const E2E_ConfigType hb_e2e_config = {
+    FZC_E2E_HEARTBEAT_DATA_ID,   /* DataId = 0x03 per spec */
+    15u,                          /* MaxDeltaCounter */
+    8u                            /* DataLength */
+};
+
+/** @brief E2E state for heartbeat TX alive counter tracking */
+static E2E_StateType hb_e2e_state;
+
 /* ==================================================================
  * API: Swc_Heartbeat_Init
  * ================================================================== */
@@ -65,6 +78,7 @@ void Swc_Heartbeat_Init(void)
 {
     Hb_CycleCounter = 0u;
     Hb_AliveCounter = 0u;
+    hb_e2e_state.Counter = 0u;
     Hb_Initialized  = TRUE;
 }
 
@@ -110,13 +124,13 @@ void Swc_Heartbeat_MainFunction(void)
         tx_data[i] = 0u;
     }
 
-    tx_data[HB_BYTE_ALIVE]      = Hb_AliveCounter;
-    tx_data[HB_BYTE_ECU_ID]     = FZC_ECU_ID;
-    tx_data[HB_BYTE_STATE]      = (uint8)vehicle_state;
-    tx_data[HB_BYTE_FAULT_LO]   = (uint8)(fault_mask & 0xFFu);
-    tx_data[HB_BYTE_FAULT_HI]   = (uint8)((fault_mask >> 8u) & 0xFFu);
+    /* Bytes 0-1 reserved for E2E_Protect (counter+dataid, CRC) */
+    tx_data[HB_BYTE_ECU_ID]      = FZC_ECU_ID;
+    tx_data[HB_BYTE_STATE_FAULT] = (uint8)(((fault_mask & 0x0Fu) << 4u)
+                                         | (vehicle_state & 0x0Fu));
 
-    /* Send complete PDU via PduR → CanIf → CAN 0x011 */
+    /* E2E protect then send via PduR → CanIf → CAN 0x011 */
+    (void)E2E_Protect(&hb_e2e_config, &hb_e2e_state, tx_data, 8u);
     {
         PduInfoType pdu_info;
         pdu_info.SduDataPtr = tx_data;

@@ -35,6 +35,7 @@
 #include "Rte.h"
 #include "Com.h"
 #include "PduR.h"
+#include "E2E.h"
 #include "Swc_FzcCanMonitor.h"
 
 /* ==================================================================
@@ -83,6 +84,26 @@ static uint8  FzcCom_TxPendLidarWarn;
 /** TX schedule cycle counter (paces fault frames to avoid FDCAN FIFO overflow) */
 static uint16 FzcCom_TxScheduleCycle;
 
+/** @brief E2E configs for TX data messages — shared BSW E2E (Profile 1)
+ *  @safety_req SWR-FZC-019 */
+static const E2E_ConfigType fzc_e2e_brake_fault_cfg = {
+    FZC_E2E_BRAKE_STATUS_DATA_ID,  /* 0x21 */
+    15u, 8u
+};
+static E2E_StateType fzc_e2e_brake_fault_state;
+
+static const E2E_ConfigType fzc_e2e_motor_cutoff_cfg = {
+    FZC_E2E_BRAKE_STATUS_DATA_ID,  /* 0x21 — same as brake (pre-existing, no separate ID) */
+    15u, 8u
+};
+static E2E_StateType fzc_e2e_motor_cutoff_state;
+
+static const E2E_ConfigType fzc_e2e_lidar_cfg = {
+    FZC_E2E_LIDAR_DATA_ID,        /* 0x22 */
+    15u, 8u
+};
+static E2E_StateType fzc_e2e_lidar_state;
+
 /* ==================================================================
  * Private: CRC-8 Calculation
  * ================================================================== */
@@ -130,6 +151,9 @@ void Swc_FzcCom_Init(void)
     FzcCom_HbCycleCount     = 0u;
     FzcCom_TxPendLidarWarn  = FALSE;
     FzcCom_TxScheduleCycle  = 0u;
+    fzc_e2e_brake_fault_state.Counter  = 0u;
+    fzc_e2e_motor_cutoff_state.Counter = 0u;
+    fzc_e2e_lidar_state.Counter        = 0u;
     FzcCom_Initialized      = TRUE;
 }
 
@@ -329,7 +353,7 @@ void Swc_FzcCom_TransmitSchedule(void)
             txBuf[i] = 0u;
         }
         txBuf[2] = (uint8)rteVal;
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
+        (void)E2E_Protect(&fzc_e2e_brake_fault_cfg, &fzc_e2e_brake_fault_state, txBuf, 8u);
         (void)PduR_Transmit(FZC_COM_TX_BRAKE_FAULT, &pdu_info);
     }
 
@@ -340,7 +364,7 @@ void Swc_FzcCom_TransmitSchedule(void)
             txBuf[i] = 0u;
         }
         txBuf[2] = (uint8)rteVal;
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_BRAKE_STATUS_DATA_ID);
+        (void)E2E_Protect(&fzc_e2e_motor_cutoff_cfg, &fzc_e2e_motor_cutoff_state, txBuf, 8u);
         (void)PduR_Transmit(FZC_COM_TX_MOTOR_CUTOFF, &pdu_info);
     }
 
@@ -360,7 +384,7 @@ void Swc_FzcCom_TransmitSchedule(void)
         (void)Rte_Read(FZC_SIG_LIDAR_DIST, &rteVal);
         txBuf[3] = (uint8)(rteVal & 0xFFu);
         txBuf[4] = (uint8)((rteVal >> 8u) & 0xFFu);
-        (void)Swc_FzcCom_E2eProtect(txBuf, 8u, FZC_E2E_LIDAR_DATA_ID);
+        (void)E2E_Protect(&fzc_e2e_lidar_cfg, &fzc_e2e_lidar_state, txBuf, 8u);
         (void)PduR_Transmit(FZC_COM_TX_LIDAR, &pdu_info);
         FzcCom_TxPendLidarWarn = FALSE;
     }

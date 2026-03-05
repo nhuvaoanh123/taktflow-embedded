@@ -111,7 +111,7 @@
  * E2E Data IDs
  * ==================================================================== */
 
-#define FZC_E2E_HEARTBEAT_DATA_ID    0x11u
+#define FZC_E2E_HEARTBEAT_DATA_ID    0x03u  /* per CAN message matrix spec */
 #define FZC_E2E_STEER_STATUS_DATA_ID 0x20u
 #define FZC_E2E_BRAKE_STATUS_DATA_ID 0x21u
 #define FZC_E2E_LIDAR_DATA_ID        0x22u

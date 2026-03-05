@@ -47,10 +47,10 @@ static const Swc_CvcCom_TxEntryType CvcCom_TxTable[5] = {
  * ================================================================== */
 
 static const Swc_CvcCom_RxEntryType CvcCom_RxTable[4] = {
-    { 0x011u, 0x02u, 8u },  /* FZC heartbeat  */
-    { 0x012u, 0x03u, 8u },  /* RZC heartbeat  */
-    { 0x210u, 0x08u, 8u },  /* Brake fault    */
-    { 0x301u, 0x09u, 8u },  /* Motor current  */
+    { 0x011u, 0x03u, 8u },  /* FZC heartbeat — FZC_E2E_HEARTBEAT_DATA_ID */
+    { 0x012u, 0x04u, 8u },  /* RZC heartbeat — RZC_E2E_HEARTBEAT_DATA_ID */
+    { 0x210u, 0x21u, 8u },  /* Brake fault — FZC_E2E_BRAKE_STATUS_DATA_ID */
+    { 0x301u, 0x0Fu, 8u },  /* Motor current — RZC_E2E_MOTOR_CURRENT_DATA_ID */
 };
 
 #define CVCCOM_RX_TABLE_SIZE  4u

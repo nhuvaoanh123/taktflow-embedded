@@ -59,11 +59,11 @@ static const Com_SignalConfigType cvc_signal_config[] = {
     {  7u,   16u,     8u, COM_UINT8,  CVC_COM_TX_BRAKE_CMD,     &sig_tx_brake_pressure },
     {  8u,   16u,     8u, COM_UINT8,  CVC_COM_TX_BODY_CMD,      &sig_tx_body_cmd       },
 
-    /* RX signals — heartbeat PDUs built by PduR_Transmit: byte 0=alive, 1=ecu_id */
-    {  9u,    0u,     8u, COM_UINT8,  CVC_COM_RX_FZC_HB,        &sig_rx_fzc_hb_alive   },
-    { 10u,    8u,     8u, COM_UINT8,  CVC_COM_RX_FZC_HB,        &sig_rx_fzc_hb_ecu_id  },
-    { 11u,    0u,     8u, COM_UINT8,  CVC_COM_RX_RZC_HB,        &sig_rx_rzc_hb_alive   },
-    { 12u,    8u,     8u, COM_UINT8,  CVC_COM_RX_RZC_HB,        &sig_rx_rzc_hb_ecu_id  },
+    /* RX signals — E2E-protected heartbeats: byte 0=[counter:4|dataid:4], 1=CRC, 2=ECU_ID */
+    {  9u,    4u,     4u, COM_UINT8,  CVC_COM_RX_FZC_HB,        &sig_rx_fzc_hb_alive   },
+    { 10u,   16u,     8u, COM_UINT8,  CVC_COM_RX_FZC_HB,        &sig_rx_fzc_hb_ecu_id  },
+    { 11u,    4u,     4u, COM_UINT8,  CVC_COM_RX_RZC_HB,        &sig_rx_rzc_hb_alive   },
+    { 12u,   16u,     8u, COM_UINT8,  CVC_COM_RX_RZC_HB,        &sig_rx_rzc_hb_ecu_id  },
     { 13u,   16u,     8u, COM_UINT8,  CVC_COM_RX_BRAKE_FAULT,   &sig_rx_brake_fault    },
     { 14u,   16u,     8u, COM_UINT8,  CVC_COM_RX_MOTOR_CUTOFF,  &sig_rx_motor_cutoff   },
     { 15u,   16u,    16u, COM_UINT16, CVC_COM_RX_LIDAR,         &sig_rx_lidar_dist     },

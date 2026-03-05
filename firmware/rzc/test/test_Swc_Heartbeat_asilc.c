@@ -49,6 +49,7 @@ typedef struct {
 #define RTE_H
 #define PDUR_H
 #define DEM_H
+#define E2E_H
 #define WDGM_H
 #define IOHWAB_H
 
@@ -87,12 +88,20 @@ typedef struct {
 #define DEM_EVENT_STATUS_PASSED      0u
 #define DEM_EVENT_STATUS_FAILED      1u
 
-/* Heartbeat payload layout (byte offsets) */
-#define HB_BYTE_ALIVE                0u
-#define HB_BYTE_ECU_ID               1u
-#define HB_BYTE_STATE                2u
-#define HB_BYTE_FAULT_LO             3u
-#define HB_BYTE_FAULT_HI             4u
+/* Heartbeat payload layout (byte offsets) — E2E-protected PDU
+ * Bytes 0-1: E2E overhead (counter+dataid, CRC) — written by E2E_Protect
+ * Byte 2:    ECU_ID
+ * Byte 3:    [FaultStatus:4 | OperatingMode:4]
+ */
+#define HB_BYTE_ECU_ID               2u
+#define HB_BYTE_STATE_FAULT          3u
+
+/* E2E config */
+#define RZC_E2E_HEARTBEAT_DATA_ID   0x04u
+
+/* E2E types needed by Swc_Heartbeat.c */
+typedef struct { uint8 DataId; uint8 MaxDeltaCounter; uint16 DataLength; } E2E_ConfigType;
+typedef struct { uint8 Counter; } E2E_StateType;
 
 /* Swc_Heartbeat API declarations */
 extern void Swc_Heartbeat_Init(void);
@@ -191,6 +200,24 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 }
 
 /* ==================================================================
+ * Mock: E2E_Protect
+ * ================================================================== */
+
+static uint8 mock_e2e_protect_count;
+static const E2E_ConfigType* mock_e2e_config_ptr;
+
+Std_ReturnType E2E_Protect(const E2E_ConfigType* Config, E2E_StateType* State,
+                           uint8* DataPtr, uint16 Length)
+{
+    mock_e2e_protect_count++;
+    mock_e2e_config_ptr = Config;
+    (void)State;
+    (void)DataPtr;
+    (void)Length;
+    return E_OK;
+}
+
+/* ==================================================================
  * Include source under test (unity include-source pattern)
  * ================================================================== */
 
@@ -218,6 +245,10 @@ void setUp(void)
     for (i = 0u; i < MOCK_COM_MAX_DATA; i++) {
         mock_com_last_data[i] = 0u;
     }
+
+    /* Reset E2E mock */
+    mock_e2e_protect_count = 0u;
+    mock_e2e_config_ptr    = NULL_PTR;
 
     /* Reset DEM mock */
     mock_dem_call_count    = 0u;
@@ -280,11 +311,11 @@ void test_HB_alive_counter_increments(void)
 
     /* First heartbeat */
     run_cycles(RZC_HB_PERIOD_CYCLES);
-    alive_first = mock_com_last_data[HB_BYTE_ALIVE];
+    alive_first = (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE];
 
     /* Second heartbeat */
     run_cycles(RZC_HB_PERIOD_CYCLES);
-    alive_second = mock_com_last_data[HB_BYTE_ALIVE];
+    alive_second = (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(alive_first + 1u, alive_second);
 }
@@ -300,10 +331,10 @@ void test_HB_alive_counter_wraps(void)
         run_cycles(RZC_HB_PERIOD_CYCLES);
     }
 
-    /* After 16 TXs the alive counter should be at max (15).
-     * One more period should wrap it to 0. */
+    /* After 16 TXs the alive counter wraps internally.
+     * One more period should send 0 (wrapped value). */
     run_cycles(RZC_HB_PERIOD_CYCLES);
-    alive_val = mock_com_last_data[HB_BYTE_ALIVE];
+    alive_val = (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE];
 
     TEST_ASSERT_EQUAL_UINT8(0u, alive_val);
 }
@@ -319,14 +350,13 @@ void test_HB_includes_ecu_id(void)
 /** @verifies SWR-RZC-022 -- Fault bitmask from RTE included in heartbeat */
 void test_HB_includes_fault_mask(void)
 {
-    mock_fault_mask = 0x00A5u;
+    mock_fault_mask = 0x0005u;  /* lower 4 bits: 0x5 */
 
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
-    /* Fault mask low byte */
-    TEST_ASSERT_EQUAL_UINT8(0xA5u, mock_com_last_data[HB_BYTE_FAULT_LO]);
-    /* Fault mask high byte */
-    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_HI]);
+    /* FaultStatus in byte 3 high nibble */
+    TEST_ASSERT_EQUAL_UINT8(0x05u,
+        (uint8)((mock_com_last_data[HB_BYTE_STATE_FAULT] >> 4u) & 0x0Fu));
 }
 
 /** @verifies SWR-RZC-022 -- Vehicle state from RTE included in heartbeat */
@@ -336,8 +366,9 @@ void test_HB_includes_state(void)
 
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
+    /* OperatingMode in byte 3 low nibble */
     TEST_ASSERT_EQUAL_UINT8((uint8)RZC_STATE_DEGRADED,
-                            mock_com_last_data[HB_BYTE_STATE]);
+                            mock_com_last_data[HB_BYTE_STATE_FAULT] & 0x0Fu);
 }
 
 /** @verifies SWR-RZC-021 -- No TX when CAN bus-off active */
@@ -384,20 +415,22 @@ void test_HB_alive_at_max(void)
         run_cycles(RZC_HB_PERIOD_CYCLES);
     }
 
+    /* Last sent alive counter should be 15 */
     TEST_ASSERT_EQUAL_UINT8(RZC_HB_ALIVE_MAX,
-                            mock_com_last_data[HB_BYTE_ALIVE]);
+                            (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE]);
 }
 
 /** @verifies SWR-RZC-022
- *  Equivalence class: Boundary — fault mask at maximum (0xFFFF) */
+ *  Equivalence class: Boundary — max 4-bit fault status (0x0F) */
 void test_HB_fault_mask_max(void)
 {
-    mock_fault_mask = 0xFFFFu;
+    mock_fault_mask = 0x000Fu;  /* max 4-bit fault status */
 
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
-    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_LO]);
-    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_HI]);
+    /* FaultStatus in byte 3 high nibble = 0x0F */
+    TEST_ASSERT_EQUAL_UINT8(0x0Fu,
+        (uint8)((mock_com_last_data[HB_BYTE_STATE_FAULT] >> 4u) & 0x0Fu));
 }
 
 /** @verifies SWR-RZC-022
@@ -419,10 +452,10 @@ void test_HB_all_states_valid(void)
             /* Bus-off suppresses send */
             continue;
         }
-        /* State byte in heartbeat should match */
+        /* OperatingMode in byte 3 low nibble should match */
         if (mock_com_send_count > 0u) {
             TEST_ASSERT_EQUAL_UINT8((uint8)states[i],
-                                    mock_com_last_data[HB_BYTE_STATE]);
+                                    mock_com_last_data[HB_BYTE_STATE_FAULT] & 0x0Fu);
         }
     }
 }
@@ -442,8 +475,9 @@ void test_HB_zero_fault_mask(void)
     mock_fault_mask = 0u;
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
-    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
-    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_HI]);
+    /* FaultStatus in byte 3 high nibble should be 0 */
+    TEST_ASSERT_EQUAL_UINT8(0u,
+        (uint8)((mock_com_last_data[HB_BYTE_STATE_FAULT] >> 4u) & 0x0Fu));
 }
 
 /** @verifies SWR-RZC-021
@@ -484,19 +518,19 @@ void test_Heartbeat_Derived_period_value(void)
 void test_HB_alive_rollover_sequence(void)
 {
     uint16 i;
-    /* Send 16 heartbeats to reach alive=15 */
+    /* Send 16 heartbeats — last one sends alive=15 */
     for (i = 0u; i < 16u; i++) {
         run_cycles(RZC_HB_PERIOD_CYCLES);
     }
-    TEST_ASSERT_EQUAL_UINT8(15u, mock_com_last_data[HB_BYTE_ALIVE]);
+    TEST_ASSERT_EQUAL_UINT8(15u, (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE]);
 
-    /* Next should wrap to 0 */
+    /* Next should wrap — sends 0 */
     run_cycles(RZC_HB_PERIOD_CYCLES);
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+    TEST_ASSERT_EQUAL_UINT8(0u, (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE]);
 
-    /* And then 1 */
+    /* And then sends 1 */
     run_cycles(RZC_HB_PERIOD_CYCLES);
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_com_last_data[HB_BYTE_ALIVE]);
+    TEST_ASSERT_EQUAL_UINT8(1u, (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE]);
 }
 
 /** @verifies SWR-RZC-021
@@ -512,7 +546,8 @@ void test_HB_double_init_resets_alive(void)
     mock_com_send_count = 0u;
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_com_last_data[HB_BYTE_ALIVE]);
+    /* Alive counter should restart at 0 (sent via Rte_Write) */
+    TEST_ASSERT_EQUAL_UINT8(0u, (uint8)mock_rte_signals[RZC_SIG_HEARTBEAT_ALIVE]);
 }
 
 /** @verifies SWR-RZC-022
@@ -525,15 +560,15 @@ void test_HB_10_periods_accuracy(void)
 }
 
 /** @verifies SWR-RZC-022
- *  Phase 6: Fault mask high byte encoding (0xFF00 → lo=0x00, hi=0xFF) */
-void test_HB_fault_mask_high_byte(void)
+ *  Phase 6: Fault mask 4-bit encoding (0x000A → FaultStatus nibble = 0xA) */
+void test_HB_fault_mask_nibble_encoding(void)
 {
-    mock_fault_mask = 0xFF00u;
+    mock_fault_mask = 0x000Au;  /* 4-bit value: 0xA */
 
     run_cycles(RZC_HB_PERIOD_CYCLES);
 
-    TEST_ASSERT_EQUAL_UINT8(0x00u, mock_com_last_data[HB_BYTE_FAULT_LO]);
-    TEST_ASSERT_EQUAL_UINT8(0xFFu, mock_com_last_data[HB_BYTE_FAULT_HI]);
+    TEST_ASSERT_EQUAL_UINT8(0x0Au,
+        (uint8)((mock_com_last_data[HB_BYTE_STATE_FAULT] >> 4u) & 0x0Fu));
 }
 
 /* ==================================================================
@@ -573,7 +608,7 @@ int main(void)
     RUN_TEST(test_HB_alive_rollover_sequence);
     RUN_TEST(test_HB_double_init_resets_alive);
     RUN_TEST(test_HB_10_periods_accuracy);
-    RUN_TEST(test_HB_fault_mask_high_byte);
+    RUN_TEST(test_HB_fault_mask_nibble_encoding);
 
     return UNITY_END();
 }

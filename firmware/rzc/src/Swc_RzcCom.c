@@ -38,6 +38,7 @@
 #include "Com.h"
 #include "PduR.h"
 #include "Dem.h"
+#include "E2E.h"
 #include "Swc_RzcSafety.h"
 
 /* ==================================================================
@@ -86,6 +87,42 @@ static uint8   RzcCom_HbCycleCount;
 
 /** TransmitSchedule cycle counter (for motor_temp and battery pacing) */
 static uint16  RzcCom_TxScheduleCycle;
+
+/* ==================================================================
+ * E2E Configuration for TX data messages (shared BSW E2E module)
+ * ================================================================== */
+
+/** @brief E2E config for Motor Status (0x300) */
+static const E2E_ConfigType rzc_e2e_motor_status_cfg = {
+    RZC_E2E_MOTOR_STATUS_DATA_ID,   /* DataId = 0x0E */
+    15u,                             /* MaxDeltaCounter */
+    8u                               /* DataLength */
+};
+static E2E_StateType rzc_e2e_motor_status_state;
+
+/** @brief E2E config for Motor Current (0x301) */
+static const E2E_ConfigType rzc_e2e_motor_current_cfg = {
+    RZC_E2E_MOTOR_CURRENT_DATA_ID,  /* DataId = 0x0F */
+    15u,                             /* MaxDeltaCounter */
+    8u                               /* DataLength */
+};
+static E2E_StateType rzc_e2e_motor_current_state;
+
+/** @brief E2E config for Motor Temp (0x302) */
+static const E2E_ConfigType rzc_e2e_motor_temp_cfg = {
+    RZC_E2E_MOTOR_TEMP_DATA_ID,     /* DataId = 0x10 */
+    15u,                             /* MaxDeltaCounter */
+    8u                               /* DataLength */
+};
+static E2E_StateType rzc_e2e_motor_temp_state;
+
+/** @brief E2E config for Battery Status (0x303) */
+static const E2E_ConfigType rzc_e2e_battery_cfg = {
+    RZC_E2E_BATTERY_DATA_ID,        /* DataId = 0x11 */
+    15u,                             /* MaxDeltaCounter */
+    8u                               /* DataLength */
+};
+static E2E_StateType rzc_e2e_battery_state;
 
 /* ==================================================================
  * Private Helper: CRC-8 calculation (polynomial 0x1D)
@@ -183,6 +220,13 @@ void Swc_RzcCom_Init(void)
     RzcCom_TorqueTimeout   = 0u;
     RzcCom_HbCycleCount    = 0u;
     RzcCom_TxScheduleCycle = 0u;
+
+    /* Initialize shared BSW E2E states for TX data messages */
+    rzc_e2e_motor_status_state.Counter  = 0u;
+    rzc_e2e_motor_current_state.Counter = 0u;
+    rzc_e2e_motor_temp_state.Counter    = 0u;
+    rzc_e2e_battery_state.Counter       = 0u;
+
     RzcCom_Initialized     = TRUE;
 }
 
@@ -426,7 +470,7 @@ void Swc_RzcCom_TransmitSchedule(void)
         pdu[5] = (uint8)motor_dir;
         pdu[6] = (uint8)motor_enable;
         pdu[7] = (uint8)motor_fault;
-        (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_STATUS, pdu, 8u);
+        (void)E2E_Protect(&rzc_e2e_motor_status_cfg, &rzc_e2e_motor_status_state, pdu, 8u);
         (void)PduR_Transmit(RZC_COM_TX_MOTOR_STATUS, &pdu_info);
 
         /* --- 0x301 Motor Current: every cycle (10ms) --- */
@@ -440,7 +484,7 @@ void Swc_RzcCom_TransmitSchedule(void)
             pdu[2] = (uint8)(current_ma & 0xFFu);
             pdu[3] = (uint8)((current_ma >> 8u) & 0xFFu);
             pdu[4] = (uint8)overcurrent;
-            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_CURRENT, pdu, 8u);
+            (void)E2E_Protect(&rzc_e2e_motor_current_cfg, &rzc_e2e_motor_current_state, pdu, 8u);
             (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
         }
 
@@ -461,7 +505,7 @@ void Swc_RzcCom_TransmitSchedule(void)
             pdu[4] = (uint8)(temp2_ddc & 0xFFu);
             pdu[5] = (uint8)((temp2_ddc >> 8u) & 0xFFu);
             pdu[6] = (uint8)derating_pct;
-            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_MOTOR_TEMP, pdu, 8u);
+            (void)E2E_Protect(&rzc_e2e_motor_temp_cfg, &rzc_e2e_motor_temp_state, pdu, 8u);
             (void)PduR_Transmit(RZC_COM_TX_MOTOR_TEMP, &pdu_info);
         }
 
@@ -478,7 +522,7 @@ void Swc_RzcCom_TransmitSchedule(void)
             pdu[2] = (uint8)(battery_mv & 0xFFu);
             pdu[3] = (uint8)((battery_mv >> 8u) & 0xFFu);
             pdu[4] = (uint8)battery_status;
-            (void)Swc_RzcCom_E2eProtect(RZC_COM_TX_BATTERY_STATUS, pdu, 8u);
+            (void)E2E_Protect(&rzc_e2e_battery_cfg, &rzc_e2e_battery_state, pdu, 8u);
             (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
         }
     }
