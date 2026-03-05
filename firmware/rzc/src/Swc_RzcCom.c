@@ -41,6 +41,10 @@
 #include "E2E.h"
 #include "Swc_RzcSafety.h"
 
+#ifdef PLATFORM_POSIX
+#include <stdio.h>
+#endif
+
 /* ==================================================================
  * Constants
  * ================================================================== */
@@ -223,11 +227,20 @@ static uint8 RzcCom_GetRxDataId(uint8 pduId)
  */
 Std_ReturnType Rzc_E2eRxCheck(uint8 pduId, const uint8* data, uint8 length)
 {
+    Std_ReturnType result;
     switch (pduId)
     {
         case RZC_COM_RX_ESTOP:
         case RZC_COM_RX_VEHICLE_TORQUE:
-            return Swc_RzcCom_E2eCheck(pduId, data, length);
+            result = Swc_RzcCom_E2eCheck(pduId, data, length);
+#ifdef PLATFORM_POSIX
+            fprintf(stderr, "[RZC-E2E] pdu=%u len=%u crc=0x%02X result=%s failCnt=%u\n",
+                    pduId, length,
+                    (length > 0u) ? data[0] : 0xFFu,
+                    (result == E_OK) ? "OK" : "FAIL",
+                    RzcCom_RxFailCount[pduId]);
+#endif
+            return result;
         default:
             return E_OK;  /* No E2E for this PDU */
     }
@@ -405,6 +418,12 @@ void Swc_RzcCom_Receive(void)
     {
         /* 3 consecutive E2E failures: safe default = zero torque */
         (void)Rte_Write(RZC_SIG_TORQUE_CMD, 0u);
+#ifdef PLATFORM_POSIX
+        fprintf(stderr, "[RZC-E2E] failCnt=%u >= limit=%u → Dem_Report(DTC=%u)\n",
+                RzcCom_RxFailCount[RZC_COM_RX_VEHICLE_TORQUE],
+                (unsigned)RZCCOM_E2E_FAIL_LIMIT,
+                (unsigned)RZC_DTC_CAN_BUS_OFF);
+#endif
         Dem_ReportErrorStatus(RZC_DTC_CAN_BUS_OFF, DEM_EVENT_STATUS_FAILED);
         return;
     }

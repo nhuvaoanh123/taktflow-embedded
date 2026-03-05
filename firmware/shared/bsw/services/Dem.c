@@ -15,6 +15,10 @@
 #include "ComStack_Types.h"
 #include "NvM.h"
 
+#ifdef PLATFORM_POSIX
+#include <stdio.h>
+#endif
+
 /* ---- Forward declaration for PduR_Transmit (avoids circular include) ---- */
 extern Std_ReturnType PduR_Transmit(PduIdType TxPduId,
                                      const PduInfoType* PduInfoPtr);
@@ -110,6 +114,10 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
         if (ev->debounceCounter >= DEM_DEBOUNCE_FAIL_THRESHOLD) {
             ev->statusByte |= DEM_STATUS_CONFIRMED_DTC;
             ev->occurrenceCounter++;
+#ifdef PLATFORM_POSIX
+            fprintf(stderr, "[DEM] DTC confirmed: event=%u debounce=%u status=0x%02X dtc=0x%06X\n",
+                    EventId, ev->debounceCounter, ev->statusByte, (unsigned)dem_dtc_codes[EventId]);
+#endif
         }
     } else {
         /* Decrement debounce counter toward pass threshold */
@@ -266,6 +274,10 @@ void Dem_MainFunction(void)
              * called Dem_Init but not Dem_SetBroadcastPduId yet). */
             if (dem_broadcast_pdu_id != 0xFFFFu)
             {
+#ifdef PLATFORM_POSIX
+                fprintf(stderr, "[DEM] Broadcasting DTC=0x%06X pdu=%u ecu=%u\n",
+                        (unsigned)dtc_code, (unsigned)dem_broadcast_pdu_id, (unsigned)dem_ecu_id);
+#endif
                 (void)PduR_Transmit(dem_broadcast_pdu_id, &pdu_info);
             }
 
