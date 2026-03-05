@@ -46,6 +46,7 @@ typedef uint8           Std_ReturnType;
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_SIG_BATTERY_STATUS    32u
+#define CVC_SIG_MOTOR_FAULT_RZC   33u
 #define CVC_COMM_OK                0u
 #define CVC_COMM_TIMEOUT           1u
 
@@ -146,6 +147,16 @@ extern Std_ReturnType  Swc_CvcCom_GetRxStatus(uint8 rxIndex,
 
 static uint8 mock_vehicle_state;
 uint8 Swc_VehicleState_GetState(void) { return mock_vehicle_state; }
+
+/* ==================================================================
+ * Mock: Dio_Hw_WritePin (used by BridgeRxToRte under PLATFORM_POSIX)
+ * ================================================================== */
+
+void Dio_Hw_WritePin(uint8 ChannelId, uint8 Level)
+{
+    (void)ChannelId;
+    (void)Level;
+}
 
 /* ==================================================================
  * Mock: Com_SendSignal, Com_ReceiveSignal, Rte_Read, Rte_Write
