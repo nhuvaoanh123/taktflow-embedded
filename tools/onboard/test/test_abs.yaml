@@ -1,0 +1,86 @@
+ecu:
+  name: abs
+  can_baudrate: 500000
+
+dbc_file: test_abs.dbc
+
+swc_files:
+  sources: [Swc_AbsControl.c]
+  headers: [Swc_AbsControl.h]
+
+rte_signals:
+  - id: 16
+    name: ABS_WHEEL_SPEED_FL
+    type: UINT16
+    initial_value: 0
+  - id: 17
+    name: ABS_WHEEL_SPEED_FR
+    type: UINT16
+    initial_value: 0
+  - id: 18
+    name: ABS_WHEEL_SPEED_RL
+    type: UINT16
+    initial_value: 0
+  - id: 19
+    name: ABS_WHEEL_SPEED_RR
+    type: UINT16
+    initial_value: 0
+  - id: 20
+    name: ABS_BRAKE_CMD_FL
+    type: UINT16
+    initial_value: 0
+  - id: 21
+    name: ABS_BRAKE_CMD_FR
+    type: UINT16
+    initial_value: 0
+  - id: 22
+    name: ABS_ACTIVE
+    type: UINT8
+    initial_value: 0
+  - id: 23
+    name: ABS_FAULT_CODE
+    type: UINT8
+    initial_value: 0
+
+tx_messages:
+  - dbc_message: ABS_BrakeCmd
+    cycle_ms: 10
+    signals:
+      - dbc_signal: BrakeForce_FL
+        rte_signal: ABS_BRAKE_CMD_FL
+      - dbc_signal: BrakeForce_FR
+        rte_signal: ABS_BRAKE_CMD_FR
+  - dbc_message: ABS_Status
+    cycle_ms: 100
+    signals:
+      - dbc_signal: ABS_Active
+        rte_signal: ABS_ACTIVE
+      - dbc_signal: ABS_FaultCode
+        rte_signal: ABS_FAULT_CODE
+
+rx_messages:
+  - dbc_message: WheelSpeed_FL_Msg
+    timeout_ms: 100
+    signals:
+      - dbc_signal: WheelSpeed_FL
+        rte_signal: ABS_WHEEL_SPEED_FL
+      - dbc_signal: WheelSpeed_FR
+        rte_signal: ABS_WHEEL_SPEED_FR
+  - dbc_message: WheelSpeed_RL_Msg
+    timeout_ms: 100
+    signals:
+      - dbc_signal: WheelSpeed_RL
+        rte_signal: ABS_WHEEL_SPEED_RL
+      - dbc_signal: WheelSpeed_RR
+        rte_signal: ABS_WHEEL_SPEED_RR
+
+runnables:
+  - func: Swc_AbsControl_MainFunction
+    period_ms: 10
+    priority: 7
+    init_func: Swc_AbsControl_Init
+
+fault_scenarios:
+  - name: wheel_speed_loss
+    type: can_timeout
+    target_message: WheelSpeed_FL_Msg

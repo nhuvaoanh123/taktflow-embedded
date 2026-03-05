@@ -123,7 +123,7 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
             ev->statusByte |= DEM_STATUS_CONFIRMED_DTC;
             ev->occurrenceCounter++;
 #ifdef PLATFORM_POSIX
-            fprintf(stderr, "[DEM] DTC confirmed: event=%u debounce=%u status=0x%02X dtc=0x%06X\n",
+            (void)fprintf(stderr, "[DEM] DTC confirmed: event=%u debounce=%d status=0x%02X dtc=0x%06X\n",
                     EventId, ev->debounceCounter, ev->statusByte, (unsigned)dem_dtc_codes[EventId]);
 #endif
         }
@@ -283,7 +283,7 @@ void Dem_MainFunction(void)
             if (dem_broadcast_pdu_id != 0xFFFFu)
             {
 #ifdef PLATFORM_POSIX
-                fprintf(stderr, "[DEM] Broadcasting DTC=0x%06X pdu=%u ecu=%u\n",
+                (void)fprintf(stderr, "[DEM] Broadcasting DTC=0x%06X pdu=%u ecu=%u\n",
                         (unsigned)dtc_code, (unsigned)dem_broadcast_pdu_id, (unsigned)dem_ecu_id);
 #endif
                 (void)PduR_Transmit(dem_broadcast_pdu_id, &pdu_info);

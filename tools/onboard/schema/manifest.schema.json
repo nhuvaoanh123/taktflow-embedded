@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SWC Onboarding Manifest",
+  "description": "Maps customer SWC to Taktflow SIL framework (DBC signals, RTE ports, runnables, faults).",
+  "type": "object",
+  "required": ["ecu", "dbc_file", "swc_files", "rte_signals", "tx_messages", "rx_messages", "runnables"],
+  "additionalProperties": false,
+  "properties": {
+    "ecu": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "description": "Short lowercase ECU name (e.g. 'abs')"
+        },
+        "can_baudrate": {
+          "type": "integer",
+          "enum": [125000, 250000, 500000, 1000000],
+          "default": 500000
+        }
+      }
+    },
+    "dbc_file": {
+      "type": "string",
+      "description": "Path to DBC file (relative to manifest)"
+    },
+    "swc_files": {
+      "type": "object",
+      "required": ["sources"],
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Customer .c source files"
+        },
+        "headers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Customer .h header files"
+        }
+      }
+    },
+    "rte_signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 16,
+            "description": "RTE signal ID (must be >= 16, BSW uses 0-15)"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]+$",
+            "description": "Signal macro name (UPPER_SNAKE_CASE)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["UINT8", "UINT16", "SINT16", "UINT32", "BOOL"],
+            "description": "Signal data type"
+          },
+          "initial_value": {
+            "type": "integer",
+            "default": 0,
+            "description": "Initial value after RTE init"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "tx_messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dbc_message", "cycle_ms", "signals"],
+        "additionalProperties": false,
+        "properties": {
+          "dbc_message": {
+            "type": "string",
+            "description": "Message name as defined in the DBC file"
+          },
+          "cycle_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "TX cycle time in milliseconds"
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["dbc_signal", "rte_signal"],
+              "additionalProperties": false,
+              "properties": {
+                "dbc_signal": {
+                  "type": "string",
+                  "description": "Signal name as defined in the DBC file"
+                },
+                "rte_signal": {
+                  "type": "string",
+                  "description": "Matching RTE signal name from rte_signals"
+                }
+              }
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "rx_messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dbc_message", "timeout_ms", "signals"],
+        "additionalProperties": false,
+        "properties": {
+          "dbc_message": {
+            "type": "string",
+            "description": "Message name as defined in the DBC file"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 60000,
+            "description": "RX timeout in milliseconds"
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["dbc_signal", "rte_signal"],
+              "additionalProperties": false,
+              "properties": {
+                "dbc_signal": {
+                  "type": "string",
+                  "description": "Signal name as defined in the DBC file"
+                },
+                "rte_signal": {
+                  "type": "string",
+                  "description": "Matching RTE signal name from rte_signals"
+                }
+              }
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "runnables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["func", "period_ms", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "func": {
+            "type": "string",
+            "description": "C function name of the runnable"
+          },
+          "period_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Runnable execution period in ms"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255,
+            "description": "Runnable priority (higher = executes first)"
+          },
+          "init_func": {
+            "type": "string",
+            "description": "Optional init function called once at startup"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "fault_scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "target_message"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]+$",
+            "description": "Scenario identifier (snake_case)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["can_timeout", "can_inject", "container_stop"],
+            "description": "Fault injection method"
+          },
+          "target_message": {
+            "type": "string",
+            "description": "DBC message name to target"
+          }
+        }
+      },
+      "default": []
+    }
+  }
+}

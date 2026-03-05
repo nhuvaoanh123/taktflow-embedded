@@ -20,7 +20,7 @@ The TMS570LC43x LaunchPad (LAUNCHXL2-570LC43) arrives tomorrow. SC is the hardes
 
 | Step | What | Status |
 |------|------|--------|
-| 1 | HALCoGen install + project setup | PENDING (user does GUI) |
+| 1 | HALCoGen install + project setup | PENDING (user does GUI — board arrived 2026-03-05) |
 | 2 | Makefile.tms570 | DONE (2026-03-04) |
 | 3 | sc_hw_tms570.c GIO+RTI+system+DCAN+ESM+stubs | DONE (2026-03-04) |
 | 4 | Debug UART (SCI) in sc_main.c | DONE (2026-03-04) |

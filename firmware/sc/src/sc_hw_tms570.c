@@ -50,33 +50,67 @@
 /** SCI/LIN base address (SCI1 for debug UART via XDS110) */
 #define SCI_BASE                0xFFF7E400u
 
+/** IOMM (I/O Multiplexing Module) base address */
+#define IOMM_BASE               0xFFFF1C00u
+#define IOMM_KICKER0            0x38u   /* Kicker 0 (unlock) */
+#define IOMM_KICKER1            0x3Cu   /* Kicker 1 (unlock) */
+/* PINMUX[n] offset = 0x110 + n*4 */
+#define IOMM_PINMUX83           0x25Cu  /* 0x110 + 83*4 — output mux for ball A5 */
+#define IOMM_PINMUX84           0x260u  /* 0x110 + 84*4 — output mux for ball C2 */
+
 /* ==================================================================
  * GIO Register Offsets (from GIO_BASE)
  * ================================================================== */
 
 #define GIO_GCR0                0x00u   /* Global control */
+#define GIO_POL                 0x0Cu   /* Interrupt polarity */
+#define GIO_ENASET              0x10u   /* Interrupt enable set */
+#define GIO_ENACLR              0x14u   /* Interrupt enable clear */
+#define GIO_LVLSET              0x18u   /* Interrupt level set */
+#define GIO_LVLCLR              0x1Cu   /* Interrupt level clear */
+#define GIO_FLG                 0x20u   /* Interrupt flag (W1C) */
 #define GIO_DIRA                0x34u   /* Port A direction */
 #define GIO_DINA                0x38u   /* Port A data input */
 #define GIO_DOUTA               0x3Cu   /* Port A data output */
 #define GIO_DSETA               0x40u   /* Port A data set */
 #define GIO_DCLRA               0x44u   /* Port A data clear */
+#define GIO_PDRA                0x48u   /* Port A open drain */
+#define GIO_PULDISA             0x4Cu   /* Port A pullup disable */
+#define GIO_PSLA                0x50u   /* Port A pull up/down select */
 #define GIO_DIRB                0x54u   /* Port B direction */
 #define GIO_DINB                0x58u   /* Port B data input */
 #define GIO_DOUTB               0x5Cu   /* Port B data output */
 #define GIO_DSETB               0x60u   /* Port B data set */
 #define GIO_DCLRB               0x64u   /* Port B data clear */
+#define GIO_PDRB                0x68u   /* Port B open drain */
+#define GIO_PULDISB             0x6Cu   /* Port B pullup disable */
+#define GIO_PSLB                0x70u   /* Port B pull up/down select */
 
 /* ==================================================================
  * RTI Register Offsets (from RTI_BASE)
  * ================================================================== */
 
 #define RTI_GCTRL               0x00u   /* Global control */
+#define RTI_TBCTRL              0x04u   /* Timebase control */
+#define RTI_CAPCTRL             0x08u   /* Capture control */
 #define RTI_COMPCTRL            0x0Cu   /* Compare control */
-#define RTI_CNT0                0x10u   /* Free running counter 0 */
+#define RTI_FRC0                0x10u   /* Free running counter 0 */
+#define RTI_UC0                 0x14u   /* Up counter 0 */
+#define RTI_CPUC0               0x18u   /* Compare up counter 0 (prescaler) */
+#define RTI_FRC1                0x30u   /* Free running counter 1 */
+#define RTI_UC1                 0x34u   /* Up counter 1 */
+#define RTI_CPUC1               0x38u   /* Compare up counter 1 (prescaler) */
 #define RTI_CMP0                0x50u   /* Compare 0 value */
 #define RTI_UDCP0               0x54u   /* Update compare 0 */
-#define RTI_INTFLAG             0x88u   /* Interrupt flag */
-#define RTI_CLEARINT            0x8Cu   /* Interrupt clear (write-1-to-clear) */
+#define RTI_CMP1                0x58u   /* Compare 1 value */
+#define RTI_UDCP1               0x5Cu   /* Update compare 1 */
+#define RTI_CMP2                0x60u   /* Compare 2 value */
+#define RTI_UDCP2               0x64u   /* Update compare 2 */
+#define RTI_CMP3                0x68u   /* Compare 3 value */
+#define RTI_UDCP3               0x6Cu   /* Update compare 3 */
+#define RTI_SETINTENA           0x80u   /* Set interrupt enable */
+#define RTI_CLEARINTENA         0x84u   /* Clear interrupt enable */
+#define RTI_INTFLAG             0x88u   /* Interrupt flag (W1C) */
 
 /** RTI compare 0 interrupt flag bit */
 #define RTI_CMP0_FLAG           0x01u
@@ -98,9 +132,11 @@
 
 #define SCI_GCR0                0x00u   /* Global control 0 */
 #define SCI_GCR1                0x04u   /* Global control 1 */
+#define SCI_FORMAT              0x28u   /* Format control (char length) */
 #define SCI_BRS                 0x2Cu   /* Baud rate selection */
 #define SCI_FLR                 0x1Cu   /* Flags register */
 #define SCI_TD                  0x38u   /* Transmit data */
+#define SCI_PIO0                0x3Cu   /* Pin function select (0=GIO, 1=SCI) */
 
 /** SCI TX ready flag */
 #define SCI_FLR_TXRDY           0x00000100u
@@ -176,51 +212,118 @@ static void reg_write(uint32 base, uint32 offset, uint32 value)
 }
 
 /* ==================================================================
- * HALCoGen system stubs (from sc_main.c)
+ * HALCoGen replacement functions
  *
- * systemInit() is called by HALCoGen startup code before main().
- * We provide a version that delegates to HALCoGen's _system_init()
- * or is a no-op if HALCoGen startup handles it.
+ * systemInit() is provided by HALCoGen's system.c — not redefined here.
+ *
+ * gioInit(), rtiInit(), rtiStartCounter() are provided HERE instead of
+ * HALCoGen HL_gio.c / HL_rti.c because the HALCoGen function signatures
+ * for gioSetBit/gioSetDirection/rtiStartCounter conflict with the SC
+ * platform-independent API (uint8 port,pin vs gioPORT_t pointer).
+ *
+ * These implementations replicate the exact register writes that
+ * HALCoGen v04.07.01 generates for the SC .hcg project configuration.
  * ================================================================== */
 
-/**
- * @brief  Initialize system clocks (PLL, flash, peripherals)
- *
- * On TMS570, HALCoGen's sys_startup.c calls systemInit() during
- * C runtime init — before main(). This function is already linked
- * from HALCoGen-generated system.c. We do NOT redefine it here;
- * the HALCoGen version is used directly.
- *
- * This is a placeholder comment — the symbol comes from
- * halcogencfg/source/system.c at link time.
- */
 /* systemInit() — provided by HALCoGen system.c, not defined here */
 
 /**
- * @brief  Initialize GIO module
+ * @brief  Initialize GIO module (ports A and B)
  *
- * HALCoGen gioInit() configures pin directions and pull-ups per the
- * .hcg project settings. Called from main() before sc_configure_gpio().
- *
- * This is provided by HALCoGen gio.c at link time.
+ * Replicates HALCoGen gioInit() register writes for the SC config:
+ *   Port A: bits 0-5 output (relay, LEDs, WDI), bits 6-7 input
+ *   Port B: bit 1 output (heartbeat LED), rest input
+ *   All outputs LOW, no open drain, no interrupts
  */
-/* gioInit() — provided by HALCoGen gio.c, not defined here */
+void gioInit(void)
+{
+    /* Bring GIO out of reset */
+    reg_write(GIO_BASE, GIO_GCR0, 1u);
+
+    /* Disable all interrupts, clear levels */
+    reg_write(GIO_BASE, GIO_ENACLR, 0xFFu);
+    reg_write(GIO_BASE, GIO_LVLCLR, 0xFFu);
+
+    /* Port A: output values = 0, direction bits 0-5 = output */
+    reg_write(GIO_BASE, GIO_DOUTA, 0x00u);
+    reg_write(GIO_BASE, GIO_DIRA, 0x3Fu);
+    reg_write(GIO_BASE, GIO_PDRA, 0x00u);
+    reg_write(GIO_BASE, GIO_PSLA, 0x00u);
+    reg_write(GIO_BASE, GIO_PULDISA, 0x00u);
+
+    /* Port B: output values = 0, direction bit 1 = output */
+    reg_write(GIO_BASE, GIO_DOUTB, 0x00u);
+    reg_write(GIO_BASE, GIO_DIRB, 0x02u);
+    reg_write(GIO_BASE, GIO_PDRB, 0x00u);
+    reg_write(GIO_BASE, GIO_PSLB, 0x00u);
+    reg_write(GIO_BASE, GIO_PULDISB, 0x00u);
+
+    /* Interrupt config: all disabled, clear pending flags */
+    reg_write(GIO_BASE, GIO_POL, 0x00u);
+    reg_write(GIO_BASE, GIO_LVLSET, 0x00u);
+    reg_write(GIO_BASE, GIO_FLG, 0xFFu);
+    reg_write(GIO_BASE, GIO_ENASET, 0x00u);
+}
 
 /**
  * @brief  Initialize RTI timer for 10ms tick
  *
- * HALCoGen rtiInit() configures compare 0 for 10ms period.
- *
- * This is provided by HALCoGen rti.c at link time.
+ * Replicates HALCoGen rtiInit() for the SC config:
+ *   RTICLK = VCLK (75 MHz) / prescaler (8) = 9.375 MHz
+ *   Compare 0 = 93750 counts = 10ms period
+ *   No interrupts enabled (SC polls INTFLAG)
  */
-/* rtiInit() — provided by HALCoGen rti.c, not defined here */
+void rtiInit(void)
+{
+    /* NTU source = 5, both counters disabled */
+    reg_write(RTI_BASE, RTI_GCTRL, (uint32)(5u << 16u));
+
+    /* Timebase and capture: disabled */
+    reg_write(RTI_BASE, RTI_TBCTRL, 0u);
+    reg_write(RTI_BASE, RTI_CAPCTRL, 0u);
+
+    /* Compare control: CMP0→cnt0, CMP1→cnt1, CMP2→cnt1, CMP3→cnt0 */
+    reg_write(RTI_BASE, RTI_COMPCTRL, 0x00001100u);
+
+    /* Counter 0: reset, prescaler = 8 (CPUCx = 7 → divide by 8) */
+    reg_write(RTI_BASE, RTI_UC0, 0u);
+    reg_write(RTI_BASE, RTI_FRC0, 0u);
+    reg_write(RTI_BASE, RTI_CPUC0, 7u);
+
+    /* Counter 1: reset, prescaler = 8 */
+    reg_write(RTI_BASE, RTI_UC1, 0u);
+    reg_write(RTI_BASE, RTI_FRC1, 0u);
+    reg_write(RTI_BASE, RTI_CPUC1, 7u);
+
+    /* Compare 0: 93750 ticks = 10ms @ 9.375 MHz (SC main loop tick) */
+    reg_write(RTI_BASE, RTI_CMP0, 93750u);
+    reg_write(RTI_BASE, RTI_UDCP0, 93750u);
+
+    /* Compare 1-3: HALCoGen defaults (not used by SC) */
+    reg_write(RTI_BASE, RTI_CMP1, 46875u);
+    reg_write(RTI_BASE, RTI_UDCP1, 46875u);
+    reg_write(RTI_BASE, RTI_CMP2, 75000u);
+    reg_write(RTI_BASE, RTI_UDCP2, 75000u);
+    reg_write(RTI_BASE, RTI_CMP3, 93750u);
+    reg_write(RTI_BASE, RTI_UDCP3, 93750u);
+
+    /* Clear all pending interrupts, disable all */
+    reg_write(RTI_BASE, RTI_INTFLAG, 0x0007000Fu);
+    reg_write(RTI_BASE, RTI_CLEARINTENA, 0x00070F0Fu);
+}
 
 /**
  * @brief  Start RTI counter block 0
  *
- * Provided by HALCoGen rti.c. Writes RTI_GCTRL to enable counter.
+ * Sets GCTRL bit 0 to enable counter block 0.
+ * Called from main() after module init, before entering main loop.
  */
-/* rtiStartCounter() — provided by HALCoGen rti.c, not defined here */
+void rtiStartCounter(void)
+{
+    uint32 gctrl = reg_read(RTI_BASE, RTI_GCTRL);
+    gctrl |= 1u;  /* Enable counter block 0 */
+    reg_write(RTI_BASE, RTI_GCTRL, gctrl);
+}
 
 /* ==================================================================
  * GIO pin access (from sc_gio.h / sc_main.c)
@@ -336,10 +439,12 @@ boolean rtiIsTickPending(void)
 
 /**
  * @brief  Clear RTI compare 0 interrupt flag
+ *
+ * INTFLAG register (0x88) is write-1-to-clear.
  */
 void rtiClearTick(void)
 {
-    reg_write(RTI_BASE, RTI_CLEARINT, RTI_CMP0_FLAG);
+    reg_write(RTI_BASE, RTI_INTFLAG, RTI_CMP0_FLAG);
 }
 
 /* ==================================================================
@@ -652,57 +757,248 @@ boolean hw_dcan_error_check(void)
 }
 
 /* ==================================================================
+ * GIO LED control (LaunchPad user LEDs)
+ *
+ * LAUNCHXL2-570LC43 user LEDs are on GIO Port B:
+ *   LED2 = GIOB[6] — active HIGH
+ *   LED3 = GIOB[7] — active HIGH
+ *
+ * Used for firmware execution verification during bring-up.
+ * ================================================================== */
+
+/** LED bitmask for GIOB pins 6 and 7 */
+#define LED_MASK  (((uint32)1u << 6u) | ((uint32)1u << 7u))
+
+/**
+ * @brief  Turn on LaunchPad user LEDs (LED2 + LED3) via GIOB[6:7]
+ *
+ * Sets GIOB pins 6 and 7 as outputs and drives HIGH.
+ * gioInit() must have been called first.
+ */
+void sc_het_led_on(void)
+{
+    /* Set GIOB[6] and GIOB[7] as outputs (OR into existing DIRB) */
+    reg_write(GIO_BASE, GIO_DIRB,
+              reg_read(GIO_BASE, GIO_DIRB) | LED_MASK);
+
+    /* Turn on both LEDs */
+    reg_write(GIO_BASE, GIO_DSETB, LED_MASK);
+}
+
+/**
+ * @brief  Turn off LaunchPad user LEDs (LED2 + LED3)
+ */
+void sc_het_led_off(void)
+{
+    reg_write(GIO_BASE, GIO_DCLRB, LED_MASK);
+}
+
+/* ==================================================================
+ * ESM Group 3 Notification Override
+ *
+ * HALCoGen's default esmGroup3Notification() enters an infinite loop,
+ * which prevents the CPU from reaching main() if any ESM Group 3
+ * error is set during power-up or after a debug reset.
+ *
+ * Common cause: CCM-R5F lockstep compare error after JTAG/XDS110
+ * debug reset desynchronizes the dual CPUs.
+ *
+ * This override clears the error and resets the nERROR pin so the
+ * startup can continue. The ESM Group 3 status register (SR1[2])
+ * is at ESM_BASE + 0x20, and the Error Key Register (EKR) is at
+ * ESM_BASE + 0x38 (write 5 to reset error pin).
+ *
+ * NOTE: For production, this should be replaced with proper
+ * error handling per ISO 26262 requirements.
+ * ================================================================== */
+
+/** ESM status register offsets */
+#define ESM_SR1_0               0x18u   /* Group 1 status (channels 0-31) */
+#define ESM_SR1_1               0x1Cu   /* Group 1 status (channels 32-63) */
+#define ESM_SR3                 0x20u   /* Group 3 status (write-1-to-clear) */
+#define ESM_EKR_OFF             0x38u   /* Error Key Register */
+
+/** CCM-R5F registers (from HL_reg_ccmr5.h, base 0xFFFFF600) */
+#define CCMR5_BASE              0xFFFFF600u
+#define CCMSR1_OFF              0x00u   /* Status Register 1 (CPU compare) */
+#define CCMSR2_OFF              0x08u   /* Status Register 2 (VIM compare) */
+#define CCMSR3_OFF              0x10u   /* Status Register 3 (periph compare) */
+#define CCMSR4_OFF              0x1Cu   /* Status Register 4 (inactivity) */
+
+/*
+ * HALCoGen notification function replacements.
+ *
+ * HL_notification.c is excluded from the build because its
+ * esmGroup3Notification contains for(;;){} which hangs the CPU
+ * on any ESM Group 3 error (common after debug reset due to
+ * CCM-R5F lockstep desync).
+ *
+ * We provide our own implementations for the 3 ESM notification
+ * functions called by HALCoGen startup/ISR code.
+ *
+ * The prototypes in HL_esm.h use (esmBASE_t*, uint32). Since we
+ * don't include that header, we use compatible (void*, uint32).
+ * ARM C ABI passes both as 32-bit values in r0/r1 — identical.
+ */
+
+/**
+ * @brief  ESM Group 1 notification (low/medium priority errors)
+ *
+ * Called from HL_esm.c (ISR) and HL_sys_vim.c. Empty stub for
+ * bring-up — errors are cleared by the caller.
+ */
+void esmGroup1Notification(void *esm, uint32 channel)
+{
+    (void)esm;
+    (void)channel;
+}
+
+/**
+ * @brief  ESM Group 2 notification (high priority errors)
+ *
+ * Called from HL_esm.c (ISR) and HL_sys_vim.c. Empty stub.
+ */
+void esmGroup2Notification(void *esm, uint32 channel)
+{
+    (void)esm;
+    (void)channel;
+}
+
+/**
+ * @brief  ESM Group 3 notification (critical errors — nERROR pin)
+ *
+ * Called from HL_sys_startup.c if ESM Group 3 flags are set on
+ * power-up (e.g., CCM-R5F lockstep error after JTAG debug reset).
+ *
+ * HALCoGen default: for(;;){} — hangs forever, CPU never reaches main().
+ * Our override: clear the error flags and reset nERROR pin, allowing
+ * startup to continue.
+ *
+ * NOTE: For production, replace with proper error handling per
+ * ISO 26262 requirements.
+ */
+void esmGroup3Notification(void *esm, uint32 channel)
+{
+    (void)esm;
+
+    /* 1. Clear ALL CCM-R5F compare errors at their SOURCE.
+     *    The CCM continuously drives ESM Group 3 until its status
+     *    registers are cleared. Without this, ESM immediately
+     *    re-latches after we clear it. */
+    reg_write(CCMR5_BASE, CCMSR1_OFF, 0xFFFFFFFFu);
+    reg_write(CCMR5_BASE, CCMSR2_OFF, 0xFFFFFFFFu);
+    reg_write(CCMR5_BASE, CCMSR3_OFF, 0xFFFFFFFFu);
+    reg_write(CCMR5_BASE, CCMSR4_OFF, 0xFFFFFFFFu);
+
+    /* 2. Clear ALL ESM status registers (write-1-to-clear) */
+    reg_write(ESM_BASE, ESM_SR1_0, 0xFFFFFFFFu);
+    reg_write(ESM_BASE, ESM_SR1_1, 0xFFFFFFFFu);
+    reg_write(ESM_BASE, ESM_SR3, channel);
+
+    /* 3. Reset nERROR pin to inactive (HIGH) — key value 5 */
+    reg_write(ESM_BASE, ESM_EKR_OFF, 0x00000005u);
+}
+
+/* ==================================================================
  * SCI Debug UART
  *
  * SCI1 is connected to XDS110 virtual COM port on the LaunchPad.
  * Used for boot diagnostics only — not safety-relevant.
  * ================================================================== */
 
+/** SCI3 base address (standalone SCI module) */
+#define SCI3_BASE               0xFFF7E500u
+
 /**
- * @brief  Initialize SCI1 for 115200 baud debug output
+ * @brief  Initialize ALL SCI modules for debug output
  *
- * HALCoGen should configure SCI1 in the project. This function
- * provides a fallback bare-metal init if needed.
+ * We don't know which SCI module the XDS110 UART connects to on the
+ * LAUNCHXL2-570LC43, so we initialize both:
+ *   - SCI1/LIN1 (0xFFF7E400) at 115200 baud (ball B7 = LIN1TX)
+ *   - SCI3 (0xFFF7E500) at 9600 baud (HALCoGen default via sciInit)
  *
- * Baud rate calculation: VCLK1 / (16 * (BRS + 1))
- * At 75 MHz VCLK1: 75000000 / (16 * 115200) = 40.69 → BRS = 40
- * Actual baud = 75000000 / (16 * 41) = 114329 (0.76% error — OK)
+ * Then sc_sci_puts() outputs on BOTH modules simultaneously.
  */
+static void sc_sci_init_module(uint32 base, uint32 brs)
+{
+    /* GCR0 reset pulse */
+    reg_write(base, 0x00u, 0u);
+    reg_write(base, 0x00u, 1u);
+
+    /* Disable all interrupts */
+    reg_write(base, 0x10u, 0xFFFFFFFFu);
+    reg_write(base, 0x18u, 0xFFFFFFFFu);
+
+    /* GCR1: SCI async mode, TX+RX enabled, internal clock, 8N1
+     * Bit 25: TXENA, Bit 24: RXENA, Bit 5: CLOCK=internal,
+     * Bit 4: STOP=0 (1 stop bit), Bit 1: TIMING=async.
+     *
+     * NOTE: Do NOT set bit 6! On the LIN/SCI module (SCI1/LIN1),
+     * bit 6 = ADAPT/LIN_MODE which switches to LIN protocol framing,
+     * preventing standard UART operation. On standalone SCI (SCI3),
+     * bit 6 = CONT, but leaving it clear is harmless. */
+    reg_write(base, SCI_GCR1,
+              ((uint32)1u << 25u) |   /* TXENA */
+              ((uint32)1u << 24u) |   /* RXENA */
+              ((uint32)1u << 5u)  |   /* CLOCK = internal */
+              ((uint32)1u << 1u));    /* TIMING = async */
+
+    /* Baud rate */
+    reg_write(base, SCI_BRS, brs);
+
+    /* FORMAT: 8-bit characters */
+    reg_write(base, SCI_FORMAT, 7u);
+
+    /* Pin config: TX+RX functional, pull-ups enabled */
+    reg_write(base, SCI_PIO0, 6u);
+    reg_write(base, 0x40u, 0u);       /* PIO1: direction */
+    reg_write(base, 0x48u, 0u);       /* PIO3: output value */
+    reg_write(base, 0x54u, 0u);       /* PIO6: open drain */
+    reg_write(base, 0x58u, 0u);       /* PIO7: pull disable */
+    reg_write(base, 0x5Cu, 6u);       /* PIO8: pull select */
+
+    /* Release from reset */
+    {
+        uint32 gcr1 = reg_read(base, SCI_GCR1);
+        gcr1 |= 0x80u;
+        reg_write(base, SCI_GCR1, gcr1);
+    }
+}
+
 void sc_sci_init(void)
 {
-    /* Reset SCI */
-    reg_write(SCI_BASE, SCI_GCR0, 0u);
-    reg_write(SCI_BASE, SCI_GCR0, 1u);  /* Release from reset */
+    /* SCI1/LIN1: 115200 baud at VCLK1=75MHz, BRS=40 → 114329 baud */
+    sc_sci_init_module(SCI_BASE, 40u);
 
-    /* Configure: 1 stop bit, no parity, 8-bit char, async mode */
-    reg_write(SCI_BASE, SCI_GCR1,
-              ((uint32)1u << 25u) |   /* CLOCK (internal) */
-              ((uint32)1u << 24u) |   /* SWnRST (out of reset) */
-              ((uint32)1u << 5u)  |   /* TXENA */
-              ((uint32)1u << 1u));    /* TIMING (async) */
+    /* SCI3: 9600 baud at VCLK1=75MHz, BRS=487 → 9607 baud */
+    sc_sci_init_module(SCI3_BASE, 487u);
+}
 
-    /* Baud rate: 75 MHz / (16 * 41) = ~114329 baud */
-    reg_write(SCI_BASE, SCI_BRS, 40u);
-
-    /* Re-enable TX after config */
-    {
-        uint32 gcr1 = reg_read(SCI_BASE, SCI_GCR1);
-        gcr1 |= ((uint32)1u << 25u) | ((uint32)1u << 24u) | ((uint32)1u << 5u) | ((uint32)1u << 1u);
-        reg_write(SCI_BASE, SCI_GCR1, gcr1);
+/**
+ * @brief  Send a single byte on a specific SCI module
+ * @param  base  SCI module base address
+ * @param  ch    Character to transmit
+ */
+static void sc_sci_putchar_on(uint32 base, uint8 ch)
+{
+    volatile uint32 timeout = 100000u;
+    /* Wait for TX ready with timeout */
+    while (((reg_read(base, SCI_FLR) & SCI_FLR_TXRDY) == 0u) && (timeout > 0u)) {
+        timeout--;
+    }
+    if (timeout > 0u) {
+        reg_write(base, SCI_TD, (uint32)ch);
     }
 }
 
 /**
- * @brief  Send a single byte over SCI1
+ * @brief  Send a single byte over ALL SCI modules
  * @param  ch  Character to transmit
  */
 void sc_sci_putchar(uint8 ch)
 {
-    /* Wait for TX ready */
-    while ((reg_read(SCI_BASE, SCI_FLR) & SCI_FLR_TXRDY) == 0u) {
-        /* Busy wait */
-    }
-    reg_write(SCI_BASE, SCI_TD, (uint32)ch);
+    sc_sci_putchar_on(SCI_BASE, ch);   /* SCI1/LIN1 at 115200 */
+    sc_sci_putchar_on(SCI3_BASE, ch);  /* SCI3 at 9600 */
 }
 
 /**

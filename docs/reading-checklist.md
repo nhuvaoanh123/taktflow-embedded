@@ -19,9 +19,9 @@ Use this as your clickable review tracker.
 ## Rank 1 - Critical
 - [x] [Stakeholder requirements](./aspice/system/stakeholder-requirements.md) — Reviewed: 2026-02-25
 - [x] [System requirements](./aspice/system/system-requirements.md) — Reviewed: 2026-02-26 (56 HITL comments, ASIL summary fixed)
-- [x] [System architecture](./aspice/system/system-architecture.md) — Reviewed: 2026-02-26 (24 HITL comments)
-- [x] [Interface control doc](./aspice/system/interface-control-doc.md) — Reviewed: 2026-02-26 (18 HITL comments)
-- [x] [CAN message matrix](./aspice/system/can-message-matrix.md) — Reviewed: 2026-02-26 (17 HITL comments)
+- [] [System architecture](./aspice/system/system-architecture.md) — Reviewed: 2026-02-26 (24 HITL comments)
+- [] [Interface control doc](./aspice/system/interface-control-doc.md) — Reviewed: 2026-02-26 (18 HITL comments)
+- [] [CAN message matrix](./aspice/system/can-message-matrix.md) — Reviewed: 2026-02-26 (17 HITL comments)
 
 ## Rank 2 — Safety Chain (read in order)
 - [ ] 1. [Item definition](./safety/concept/item-definition.md)

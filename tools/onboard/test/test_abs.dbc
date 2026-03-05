@@ -1,0 +1,24 @@
+VERSION ""
+
+NS_ :
+
+BS_:
+
+BU_: ABS VCU
+
+BO_ 256 ABS_BrakeCmd: 8 ABS
+ SG_ BrakeForce_FL : 0|16@1+ (1,0) [0|65535] "" VCU
+ SG_ BrakeForce_FR : 16|16@1+ (1,0) [0|65535] "" VCU
+
+BO_ 257 ABS_Status: 8 ABS
+ SG_ ABS_Active : 0|8@1+ (1,0) [0|1] "" VCU
+ SG_ ABS_FaultCode : 8|8@1+ (1,0) [0|255] "" VCU
+
+BO_ 512 WheelSpeed_FL_Msg: 8 VCU
+ SG_ WheelSpeed_FL : 0|16@1+ (0.01,0) [0|655.35] "km/h" ABS
+ SG_ WheelSpeed_FR : 16|16@1+ (0.01,0) [0|655.35] "km/h" ABS
+
+BO_ 513 WheelSpeed_RL_Msg: 8 VCU
+ SG_ WheelSpeed_RL : 0|16@1+ (0.01,0) [0|655.35] "km/h" ABS
+ SG_ WheelSpeed_RR : 16|16@1+ (0.01,0) [0|655.35] "km/h" ABS
+

@@ -57,7 +57,7 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 | # | Component | Qty | Unit Cost | Total | Supplier | Part Number | Status | Procurement Priority |
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 1 | STM32G474RE Nucleo-64 | 3 | $16.00 | $48.00 | Conrad | NUCLEO-G474RE | **Delivered** 2026-03-02 | Phase 1 (first) |
-| 2 | TMS570LC43x LaunchPad | 1 | $40.00 | $40.00 | Mouser / TI Direct | LAUNCHXL2-570LC43 | Not ordered | Phase 1 (first) |
+| 2 | TMS570LC43x LaunchPad | 1 | $40.00 | $40.00 | Mouser / TI Direct | LAUNCHXL2-570LC43 | **Delivered** 2026-03-05 | Phase 1 (first) |
 | 3 | Raspberry Pi 4 Model B (4GB) | 1 | $55.00 | $55.00 | Adafruit / PiShop | SC0194 | Not ordered | Phase 2 |
 | 4 | 32GB MicroSD Card (Class 10) | 1 | $9.00 | $9.00 | Amazon | SanDisk Ultra | Not ordered | Phase 2 |
 | 5 | RPi 4 USB-C Power Supply (5V/3A) | 1 | $8.00 | $8.00 | Conrad | RPI PS 15W BK EU (5.1V/3A) | **Delivered** 2026-03-02 | Phase 2 |
@@ -73,7 +73,7 @@ This document consolidates the engineering BOM, procurement checklist, and procu
 |---|-----------|-----|-----------|-------|----------|-------------|--------|---------------------|
 | 6 | TJA1051T/3 CAN Transceiver Module (3.3V) | 3 | $4.00 | $12.00 | Amazon / AliExpress | TJA1051 breakout module | Not ordered | Phase 1 |
 | 7 | SN65HVD230 CAN Transceiver Module (3.3V) | 1 | $3.00 | $3.00 | Amazon / AliExpress | SN65HVD230 breakout | Not ordered | Phase 1 |
-| 8 | CANable 2.0 (USB-CAN adapter, candleLight FW) | 2 | $30.00 | $60.00 | CANable.com / Tindie | CANable 2.0 | Not ordered | Phase 1 |
+| 8 | USB-CAN Adapters (substitutes for CANable 2.0) | 2 | $30.00 | $60.00 | Amazon | Ecktron UCAN x1 + Waveshare USB-CAN-A (STM32) x1 | **Delivered** 2026-03-05 | Phase 1 |
 | 9 | 120 ohm Termination Resistors (1/4W, 1%) | 4 | $0.10 | $0.40 | Amazon / Mouser | CF1/4W-120R | Not ordered | Phase 1 |
 | 10 | Common-Mode Choke (100 uH, CAN-rated) | 4 | $1.50 | $6.00 | Mouser / Digikey | ACM2012-102-2P | Not ordered | Phase 1 |
 | 11 | PESD1CAN TVS Diode Array (CAN ESD protection) | 4 | $0.80 | $3.20 | Mouser / Digikey | PESD1CAN,215 | Not ordered | Phase 1 |
@@ -372,13 +372,13 @@ For critical components, backup alternatives are identified:
 | # | Component | Ordered | Received | Verified | Notes |
 |---|-----------|---------|----------|----------|-------|
 | 1 | STM32G474RE Nucleo-64 (x3) | 2026-02-22 | 2026-03-02 | -- | Conrad (PV-08309187631) |
-| 2 | TMS570LC43x LaunchPad | 2026-02-22 | -- | -- | Confirmed on the way |
+| 2 | TMS570LC43x LaunchPad | 2026-02-22 | 2026-03-05 | -- | Delivered |
 | 3 | Raspberry Pi 4 4GB | 2026-02-22 | -- | -- | Confirmed done |
 | 4 | 32GB MicroSD | 2026-02-23 | -- | -- | Confirmed done |
 | 5 | RPi USB-C PSU | 2026-02-22 | 2026-03-02 | -- | Conrad RPI PS 15W BK EU (5.1V/3A) |
 | 6 | TJA1051T/3 module (x3) | 2026-02-22 | -- | -- | Full qty confirmed done (initially x2, then topped up) |
 | 7 | SN65HVD230 module | 2026-02-22 | -- | -- | |
-| 8 | USB-CAN adapters (x2) | 2026-02-22 | -- | -- | Substitutes: Ecktron UCAN x1, Waveshare USB-CAN x1 (not CANable 2.0) |
+| 8 | USB-CAN adapters (x2) | 2026-02-22 | 2026-03-05 | -- | Substitutes: Ecktron UCAN x1, Waveshare USB-CAN-A (STM32) x1 (not CANable 2.0) |
 | 9 | 120R resistors | 2026-02-23 | -- | -- | Confirmed done |
 | 10 | Common-mode chokes (x4) | -- | -- | -- | |
 | 11 | CAN TVS diodes (x4) | -- | -- | -- | |
@@ -587,6 +587,12 @@ For critical components, backup alternatives are identified:
 5. DC/DC step-down converters x3 (DCDC DOWN 5) delivered (BOM #35).
 6. Plastic spacers x10 (AH 11,1, 11.1mm) delivered (BOM #60).
 7. Perfboards: H25PR200 (200x100mm) + LR DS-57 (70x50mm) delivered (BOM #61).
+
+### 2026-03-05 (USB-CAN Adapters Delivered)
+
+1. Ecktron UCAN USB-CAN adapter x1 delivered (BOM #8 substitute).
+2. Waveshare USB-CAN-A (Model A, STM32 chip) x1 delivered (BOM #8 substitute).
+3. TMS570LC43x LaunchPad delivered (BOM #2).
 
 ---
 

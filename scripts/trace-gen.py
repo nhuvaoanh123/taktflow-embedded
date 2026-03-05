@@ -284,7 +284,7 @@ def parse_sil_scenarios(sil_dir):
     if not sil_dir.is_dir():
         return sil_map
 
-    for yaml_file in sorted(sil_dir.glob("*.yaml")):
+    for yaml_file in sorted(sil_dir.glob("**/*.yaml")):
         rel = str(yaml_file.relative_to(ROOT_DIR)).replace("\\", "/")
         try:
             content = yaml_file.read_text(encoding="utf-8", errors="replace")
