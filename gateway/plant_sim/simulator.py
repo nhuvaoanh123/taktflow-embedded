@@ -51,11 +51,11 @@ TX_DTC_BROADCAST = 0x500
 TX_FZC_VIRTUAL_SENSORS = 0x400   # steering angle, brake pos, brake current
 TX_RZC_VIRTUAL_SENSORS = 0x401   # motor current, motor temp, battery voltage
 
-# DTC codes (from defect_catalog.py — must match SAP QM mock)
-DTC_OVERCURRENT = 0xE301
-DTC_STEER_FAULT = 0xE201
-DTC_BRAKE_FAULT = 0xE202
-DTC_BATTERY_UV = 0xE401
+# DTC codes — 24-bit big-endian, must match firmware Dem_SetDtcCode() values
+DTC_OVERCURRENT = 0x00E301   # RZC: Dem_SetDtcCode(RZC_DTC_OVERCURRENT, 0x00E301u)
+DTC_STEER_FAULT = 0x00D001   # FZC: Dem_SetDtcCode(FZC_DTC_STEER_PLAUSIBILITY, 0x00D001u)
+DTC_BRAKE_FAULT = 0x00E202   # FZC: no firmware Dem equivalent yet — keep for plant-sim
+DTC_BATTERY_UV  = 0x00E401   # RZC: Dem_SetDtcCode(RZC_DTC_BATTERY, 0x00E401u)
 
 # ECU source IDs
 ECU_FZC = 2
@@ -374,14 +374,15 @@ class PlantSimulator:
         self._dtc_occurrence[dtc_code] = count
 
         payload = bytearray(8)
-        payload[0] = dtc_code & 0xFF
-        payload[1] = (dtc_code >> 8) & 0xFF
-        payload[2] = 0x01  # DTC_Status: active
-        payload[3] = ecu_source & 0xFF
-        payload[4] = min(255, count)
+        payload[0] = (dtc_code >> 16) & 0xFF   # DTC high byte (24-bit BE)
+        payload[1] = (dtc_code >> 8) & 0xFF    # DTC mid byte
+        payload[2] = dtc_code & 0xFF           # DTC low byte
+        payload[3] = 0x01                      # DTC_Status: active
+        payload[4] = ecu_source & 0xFF
+        payload[5] = min(255, count)
         self.bus.send(can.Message(arbitration_id=TX_DTC_BROADCAST,
                                   data=payload, is_extended_id=False))
-        log.info("DTC 0x%04X from ECU %d (occurrence %d)", dtc_code, ecu_source, count)
+        log.info("DTC 0x%06X from ECU %d (occurrence %d)", dtc_code, ecu_source, count)
 
     def _check_and_send_dtcs(self):
         """Check all fault conditions and send DTCs."""

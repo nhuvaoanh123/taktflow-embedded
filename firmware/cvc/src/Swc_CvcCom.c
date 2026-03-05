@@ -373,13 +373,14 @@ void Swc_CvcCom_BridgeRxToRte(void)
 #ifdef PLATFORM_POSIX
     /* SIL E-Stop injection: fault-inject API sends CAN 0x001 with E-Stop
      * active flag at byte 2.  CVC normally reads E-Stop via GPIO (DIO ch 5).
-     * In SIL, write to the POSIX DIO stub so Swc_EStop picks it up. */
+     * In SIL, write to the POSIX DIO stub so Swc_EStop picks it up.
+     * Pass-through: DIO follows inject value every cycle (not write-once). */
     {
         uint8 estop_inject_val = 0u;
         (void)Com_ReceiveSignal(19u, &estop_inject_val);
-        if (estop_inject_val != 0u) {
+        {
             extern void Dio_Hw_WritePin(uint8 ChannelId, uint8 Level);
-            Dio_Hw_WritePin(5u, 1u);  /* STD_HIGH = 1u — literal avoids header dep in unit tests */
+            Dio_Hw_WritePin(5u, (estop_inject_val != 0u) ? 1u : 0u);
         }
     }
 #endif

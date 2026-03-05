@@ -25,9 +25,9 @@ DTC_TO_DEFECT: dict[str, dict[str, str]] = {
         "text": "Motor stall fault",
         "priority": "1",
     },
-    "0xE201": {
+    "0xD001": {
         "code": "D-STR-001",
-        "text": "Steering servo fault",
+        "text": "Steering plausibility fault",
         "priority": "1",
     },
     "0xE202": {

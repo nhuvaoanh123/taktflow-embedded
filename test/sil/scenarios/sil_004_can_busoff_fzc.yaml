@@ -7,8 +7,8 @@
 #
 # Simulates a CAN bus-off condition on the Front Zone Controller by stopping
 # its Docker container.  The Safety Controller must detect the missing
-# FZC heartbeat within 200ms and transition the vehicle to DEGRADED mode.
-# The RZC (brake controller) must remain operational during degraded mode.
+# FZC heartbeat within 200ms and transition the vehicle to LIMP mode.
+# The RZC (brake controller) must remain operational during limp mode.
 # =============================================================================
 
 name: "CAN Bus-Off FZC"
@@ -17,7 +17,7 @@ description: >
   Stop the FZC Docker container to simulate CAN bus-off / ECU failure.
   Verify the Safety Controller detects the FZC heartbeat loss within 200ms
   (3 missed heartbeats at 50ms interval + margin), transitions the vehicle
-  to DEGRADED state, and that the RZC (rear zone controller) remains
+  to LIMP state, and that the RZC (rear zone controller) remains
   operational so brake commands can still be processed.
 verifies:
   - "SWR-FZC-005"   # FZC heartbeat monitoring and timeout detection
@@ -53,9 +53,9 @@ verdicts:
     description: "SC must detect FZC heartbeat loss within 200ms (3 missed @ 50ms)"
 
   - type: vehicle_state
-    expected: DEGRADED
+    expected: LIMP
     within_ms: 500
-    description: "Vehicle must enter DEGRADED mode after FZC loss"
+    description: "Vehicle must enter LIMP mode after single-zone FZC loss (EVT_CAN_TIMEOUT_SINGLE)"
 
   - type: can_message
     can_id: 0x012

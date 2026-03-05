@@ -51,8 +51,8 @@ CAN_BRAKE_COMMAND = 0x103   # Brake_Command    — 8 bytes
 CAN_BATTERY_STATUS = 0x303  # Battery_Status   — 4 bytes, no E2E
 CAN_DTC_BROADCAST = 0x500   # DTC_Broadcast    — 8 bytes, no E2E
 
-# DTC codes (must match plant_sim/simulator.py and SAP QM mock)
-DTC_BATTERY_UV = 0xE401
+# DTC codes — 24-bit big-endian, must match firmware Dem_SetDtcCode() values
+DTC_BATTERY_UV = 0x00E401
 ECU_RZC = 3
 
 # E2E Data IDs (lower 4 bits of byte 0, matches DBC DataID field values)
@@ -184,19 +184,22 @@ def _battery_frame(voltage_mv: int, soc_pct: int, status: int) -> bytes:
 def _dtc_frame(dtc_code: int, ecu_source: int, occurrence: int = 1) -> bytes:
     """Build a DTC_Broadcast frame (0x500, 8 bytes, no E2E).
 
-    Byte layout (from DBC):
-      [0..1] DTC_Number     (16-bit LE)
-      [2]    DTC_Status      (0x01 = active)
-      [3]    ECU_Source       (1=CVC, 2=FZC, 3=RZC, 4=SC)
-      [4]    OccurrenceCount
-      [5..7] FreezeFrame0-2
+    Byte layout (matches firmware Dem.c 24-bit big-endian):
+      [0]    DTC_Number high byte
+      [1]    DTC_Number mid byte
+      [2]    DTC_Number low byte
+      [3]    DTC_Status      (0x01 = active)
+      [4]    ECU_Source       (1=CVC, 2=FZC, 3=RZC, 4=SC)
+      [5]    OccurrenceCount
+      [6..7] Reserved
     """
     payload = bytearray(8)
-    payload[0] = dtc_code & 0xFF
-    payload[1] = (dtc_code >> 8) & 0xFF
-    payload[2] = 0x01  # active
-    payload[3] = ecu_source & 0xFF
-    payload[4] = min(255, occurrence)
+    payload[0] = (dtc_code >> 16) & 0xFF   # DTC high byte
+    payload[1] = (dtc_code >> 8) & 0xFF    # DTC mid byte
+    payload[2] = dtc_code & 0xFF           # DTC low byte
+    payload[3] = 0x01  # active
+    payload[4] = ecu_source & 0xFF
+    payload[5] = min(255, occurrence)
     return bytes(payload)
 
 
@@ -268,7 +271,7 @@ def steer_fault() -> str:
 
     The plant-sim:
       1. Sets steering fault flag
-      2. Sends DTC 0xE201 (steer fault) on CAN 0x500
+      2. Sends DTC 0xD001 (steer plausibility fault) on CAN 0x500
       3. Transitions to SAFE_STOP (motor off, brake applied)
       4. Motor_Status CAN frames reflect motor disabled
     """
@@ -276,7 +279,7 @@ def steer_fault() -> str:
         return "Steer fault: MQTT client not available"
     inject_steer_fault(_mqtt_client)
     return ("Steer fault: MQTT inject_steer_fault -> plant-sim sets fault.  "
-            "DTC 0xE201 broadcast + physics -> SAFE_STOP.")
+            "DTC 0xD001 broadcast + physics -> SAFE_STOP.")
 
 
 def brake_fault() -> str:
@@ -674,7 +677,7 @@ SCENARIOS: dict[str, dict] = {
         "fn": steer_fault,
         "description": (
             "Steering fault: MQTT inject to plant-sim sets steering fault.  "
-            "DTC 0xE201 broadcast + physics cascade -> SAFE_STOP."
+            "DTC 0xD001 broadcast + physics cascade -> SAFE_STOP."
         ),
     },
     "brake_fault": {
