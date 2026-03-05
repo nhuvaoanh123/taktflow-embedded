@@ -243,6 +243,16 @@ void Dem_MainFunction(void)
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
 
+#ifdef PLATFORM_POSIX
+        /* SIL diagnostic: trace DTC broadcast decision for E2E-related event */
+        if ((i == 5u) && ((dem_events[i].statusByte & DEM_STATUS_CONFIRMED_DTC) != 0u))
+        {
+            fprintf(stderr, "[DEM-DIAG] event=5 status=0x%02X sent=%u pduId=%u dtc=0x%06X\n",
+                    dem_events[i].statusByte, dem_broadcast_sent[i],
+                    (unsigned)dem_broadcast_pdu_id, (unsigned)dem_dtc_codes[i]);
+        }
+#endif
+
         /* Only broadcast newly confirmed DTCs that haven't been sent yet */
         if (((dem_events[i].statusByte & DEM_STATUS_CONFIRMED_DTC) != 0u) &&
             (dem_broadcast_sent[i] == 0u))
