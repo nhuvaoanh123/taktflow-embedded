@@ -90,7 +90,7 @@ static const Com_SignalConfigType rzc_signal_config[] = {
 
     /* RX signals — Vehicle + Torque PDU */
     { 16u,   16u,     8u, COM_UINT8,  RZC_COM_RX_VEHICLE_TORQUE,     &sig_rx_vehicle_state  },
-    { 17u,   24u,    16u, COM_SINT16, RZC_COM_RX_VEHICLE_TORQUE,     &sig_rx_torque_cmd     },
+    { 17u,   32u,    16u, COM_SINT16, RZC_COM_RX_VEHICLE_TORQUE,     &sig_rx_torque_cmd     },
 
     /* RX virtual sensor signals (CAN 0x401 — no E2E, raw payload) */
     { 18u,    0u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_current  },

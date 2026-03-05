@@ -354,12 +354,15 @@ void Swc_CvcCom_BridgeRxToRte(void)
 
     uint8  steering_fault_val = 0u;
 
+    uint8  motor_fault_rzc_val = 0u;
+
     /* Read fault signals from Com shadow buffers */
     (void)Com_ReceiveSignal(13u, &brake_fault_val);      /* sig_rx_brake_fault */
     (void)Com_ReceiveSignal(14u, &motor_cutoff_val);     /* sig_rx_motor_cutoff */
     (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* sig_rx_sc_relay_kill */
     (void)Com_ReceiveSignal(18u, &battery_status_val);   /* sig_rx_battery_status (CAN 0x303) */
     (void)Com_ReceiveSignal(20u, &steering_fault_val);   /* sig_rx_steering_fault (CAN 0x200) */
+    (void)Com_ReceiveSignal(21u, &motor_fault_rzc_val);  /* sig_rx_motor_fault_rzc (CAN 0x300) */
 
     /* Bridge to RTE for VehicleState to consume.
      * Heartbeat comm status is owned exclusively by Swc_Heartbeat.c
@@ -369,6 +372,7 @@ void Swc_CvcCom_BridgeRxToRte(void)
     (void)Rte_Write(CVC_SIG_SC_RELAY_KILL,  (uint32)sc_relay_kill_val);
     (void)Rte_Write(CVC_SIG_BATTERY_STATUS, (uint32)battery_status_val);
     (void)Rte_Write(CVC_SIG_STEERING_FAULT, (uint32)steering_fault_val);
+    (void)Rte_Write(CVC_SIG_MOTOR_FAULT_RZC, (uint32)motor_fault_rzc_val);
 
 #ifdef PLATFORM_POSIX
     /* SIL E-Stop injection: fault-inject API sends CAN 0x001 with E-Stop

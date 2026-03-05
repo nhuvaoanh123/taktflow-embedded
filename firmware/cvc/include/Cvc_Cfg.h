@@ -37,7 +37,8 @@
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_SIG_BATTERY_STATUS    32u
-#define CVC_SIG_COUNT             33u
+#define CVC_SIG_MOTOR_FAULT_RZC   33u
+#define CVC_SIG_COUNT             34u
 
 /* ====================================================================
  * Com TX PDU IDs
@@ -67,6 +68,7 @@
 #define CVC_COM_RX_BATTERY_STATUS  7u   /* CAN 0x303 */
 #define CVC_COM_RX_ESTOP_INJECT    8u   /* CAN 0x001 — SIL E-Stop injection */
 #define CVC_COM_RX_STEER_STATUS    9u   /* CAN 0x200 — FZC steering status  */
+#define CVC_COM_RX_MOTOR_STATUS   10u   /* CAN 0x300 — RZC motor status     */
 
 /* Com RX Signal IDs (for Com_ReceiveSignal — heartbeat alive counters) */
 #define CVC_COM_SIG_FZC_HB_ALIVE  9u   /* sig_rx_fzc_hb_alive */

@@ -228,14 +228,15 @@ static uint16 fault_unlatch_count[CVC_LATCH_COUNT];
  * Confirmation-read pattern — ISO 26262 debounce + fresh Com + E2E
  * ================================================================== */
 
-/** @brief  Per-fault debounce counters: [brake, motor_cutoff, steering] */
-static uint8 fault_confirm_count[3];
+/** @brief  Per-fault debounce counters: [brake, motor_cutoff_fzc, steering, motor_fault_rzc] */
+static uint8 fault_confirm_count[4];
 
 #define CVC_FAULT_CONFIRM_THRESHOLD  3u   /**< 3 consecutive 10ms cycles = 30ms */
 #define CVC_FAULT_IDX_BRAKE          0u
 #define CVC_FAULT_IDX_MOTOR_CUTOFF   1u
 #define CVC_FAULT_IDX_STEERING       2u
-#define CVC_FAULT_CONFIRM_COUNT      3u
+#define CVC_FAULT_IDX_MOTOR_RZC      3u
+#define CVC_FAULT_CONFIRM_COUNT      4u
 
 #define CVC_FAULT_COM_BRAKE         13u   /**< Com signal ID for brake_fault   */
 #define CVC_FAULT_COM_MOTOR_CUTOFF  14u   /**< Com signal ID for motor_cutoff  */
@@ -467,6 +468,7 @@ void Swc_VehicleState_MainFunction(void)
     uint32 steering_fault  = 0u;
     uint32 sc_relay_kill   = 0u;
     uint32 battery_status  = 2u;  /* Default NORMAL if read fails */
+    uint32 motor_fault_rzc = 0u;
 
     if (initialized != TRUE)
     {
@@ -483,6 +485,7 @@ void Swc_VehicleState_MainFunction(void)
     (void)Rte_Read(CVC_SIG_STEERING_FAULT,   &steering_fault);
     (void)Rte_Read(CVC_SIG_SC_RELAY_KILL,   &sc_relay_kill);
     (void)Rte_Read(CVC_SIG_BATTERY_STATUS, &battery_status);
+    (void)Rte_Read(CVC_SIG_MOTOR_FAULT_RZC, &motor_fault_rzc);
 
 #ifdef SIL_DIAG
     {
@@ -644,6 +647,7 @@ void Swc_VehicleState_MainFunction(void)
     if ((current_state == CVC_STATE_DEGRADED) &&
         (pedal_fault == 0u) &&
         (motor_cutoff == 0u) &&
+        (motor_fault_rzc == 0u) &&
         (brake_fault == 0u) &&
         (battery_status == 2u))
     {
@@ -691,6 +695,11 @@ void Swc_VehicleState_MainFunction(void)
                 CVC_DTC_MOTOR_CUTOFF_RX, CVC_EVT_MOTOR_CUTOFF);
 
             Swc_VehicleState_ConfirmFault(
+                CVC_FAULT_IDX_MOTOR_RZC, motor_fault_rzc,
+                21u, 0xFFu,
+                CVC_DTC_MOTOR_OVERCURRENT, CVC_EVT_MOTOR_CUTOFF);
+
+            Swc_VehicleState_ConfirmFault(
                 CVC_FAULT_IDX_BRAKE, brake_fault,
                 CVC_FAULT_COM_BRAKE, CVC_FAULT_E2E_BRAKE,
                 CVC_DTC_BRAKE_FAULT_RX, CVC_EVT_BRAKE_FAULT);
@@ -710,7 +719,7 @@ void Swc_VehicleState_MainFunction(void)
         const uint32 raw_signals[CVC_LATCH_COUNT] = {
             estop_active,   /* CVC_LATCH_IDX_ESTOP        */
             sc_relay_kill,  /* CVC_LATCH_IDX_SC_KILL      */
-            motor_cutoff,   /* CVC_LATCH_IDX_MOTOR_CUTOFF */
+            (motor_cutoff != 0u || motor_fault_rzc != 0u) ? 1u : 0u,  /* CVC_LATCH_IDX_MOTOR_CUTOFF */
             brake_fault,    /* CVC_LATCH_IDX_BRAKE        */
             steering_fault, /* CVC_LATCH_IDX_STEERING     */
             pedal_fault,    /* CVC_LATCH_IDX_PEDAL_DUAL   */
@@ -754,6 +763,7 @@ void Swc_VehicleState_MainFunction(void)
             /* Defense in depth: check instantaneous signals */
             if ((estop_active == 0u) &&
                 (motor_cutoff == 0u) &&
+                (motor_fault_rzc == 0u) &&
                 (brake_fault == 0u) &&
                 (steering_fault == 0u) &&
                 (pedal_fault == 0u) &&
