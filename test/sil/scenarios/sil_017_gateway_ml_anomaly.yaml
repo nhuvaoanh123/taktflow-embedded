@@ -51,11 +51,13 @@ verdicts:
   - type: mqtt_payload_field
     topic: "vehicle/alerts"
     field: "anomaly_score"
+    operator: exists
     description: "Alert contains anomaly score exceeding threshold"
 
   - type: mqtt_payload_field
     topic: "vehicle/alerts"
     field: "anomaly_type"
+    operator: exists
     description: "Alert identifies the anomaly type (motor current)"
 
 teardown:

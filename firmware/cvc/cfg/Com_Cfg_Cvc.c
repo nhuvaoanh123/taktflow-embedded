@@ -38,6 +38,8 @@ static uint16 sig_rx_lidar_dist;
 static uint16 sig_rx_motor_current;
 static uint8  sig_rx_sc_relay_kill;
 static uint8  sig_rx_battery_status = 2u;  /* NORMAL — prevents false BATT_CRIT in SIL */
+static uint8  sig_rx_estop_inject;
+static uint8  sig_rx_steering_fault;
 
 /* ==================================================================
  * Signal Configuration Table
@@ -68,6 +70,8 @@ static const Com_SignalConfigType cvc_signal_config[] = {
     { 16u,   16u,    16u, COM_UINT16, CVC_COM_RX_MOTOR_CURRENT, &sig_rx_motor_current  },
     { 17u,    0u,     8u, COM_UINT8,  CVC_COM_RX_SC_RELAY,      &sig_rx_sc_relay_kill  },
     { 18u,   24u,     8u, COM_UINT8,  CVC_COM_RX_BATTERY_STATUS, &sig_rx_battery_status },
+    { 19u,   16u,     8u, COM_UINT8,  CVC_COM_RX_ESTOP_INJECT,   &sig_rx_estop_inject   },
+    { 20u,   32u,     8u, COM_UINT8,  CVC_COM_RX_STEER_STATUS,  &sig_rx_steering_fault },
 };
 
 #define CVC_COM_SIGNAL_COUNT  (sizeof(cvc_signal_config) / sizeof(cvc_signal_config[0]))
@@ -106,6 +110,8 @@ static const Com_RxPduConfigType cvc_rx_pdu_config[] = {
     { CVC_COM_RX_MOTOR_CURRENT,   8u,  200u },   /* 5 Hz motor feedback  */
     { CVC_COM_RX_SC_RELAY,        4u,  200u },   /* SC relay status      */
     { CVC_COM_RX_BATTERY_STATUS,  8u,    0u },   /* Battery status — timeout disabled (heartbeat covers RZC comm loss) */
+    { CVC_COM_RX_ESTOP_INJECT,    8u,    0u },   /* E-Stop inject (SIL) — no timeout */
+    { CVC_COM_RX_STEER_STATUS,   8u,  200u },   /* FZC steering status — 20× period */
 };
 
 #define CVC_COM_RX_PDU_COUNT  (sizeof(cvc_rx_pdu_config) / sizeof(cvc_rx_pdu_config[0]))

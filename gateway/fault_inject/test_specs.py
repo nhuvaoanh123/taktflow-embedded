@@ -106,10 +106,10 @@ TEST_SPECS: list[TestSpec] = [
                 timeout_ms=5000,
             ),
             VerdictCheck(
-                description="DTC 0xE201 broadcast",
+                description="DTC 0xD001 broadcast",
                 check_type="dtc",
-                expected="DTC 0xE201 received",
-                value=0xE201,
+                expected="DTC 0xD001 received",
+                value=0xD001,
                 timeout_ms=5000,
             ),
         ],

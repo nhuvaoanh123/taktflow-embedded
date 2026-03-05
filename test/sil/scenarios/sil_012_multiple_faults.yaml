@@ -17,7 +17,7 @@ id: "SIL-012"
 description: >
   Inject overcurrent (95% torque + brake) and steer_fault (rapid oscillation)
   in rapid succession (within 500ms).  Verify both DTC 0xE301 (overcurrent,
-  from RZC) and DTC 0xE201 (steer_fault, from FZC) are broadcast on CAN.
+  from RZC) and DTC 0xD001 (steer plausibility, from FZC) are broadcast on CAN.
   Verify the Safety Controller handles multiple faults with correct priority
   and the vehicle enters DEGRADED (possibly escalating to SAFE_STOP when
   both motor and steering subsystems are simultaneously faulted).
@@ -58,9 +58,9 @@ verdicts:
 
   - type: dtc_broadcast
     can_id: 0x500
-    dtc_code: 0xE201
+    dtc_code: 0xD001
     ecu_source: 2
-    description: "DTC 0xE201 (steer_fault) broadcast from FZC (source=2)"
+    description: "DTC 0xD001 (steer plausibility) broadcast from FZC (source=2)"
 
   - type: vehicle_state
     expected: DEGRADED

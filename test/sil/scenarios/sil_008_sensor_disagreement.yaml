@@ -7,7 +7,7 @@
 #
 # Validates the steering fault detection path.  The steer_fault scenario
 # sends 10 rapid +/-40 deg oscillations that exceed the FZC's configured
-# maximum steering rate, triggering a SteerFaultStatus and DTC 0xE201.
+# maximum steering rate, triggering a SteerFaultStatus and DTC 0xD001.
 # =============================================================================
 
 name: "Steering Sensor Fault"
@@ -15,7 +15,7 @@ id: "SIL-008"
 description: >
   Inject steer_fault scenario: 10 rapid +/-40 deg oscillations at 5ms
   interval (200 deg/s effective rate).  FZC detects the rate-limit
-  violation, sets SteerFaultStatus, broadcasts DTC 0xE201, and the
+  violation, sets SteerFaultStatus, broadcasts DTC 0xD001, and the
   vehicle transitions to DEGRADED.  Verify the complete fault detection
   and reporting chain.
 verifies:
@@ -46,9 +46,9 @@ steps:
 verdicts:
   - type: dtc_broadcast
     can_id: 0x500
-    dtc_code: 0xE201
+    dtc_code: 0xD001
     ecu_source: 2
-    description: "DTC 0xE201 (steer_fault) broadcast from FZC (source=2)"
+    description: "DTC 0xD001 (steer plausibility) broadcast from FZC (source=2)"
 
   - type: vehicle_state
     expected: DEGRADED

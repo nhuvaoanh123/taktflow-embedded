@@ -65,6 +65,8 @@
 #define CVC_COM_RX_MOTOR_CURRENT   5u   /* CAN 0x301 */
 #define CVC_COM_RX_SC_RELAY        6u   /* CAN 0x013 */
 #define CVC_COM_RX_BATTERY_STATUS  7u   /* CAN 0x303 */
+#define CVC_COM_RX_ESTOP_INJECT    8u   /* CAN 0x001 — SIL E-Stop injection */
+#define CVC_COM_RX_STEER_STATUS    9u   /* CAN 0x200 — FZC steering status  */
 
 /* Com RX Signal IDs (for Com_ReceiveSignal — heartbeat alive counters) */
 #define CVC_COM_SIG_FZC_HB_ALIVE  9u   /* sig_rx_fzc_hb_alive */

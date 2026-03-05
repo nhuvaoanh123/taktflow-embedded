@@ -37,6 +37,8 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Any, Optional
 
+import uuid
+
 import can
 import paho.mqtt.client as paho_mqtt
 import requests
@@ -498,6 +500,9 @@ class ScenarioExecutor:
         self._fault_api_url = fault_api_url
         self._default_timeout_sec = default_timeout_sec
 
+        # Unique client ID for fault API control lock
+        self._client_id = str(uuid.uuid4())
+
         # Baseline storage for record_baseline / comparison verdicts
         self._baseline_motor_rpm: Optional[int] = None
         self._baseline_battery_soc: Optional[int] = None
@@ -506,24 +511,67 @@ class ScenarioExecutor:
         # Analysis results storage for build/static_analysis step actions
         self._analysis_results: dict[str, dict[str, Any]] = {}
 
+    def acquire_control_lock(self) -> None:
+        """Acquire the fault API control lock at suite start."""
+        try:
+            resp = self._fault_api_call(
+                "POST",
+                f"{self._fault_api_url}/api/fault/lock",
+            )
+            log.info("Acquired fault API control lock: %s", self._client_id)
+        except Exception as exc:
+            log.warning("Could not acquire control lock: %s", exc)
+
+    def release_control_lock(self) -> None:
+        """Release the fault API control lock at suite end."""
+        try:
+            resp = requests.delete(
+                f"{self._fault_api_url}/api/fault/lock",
+                headers={"X-Client-Id": self._client_id},
+                timeout=10,
+            )
+            log.info("Released fault API control lock")
+        except Exception as exc:
+            log.warning("Could not release control lock: %s", exc)
+
     def _fault_api_call(
         self, method: str, url: str, **kwargs: Any
     ) -> requests.Response:
-        """Call fault API with retry for post-restart resilience."""
-        max_retries = 3
+        """Call fault API with retry for post-restart resilience.
+
+        Sends X-Client-Id header on all calls and retries on connection
+        errors, timeouts, and HTTP 403/503 (lock conflict / service restart).
+        """
+        max_retries = 10
+        backoff_sec = 5
         timeout = kwargs.pop("timeout", 60)
+        headers = kwargs.pop("headers", {})
+        headers["X-Client-Id"] = self._client_id
         for attempt in range(max_retries):
             try:
-                resp = requests.request(method, url, timeout=timeout, **kwargs)
+                resp = requests.request(
+                    method, url, timeout=timeout,
+                    headers=headers, **kwargs,
+                )
                 resp.raise_for_status()
                 return resp
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else 0
+                if status in (403, 503) and attempt < max_retries - 1:
+                    log.warning(
+                        "  Fault API attempt %d/%d HTTP %d: %s — retrying in %ds",
+                        attempt + 1, max_retries, status, exc, backoff_sec,
+                    )
+                    time.sleep(backoff_sec)
+                else:
+                    raise
             except (requests.ConnectionError, requests.Timeout) as exc:
                 if attempt < max_retries - 1:
                     log.warning(
-                        "  Fault API attempt %d/%d failed: %s — retrying in 3s",
-                        attempt + 1, max_retries, exc,
+                        "  Fault API attempt %d/%d failed: %s — retrying in %ds",
+                        attempt + 1, max_retries, exc, backoff_sec,
                     )
-                    time.sleep(3)
+                    time.sleep(backoff_sec)
                 else:
                     raise
 
@@ -1365,12 +1413,14 @@ class ScenarioExecutor:
     ) -> VerdictEvidence:
         """Verify a specific DTC was broadcast on CAN 0x500.
 
-        DTC_Broadcast frame layout (from scenarios.py):
-            [0..1] DTC_Number     (16-bit LE)
-            [2]    DTC_Status      (0x01 = active)
-            [3]    ECU_Source       (1=CVC, 2=FZC, 3=RZC, 4=SC)
-            [4]    OccurrenceCount
-            [5..7] FreezeFrame0-2
+        DTC_Broadcast frame layout (from Dem.c):
+            [0]    DTC_Number high  (24-bit UDS DTC, big-endian)
+            [1]    DTC_Number mid
+            [2]    DTC_Number low
+            [3]    DTC_Status       (ISO 14229 status byte)
+            [4]    ECU_Source        (0x01=CVC, 0x02=FZC, 0x03=RZC, 0x04=SC)
+            [5]    OccurrenceCount
+            [6..7] Reserved
         """
         can_id = _parse_int(vdef.get("can_id", CAN_DTC_BROADCAST))
         expected_dtc = _parse_int(vdef.get("dtc_code", 0))
@@ -1390,10 +1440,11 @@ class ScenarioExecutor:
 
         # Search history for matching DTC
         for ts, msg in history:
-            if len(msg.data) < 4:
+            if len(msg.data) < 5:
                 continue
-            dtc_num = msg.data[0] | (msg.data[1] << 8)
-            source = msg.data[3]
+            # 3-byte big-endian DTC code (UDS format)
+            dtc_num = (msg.data[0] << 16) | (msg.data[1] << 8) | msg.data[2]
+            source = msg.data[4]
             if dtc_num == expected_dtc:
                 source_match = (
                     expected_source is None or source == expected_source
@@ -1401,9 +1452,9 @@ class ScenarioExecutor:
                 if source_match:
                     return VerdictEvidence(
                         description=description
-                        or f"DTC 0x{expected_dtc:04X} broadcast",
+                        or f"DTC 0x{expected_dtc:06X} broadcast",
                         expected=(
-                            f"DTC=0x{expected_dtc:04X}"
+                            f"DTC=0x{expected_dtc:06X}"
                             + (
                                 f", source={expected_source}"
                                 if expected_source is not None
@@ -1411,8 +1462,8 @@ class ScenarioExecutor:
                             )
                         ),
                         observed=(
-                            f"DTC=0x{dtc_num:04X}, "
-                            f"status=0x{msg.data[2]:02X}, "
+                            f"DTC=0x{dtc_num:06X}, "
+                            f"status=0x{msg.data[3]:02X}, "
                             f"source={source}"
                         ),
                         passed=True,
@@ -1423,14 +1474,14 @@ class ScenarioExecutor:
         # Not found
         dtcs_seen = []
         for _, msg in history:
-            if len(msg.data) >= 4:
-                dtc_num = msg.data[0] | (msg.data[1] << 8)
-                dtcs_seen.append(f"0x{dtc_num:04X}")
+            if len(msg.data) >= 5:
+                dtc_num = (msg.data[0] << 16) | (msg.data[1] << 8) | msg.data[2]
+                dtcs_seen.append(f"0x{dtc_num:06X}")
 
         return VerdictEvidence(
             description=description
-            or f"DTC 0x{expected_dtc:04X} broadcast",
-            expected=f"DTC=0x{expected_dtc:04X}",
+            or f"DTC 0x{expected_dtc:06X} broadcast",
+            expected=f"DTC=0x{expected_dtc:06X}",
             observed=f"DTCs seen: {dtcs_seen}" if dtcs_seen else "No DTC messages",
             passed=False,
             timestamp=time.monotonic(),
@@ -1642,9 +1693,10 @@ class ScenarioExecutor:
         active_dtcs: list[str] = []
 
         for _, msg in history:
-            if len(msg.data) >= 3 and msg.data[2] == 0x01:
-                dtc_num = msg.data[0] | (msg.data[1] << 8)
-                active_dtcs.append(f"0x{dtc_num:04X}")
+            # DTC status byte is at index 3 (ISO 14229), bit 0 = test_failed
+            if len(msg.data) >= 5 and (msg.data[3] & 0x01):
+                dtc_num = (msg.data[0] << 16) | (msg.data[1] << 8) | msg.data[2]
+                active_dtcs.append(f"0x{dtc_num:06X}")
 
         passed = len(active_dtcs) == 0
 
@@ -1677,22 +1729,22 @@ class ScenarioExecutor:
         history = self._can.get_message_history(CAN_DTC_BROADCAST)
 
         for _, msg in history:
-            if len(msg.data) >= 2:
-                dtc_num = msg.data[0] | (msg.data[1] << 8)
+            if len(msg.data) >= 3:
+                dtc_num = (msg.data[0] << 16) | (msg.data[1] << 8) | msg.data[2]
                 if dtc_num == expected_dtc:
                     return VerdictEvidence(
                         description=description
-                        or f"DTC 0x{expected_dtc:04X} preserved",
-                        expected=f"DTC 0x{expected_dtc:04X} in history",
-                        observed=f"Found DTC 0x{dtc_num:04X}",
+                        or f"DTC 0x{expected_dtc:06X} preserved",
+                        expected=f"DTC 0x{expected_dtc:06X} in history",
+                        observed=f"Found DTC 0x{dtc_num:06X}",
                         passed=True,
                         timestamp=time.monotonic(),
                     )
 
         return VerdictEvidence(
             description=description
-            or f"DTC 0x{expected_dtc:04X} preserved",
-            expected=f"DTC 0x{expected_dtc:04X} in history",
+            or f"DTC 0x{expected_dtc:06X} preserved",
+            expected=f"DTC 0x{expected_dtc:06X} in history",
             observed=f"Not found in {len(history)} DTC messages",
             passed=False,
             timestamp=time.monotonic(),
@@ -1948,10 +2000,15 @@ class ScenarioExecutor:
             )
 
         # Extract SOC values (byte 2 of Battery_Status)
+        # Filter: plant-sim sends 4-byte frames with SOC in byte 2 (0-100).
+        # RZC sends 8-byte E2E frames where byte 2 is voltage LSB, not SOC.
+        # Only accept values in valid SOC range [0, 100].
         soc_values: list[int] = []
         for _, msg in history:
             if len(msg.data) >= 3:
-                soc_values.append(msg.data[2])
+                raw = msg.data[2]
+                if raw <= 100:
+                    soc_values.append(raw)
 
         if len(soc_values) < 2:
             return VerdictEvidence(
@@ -2672,33 +2729,38 @@ def main() -> int:
         default_timeout_sec=args.timeout,
     )
 
+    # Acquire fault API control lock for the entire test suite
+    executor.acquire_control_lock()
+
     # Execute all scenarios
     results: list[ScenarioResult] = []
-    for scenario_path in scenario_paths:
-        try:
-            result = executor.execute_scenario(scenario_path)
-            results.append(result)
-        except Exception as exc:
-            log.error(
-                "Unhandled exception in scenario %s: %s",
-                scenario_path.name, exc,
-            )
-            results.append(
-                ScenarioResult(
-                    scenario_id=scenario_path.stem,
-                    scenario_name=scenario_path.stem,
-                    description="",
-                    verifies=[],
-                    aspice="SWE.5",
-                    passed=False,
-                    duration_sec=0.0,
-                    error=f"Unhandled exception: {exc}",
+    try:
+        for scenario_path in scenario_paths:
+            try:
+                result = executor.execute_scenario(scenario_path)
+                results.append(result)
+            except Exception as exc:
+                log.error(
+                    "Unhandled exception in scenario %s: %s",
+                    scenario_path.name, exc,
                 )
-            )
-
-    # Stop monitors
-    can_monitor.stop()
-    mqtt_monitor.stop()
+                results.append(
+                    ScenarioResult(
+                        scenario_id=scenario_path.stem,
+                        scenario_name=scenario_path.stem,
+                        description="",
+                        verifies=[],
+                        aspice="SWE.5",
+                        passed=False,
+                        duration_sec=0.0,
+                        error=f"Unhandled exception: {exc}",
+                    )
+                )
+    finally:
+        # Release control lock and stop monitors
+        executor.release_control_lock()
+        can_monitor.stop()
+        mqtt_monitor.stop()
 
     # Generate reports
     junit_path = results_dir / "sil_results.xml"

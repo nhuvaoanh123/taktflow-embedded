@@ -47,21 +47,25 @@ verdicts:
   - type: mqtt_payload_field
     topic: "vehicle/telemetry"
     field: "motor_speed_rpm"
+    operator: exists
     description: "Telemetry contains motor speed (decoded from CAN 0x300)"
 
   - type: mqtt_payload_field
     topic: "vehicle/telemetry"
     field: "battery_voltage_v"
+    operator: exists
     description: "Telemetry contains battery voltage (decoded from CAN 0x303)"
 
   - type: mqtt_payload_field
     topic: "vehicle/telemetry"
     field: "vehicle_state"
+    operator: exists
     description: "Telemetry contains vehicle state (decoded from CAN 0x100)"
 
   - type: mqtt_payload_field
     topic: "vehicle/telemetry"
     field: "timestamp"
+    operator: exists
     description: "Telemetry contains ISO 8601 timestamp"
 
 teardown:

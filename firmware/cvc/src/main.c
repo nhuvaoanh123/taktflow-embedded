@@ -146,6 +146,8 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     { 0x301u, CVC_COM_RX_MOTOR_CURRENT, 8u, FALSE },  /* Motor current      */
     { 0x013u, CVC_COM_RX_SC_RELAY,      4u, FALSE },  /* SC relay status    */
     { 0x303u, CVC_COM_RX_BATTERY_STATUS, 8u, FALSE }, /* Battery status     */
+    { 0x001u, CVC_COM_RX_ESTOP_INJECT,  8u, FALSE },  /* E-Stop inject (SIL)*/
+    { 0x200u, CVC_COM_RX_STEER_STATUS, 8u, FALSE },  /* FZC steering status*/
     { 0x7DFu, 0xFFu,                    8u, FALSE },  /* UDS functional req  */
     { 0x7E0u, 0xFEu,                    8u, FALSE },  /* UDS physical req    */
 };
@@ -167,6 +169,8 @@ static const PduR_RoutingTableType cvc_pdur_routing[] = {
     { CVC_COM_RX_MOTOR_CURRENT, PDUR_DEST_COM, CVC_COM_RX_MOTOR_CURRENT },
     { CVC_COM_RX_SC_RELAY,      PDUR_DEST_COM, CVC_COM_RX_SC_RELAY      },
     { CVC_COM_RX_BATTERY_STATUS, PDUR_DEST_COM, CVC_COM_RX_BATTERY_STATUS },
+    { CVC_COM_RX_ESTOP_INJECT,   PDUR_DEST_COM, CVC_COM_RX_ESTOP_INJECT  },
+    { CVC_COM_RX_STEER_STATUS,  PDUR_DEST_COM, CVC_COM_RX_STEER_STATUS },
     { 0xFFu,                    PDUR_DEST_CANTP, 0u                      },
     { 0xFEu,                    PDUR_DEST_CANTP, 0u                      },
 };

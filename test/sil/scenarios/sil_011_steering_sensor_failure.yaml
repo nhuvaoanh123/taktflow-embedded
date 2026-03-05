@@ -66,9 +66,9 @@ verdicts:
 
   - type: dtc_broadcast
     can_id: 0x500
-    dtc_code: 0xE201
+    dtc_code: 0xD001
     ecu_source: 2
-    description: "DTC 0xE201 (steer_fault) must have been broadcast from FZC"
+    description: "DTC 0xD001 (steer plausibility) must have been broadcast from FZC"
 
   - type: can_message
     can_id: 0x001

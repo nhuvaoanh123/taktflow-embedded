@@ -63,6 +63,8 @@ services:
       - CAN_INTERFACE=vcan0
       - ECU_NAME=cvc
       - SPI_PEDAL_UDP_PORT=9100
+    volumes:
+      - nvm_cvc:/tmp
     restart: unless-stopped
 
   # --- Front Zone Controller ---
@@ -80,6 +82,8 @@ services:
     environment:
       - CAN_INTERFACE=vcan0
       - ECU_NAME=fzc
+    volumes:
+      - nvm_fzc:/tmp
     restart: unless-stopped
 
   # --- Rear Zone Controller ---
@@ -97,6 +101,8 @@ services:
     environment:
       - CAN_INTERFACE=vcan0
       - ECU_NAME=rzc
+    volumes:
+      - nvm_rzc:/tmp
     restart: unless-stopped
 
   # --- Safety Controller ---
@@ -212,11 +218,14 @@ services:
         condition: service_completed_successfully
       mqtt-broker:
         condition: service_started
+      sap-qm-mock:
+        condition: service_started
     environment:
       - CAN_CHANNEL=vcan0
       - DBC_PATH=/app/taktflow.dbc
       - MQTT_HOST=localhost
       - MQTT_PORT=1883
+      - SAP_QM_API_URL=http://localhost:8090
     restart: unless-stopped
 
   # --- WebSocket Telemetry Bridge ---
@@ -302,3 +311,6 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  nvm_cvc:
+  nvm_fzc:
+  nvm_rzc:
