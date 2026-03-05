@@ -251,7 +251,7 @@ Std_ReturnType Rzc_E2eRxCheck(uint8 pduId, const uint8* data, uint8 length)
                 &RzcCom_RxE2eState[pduId],
                 data, (uint16)length);
 #ifdef PLATFORM_POSIX
-            fprintf(stderr, "[RZC-E2E] pdu=%u len=%u byte0=0x%02X byte1=0x%02X status=%u failCnt=%u\n",
+            (void)fprintf(stderr, "[RZC-E2E] pdu=%u len=%u byte0=0x%02X byte1=0x%02X status=%u failCnt=%u\n",
                     pduId, length,
                     (length > 0u) ? data[0] : 0xFFu,
                     (length > 1u) ? data[1] : 0xFFu,
@@ -463,7 +463,7 @@ void Swc_RzcCom_Receive(void)
         /* 3 consecutive E2E failures: safe default = zero torque */
         (void)Rte_Write(RZC_SIG_TORQUE_CMD, 0u);
 #ifdef PLATFORM_POSIX
-        fprintf(stderr, "[RZC-E2E] failCnt=%u >= limit=%u → Dem_Report(DTC=%u)\n",
+        (void)fprintf(stderr, "[RZC-E2E] failCnt=%u >= limit=%u → Dem_Report(DTC=%u)\n",
                 RzcCom_RxFailCount[RZC_COM_RX_VEHICLE_TORQUE],
                 (unsigned)RZCCOM_E2E_FAIL_LIMIT,
                 (unsigned)RZC_DTC_CAN_BUS_OFF);
