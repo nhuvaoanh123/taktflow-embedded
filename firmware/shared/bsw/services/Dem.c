@@ -244,9 +244,24 @@ void Dem_MainFunction(void)
     uint8 pdu_data[8];
     PduInfoType pdu_info;
     uint32 dtc_code;
+#ifdef PLATFORM_POSIX
+    static uint8 dem_mf_log_count;
+#endif
 
     pdu_info.SduDataPtr = pdu_data;
     pdu_info.SduLength  = 8u;
+
+#ifdef PLATFORM_POSIX
+    /* Trace Dem_MainFunction entry (first 10 calls only) */
+    if (dem_mf_log_count < 10u) {
+        (void)fprintf(stderr, "[DEM-MF] call=%u ev5: status=0x%02X sent=%u ev15: status=0x%02X sent=%u pduId=%u\n",
+                dem_mf_log_count,
+                dem_events[5].statusByte, dem_broadcast_sent[5],
+                dem_events[15].statusByte, dem_broadcast_sent[15],
+                (unsigned)dem_broadcast_pdu_id);
+        dem_mf_log_count++;
+    }
+#endif
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
