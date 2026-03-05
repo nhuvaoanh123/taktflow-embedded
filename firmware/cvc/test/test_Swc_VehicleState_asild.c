@@ -41,6 +41,7 @@ typedef uint8 Std_ReturnType;
 #define CVC_SIG_BRAKE_FAULT       30u
 #define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_SIG_BATTERY_STATUS    32u
+#define CVC_SIG_MOTOR_FAULT_RZC   33u
 
 /* ==================================================================
  * Vehicle State / Event / Comm definitions (from Cvc_Cfg.h)
@@ -112,6 +113,7 @@ typedef uint8 Std_ReturnType;
 #define CVC_DTC_BRAKE_FAULT_RX     10u
 #define CVC_DTC_STEERING_FAULT_RX  11u
 #define CVC_DTC_BATT_UNDERVOLT    13u
+#define CVC_DTC_MOTOR_OVERCURRENT  7u
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_FAILED     1u
