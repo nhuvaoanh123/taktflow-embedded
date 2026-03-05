@@ -89,6 +89,19 @@ static uint16  RzcCom_TorqueTimeout;
 /** Heartbeat TX cycle counter */
 static uint8   RzcCom_HbCycleCount;
 
+/* ==================================================================
+ * E2E RX Configuration — uses shared BSW E2E_Check (Profile P01)
+ *
+ * Must match CVC TX E2E config for interoperability.
+ * Byte layout: [0]=counter:4|dataId:4, [1]=CRC-8, [2..7]=payload
+ * ================================================================== */
+
+/** E2E RX config: one entry per E2E-protected RX PDU (indexed by PDU ID) */
+static E2E_ConfigType RzcCom_RxE2eConfig[3];
+
+/** E2E RX state: alive counter tracking per PDU */
+static E2E_StateType  RzcCom_RxE2eState[3];
+
 /** TransmitSchedule cycle counter (for motor_temp and battery pacing) */
 static uint16  RzcCom_TxScheduleCycle;
 
@@ -227,20 +240,33 @@ static uint8 RzcCom_GetRxDataId(uint8 pduId)
  */
 Std_ReturnType Rzc_E2eRxCheck(uint8 pduId, const uint8* data, uint8 length)
 {
-    Std_ReturnType result;
+    E2E_CheckStatusType e2eResult;
+
     switch (pduId)
     {
         case RZC_COM_RX_ESTOP:
         case RZC_COM_RX_VEHICLE_TORQUE:
-            result = Swc_RzcCom_E2eCheck(pduId, data, length);
+            e2eResult = E2E_Check(
+                &RzcCom_RxE2eConfig[pduId],
+                &RzcCom_RxE2eState[pduId],
+                data, (uint16)length);
 #ifdef PLATFORM_POSIX
-            fprintf(stderr, "[RZC-E2E] pdu=%u len=%u crc=0x%02X result=%s failCnt=%u\n",
+            fprintf(stderr, "[RZC-E2E] pdu=%u len=%u byte0=0x%02X byte1=0x%02X status=%u failCnt=%u\n",
                     pduId, length,
                     (length > 0u) ? data[0] : 0xFFu,
-                    (result == E_OK) ? "OK" : "FAIL",
+                    (length > 1u) ? data[1] : 0xFFu,
+                    (unsigned)e2eResult,
                     RzcCom_RxFailCount[pduId]);
 #endif
-            return result;
+            if (e2eResult == E2E_STATUS_ERROR)
+            {
+                RzcCom_RxFailCount[pduId]++;
+                return E_NOT_OK;
+            }
+            /* OK, REPEATED, WRONG_SEQ — all acceptable, clear fail count */
+            RzcCom_RxFailCount[pduId] = 0u;
+            return E_OK;
+
         default:
             return E_OK;  /* No E2E for this PDU */
     }
@@ -270,6 +296,24 @@ void Swc_RzcCom_Init(void)
     rzc_e2e_motor_current_state.Counter = 0u;
     rzc_e2e_motor_temp_state.Counter    = 0u;
     rzc_e2e_battery_state.Counter       = 0u;
+
+    /* Initialize shared BSW E2E config and state for RX messages.
+     * DataId/MaxDeltaCounter must match CVC TX E2E configuration. */
+    RzcCom_RxE2eConfig[RZC_COM_RX_ESTOP].DataId          = RZC_E2E_ESTOP_DATA_ID;
+    RzcCom_RxE2eConfig[RZC_COM_RX_ESTOP].MaxDeltaCounter  = 3u;
+    RzcCom_RxE2eConfig[RZC_COM_RX_ESTOP].DataLength        = 8u;
+    RzcCom_RxE2eState[RZC_COM_RX_ESTOP].Counter            = 0u;
+
+    RzcCom_RxE2eConfig[RZC_COM_RX_VEHICLE_TORQUE].DataId          = RZC_E2E_VEHSTATE_DATA_ID;
+    RzcCom_RxE2eConfig[RZC_COM_RX_VEHICLE_TORQUE].MaxDeltaCounter  = 3u;
+    RzcCom_RxE2eConfig[RZC_COM_RX_VEHICLE_TORQUE].DataLength        = 8u;
+    RzcCom_RxE2eState[RZC_COM_RX_VEHICLE_TORQUE].Counter            = 0u;
+
+    /* VIRT_SENSORS (index 2) not E2E-protected — zero-init for safety */
+    RzcCom_RxE2eConfig[RZC_COM_RX_VIRT_SENSORS].DataId          = 0u;
+    RzcCom_RxE2eConfig[RZC_COM_RX_VIRT_SENSORS].MaxDeltaCounter  = 0u;
+    RzcCom_RxE2eConfig[RZC_COM_RX_VIRT_SENSORS].DataLength        = 0u;
+    RzcCom_RxE2eState[RZC_COM_RX_VIRT_SENSORS].Counter            = 0u;
 
     RzcCom_Initialized     = TRUE;
 }

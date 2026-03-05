@@ -44,16 +44,24 @@ typedef struct {
     uint8  SduLength;
 } PduInfoType;
 
-/* E2E types (must be before source inclusion) */
+/* E2E types (must match shared/bsw/services/E2E.h layout) */
 typedef struct {
     uint8  DataId;
     uint8  MaxDeltaCounter;
-    uint8  DataLength;
+    uint16 DataLength;
 } E2E_ConfigType;
 
 typedef struct {
     uint8  Counter;
 } E2E_StateType;
+
+typedef enum {
+    E2E_STATUS_OK           = 0u,
+    E2E_STATUS_REPEATED     = 1u,
+    E2E_STATUS_WRONG_SEQ    = 2u,
+    E2E_STATUS_ERROR        = 3u,
+    E2E_STATUS_NO_NEW_DATA  = 4u
+} E2E_CheckStatusType;
 
 /* Prevent BSW headers from redefining types when source is included */
 #define PLATFORM_TYPES_H
@@ -124,7 +132,7 @@ void Swc_RzcSafety_NotifyCanRx(void) { mock_safety_notify_count++; }
 #define RZC_E2E_MOTOR_CURRENT_DATA_ID 0x0Fu
 #define RZC_E2E_MOTOR_TEMP_DATA_ID   0x10u
 #define RZC_E2E_BATTERY_DATA_ID      0x11u
-#define RZC_E2E_ESTOP_DATA_ID        0x00u
+#define RZC_E2E_ESTOP_DATA_ID        0x01u
 #define RZC_E2E_VEHSTATE_DATA_ID     0x05u
 
 #define RZC_ECU_ID               0x03u
@@ -252,7 +260,7 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
 static uint8 mock_e2e_protect_count;
 
 Std_ReturnType E2E_Protect(const E2E_ConfigType* config, E2E_StateType* state,
-                           uint8* data, uint8 length)
+                           uint8* data, uint16 length)
 {
     (void)config;
     (void)state;
@@ -260,6 +268,24 @@ Std_ReturnType E2E_Protect(const E2E_ConfigType* config, E2E_StateType* state,
     (void)length;
     mock_e2e_protect_count++;
     return E_OK;
+}
+
+/* ==================================================================
+ * Mock: E2E_Check (shared BSW E2E module — RX verification)
+ * ================================================================== */
+
+static E2E_CheckStatusType mock_e2e_check_result;
+static uint8               mock_e2e_check_count;
+
+E2E_CheckStatusType E2E_Check(const E2E_ConfigType* config, E2E_StateType* state,
+                              const uint8* data, uint16 length)
+{
+    (void)config;
+    (void)state;
+    (void)data;
+    (void)length;
+    mock_e2e_check_count++;
+    return mock_e2e_check_result;
 }
 
 /* ==================================================================
@@ -300,6 +326,8 @@ void setUp(void)
     mock_dem_last_status   = 0xFFu;
 
     mock_e2e_protect_count = 0u;
+    mock_e2e_check_result  = E2E_STATUS_ERROR;  /* Default: reject (safe) */
+    mock_e2e_check_count   = 0u;
 
     Swc_RzcCom_Init();
 }
@@ -500,9 +528,23 @@ void test_Rzc_E2eRxCheck_vehicle_torque_bad_crc(void)
     uint8 bad_data[8] = {0xFFu, 0x01u, 0x03u, 0x00u, 0x64u, 0x00u, 0x00u, 0x00u};
     Std_ReturnType result;
 
+    mock_e2e_check_result = E2E_STATUS_ERROR;
     result = Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, bad_data, 8u);
 
     TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, result);
+    TEST_ASSERT_EQUAL_UINT8(1u, mock_e2e_check_count);
+}
+
+/** @verifies SWR-RZC-020 -- Valid E2E frame returns E_OK and clears fail count */
+void test_Rzc_E2eRxCheck_vehicle_torque_valid(void)
+{
+    uint8 data[8] = {0x15u, 0xAAu, 0x01u, 0x00u, 0x64u, 0x00u, 0x00u, 0x00u};
+    Std_ReturnType result;
+
+    mock_e2e_check_result = E2E_STATUS_OK;
+    result = Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, data, 8u);
+
+    TEST_ASSERT_EQUAL_UINT8(E_OK, result);
 }
 
 /** @verifies SWR-RZC-020 -- Non-E2E PDU (virtual sensors) always returns E_OK */
@@ -514,6 +556,7 @@ void test_Rzc_E2eRxCheck_virt_sensors_always_ok(void)
     result = Rzc_E2eRxCheck(RZC_COM_RX_VIRT_SENSORS, any_data, 8u);
 
     TEST_ASSERT_EQUAL_UINT8(E_OK, result);
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_e2e_check_count);  /* E2E_Check not called */
 }
 
 /** @verifies SWR-RZC-020 -- E-stop PDU with bad CRC returns E_NOT_OK */
@@ -522,9 +565,29 @@ void test_Rzc_E2eRxCheck_estop_bad_crc(void)
     uint8 bad_data[8] = {0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu, 0x00u, 0x11u};
     Std_ReturnType result;
 
+    mock_e2e_check_result = E2E_STATUS_ERROR;
     result = Rzc_E2eRxCheck(RZC_COM_RX_ESTOP, bad_data, 8u);
 
     TEST_ASSERT_EQUAL_UINT8(E_NOT_OK, result);
+}
+
+/** @verifies SWR-RZC-020 -- 3 E2E failures via CanIf callback triggers DTC in Receive */
+void test_Rzc_E2eRxCheck_3_failures_triggers_dem(void)
+{
+    uint8 bad_data[8] = {0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu};
+
+    mock_e2e_check_result = E2E_STATUS_ERROR;
+
+    /* 3 consecutive failures on VEHICLE_TORQUE via CanIf callback */
+    (void)Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, bad_data, 8u);
+    (void)Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, bad_data, 8u);
+    (void)Rzc_E2eRxCheck(RZC_COM_RX_VEHICLE_TORQUE, bad_data, 8u);
+
+    /* Receive should detect fail count >= 3 and report DTC */
+    Swc_RzcCom_Receive();
+
+    TEST_ASSERT_EQUAL_UINT8(RZC_DTC_CAN_BUS_OFF, mock_dem_last_event_id);
+    TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED, mock_dem_last_status);
 }
 
 /* ==================================================================
@@ -551,8 +614,10 @@ int main(void)
 
     /* SWR-RZC-020: Rzc_E2eRxCheck CanIf Callback */
     RUN_TEST(test_Rzc_E2eRxCheck_vehicle_torque_bad_crc);
+    RUN_TEST(test_Rzc_E2eRxCheck_vehicle_torque_valid);
     RUN_TEST(test_Rzc_E2eRxCheck_virt_sensors_always_ok);
     RUN_TEST(test_Rzc_E2eRxCheck_estop_bad_crc);
+    RUN_TEST(test_Rzc_E2eRxCheck_3_failures_triggers_dem);
 
     return UNITY_END();
 }
