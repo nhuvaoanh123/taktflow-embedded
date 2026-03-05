@@ -86,6 +86,12 @@ void Dem_Init(const void* ConfigPtr)
 
     /* Attempt to restore DTCs from NvM */
     (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
+
+#ifdef PLATFORM_POSIX
+    fprintf(stderr, "[DEM-INIT] event5: status=0x%02X debounce=%d occ=%u\n",
+            dem_events[5].statusByte, dem_events[5].debounceCounter,
+            (unsigned)dem_events[5].occurrenceCounter);
+#endif
 }
 
 void Dem_ReportErrorStatus(Dem_EventIdType EventId,
@@ -99,6 +105,14 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
     SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
 
     Dem_EventDataType* ev = &dem_events[EventId];
+
+#ifdef PLATFORM_POSIX
+    /* SIL diagnostic: trace every report for event 5 (CAN_BUS_OFF) */
+    if (EventId == 5u) {
+        fprintf(stderr, "[DEM-RPT] event=5 status=%u debounce=%d statusByte=0x%02X\n",
+                (unsigned)EventStatus, ev->debounceCounter, ev->statusByte);
+    }
+#endif
 
     if (EventStatus == DEM_EVENT_STATUS_FAILED) {
         /* Increment debounce counter toward fail threshold */
