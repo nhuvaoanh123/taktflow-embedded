@@ -1110,7 +1110,9 @@ class ScenarioExecutor:
             return self._verdict_vehicle_state(vdef, description, within_ms)
 
         elif vtype == "can_message":
-            return self._verdict_can_message(vdef, description, within_ms)
+            return self._verdict_can_message(
+                vdef, description, within_ms, observation_start
+            )
 
         elif vtype == "can_message_absent":
             return self._verdict_can_message_absent(
@@ -1135,7 +1137,9 @@ class ScenarioExecutor:
             )
 
         elif vtype == "motor_tracking":
-            return self._verdict_motor_tracking(vdef, description, within_ms)
+            return self._verdict_motor_tracking(
+                vdef, description, within_ms, observation_start
+            )
 
         elif vtype == "e2e_error_count":
             return self._verdict_e2e_error_count(
@@ -1262,19 +1266,34 @@ class ScenarioExecutor:
         vdef: dict[str, Any],
         description: str,
         within_ms: float,
+        observation_start: float = 0.0,
     ) -> VerdictEvidence:
         """Verify a specific CAN message was received with expected fields.
 
         Checks:
-            1. A CAN message with the specified ID was received.
+            1. A CAN message with the specified ID was received (since
+               observation_start OR as a new frame within within_ms).
             2. Field checks (byte/mask/expected) all pass.
         """
         can_id = _parse_int(vdef.get("can_id", 0))
         field_checks = vdef.get("field_checks", [])
         wait_sec = within_ms / 1000.0
 
-        # Wait for the message to appear
-        result = self._can.wait_for_can_message(can_id, timeout_sec=wait_sec)
+        # First check message history for frames received since
+        # observation_start (covers event bursts during steps phase).
+        result = None
+        if observation_start > 0:
+            history = self._can.get_message_history(can_id)
+            for ts, msg in reversed(history):
+                if ts >= observation_start:
+                    result = (ts, msg)
+                    break
+
+        # Fall back to waiting for a new frame if nothing in history.
+        if result is None:
+            result = self._can.wait_for_can_message(
+                can_id, timeout_sec=wait_sec
+            )
 
         if result is None:
             return VerdictEvidence(
@@ -1565,12 +1584,32 @@ class ScenarioExecutor:
         vdef: dict[str, Any],
         description: str,
         within_ms: float,
+        observation_start: float = 0.0,
     ) -> VerdictEvidence:
         """Verify motor RPM is non-zero (motor is tracking commands).
 
-        Checks that Motor_Status (0x300) shows RPM > 0, indicating the
-        motor is responding to torque requests.
+        Checks Motor_Status (0x300) history since observation_start for any
+        frame with RPM > 0.  Falls back to live polling if no history match.
         """
+        # Check message history first (covers frames from steps phase)
+        if observation_start > 0:
+            history = self._can.get_message_history(CAN_MOTOR_STATUS)
+            for ts, msg in history:
+                if ts >= observation_start and len(msg.data) >= 4:
+                    rpm = (
+                        msg.data[MOTOR_RPM_BYTE_LO]
+                        | (msg.data[MOTOR_RPM_BYTE_HI] << 8)
+                    )
+                    if rpm > 0:
+                        return VerdictEvidence(
+                            description=description or "Motor RPM tracking",
+                            expected="RPM > 0",
+                            observed=f"RPM = {rpm}",
+                            passed=True,
+                            timestamp=ts,
+                        )
+
+        # Fall back to live polling
         wait_sec = within_ms / 1000.0
         deadline = time.monotonic() + wait_sec
 
