@@ -6,17 +6,17 @@
 # @date    2026-02-24
 #
 # Validates the battery undervoltage protection chain.  The fault injection
-# API sends Battery_Status frames with progressively lower voltage
-# (12.6V -> 8.5V over 5 seconds), triggering UV_warn at 10.5V and
-# critical_UV at 9.0V.  A DTC 0xE401 is broadcast, and the vehicle
-# must transition through DEGRADED to SAFE_STOP.
+# API sends progressive voltage drops via MQTT to the plant-sim battery model
+# (12.6V -> 7.0V over 5 seconds), triggering UV_warn at 10.5V (RZC threshold)
+# and critical_UV / DISABLE_LOW at 8.0V.  A DTC 0xE401 is broadcast, and the
+# vehicle must transition through DEGRADED to SAFE_STOP.
 # =============================================================================
 
 name: "Battery Undervoltage"
 id: "SIL-006"
 description: >
-  Inject battery_low scenario: voltage drops from 12.6V to 8.5V over 5
-  seconds via Battery_Status frames (0x303) at 100ms intervals.  Verify
+  Inject battery_low scenario: voltage drops from 12.6V to 7.0V over 5
+  seconds via MQTT plant-sim injection at 100ms intervals.  Verify
   DTC 0xE401 (battery UV) is broadcast from RZC (source 3), vehicle
   transitions DEGRADED -> SAFE_STOP, and the shutdown sequence is graceful
   (motor de-energized before power loss).
@@ -40,7 +40,7 @@ steps:
     name: battery_low
     description: >
       Phase 1 (2s): 12.6V -> 10.2V (UV_warn zone, status=1).
-      Phase 2 (3s): 10.2V -> 8.5V (critical_UV zone, status=0) + DTC 0xE401.
+      Phase 2 (3s): 10.2V -> 7.0V (critical_UV zone, status=0) + DTC 0xE401.
   - action: wait
     seconds: 2
     description: "Allow fault chain to complete after injection finishes"
@@ -59,8 +59,8 @@ verdicts:
 
   - type: vehicle_state
     expected: SAFE_STOP
-    within_ms: 7000
-    description: "Vehicle enters SAFE_STOP during critical_UV phase (9.0V threshold)"
+    within_ms: 8000
+    description: "Vehicle enters SAFE_STOP during critical_UV phase (8.0V threshold)"
 
   - type: motor_shutdown
     within_ms: 7000
@@ -69,8 +69,8 @@ verdicts:
   - type: can_message
     can_id: 0x303
     field: battery_voltage_mv
-    expected_below: 9000
-    description: "Battery voltage frames show values below 9.0V at end of drain"
+    expected_below: 8000
+    description: "Battery voltage frames show values below 8.0V at end of drain"
 
 teardown:
   - action: reset

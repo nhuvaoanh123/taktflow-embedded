@@ -509,9 +509,9 @@ void Swc_RzcCom_TransmitSchedule(void)
             (void)PduR_Transmit(RZC_COM_TX_MOTOR_TEMP, &pdu_info);
         }
 
-        /* --- 0x303 Battery Status: every 100 cycles (1000ms) ---
+        /* --- 0x303 Battery Status: every 20 cycles (200ms) ---
          * Offset by 7 cycles to avoid collision with motor_temp and heartbeat. */
-        if ((RzcCom_TxScheduleCycle % 100u) == 7u)
+        if ((RzcCom_TxScheduleCycle % 20u) == 7u)
         {
             uint32 battery_mv     = 0u;
             uint32 battery_status = 0u;

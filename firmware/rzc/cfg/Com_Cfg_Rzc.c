@@ -112,7 +112,7 @@ static const Com_TxPduConfigType rzc_tx_pdu_config[] = {
     { RZC_COM_TX_MOTOR_STATUS,        8u,   20u },   /* 20ms motor status          */
     { RZC_COM_TX_MOTOR_CURRENT,       8u,   10u },   /* 10ms motor current         */
     { RZC_COM_TX_MOTOR_TEMP,          8u,  100u },   /* 100ms motor temperature    */
-    { RZC_COM_TX_BATTERY_STATUS,      8u, 1000u },   /* 1000ms battery status      */
+    { RZC_COM_TX_BATTERY_STATUS,      8u,  200u },   /* 200ms battery status       */
 };
 
 #define RZC_COM_TX_PDU_COUNT  (sizeof(rzc_tx_pdu_config) / sizeof(rzc_tx_pdu_config[0]))

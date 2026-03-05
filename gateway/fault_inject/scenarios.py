@@ -310,8 +310,8 @@ def battery_low() -> str:
     which the RZC reads via its sensor feeder → IoHwAb → SWC → CAN 0x303.
     After the drain sequence, sends a DTC_BATTERY_UV broadcast.
 
-    Phase 1 (2 s): 12.6 V -> 10.2 V (UV_warn zone)
-    Phase 2 (3 s): 10.2 V ->  8.5 V (critical_UV zone) + DTC
+    Phase 1 (2 s): 12.6 V -> 10.2 V (UV_warn zone, RZC threshold 10.5 V)
+    Phase 2 (3 s): 10.2 V ->  7.0 V (critical_UV zone, RZC threshold 8.0 V) + DTC
     """
     if _mqtt_client is None:
         return "Battery low: MQTT client not available"
@@ -326,11 +326,12 @@ def battery_low() -> str:
             plant_inject_voltage(_mqtt_client, v, soc)
             time.sleep(0.1)
 
-        # Phase 2: voltage drops from 10.2 V to 8.5 V (critical_UV) over 3 s
+        # Phase 2: voltage drops from 10.2 V to 7.0 V (critical_UV) over 3 s
+        # Must cross RZC DISABLE_LOW threshold (8000 mV) for status=0
         for i in range(30):
             frac = i / 29.0
-            v = int(10200 - (10200 - 8500) * frac)
-            soc = int(18 - (18 - 3) * frac)
+            v = int(10200 - (10200 - 7000) * frac)
+            soc = int(18 - (18 - 1) * frac)
             plant_inject_voltage(_mqtt_client, v, soc)
             time.sleep(0.1)
 
@@ -339,7 +340,7 @@ def battery_low() -> str:
               _dtc_frame(DTC_BATTERY_UV, ECU_RZC))
     finally:
         bus.shutdown()
-    return ("Battery drain: 12.6 V -> 8.5 V over 5 s via MQTT + DTC 0xE401.  "
+    return ("Battery drain: 12.6 V -> 7.0 V over 5 s via MQTT + DTC 0xE401.  "
             "Plant sim restores normal values within ~8 s after scenario ends.")
 
 
