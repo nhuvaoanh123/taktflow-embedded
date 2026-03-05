@@ -56,15 +56,17 @@ verdicts:
     description: "Vehicle must remain in RUN for the entire 60-second window"
 
   - type: alive_counter_wrap
-    can_ids: [0x100, 0x300, 0x303]
+    can_ids: [0x100, 0x300]
     counter_bits: 4
     interval_ms: 100
     expected_wraps_min: 20
     description: >
       4-bit alive counters (0-15) in E2E-protected status frames.
-      Vehicle_Status (0x100), Motor_Status (0x300), Battery_Status (0x303)
-      each carry an alive counter in byte 0 upper nibble.  At 100ms
-      period, counter wraps every 1.6s — expect at least 20 wraps in 60s.
+      Vehicle_Status (0x100) and Motor_Status (0x300) carry alive counter
+      in byte 0 upper nibble (plant-sim E2E layout).  At 100ms period,
+      counter wraps every 1.6s — expect at least 20 wraps in 60s.
+      Note: Battery_Status (0x303) excluded — RZC E2E layout uses byte 1
+      low nibble (AUTOSAR style), incompatible with this verdict type.
 
   - type: can_timing_jitter
     can_ids: [0x010, 0x011, 0x012]

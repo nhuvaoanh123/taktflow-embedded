@@ -111,7 +111,7 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_VEHICLE_STOPPED    -> (invalid)    */
         CVC_STATE_DEGRADED,    /* EVT_MOTOR_CUTOFF       -> DEGRADED     */
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
-        CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
+        CVC_STATE_DEGRADED,    /* EVT_STEERING_FAULT     -> DEGRADED     */
         CVC_STATE_DEGRADED,    /* EVT_BATTERY_WARN       -> DEGRADED     */
         CVC_STATE_LIMP         /* EVT_BATTERY_CRIT       -> LIMP         */
     },

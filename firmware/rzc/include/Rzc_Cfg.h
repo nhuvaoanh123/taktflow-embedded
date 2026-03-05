@@ -46,7 +46,8 @@
 #define RZC_SIG_HEARTBEAT_ALIVE    37u
 #define RZC_SIG_SAFETY_STATUS      38u
 #define RZC_SIG_CMD_TIMEOUT        39u
-#define RZC_SIG_COUNT              40u
+#define RZC_SIG_BATTERY_SOC        40u
+#define RZC_SIG_COUNT              41u
 
 /* ====================================================================
  * Com TX PDU IDs

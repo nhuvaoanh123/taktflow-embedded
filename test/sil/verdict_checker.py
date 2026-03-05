@@ -2039,14 +2039,13 @@ class ScenarioExecutor:
                 timestamp=time.monotonic(),
             )
 
-        # Extract SOC values (byte 2 of Battery_Status)
-        # Filter: plant-sim sends 4-byte frames with SOC in byte 2 (0-100).
-        # RZC sends 8-byte E2E frames where byte 2 is voltage LSB, not SOC.
-        # Only accept values in valid SOC range [0, 100].
+        # Extract SOC values from Battery_Status (0x303).
+        # RZC sends 8-byte E2E frames: [CRC, alive, mV_lo, mV_hi, status, SOC, 0, 0]
+        # SOC is in byte 5 (0-100%).
         soc_values: list[int] = []
         for _, msg in history:
-            if len(msg.data) >= 3:
-                raw = msg.data[2]
+            if len(msg.data) >= 6:
+                raw = msg.data[5]
                 if raw <= 100:
                     soc_values.append(raw)
 

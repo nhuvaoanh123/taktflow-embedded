@@ -81,10 +81,11 @@ verdicts:
 
   - type: dtc_preserved
     can_id: 0x500
+    dtc_code: 0xC40100
     field: occurrence_count
     expected_min: 1
     description: >
-      DTC occurrence count must be preserved (> 0) even after reset.
+      DTC 0xC40100 (E-Stop activated) must be preserved (> 0) after reset.
       DTCs are historical records — reset clears active status, not history.
 
   - type: can_message

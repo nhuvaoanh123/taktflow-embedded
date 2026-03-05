@@ -515,13 +515,16 @@ void Swc_RzcCom_TransmitSchedule(void)
         {
             uint32 battery_mv     = 0u;
             uint32 battery_status = 0u;
+            uint32 battery_soc    = 0u;
             (void)Rte_Read(RZC_SIG_BATTERY_MV, &battery_mv);
             (void)Rte_Read(RZC_SIG_BATTERY_STATUS, &battery_status);
+            (void)Rte_Read(RZC_SIG_BATTERY_SOC, &battery_soc);
 
             for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
             pdu[2] = (uint8)(battery_mv & 0xFFu);
             pdu[3] = (uint8)((battery_mv >> 8u) & 0xFFu);
             pdu[4] = (uint8)battery_status;
+            pdu[5] = (uint8)battery_soc;
             (void)E2E_Protect(&rzc_e2e_battery_cfg, &rzc_e2e_battery_state, pdu, 8u);
             (void)PduR_Transmit(RZC_COM_TX_BATTERY_STATUS, &pdu_info);
         }

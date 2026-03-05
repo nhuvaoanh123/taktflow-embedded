@@ -79,6 +79,7 @@ static const Rte_SignalConfigType rzc_signal_config[RZC_SIG_COUNT] = {
     { RZC_SIG_HEARTBEAT_ALIVE,   0u },   /* 37: Heartbeat alive counter       */
     { RZC_SIG_SAFETY_STATUS,     0u },   /* 38: Aggregated safety status      */
     { RZC_SIG_CMD_TIMEOUT,       0u },   /* 39: Command timeout flag          */
+    { RZC_SIG_BATTERY_SOC,     100u },   /* 40: Battery SOC % (init 100)      */
 };
 
 /* ==================================================================

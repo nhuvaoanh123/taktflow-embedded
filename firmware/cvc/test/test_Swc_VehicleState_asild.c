@@ -951,8 +951,8 @@ void test_RUN_to_SAFE_STOP_on_brake_fault(void)
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
 }
 
-/** @verifies SWR-CVC-010 — RUN -> SAFE_STOP on steering fault signal (debounce only) */
-void test_RUN_to_SAFE_STOP_on_steering_fault(void)
+/** @verifies SWR-CVC-010 — RUN -> DEGRADED on steering fault signal (debounce only) */
+void test_RUN_to_DEGRADED_on_steering_fault(void)
 {
     /* Get to RUN */
     get_to_run();
@@ -963,7 +963,7 @@ void test_RUN_to_SAFE_STOP_on_steering_fault(void)
     Swc_VehicleState_MainFunction();
     Swc_VehicleState_MainFunction();
 
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 }
 
 /** @verifies SWR-CVC-011 — DEGRADED -> SAFE_STOP on motor cutoff (escalation, confirmed) */
@@ -1246,7 +1246,7 @@ void test_steering_fault_debounce_only(void)
     Swc_VehicleState_MainFunction();
     Swc_VehicleState_MainFunction();
 
-    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
+    TEST_ASSERT_EQUAL_UINT8(CVC_STATE_DEGRADED, Swc_VehicleState_GetState());
 }
 
 /** @verifies SWR-CVC-010 — E-stop: immediate, no debounce (ASIL D) */
@@ -1489,7 +1489,7 @@ int main(void)
     /* SWR-CVC-010/011: Subsystem fault state transitions */
     RUN_TEST(test_RUN_to_DEGRADED_on_motor_cutoff);
     RUN_TEST(test_RUN_to_SAFE_STOP_on_brake_fault);
-    RUN_TEST(test_RUN_to_SAFE_STOP_on_steering_fault);
+    RUN_TEST(test_RUN_to_DEGRADED_on_steering_fault);
     RUN_TEST(test_DEGRADED_to_SAFE_STOP_on_motor_cutoff);
 
     /* SWR-CVC-013: SAFE_STOP recovery */

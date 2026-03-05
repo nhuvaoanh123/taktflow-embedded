@@ -52,6 +52,7 @@ typedef uint8           boolean;
 
 #define RZC_SIG_BATTERY_MV         28u
 #define RZC_SIG_BATTERY_STATUS     29u
+#define RZC_SIG_BATTERY_SOC        40u
 
 #define RZC_COM_TX_BATTERY_STATUS   4u
 

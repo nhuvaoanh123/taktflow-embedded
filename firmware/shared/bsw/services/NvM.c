@@ -112,6 +112,7 @@ Std_ReturnType NvM_WriteBlock(NvM_BlockIdType BlockId, const void* NvM_SrcPtr)
     }
 
     n = write(fd, NvM_SrcPtr, (size_t)NVM_BLOCK_SIZE);
+    (void)fsync(fd);
     (void)close(fd);
     (void)n;
 

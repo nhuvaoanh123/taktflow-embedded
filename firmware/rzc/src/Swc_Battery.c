@@ -40,6 +40,7 @@
 static uint8   Batt_Initialized;
 static uint16  Batt_Voltage_mV;
 static uint8   Batt_Status;
+static uint8   Batt_Soc;
 static uint16  Batt_AvgBuffer[RZC_BATT_AVG_WINDOW];
 static uint8   Batt_AvgIndex;
 
@@ -137,6 +138,7 @@ void Swc_Battery_Init(void)
         Batt_AvgBuffer[i] = RZC_BATT_NOMINAL_MV;
     }
 
+    Batt_Soc           = 100u;
     Batt_Initialized = TRUE;
 }
 
@@ -182,10 +184,32 @@ void Swc_Battery_MainFunction(void)
     }
 
     /* ----------------------------------------------------------
-     * Step 4: Write RTE signals
+     * Step 4: Compute SOC from voltage (linear map, monotonic)
+     *         12600 mV = 100%, 10500 mV = 0%, clamped [0,100]
+     * ---------------------------------------------------------- */
+    {
+        uint8 target_soc;
+        if (avg_voltage >= 12600u) {
+            target_soc = 100u;
+        } else if (avg_voltage <= 10500u) {
+            target_soc = 0u;
+        } else {
+            target_soc = (uint8)(((uint32)(avg_voltage - 10500u) * 100u) / 2100u);
+        }
+
+        /* Monotonic decrease guard — SOC can only go down, never up
+         * (unless re-initialized via Swc_Battery_Init on power cycle). */
+        if (target_soc < Batt_Soc) {
+            Batt_Soc = target_soc;
+        }
+    }
+
+    /* ----------------------------------------------------------
+     * Step 5: Write RTE signals
      * ---------------------------------------------------------- */
     (void)Rte_Write(RZC_SIG_BATTERY_MV, (uint32)Batt_Voltage_mV);
     (void)Rte_Write(RZC_SIG_BATTERY_STATUS, (uint32)Batt_Status);
+    (void)Rte_Write(RZC_SIG_BATTERY_SOC, (uint32)Batt_Soc);
 
     /* CAN TX handled by Swc_RzcCom (reads RTE signals, sends via Com) */
 }
