@@ -23,6 +23,7 @@
 #include "Swc_Heartbeat.h"
 #include "Cvc_Cfg.h"
 #include "Com.h"
+#include "PduR.h"
 #include "E2E.h"
 #include "E2E_Sm.h"
 #include "Rte.h"
@@ -163,9 +164,14 @@ void Swc_Heartbeat_MainFunction(void)
         pdu[3] = (uint8)(vehicle_state & 0x0Fu);     /* OperatingMode — byte 3 low nibble */
         /* pdu[4..7] reserved (zero) */
 
-        /* E2E protect then transmit */
+        /* E2E protect then transmit via PduR (raw PDU, not Com signal) */
         (void)E2E_Protect(&hb_e2e_config, &hb_e2e_state, pdu, HB_PDU_LENGTH);
-        (void)Com_SendSignal(CVC_COM_TX_HEARTBEAT, pdu);
+        {
+            PduInfoType pdu_info;
+            pdu_info.SduDataPtr = pdu;
+            pdu_info.SduLength  = HB_PDU_LENGTH;
+            (void)PduR_Transmit(CVC_COM_TX_HEARTBEAT, &pdu_info);
+        }
 
         /* WdgM checkpoint: SE 3 alive indication at TX boundary */
         (void)WdgM_CheckpointReached(3u);

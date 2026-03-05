@@ -92,6 +92,7 @@ void Swc_RzcSafety_NotifyCanRx(void) { mock_safety_notify_count++; }
 #define RZC_SIG_TEMP_FAULT         27u
 #define RZC_SIG_BATTERY_MV         28u
 #define RZC_SIG_BATTERY_STATUS     29u
+#define RZC_SIG_BATTERY_SOC        40u
 #define RZC_SIG_ENCODER_SPEED      30u
 #define RZC_SIG_ENCODER_DIR        31u
 #define RZC_SIG_ENCODER_STALL      32u

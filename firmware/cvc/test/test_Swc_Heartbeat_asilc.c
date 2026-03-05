@@ -39,6 +39,17 @@ typedef uint8          boolean;
 #define DEM_H
 #define E2E_H
 #define WDGM_H
+#define PDUR_H
+#define COMSTACK_TYPES_H
+#define CANIF_H
+
+/* PduR / ComStack types needed by Swc_Heartbeat.c */
+typedef uint16 PduIdType;
+typedef uint16 PduLengthType;
+typedef struct {
+    uint8          *SduDataPtr;
+    PduLengthType   SduLength;
+} PduInfoType;
 #define DEM_EVENT_STATUS_PASSED  0u
 #define DEM_EVENT_STATUS_FAILED  1u
 
@@ -88,7 +99,7 @@ typedef uint8 WdgM_SupervisedEntityIdType;
 #define CVC_COM_SIG_RZC_HB_ALIVE 11u
 
 /* ====================================================================
- * Mock: Com_SendSignal
+ * Mock: Com_SendSignal (still needed for other Com calls)
  * ==================================================================== */
 
 static uint8 mock_com_send_count;
@@ -104,6 +115,29 @@ Std_ReturnType Com_SendSignal(uint8 SignalId, const void* SignalDataPtr)
         uint8 i;
         for (i = 0u; i < 8u; i++) {
             mock_com_send_data[i] = p[i];
+        }
+    }
+    return E_OK;
+}
+
+/* ====================================================================
+ * Mock: PduR_Transmit (heartbeat TX path)
+ * ==================================================================== */
+
+static uint8  mock_pdur_tx_count;
+static uint16 mock_pdur_tx_pdu_id;
+static uint8  mock_pdur_tx_data[8];
+static uint16 mock_pdur_tx_length;
+
+Std_ReturnType PduR_Transmit(PduIdType TxPduId, const PduInfoType* PduInfoPtr)
+{
+    mock_pdur_tx_pdu_id = TxPduId;
+    mock_pdur_tx_count++;
+    if ((PduInfoPtr != NULL_PTR) && (PduInfoPtr->SduDataPtr != NULL_PTR)) {
+        uint8 i;
+        mock_pdur_tx_length = PduInfoPtr->SduLength;
+        for (i = 0u; i < 8u; i++) {
+            mock_pdur_tx_data[i] = PduInfoPtr->SduDataPtr[i];
         }
     }
     return E_OK;
@@ -273,6 +307,9 @@ void setUp(void)
 
     mock_com_send_count    = 0u;
     mock_com_send_sig_id   = 0xFFu;
+    mock_pdur_tx_count     = 0u;
+    mock_pdur_tx_pdu_id    = 0xFFFFu;
+    mock_pdur_tx_length    = 0u;
     mock_com_rx_fzc_alive  = 0u;     /* Match fzc_last_alive init (0) — no false positive */
     mock_com_rx_rzc_alive  = 0u;     /* Match rzc_last_alive init (0) — no false positive */
     mock_e2e_protect_count = 0u;
@@ -286,6 +323,7 @@ void setUp(void)
 
     for (i = 0u; i < 8u; i++) {
         mock_com_send_data[i]      = 0u;
+        mock_pdur_tx_data[i]       = 0u;
         mock_dem_event_ids[i]      = 0xFFu;
         mock_dem_event_statuses[i] = 0xFFu;
     }
@@ -335,8 +373,8 @@ void test_Heartbeat_TX_every_50ms(void)
     /* 50ms = 5 calls at 10ms each */
     run_cycles(5u);
 
-    TEST_ASSERT_EQUAL(1u, mock_com_send_count);
-    TEST_ASSERT_EQUAL(CVC_COM_TX_HEARTBEAT, mock_com_send_sig_id);
+    TEST_ASSERT_EQUAL(1u, mock_pdur_tx_count);
+    TEST_ASSERT_EQUAL(CVC_COM_TX_HEARTBEAT, mock_pdur_tx_pdu_id);
 }
 
 /** @verifies SWR-CVC-021 */
@@ -378,8 +416,8 @@ void test_Heartbeat_TX_data_includes_ecu_id_and_state(void)
     run_cycles(5u);
 
     /* PDU layout: [E2E_byte0, E2E_CRC, ECU_ID, FaultStatus|OpMode, 0,0,0,0] */
-    TEST_ASSERT_EQUAL(CVC_ECU_ID_CVC, mock_com_send_data[2]);
-    TEST_ASSERT_EQUAL(2u, mock_com_send_data[3] & 0x0Fu);  /* OpMode in low nibble */
+    TEST_ASSERT_EQUAL(CVC_ECU_ID_CVC, mock_pdur_tx_data[2]);
+    TEST_ASSERT_EQUAL(2u, mock_pdur_tx_data[3] & 0x0Fu);  /* OpMode in low nibble */
 }
 
 /** @verifies SWR-CVC-021 */
@@ -388,7 +426,7 @@ void test_Heartbeat_No_TX_before_50ms(void)
     /* Only 4 cycles (40ms) — should NOT transmit */
     run_cycles(4u);
 
-    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+    TEST_ASSERT_EQUAL(0u, mock_pdur_tx_count);
 }
 
 /* ====================================================================
@@ -610,7 +648,7 @@ void test_Heartbeat_No_TX_at_4_cycles(void)
 {
     run_cycles(4u);
 
-    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+    TEST_ASSERT_EQUAL(0u, mock_pdur_tx_count);
 }
 
 /** @verifies SWR-CVC-021
@@ -620,7 +658,7 @@ void test_Heartbeat_TX_at_exactly_5_cycles(void)
 {
     run_cycles(5u);
 
-    TEST_ASSERT_EQUAL(1u, mock_com_send_count);
+    TEST_ASSERT_EQUAL(1u, mock_pdur_tx_count);
 }
 
 /* ------------------------------------------------------------------
@@ -826,11 +864,11 @@ void test_Heartbeat_MainFunction_before_init_no_action(void)
     /* Reset initialized flag (source included) */
     initialized = FALSE;
 
-    mock_com_send_count = 0u;
+    mock_pdur_tx_count = 0u;
     run_cycles(10u);
 
     /* Should do nothing — not initialized */
-    TEST_ASSERT_EQUAL(0u, mock_com_send_count);
+    TEST_ASSERT_EQUAL(0u, mock_pdur_tx_count);
 
     /* Restore */
     Swc_Heartbeat_Init();
