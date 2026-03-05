@@ -30,8 +30,7 @@ jobs:
 
       - name: Install cppcheck
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cppcheck
+          pip install cppcheck
           cppcheck --version
 
       - name: Download MISRA rule texts
