@@ -84,14 +84,16 @@ void Dem_Init(const void* ConfigPtr)
     dem_ecu_id = 0u;
     dem_broadcast_pdu_id = 0xFFFFu;  /* Unconfigured sentinel */
 
-    /* Attempt to restore DTCs from NvM */
+    /* Restore occurrence counters from NvM (persistence across power cycles).
+     * Clear runtime state — DTCs must be re-confirmed through fresh fault
+     * detection each lifecycle (AUTOSAR Dem_Init semantics). */
     (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
 
-#ifdef PLATFORM_POSIX
-    fprintf(stderr, "[DEM-INIT] event5: status=0x%02X debounce=%d occ=%u\n",
-            dem_events[5].statusByte, dem_events[5].debounceCounter,
-            (unsigned)dem_events[5].occurrenceCounter);
-#endif
+    for (i = 0u; i < DEM_MAX_EVENTS; i++) {
+        dem_events[i].debounceCounter = 0;
+        dem_events[i].statusByte      = 0u;
+        /* occurrenceCounter preserved from NvM */
+    }
 }
 
 void Dem_ReportErrorStatus(Dem_EventIdType EventId,
@@ -105,14 +107,6 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
     SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
 
     Dem_EventDataType* ev = &dem_events[EventId];
-
-#ifdef PLATFORM_POSIX
-    /* SIL diagnostic: trace every report for event 5 (CAN_BUS_OFF) */
-    if (EventId == 5u) {
-        fprintf(stderr, "[DEM-RPT] event=5 status=%u debounce=%d statusByte=0x%02X\n",
-                (unsigned)EventStatus, ev->debounceCounter, ev->statusByte);
-    }
-#endif
 
     if (EventStatus == DEM_EVENT_STATUS_FAILED) {
         /* Increment debounce counter toward fail threshold */
@@ -256,16 +250,6 @@ void Dem_MainFunction(void)
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         SchM_Enter_Dem_DEM_EXCLUSIVE_AREA_0();
-
-#ifdef PLATFORM_POSIX
-        /* SIL diagnostic: trace DTC broadcast decision for E2E-related event */
-        if ((i == 5u) && ((dem_events[i].statusByte & DEM_STATUS_CONFIRMED_DTC) != 0u))
-        {
-            fprintf(stderr, "[DEM-DIAG] event=5 status=0x%02X sent=%u pduId=%u dtc=0x%06X\n",
-                    dem_events[i].statusByte, dem_broadcast_sent[i],
-                    (unsigned)dem_broadcast_pdu_id, (unsigned)dem_dtc_codes[i]);
-        }
-#endif
 
         /* Only broadcast newly confirmed DTCs that haven't been sent yet */
         if (((dem_events[i].statusByte & DEM_STATUS_CONFIRMED_DTC) != 0u) &&
