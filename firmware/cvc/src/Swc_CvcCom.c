@@ -379,7 +379,7 @@ void Swc_CvcCom_BridgeRxToRte(void)
         (void)Com_ReceiveSignal(19u, &estop_inject_val);
         if (estop_inject_val != 0u) {
             extern void Dio_Hw_WritePin(uint8 ChannelId, uint8 Level);
-            Dio_Hw_WritePin(5u, STD_HIGH);
+            Dio_Hw_WritePin(5u, 1u);  /* STD_HIGH = 1u — literal avoids header dep in unit tests */
         }
     }
 #endif
