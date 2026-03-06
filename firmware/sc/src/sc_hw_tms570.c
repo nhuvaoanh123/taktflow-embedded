@@ -1000,7 +1000,7 @@ void esmGroup3Notification(void *esm, uint32 channel)
  *
  * We don't know which SCI module the XDS110 UART connects to on the
  * LAUNCHXL2-570LC43, so we initialize both:
- *   - SCI1/LIN1 (0xFFF7E400) at 115200 baud (ball B7 = LIN1TX)
+ *   - SCI1/LIN1 (0xFFF7E400) at 115200 baud (ball A5 = LIN1TX)
  *   - SCI3 (0xFFF7E500) at 9600 baud (HALCoGen default via sciInit)
  *
  * Then sc_sci_puts() outputs on BOTH modules simultaneously.
@@ -1130,3 +1130,8 @@ void sc_sci_put_uint(uint32 val)
 }
 
 #endif /* PLATFORM_TMS570 */
+
+/* Appended by build fix: stub for unused EMIF referenced by HL_system.c */
+#ifdef PLATFORM_TMS570
+void emif_SDRAM_StartupInit(void) { /* SC does not use EMIF/SDRAM */ }
+#endif

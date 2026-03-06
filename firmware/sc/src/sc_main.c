@@ -135,9 +135,15 @@ int main(void)
     uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
 #endif
 
-    /* ---- 0. UART — prove CPU reaches main() ---- */
+    /* ---- 0. LED+UART -- prove CPU reaches main() ---- */
 #ifdef PLATFORM_TMS570
+    /* LED checkpoint: startup ASM turns GIOB[6:7] ON.
+     *   Both stay ON  = CPU stuck before main
+     *   Both go OFF   = main reached
+     *   Both back ON  = SCI init done */
+    sc_het_led_off();
     sc_sci_init();
+    sc_het_led_on();
     sc_sci_puts("=== SC Boot (TMS570LC43x) ===\r\n");
     sc_sci_puts("main() reached OK\r\n");
 #endif
