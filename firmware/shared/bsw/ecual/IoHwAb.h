@@ -192,4 +192,11 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count);
  */
 Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir);
 
+#ifdef PLATFORM_POSIX
+/** @brief  Inject encoder pulse count for SIL testing */
+void IoHwAb_Posix_InjectEncoderCount(uint32 Count);
+/** @brief  Inject encoder direction for SIL testing */
+void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir);
+#endif
+
 #endif /* IOHWAB_H */

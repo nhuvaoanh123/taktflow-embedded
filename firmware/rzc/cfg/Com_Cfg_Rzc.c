@@ -52,6 +52,7 @@ static sint16 sig_rx_torque_cmd;
 static uint16 sig_rx_virt_motor_current;
 static uint16 sig_rx_virt_motor_temp;
 static uint16 sig_rx_virt_battery_voltage;
+static uint16 sig_rx_virt_motor_rpm;
 
 /* ==================================================================
  * Signal Configuration Table
@@ -96,6 +97,7 @@ static const Com_SignalConfigType rzc_signal_config[] = {
     { 18u,    0u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_current  },
     { 19u,   16u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_temp     },
     { 20u,   32u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_battery_voltage},
+    { 21u,   48u,    16u, COM_UINT16, RZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_motor_rpm      },
 };
 
 #define RZC_COM_SIGNAL_COUNT  (sizeof(rzc_signal_config) / sizeof(rzc_signal_config[0]))

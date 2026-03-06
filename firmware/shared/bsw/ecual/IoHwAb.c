@@ -20,6 +20,11 @@
 static const IoHwAb_ConfigType* iohwab_config = NULL_PTR;
 static boolean                  iohwab_initialized = FALSE;
 
+#ifdef PLATFORM_POSIX
+static uint32 iohwab_enc_count_inject = 0u;
+static uint8  iohwab_enc_dir_inject   = 0u;  /* IOHWAB_MOTOR_FORWARD */
+#endif
+
 /* ---- Private Helpers ---- */
 
 /**
@@ -386,8 +391,12 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
         return E_NOT_OK;
     }
 
-    /* Encoder count via DIO pulse counting — placeholder for SIL */
+#ifdef PLATFORM_POSIX
+    *Count = iohwab_enc_count_inject;
+#else
+    /* TODO:HARDWARE Real encoder read via timer capture */
     *Count = 0u;
+#endif
 
     return E_OK;
 }
@@ -404,8 +413,24 @@ Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
         return E_NOT_OK;
     }
 
-    /* Encoder direction via DIO — placeholder for SIL */
+#ifdef PLATFORM_POSIX
+    *Dir = iohwab_enc_dir_inject;
+#else
+    /* TODO:HARDWARE Real encoder direction via DIO */
     *Dir = IOHWAB_MOTOR_FORWARD;
+#endif
 
     return E_OK;
 }
+
+#ifdef PLATFORM_POSIX
+void IoHwAb_Posix_InjectEncoderCount(uint32 Count)
+{
+    iohwab_enc_count_inject = Count;
+}
+
+void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir)
+{
+    iohwab_enc_dir_inject = Dir;
+}
+#endif

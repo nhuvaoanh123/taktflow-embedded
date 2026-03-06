@@ -514,7 +514,10 @@ class PlantSimulator:
         batt_mv = self.battery.voltage_mv
         struct.pack_into('<H', payload, 4, min(65535, batt_mv))
 
-        # Bytes 6-7: reserved
+        # Bytes 6-7: motor_rpm (uint16 LE, RPM 0-10000)
+        rpm = max(0, min(10000, self.motor.rpm_int))
+        struct.pack_into('<H', payload, 6, rpm)
+
         self.bus.send(can.Message(arbitration_id=TX_RZC_VIRTUAL_SENSORS,
                                   data=bytes(payload), is_extended_id=False))
 

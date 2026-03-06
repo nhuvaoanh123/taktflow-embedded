@@ -23,6 +23,7 @@
 #include "Swc_RzcSensorFeeder.h"
 #include "Rzc_Cfg.h"
 #include "Com.h"
+#include "IoHwAb.h"
 
 #ifdef PLATFORM_POSIX
 /* MCAL injection API — only exists in POSIX stub builds */
@@ -33,6 +34,11 @@ extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
  *          false undervoltage fault (threshold = RZC_BATT_DISABLE_LOW_MV).
  *          Any non-zero battery_voltage means plant-sim has started. */
 static uint8 SensorFeeder_DataValid;
+
+/* Encoder injection — convert plant-sim RPM to cumulative pulse count */
+extern void IoHwAb_Posix_InjectEncoderCount(uint32 Count);
+extern void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir);
+static uint32 SensorFeeder_EncCount;
 #endif
 
 /* ==================================================================
@@ -51,6 +57,7 @@ void Swc_RzcSensorFeeder_Init(void)
 
 #ifdef PLATFORM_POSIX
     SensorFeeder_DataValid = 0u;
+    SensorFeeder_EncCount  = 0u;
     /* Inject nominal defaults before plant-sim starts sending 0x401.
      * Motor current=0, motor temp=0 are safe (no overcurrent/overtemp).
      * Battery voltage needs nominal value to prevent false undervoltage
@@ -129,6 +136,21 @@ void Swc_RzcSensorFeeder_MainFunction(void)
         Adc_Posix_InjectValue(RZC_BATTERY_VOLTAGE_ADC_GROUP,
                               RZC_BATTERY_VOLTAGE_ADC_CH,
                               raw_batt);
+    }
+
+    /* Encoder count injection from plant-sim RPM.
+     * Encoder SWC computes: rpm = (delta * 6000) / PPR
+     * Reverse:              delta = rpm * PPR / 6000        */
+    {
+        uint32 motor_rpm = 0u;
+        (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_RPM, &motor_rpm);
+
+        uint32 delta = ((uint32)motor_rpm * RZC_ENCODER_PPR) / 6000u;
+        SensorFeeder_EncCount += delta;
+
+        IoHwAb_Posix_InjectEncoderCount(SensorFeeder_EncCount);
+        IoHwAb_Posix_InjectEncoderDirection(
+            (motor_rpm > 0u) ? IOHWAB_MOTOR_FORWARD : IOHWAB_MOTOR_STOP);
     }
 #else
     (void)SensorFeeder_Initialized;
