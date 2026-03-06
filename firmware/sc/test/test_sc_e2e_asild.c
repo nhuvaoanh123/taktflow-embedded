@@ -69,7 +69,7 @@ static uint8 helper_crc8(const uint8* data, uint8 len)
             }
         }
     }
-    return crc;
+    return crc ^ 0xFFu;  /* XOR-out per SAE-J1850 (matches sc_crc8) */
 }
 
 /**
@@ -85,19 +85,20 @@ static void build_valid_msg(uint8* data, uint8 dataId, uint8 alive,
     uint8 crc_input[7];
     uint8 i;
 
-    /* Byte 0: alive counter in upper nibble */
-    data[0] = (uint8)(alive << 4u);
+    /* Byte 0: [alive:4 | dataId:4] — matches BSW packing checked by SC */
+    data[0] = (uint8)((alive << 4u) | (dataId & 0x0Fu));
 
     /* Bytes 2..7: payload */
     for (i = 0u; i < 6u; i++) {
         data[2u + i] = (payload != NULL_PTR) ? payload[i] : 0u;
     }
 
-    /* CRC-8 over: Data ID byte + payload bytes 2..7 */
-    crc_input[0] = dataId;
+    /* CRC-8 over: payload bytes 2..7, then DataId last
+     * (matches SC_E2E_Check / BSW E2E_ComputePduCrc order) */
     for (i = 0u; i < 6u; i++) {
-        crc_input[1u + i] = data[2u + i];
+        crc_input[i] = data[2u + i];
     }
+    crc_input[6] = dataId;
     data[1] = helper_crc8(crc_input, 7u);
 }
 
@@ -131,8 +132,8 @@ void test_CRC8_known_value(void)
 void test_CRC8_empty(void)
 {
     uint8 crc = sc_crc8(NULL_PTR, 0u);
-    /* With zero length, CRC should just be the init value (no XOR-out) */
-    TEST_ASSERT_EQUAL_UINT8(SC_CRC8_INIT, crc);
+    /* With zero length, CRC = init ^ XOR-out = 0xFF ^ 0xFF = 0x00 */
+    TEST_ASSERT_EQUAL_UINT8(0x00u, crc);
 }
 
 /* ==================================================================
