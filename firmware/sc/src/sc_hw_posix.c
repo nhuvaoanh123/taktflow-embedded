@@ -280,11 +280,19 @@ void dcan1_reg_write(uint32 offset, uint32 value)
     (void)offset;
     (void)value;
 
-    /* On exit-init (CTL offset write with value 0x00), open SocketCAN */
-    if ((offset == 0x00u) && (value == 0x00u)) {
+    /* On exit-init (CTL offset write with Init bit cleared), open SocketCAN */
+    if ((offset == 0x00u) && ((value & 0x01u) == 0u)) {
         dcan_initialized = TRUE;
         sc_posix_can_init();
     }
+}
+
+/**
+ * @brief  Configure DCAN1 mailboxes (POSIX: no-op, filtering done in SW)
+ */
+void dcan1_setup_mailboxes(void)
+{
+    /* SocketCAN filtering is done in dcan1_get_mailbox_data */
 }
 
 /**

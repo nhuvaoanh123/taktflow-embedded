@@ -21,6 +21,12 @@
 extern uint32  dcan1_reg_read(uint32 offset);
 extern void    dcan1_reg_write(uint32 offset, uint32 value);
 extern boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc);
+extern void    dcan1_setup_mailboxes(void);
+
+#ifdef PLATFORM_TMS570
+/** HALCoGen-generated CAN init (parity, message RAM, default config) */
+extern void canInit(void);
+#endif
 
 /* ==================================================================
  * DCAN1 Register Offsets
@@ -92,16 +98,32 @@ void SC_CAN_Init(void)
     bus_silence_counter = 0u;
     bus_off             = FALSE;
 
-    /* Configure DCAN1: enter init mode, set baud, set silent, exit init */
-    /* Note: actual register writes are platform-specific; these calls
-     * go through the extern abstraction for testability */
-    dcan1_reg_write(DCAN_CTL_OFFSET, 0x01u);    /* Init mode */
+#ifdef PLATFORM_TMS570
+    /* Use HALCoGen canInit() to properly initialize DCAN1:
+     * - Parity/ECC setup
+     * - Message RAM initialization (all 64 objects)
+     * - Default baud rate from .hcg config
+     * Then override with SC-specific settings. */
+    canInit();
+#endif
+
+    /* Re-enter init mode to apply SC overrides */
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x41u);    /* Init + CCE */
     dcan1_reg_write(DCAN_BTR_OFFSET,
                     ((uint32)SC_DCAN_BRP) |
                     ((uint32)SC_DCAN_TSEG1 << 8u) |
-                    ((uint32)SC_DCAN_TSEG2 << 12u));
+                    ((uint32)SC_DCAN_TSEG2 << 12u) |
+                    ((uint32)SC_DCAN_SJW << 6u));
+
+    /* Configure 6 receive mailboxes with SC CAN IDs */
+    dcan1_setup_mailboxes();
+
+    /* Enable TEST register access, then set Silent mode */
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x81u);    /* Init + Test */
     dcan1_reg_write(DCAN_TEST_OFFSET, 0x08u);   /* Silent bit */
-    dcan1_reg_write(DCAN_CTL_OFFSET, 0x00u);    /* Exit init mode */
+
+    /* Exit init mode — keep Test bit set to retain silent mode */
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x80u);    /* Test, Init cleared */
 
     can_initialized = TRUE;
 }

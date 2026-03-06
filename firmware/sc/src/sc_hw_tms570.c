@@ -190,6 +190,18 @@
 /** MCTL NewDat bit */
 #define DCAN_MCTL_NEWDAT        ((uint32)1u << 15u)
 
+/** MCTL UMask bit — use acceptance mask for filtering */
+#define DCAN_MCTL_UMASK         ((uint32)1u << 12u)
+
+/** ARB MsgVal bit — message object is valid */
+#define DCAN_ARB_MSGVAL         ((uint32)1u << 31u)
+
+/** ARB Xtd bit — extended ID (0 = standard 11-bit) */
+#define DCAN_ARB_XTD            ((uint32)1u << 30u)
+
+/** ARB Dir bit — 0=receive, 1=transmit */
+#define DCAN_ARB_DIR            ((uint32)1u << 29u)
+
 /* ==================================================================
  * Helper: volatile register access
  * ================================================================== */
@@ -469,6 +481,80 @@ uint32 dcan1_reg_read(uint32 offset)
 void dcan1_reg_write(uint32 offset, uint32 value)
 {
     reg_write(DCAN1_BASE, offset, value);
+}
+
+/**
+ * @brief  Wait for DCAN IF1 to be ready (not busy)
+ */
+static void dcan1_wait_if1_ready(void)
+{
+    volatile uint32 timeout = 10000u;
+    while (((reg_read(DCAN1_BASE, DCAN_IF1CMD) & DCAN_IFCMD_BUSY) != 0u) &&
+           (timeout > 0u)) {
+        timeout--;
+    }
+}
+
+/**
+ * @brief  Configure one DCAN1 RX message object via IF1
+ *
+ * Programs a message object to receive standard-ID CAN frames
+ * with exact ID matching (mask = all 1s for 11-bit ID).
+ *
+ * @param  msg_num  Message object number (1-indexed)
+ * @param  can_id   Standard 11-bit CAN ID
+ * @param  dlc      Expected DLC (1-8)
+ */
+static void dcan1_config_rx_mailbox(uint8 msg_num, uint16 can_id, uint8 dlc)
+{
+    uint32 arb;
+    uint32 mctl;
+
+    dcan1_wait_if1_ready();
+
+    /* Mask: match all 11 bits of standard ID (bits 28:18 of mask register) */
+    reg_write(DCAN1_BASE, DCAN_IF1MSK,
+              ((uint32)0x7FFu << 18u) | ((uint32)1u << 14u));
+    /* bit 14 = MDir: also match direction bit */
+
+    /* Arbitration: standard ID in bits 28:18, MsgVal=1, Dir=0 (RX), Xtd=0 */
+    arb = ((uint32)can_id << 18u) | DCAN_ARB_MSGVAL;
+    reg_write(DCAN1_BASE, DCAN_IF1ARB, arb);
+
+    /* Message control: DLC, UMask=1 (use acceptance mask), EOB=1 */
+    mctl = ((uint32)dlc & 0x0Fu) | DCAN_MCTL_UMASK | ((uint32)1u << 7u);
+    reg_write(DCAN1_BASE, DCAN_IF1MCTL, mctl);
+
+    /* Transfer IF1 → message object RAM: write mask + arb + control */
+    reg_write(DCAN1_BASE, DCAN_IF1CMD,
+              DCAN_IFCMD_WR | DCAN_IFCMD_MASK | DCAN_IFCMD_ARB |
+              DCAN_IFCMD_CONTROL | ((uint32)msg_num & 0xFFu));
+
+    dcan1_wait_if1_ready();
+}
+
+/**
+ * @brief  Configure all SC receive mailboxes on DCAN1
+ *
+ * Called from SC_CAN_Init() after baud rate and silent mode are set,
+ * but before exiting init mode.
+ *
+ * Mailbox assignments (from sc_cfg.h):
+ *   MB1: E-Stop      (0x001)
+ *   MB2: CVC HB      (0x010)
+ *   MB3: FZC HB      (0x011)
+ *   MB4: RZC HB      (0x012)
+ *   MB5: VehicleState (0x100)
+ *   MB6: MotorCurrent (0x301)
+ */
+void dcan1_setup_mailboxes(void)
+{
+    dcan1_config_rx_mailbox(SC_MB_ESTOP,         SC_CAN_ID_ESTOP,         SC_CAN_DLC);
+    dcan1_config_rx_mailbox(SC_MB_CVC_HB,        SC_CAN_ID_CVC_HB,       SC_CAN_DLC);
+    dcan1_config_rx_mailbox(SC_MB_FZC_HB,        SC_CAN_ID_FZC_HB,       SC_CAN_DLC);
+    dcan1_config_rx_mailbox(SC_MB_RZC_HB,        SC_CAN_ID_RZC_HB,       SC_CAN_DLC);
+    dcan1_config_rx_mailbox(SC_MB_VEHICLE_STATE,  SC_CAN_ID_VEHICLE_STATE, SC_CAN_DLC);
+    dcan1_config_rx_mailbox(SC_MB_MOTOR_CURRENT,  SC_CAN_ID_MOTOR_CURRENT, SC_CAN_DLC);
 }
 
 /**

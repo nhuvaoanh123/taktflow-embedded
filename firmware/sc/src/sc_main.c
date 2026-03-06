@@ -135,31 +135,6 @@ int main(void)
     uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
 #endif
 
-    /* ---- ABSOLUTE FIRST: bare-metal LED blink to prove main() reached ----
-     * GIOB[6]=LED2, GIOB[7]=LED3 on LAUNCHXL2-570LC43 board.
-     * At this point: systemInit() done, pin mux configured, clocks running.
-     * 10 blinks then continue boot. Direct register writes only.
-     *
-     * GIO base: 0xFFF7BC00
-     *   GIOGCR0  = base+0x00  (global enable)
-     *   GIODIRB  = base+0x54  (port B direction)
-     *   GIODSETB = base+0x60  (port B data set)
-     *   GIODCLRB = base+0x64  (port B data clear)  */
-#ifdef PLATFORM_TMS570
-    {
-        volatile uint32 d;
-        uint32 i;
-        *(volatile uint32 *)0xFFF7BC00u = 0x00000001u;  /* GIOGCR0: enable GIO */
-        *(volatile uint32 *)0xFFF7BC54u = 0x000000C0u;  /* GIODIRB: bits 6,7 output */
-        for (i = 0u; i < 10u; i++) {
-            *(volatile uint32 *)0xFFF7BC60u = 0x000000C0u;  /* GIODSETB: LED2+LED3 ON */
-            for (d = 0u; d < 15000000u; d++) { }  /* ~300ms at 300MHz */
-            *(volatile uint32 *)0xFFF7BC64u = 0x000000C0u;  /* GIODCLRB: LED2+LED3 OFF */
-            for (d = 0u; d < 15000000u; d++) { }
-        }
-    }
-#endif
-
     /* ---- 0. UART — prove CPU reaches main() ---- */
 #ifdef PLATFORM_TMS570
     sc_sci_init();
@@ -177,19 +152,6 @@ int main(void)
 
 #ifdef PLATFORM_TMS570
     sc_sci_puts("Init done: GIO, GPIO, RTI\r\n");
-    /* LED blink: 3 times to confirm firmware running */
-    {
-        volatile uint32 d;
-        uint8 blink;
-        for (blink = 0u; blink < 3u; blink++) {
-            sc_het_led_on();
-            for (d = 0u; d < 50000000u; d++) { }
-            sc_het_led_off();
-            for (d = 0u; d < 50000000u; d++) { }
-        }
-        sc_het_led_on();
-    }
-    sc_sci_puts("LED blink done\r\n");
 #endif
 
     /* ---- 2. Module initialization ---- */
@@ -307,6 +269,10 @@ int main(void)
             sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_RZC) ? "TIMEOUT" : "OK");
             sc_sci_puts(" relay=");
             sc_sci_puts((SC_Relay_IsKilled() == FALSE) ? "ON" : "OFF");
+            sc_sci_puts(" ES=0x");
+            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC04u);  /* DCAN1 ES */
+            sc_sci_puts(" ND=0x");
+            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC9Cu);  /* DCAN1 NEWDAT1 */
             sc_sci_puts("\r\n");
         }
 #endif

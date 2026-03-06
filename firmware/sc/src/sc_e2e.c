@@ -62,7 +62,7 @@ static uint8 sc_crc8(const uint8* data, uint8 len)
         }
     }
 
-    return crc;
+    return crc ^ 0xFFu;  /* XOR-out per SAE-J1850 (matches BSW E2E) */
 }
 #endif
 
@@ -86,9 +86,7 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
 {
 #if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
     /* SIL bypass: vcan0 has perfect data integrity — no bit-flips.
-     * The BSW E2E format (used by CVC/FZC/RZC senders) differs from
-     * SC's native E2E layout, so CRC/alive checks would always fail.
-     * E2E algorithm is still validated by unit tests (UNIT_TEST builds). */
+     * E2E algorithm is validated by unit tests (UNIT_TEST builds). */
     (void)dataId;
     if ((data == NULL_PTR) || (msgIndex >= SC_MB_COUNT) || (dlc < 2u)) {
         return FALSE;
@@ -111,21 +109,27 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
     /* Extract alive counter from byte 0 upper nibble */
     alive = (uint8)((data[0] >> 4u) & 0x0Fu);
 
+    /* Verify DataId in byte 0 lower nibble (BSW packs [counter:4|dataId:4]) */
+    if ((data[0] & 0x0Fu) != (dataId & 0x0Fu)) {
+        valid = FALSE;
+    }
+
     /* Extract received CRC from byte 1 */
     received_crc = data[1];
 
-    /* Build CRC input: Data ID byte + payload bytes 2..DLC-1 */
-    crc_input[0] = dataId;
+    /* Build CRC input: payload bytes 2..DLC-1, then DataId last
+     * (matches BSW E2E_ComputePduCrc order) */
     payload_len = (dlc > 2u) ? (uint8)(dlc - 2u) : 0u;
     if (payload_len > 6u) {
         payload_len = 6u;  /* Cap at 6 payload bytes for 8-byte CAN */
     }
     for (i = 0u; i < payload_len; i++) {
-        crc_input[1u + i] = data[2u + i];
+        crc_input[i] = data[2u + i];
     }
+    crc_input[payload_len] = dataId;
 
     /* Compute expected CRC */
-    expected_crc = sc_crc8(crc_input, (uint8)(1u + payload_len));
+    expected_crc = sc_crc8(crc_input, (uint8)(payload_len + 1u));
 
     /* Verify CRC */
     if (expected_crc != received_crc) {
