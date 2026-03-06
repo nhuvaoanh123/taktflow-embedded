@@ -120,12 +120,11 @@ BO_ 768 Motor_Status: 8 RZC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" CVC,SC,ICU
  SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" CVC,SC,ICU
  SG_ E2E_CRC8 : 8|8@1+ (1,0) [0|255] "" CVC,SC,ICU
- SG_ MotorSpeed_RPM : 16|16@1+ (1,0) [0|10000] "RPM" CVC,SC,ICU
- SG_ MotorDirection : 32|2@1+ (1,0) [0|2] "" CVC,SC,ICU
- SG_ MotorEnable : 34|1@1+ (1,0) [0|1] "" CVC,SC,ICU
- SG_ MotorFaultStatus : 35|5@1+ (1,0) [0|31] "" CVC,SC,ICU
- SG_ DutyPercent : 40|8@1+ (1,0) [0|95] "%" CVC,SC,ICU
- SG_ DeratingPercent : 48|8@1+ (1,0) [0|100] "%" CVC,SC,ICU
+ SG_ TorqueEcho : 16|8@1+ (1,0) [0|100] "%" CVC,SC,ICU
+ SG_ MotorSpeed_RPM : 24|16@1+ (1,0) [0|10000] "RPM" CVC,SC,ICU
+ SG_ MotorDirection : 40|8@1+ (1,0) [0|2] "" CVC,SC,ICU
+ SG_ MotorEnable : 48|8@1+ (1,0) [0|1] "" CVC,SC,ICU
+ SG_ MotorFaultStatus : 56|8@1+ (1,0) [0|31] "" CVC,SC,ICU
 
 BO_ 769 Motor_Current: 8 RZC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" SC,CVC,ICU
