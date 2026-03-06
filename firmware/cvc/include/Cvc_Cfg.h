@@ -147,10 +147,10 @@
  *          After container restart, zone controllers may still send stale
  *          brake_fault / motor_cutoff for a few seconds after CVC enters RUN.
  *          This grace period absorbs those transients in Docker only.
- *          300 × 10ms = 3s. Not compiled on bare metal. */
+ *          1000 × 10ms = 10s. Not compiled on bare metal. */
 #ifdef PLATFORM_POSIX
   #ifndef CVC_POST_INIT_GRACE_CYCLES
-    #define CVC_POST_INIT_GRACE_CYCLES  300u  /* 3s — Docker fault signal settling */
+    #define CVC_POST_INIT_GRACE_CYCLES  1000u  /* 10s — Docker fault signal settling */
   #endif
 #endif
 
