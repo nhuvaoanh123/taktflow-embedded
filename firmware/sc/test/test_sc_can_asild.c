@@ -41,9 +41,8 @@ typedef uint8               Std_ReturnType;
 #define SC_HB_ALIVE_MAX             15u
 #define SC_CAN_DLC                  8u
 #define SC_BUS_SILENCE_TICKS        20u
-#define SC_DCAN_BRP                 9u
-#define SC_DCAN_TSEG1               10u
-#define SC_DCAN_TSEG2               2u
+/* SC_DCAN_BRP, SC_DCAN_TSEG1, SC_DCAN_TSEG2, SC_DCAN_SJW
+ * come from sc_cfg.h via the included sc_can.c */
 
 #define SC_MB_IDX_ESTOP             0u
 #define SC_MB_IDX_CVC_HB            1u

@@ -245,8 +245,13 @@
 /* ==================================================================
  * DCAN1 Baud Rate Configuration (500 kbps from 75 MHz VCLK1)
  *
- * Bit time = (BRP + 1) * (1 + TSEG1 + TSEG2) / VCLK1
- *          = 16 * 10 / 75 MHz = 2 us = 500 kbps
+ * DCAN BTR register uses +1 encoding: actual = field + 1.
+ * Bit rate  = VCLK1 / ((BRP+1) * (1 + (TSEG1+1) + (TSEG2+1)))
+ *           = 75 MHz / (10 * 15) = 500,000 bps
+ * Sample pt = (1 + (TSEG1+1)) / 15 = 12/15 = 80%
+ *
+ * SJW field is 2 bits (bits 6-7 of BTR), max field value = 3
+ * (actual SJW = 4). Values > 3 overflow into TSEG1 field.
  *
  * SJW >= 4 required for internal oscillator tolerance (HSI ±1%
  * per chip = ±2% relative between two nodes). Lesson from STM32
@@ -256,9 +261,9 @@
  * If VCLK1 differs from 75 MHz, recalculate BRP.
  * ================================================================== */
 
-#define SC_DCAN_BRP                 15u    /* Baud rate prescaler (BRP+1=16) */
-#define SC_DCAN_TSEG1               7u     /* Time segment 1 (prop + phase1) */
-#define SC_DCAN_TSEG2               2u     /* Time segment 2 (phase2) */
-#define SC_DCAN_SJW                 4u     /* Sync jump width (>=4 for osc tolerance) */
+#define SC_DCAN_BRP                 9u     /* Baud rate prescaler (BRP+1=10, Tq=7.5MHz) */
+#define SC_DCAN_TSEG1               10u    /* Time segment 1 (TSEG1+1=11) */
+#define SC_DCAN_TSEG2               2u     /* Time segment 2 (TSEG2+1=3) */
+#define SC_DCAN_SJW                 3u     /* Sync jump width (SJW+1=4, max for 2-bit field) */
 
 #endif /* SC_CFG_H */
