@@ -602,56 +602,64 @@ def _clear_nvm_files() -> None:
             pass  # Container may already be stopped; best-effort
 
 
-def _restart_ecu_containers() -> list[str]:
-    """Restart ECU + plant-sim containers to clear latched firmware faults.
+def _reset_all_containers() -> list[str]:
+    """Stop ALL ECU containers, then start them in correct order.
 
-    Restart order:
-      1. Zone controllers + plant-sim (FZC/RZC send heartbeats)
-      2. SC (receives heartbeats during its 5s grace period)
-      3. Wait 2s (SC stabilizes, heartbeats flowing)
-      4. CVC last (SC relay not killed, heartbeats confirmed)
+    Two-phase stop-then-start eliminates the timing race where an old
+    container (e.g. CVC in SAFE_STOP sending brake_cmd=100%) keeps
+    running while freshly restarted containers (e.g. FZC) receive its
+    stale commands — causing spurious PWM deviation faults.
 
-    The SC was previously in the zone controller list, but sequential
-    restart means its 5s grace expired before CVC even booted — causing
-    immediate SC_KILL on every reset.  Moving SC to Phase 2 ensures its
-    grace period covers the CVC boot window.
+    Phase 1: Stop all ECU + plant-sim containers (all off first)
+    Phase 2: Start zone controllers + plant-sim (heartbeat senders)
+    Phase 3: Start SC (needs heartbeats during its 5s grace)
+    Phase 4: Wait 2s, then start CVC (needs SC relay OK + heartbeats)
     """
     client = docker.from_env()
-    restarted = []
+    all_ecu_names = _ZONE_CONTAINERS + [_SC_CONTAINER, _CVC_CONTAINER]
+    restarted: list[str] = []
 
-    # Phase 1: restart zone controllers + plant-sim (heartbeat senders)
+    # Phase 1: stop ALL containers first — no stale data race
+    for name in all_ecu_names:
+        try:
+            c = client.containers.get(name)
+            c.stop(timeout=5)
+        except docker.errors.NotFound:
+            log.warning("Container %s not found — skipping stop", name)
+        except Exception as exc:
+            log.warning("Failed to stop %s: %s", name, exc)
+
+    # Phase 2: start zone controllers + plant-sim (heartbeat senders first)
     for name in _ZONE_CONTAINERS:
         try:
             c = client.containers.get(name)
-            c.restart(timeout=5)
+            c.start()
             restarted.append(name)
         except docker.errors.NotFound:
-            log.warning("Container %s not found — skipping", name)
+            log.warning("Container %s not found — skipping start", name)
         except Exception as exc:
-            log.warning("Failed to restart %s: %s", name, exc)
+            log.warning("Failed to start %s: %s", name, exc)
 
-    # Phase 2: restart SC (after heartbeat senders are running)
+    # Phase 3: start SC (after heartbeat senders are running)
     try:
         c = client.containers.get(_SC_CONTAINER)
-        c.restart(timeout=5)
+        c.start()
         restarted.append(_SC_CONTAINER)
     except docker.errors.NotFound:
-        log.warning("Container %s not found — skipping", _SC_CONTAINER)
+        log.warning("Container %s not found — skipping start", _SC_CONTAINER)
     except Exception as exc:
-        log.warning("Failed to restart %s: %s", _SC_CONTAINER, exc)
+        log.warning("Failed to start %s: %s", _SC_CONTAINER, exc)
 
-    # Phase 3: wait for SC to boot and start receiving heartbeats
+    # Phase 4: wait for SC to boot, then start CVC last
     time.sleep(2)
-
-    # Phase 4: restart CVC last
     try:
         c = client.containers.get(_CVC_CONTAINER)
-        c.restart(timeout=5)
+        c.start()
         restarted.append(_CVC_CONTAINER)
     except docker.errors.NotFound:
-        log.warning("Container %s not found — skipping", _CVC_CONTAINER)
+        log.warning("Container %s not found — skipping start", _CVC_CONTAINER)
     except Exception as exc:
-        log.warning("Failed to restart %s: %s", _CVC_CONTAINER, exc)
+        log.warning("Failed to start %s: %s", _CVC_CONTAINER, exc)
 
     return restarted
 
@@ -675,8 +683,8 @@ def reset() -> str:
     # from overflowing into Com/RTE buffers on next boot (NvM overflow bug)
     _clear_nvm_files()
 
-    # Power-cycle: restart ECU containers to clear latched faults
-    restarted = _restart_ecu_containers()
+    # Power-cycle: stop ALL then start in order (no stale-data race)
+    restarted = _reset_all_containers()
     log.info("Power-cycle reset: restarted %d containers", len(restarted))
 
     return f"Power-cycle reset: {len(restarted)} containers restarted"
