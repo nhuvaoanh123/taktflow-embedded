@@ -579,6 +579,29 @@ _SC_CONTAINER = "docker-sc-1"
 _CVC_CONTAINER = "docker-cvc-1"
 
 
+def _clear_nvm_files() -> None:
+    """Clear NvM persistence files from all ECU containers before restart.
+
+    The POSIX NvM stub stores DTC occurrence counters in /tmp/nvm_block_*.bin.
+    These files persist across container restarts (Docker named volumes).
+    On boot, Dem_Init reads NVM_BLOCK_SIZE (1024) bytes into the ~224-byte
+    dem_events buffer, overflowing 800 bytes into adjacent BSS statics.
+    If those statics include Com shadow buffers or RTE signal buffers,
+    stale fault values from the previous scenario are restored — causing
+    persistent brake_fault=1 / motor_cutoff=1 that never clears.
+
+    Deleting the NvM files ensures a truly clean reset with no DTC carryover.
+    """
+    client = docker.from_env()
+    all_containers = _ZONE_CONTAINERS + [_SC_CONTAINER, _CVC_CONTAINER]
+    for name in all_containers:
+        try:
+            c = client.containers.get(name)
+            c.exec_run("rm -f /tmp/nvm_block_1.bin /tmp/nvm_block_2.bin")
+        except Exception:
+            pass  # Container may already be stopped; best-effort
+
+
 def _restart_ecu_containers() -> list[str]:
     """Restart ECU + plant-sim containers to clear latched firmware faults.
 
@@ -647,6 +670,10 @@ def reset() -> str:
         reset_payload = json.dumps({"action": "reset", "ts": time.time()})
         _mqtt_client.publish("taktflow/command/reset", reset_payload, qos=1)
         reset_plant_faults(_mqtt_client)
+
+    # Clear NvM persistence files before restart — prevents stale DTC data
+    # from overflowing into Com/RTE buffers on next boot (NvM overflow bug)
+    _clear_nvm_files()
 
     # Power-cycle: restart ECU containers to clear latched faults
     restarted = _restart_ecu_containers()

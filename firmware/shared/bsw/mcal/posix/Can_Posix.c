@@ -124,6 +124,20 @@ Std_ReturnType Can_Hw_Init(uint32 baudrate)
     /* Set non-blocking mode */
     CAN_POSIX_FCNTL_FN(fd, 4, MSG_DONTWAIT); /* F_SETFL = 4 */
 
+    /* Drain stale frames from socket buffer.
+     * After Docker container restart, vcan0 persists at the kernel level.
+     * Other ECUs that restarted earlier may have sent frames before this
+     * ECU's socket was bound.  Discard them to prevent reading stale
+     * fault signals from a previous scenario. */
+    {
+        struct can_frame drain;
+        ssize_t drain_n;
+        do {
+            drain_n = CAN_POSIX_RECVFROM_FN(
+                fd, &drain, sizeof(drain), MSG_DONTWAIT, NULL_PTR, NULL_PTR);
+        } while (drain_n > 0);
+    }
+
     can_posix_fd      = fd;
     can_posix_bus_off  = FALSE;
 

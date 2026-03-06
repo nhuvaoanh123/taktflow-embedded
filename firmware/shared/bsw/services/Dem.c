@@ -17,6 +17,7 @@
 
 #ifdef PLATFORM_POSIX
 #include <stdio.h>
+#include <string.h>
 #endif
 
 /* ---- Forward declaration for PduR_Transmit (avoids circular include) ---- */
@@ -85,20 +86,27 @@ void Dem_Init(const void* ConfigPtr)
     dem_broadcast_pdu_id = 0xFFFFu;  /* Unconfigured sentinel */
 
     /* Restore occurrence counters from NvM (persistence across power cycles).
-     * WARNING: NvM_ReadBlock reads NVM_BLOCK_SIZE (1024) bytes, which overflows
-     * past dem_events (224 bytes) into adjacent statics (dem_broadcast_sent,
-     * dem_ecu_id, dem_broadcast_pdu_id). Clear ALL runtime state after restore.
-     * DTCs must be re-confirmed through fresh fault detection each lifecycle. */
+     * POSIX: NVM_BLOCK_SIZE (1024) exceeds sizeof(dem_events) (~224 bytes).
+     * Direct read overflows 800 bytes into adjacent BSS statics, corrupting
+     * Com shadow buffers and RTE signals across compilation units.
+     * Fix: read into a properly-sized temp buffer, copy only valid data.
+     * Target: NvM_ReadBlock is a no-op stub — direct read is safe. */
+#ifdef PLATFORM_POSIX
+    {
+        uint8 nvm_tmp[NVM_BLOCK_SIZE];
+        (void)memset(nvm_tmp, 0u, sizeof(nvm_tmp));
+        (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)nvm_tmp);
+        (void)memcpy(dem_events, nvm_tmp, sizeof(dem_events));
+    }
+#else
     (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
+#endif
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         dem_events[i].debounceCounter = 0;
         dem_events[i].statusByte      = 0u;
         /* occurrenceCounter preserved from NvM */
-        dem_broadcast_sent[i]         = 0u;
     }
-    dem_ecu_id = 0u;
-    dem_broadcast_pdu_id = 0xFFFFu;
 }
 
 void Dem_ReportErrorStatus(Dem_EventIdType EventId,
@@ -294,9 +302,20 @@ void Dem_MainFunction(void)
                 (void)PduR_Transmit(dem_broadcast_pdu_id, &pdu_info);
             }
 
-            /* Persist to NvM (outside critical section) */
+            /* Persist to NvM (outside critical section).
+             * POSIX: use temp buffer to avoid writing 800 bytes of adjacent
+             * BSS into the NvM file (NVM_BLOCK_SIZE > sizeof(dem_events)). */
+#ifdef PLATFORM_POSIX
+            {
+                uint8 nvm_wr[NVM_BLOCK_SIZE];
+                (void)memset(nvm_wr, 0u, sizeof(nvm_wr));
+                (void)memcpy(nvm_wr, dem_events, sizeof(dem_events));
+                (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID, (const void*)nvm_wr);
+            }
+#else
             (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID,
                                   (const void*)dem_events);
+#endif
         } else {
             SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
         }
