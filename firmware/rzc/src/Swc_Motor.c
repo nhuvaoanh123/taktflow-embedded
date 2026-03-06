@@ -295,7 +295,10 @@ void Swc_Motor_MainFunction(void)
      * ---------------------------------------------------------- */
     new_cmd_received = FALSE;
 
-    if (rte_torque_raw != Motor_PrevTorqueCmdRaw) {
+    if ((rte_torque_raw != Motor_PrevTorqueCmdRaw) || (rte_torque_raw == 0u)) {
+        /* Value changed → CVC is alive.
+         * Zero torque → intentional idle; don't flag CVC loss even if
+         * the value stays at 0 for many cycles (motor is safely off). */
         new_cmd_received   = TRUE;
         Motor_PrevTorqueCmdRaw = rte_torque_raw;
         Motor_CmdTimeoutCycles = 0u;
