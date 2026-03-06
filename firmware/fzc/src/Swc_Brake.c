@@ -275,7 +275,7 @@ void Swc_Brake_MainFunction(void)
      *         If deviation exceeds threshold for N debounce cycles,
      *         declare PWM deviation fault.
      * ---------------------------------------------------------- */
-    if (new_fault == FZC_BRAKE_NO_FAULT) {
+    if ((new_fault == FZC_BRAKE_NO_FAULT) && (Brake_FirstCmdReceived == TRUE)) {
         if (brake_cmd >= Brake_Position) {
             deviation = brake_cmd - Brake_Position;
         } else {
@@ -326,11 +326,18 @@ void Swc_Brake_MainFunction(void)
         /* No new fault but latch still active: count fault-free cycles */
         Brake_LatchCounter++;
         if (Brake_LatchCounter >= Brake_CfgPtr->latchClearCycles) {
-            /* Latch cleared after sufficient fault-free cycles */
-            Brake_FaultLatched    = FALSE;
-            Brake_LatchCounter    = 0u;
-            Brake_AutoBrakeActive = FALSE;
-            Brake_Fault           = FZC_BRAKE_NO_FAULT;
+            /* Latch cleared after sufficient fault-free cycles.
+             * Reset FirstCmdReceived so timeout and deviation checks
+             * stay disarmed until a fresh CVC command arrives.  This
+             * prevents the timeout from re-firing immediately (the
+             * counter is already above threshold) and deviation from
+             * triggering against a stale command reference. */
+            Brake_FaultLatched      = FALSE;
+            Brake_LatchCounter      = 0u;
+            Brake_AutoBrakeActive   = FALSE;
+            Brake_Fault             = FZC_BRAKE_NO_FAULT;
+            Brake_FirstCmdReceived  = FALSE;
+            Brake_CmdTimeoutCounter = 0u;
         } else {
             /* Latch still active: keep fault code and force 100% brake */
             if (Brake_Fault == FZC_BRAKE_NO_FAULT) {
