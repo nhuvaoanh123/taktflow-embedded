@@ -41,8 +41,8 @@ typedef uint8               Std_ReturnType;
 #define SC_HB_ALIVE_MAX             15u
 #define SC_CAN_DLC                  8u
 #define SC_BUS_SILENCE_TICKS        20u
-#define SC_DCAN_BRP                 15u
-#define SC_DCAN_TSEG1               7u
+#define SC_DCAN_BRP                 9u
+#define SC_DCAN_TSEG1               10u
 #define SC_DCAN_TSEG2               2u
 
 #define SC_MB_IDX_ESTOP             0u
@@ -135,6 +135,15 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
     *dlc = SC_CAN_DLC;
     mock_mb_new_data[mbIndex] = FALSE;
     return TRUE;
+}
+
+/* ==================================================================
+ * Mock: dcan1_setup_mailboxes (HAL — mailbox configuration)
+ * ================================================================== */
+
+void dcan1_setup_mailboxes(void)
+{
+    /* Stub — mailbox setup is hardware-only, not tested here */
 }
 
 /* ==================================================================
