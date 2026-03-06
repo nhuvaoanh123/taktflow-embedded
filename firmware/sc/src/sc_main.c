@@ -136,7 +136,7 @@ int main(void)
 #endif
 
     /* ---- ABSOLUTE FIRST: bare-metal LED blink to prove main() reached ----
-     * GIOB[4]=LED2, GIOB[5]=LED3 per SPRR397 schematic sheet 10.
+     * GIOB[6]=LED2, GIOB[7]=LED3 on LAUNCHXL2-570LC43 board.
      * At this point: systemInit() done, pin mux configured, clocks running.
      * 10 blinks then continue boot. Direct register writes only.
      *
@@ -150,11 +150,11 @@ int main(void)
         volatile uint32 d;
         uint32 i;
         *(volatile uint32 *)0xFFF7BC00u = 0x00000001u;  /* GIOGCR0: enable GIO */
-        *(volatile uint32 *)0xFFF7BC54u = 0x00000030u;  /* GIODIRB: bits 4,5 output */
+        *(volatile uint32 *)0xFFF7BC54u = 0x000000C0u;  /* GIODIRB: bits 6,7 output */
         for (i = 0u; i < 10u; i++) {
-            *(volatile uint32 *)0xFFF7BC60u = 0x00000030u;  /* GIODSETB: LED2+LED3 ON */
+            *(volatile uint32 *)0xFFF7BC60u = 0x000000C0u;  /* GIODSETB: LED2+LED3 ON */
             for (d = 0u; d < 15000000u; d++) { }  /* ~300ms at 300MHz */
-            *(volatile uint32 *)0xFFF7BC64u = 0x00000030u;  /* GIODCLRB: LED2+LED3 OFF */
+            *(volatile uint32 *)0xFFF7BC64u = 0x000000C0u;  /* GIODCLRB: LED2+LED3 OFF */
             for (d = 0u; d < 15000000u; d++) { }
         }
     }
