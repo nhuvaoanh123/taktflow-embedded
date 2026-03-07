@@ -199,8 +199,8 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 | # | Function | Peripheral | Pin Name | LaunchPad Connector | Direction | Voltage | External Component | Net Name | ASIL |
 |---|----------|-----------|----------|--------------------|-----------|---------|--------------------|----------|------|
-| 1 | CAN TX | DCAN1 | DCAN1TX | J5 (edge connector) | OUT | 3.3V | SN65HVD230 TXD | SC_CAN_TX | D |
-| 2 | CAN RX | DCAN1 | DCAN1RX | J5 (edge connector) | IN | 3.3V | SN65HVD230 RXD | SC_CAN_RX | D |
+| 1 | CAN TX | DCAN1 | DCAN1TX | J10 pin 45 (proto header) | OUT | 3.3V | SN65HVD230 TXD | SC_CAN_TX | D |
+| 2 | CAN RX | DCAN1 | DCAN1RX | J10 pin 44 (proto header) | IN | 3.3V | SN65HVD230 RXD | SC_CAN_RX | D |
 | 3 | Kill relay control | GIO | GIO_A0 | J3-1 (HDR1) | OUT | 3.3V | IRLZ44N gate (100R + 10k PD) | SC_KILL_RELAY | D |
 | 4 | CVC fault LED | GIO | GIO_A1 | J3-2 (HDR1) | OUT | 3.3V | Red LED + 330R | SC_LED_CVC | B |
 | 5 | FZC fault LED | GIO | GIO_A2 | J3-3 (HDR1) | OUT | 3.3V | Red LED + 330R | SC_LED_FZC | B |
@@ -219,7 +219,7 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 
 | Connector | Pins Available | Used By |
 |-----------|---------------|---------|
-| J5 (edge connector) | DCAN1TX, DCAN1RX, SPI1, etc. | DCAN1 TX/RX |
+| J10 (proto header, 50-pin) | DCAN1RX (pin 44), DCAN1TX (pin 45), N2HET, ADC, etc. | DCAN1 TX/RX |
 | J3 (HDR1 header) | GIO_A0 through GIO_A7 | Kill relay, LEDs, WDT |
 | J12 | GIO_B1 (onboard LED1) | Heartbeat blink |
 | J1 (XDS110 USB) | Debug/power | USB power + JTAG |
@@ -239,10 +239,10 @@ All unused GPIO pins configured as GPIO output LOW at initialization.
 ### 7.4 DCAN1 Configuration Notes
 
 1. **DCAN1 module**: Enabled via HALCoGen configuration tool.
-2. **Silent mode**: Set DCAN1 TEST register bit 3 = 1 for listen-only operation.
+2. **Normal mode**: DCAN1 runs in normal operation (SWR-SC-029). TEST register bit 3 is NOT set. SC transmits SC_Status (CAN ID 0x013) via mailbox 7 in addition to receiving.
 3. **Bit timing**: Configured for 500 kbps with 80% sample point (see HW Design section 6.3).
-4. **Mailboxes**: Configure message objects 1-15 for reception of heartbeat (0x010-0x012), vehicle state (0x100), torque request (0x101), motor current (0x301).
-5. **Edge connector wiring**: DCAN1TX and DCAN1RX available on edge connector J5. Wire to SN65HVD230 breakout board.
+4. **Mailboxes**: Configure message objects 1-6 for reception of heartbeat (0x010-0x012), vehicle state (0x100), torque request (0x101), motor current (0x301). Mailbox 7 is TX-only for SC_Status (0x013).
+5. **Proto header wiring**: DCAN1RX on J10 pin 44, DCAN1TX on J10 pin 45 (verified from schematic sprr397.pdf page 9 by coordinate analysis). Wire to SN65HVD230 breakout board.
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-PIN-SC-DCAN -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** The DCAN1 configuration notes are essential for the SC setup. The silent mode (listen-only) is critical for the safety controller's passive monitoring architecture -- it must not interfere with CAN bus traffic. The 500 kbps with 80% sample point matches the STM32 ECUs' CAN configuration. The mailbox configuration (objects 1-15 for specific CAN IDs) is appropriately selective. The note about HALCoGen and the edge connector wiring provides practical build guidance. No gaps identified.

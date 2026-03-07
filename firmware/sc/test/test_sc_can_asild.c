@@ -188,6 +188,32 @@ void SC_Heartbeat_NotifyRx(uint8 ecuIndex)
     mock_hb_last_ecu = ecuIndex;
 }
 
+void SC_Heartbeat_ValidateContent(uint8 ecuIndex, const uint8* payload)
+{
+    (void)ecuIndex;
+    (void)payload;
+}
+
+/* ==================================================================
+ * Mock: dcan1_transmit (HAL TX — SC_Status broadcast)
+ * ================================================================== */
+
+static boolean mock_transmit_called;
+static uint8   mock_transmit_mb_index;
+static uint8   mock_transmit_dlc;
+static uint8   mock_transmit_data[8u];
+
+void dcan1_transmit(uint8 mbIndex, const uint8* data, uint8 dlc)
+{
+    uint8 i;
+    mock_transmit_called   = TRUE;
+    mock_transmit_mb_index = mbIndex;
+    mock_transmit_dlc      = dlc;
+    for (i = 0u; i < dlc && i < 8u; i++) {
+        mock_transmit_data[i] = data[i];
+    }
+}
+
 /* ==================================================================
  * Include source under test
  * ================================================================== */
@@ -225,6 +251,13 @@ void setUp(void)
     mock_e2e_check_result = TRUE;
     mock_hb_notify_count  = 0u;
     mock_hb_last_ecu      = 0xFFu;
+
+    mock_transmit_called   = FALSE;
+    mock_transmit_mb_index = 0xFFu;
+    mock_transmit_dlc      = 0u;
+    for (i = 0u; i < 8u; i++) {
+        mock_transmit_data[i] = 0u;
+    }
 
     SC_CAN_Init();
 }
@@ -449,6 +482,51 @@ void test_can_get_message_null_dlc(void)
 }
 
 /* ==================================================================
+ * SWR-SC-029: Normal Mode (TC-SC-049)
+ * SWR-SC-030: SC_Status TX (TC-SC-050)
+ * ================================================================== */
+
+/** @id TC-SC-049 @verifies SWR-SC-029
+ *  Normal operation: after SC_CAN_Init(), DCAN1 TEST register must NOT
+ *  have the silent bit (bit 3) set, and CTL Init bit must be cleared. */
+void test_CAN_Init_normal_mode(void)
+{
+    /* TEST register was never written during init — must be 0 (no silent) */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_dcan_test & 0x08u);   /* Bit 3: silent */
+
+    /* CTL register final write must clear Init bit (bit 0) */
+    TEST_ASSERT_EQUAL_UINT32(0u, mock_dcan_ctl & 0x01u);    /* Bit 0: Init */
+
+    TEST_ASSERT_TRUE(can_initialized);
+}
+
+/** @id TC-SC-050 @verifies SWR-SC-030
+ *  SC_CAN_TransmitStatus() must delegate to dcan1_transmit() with mailbox
+ *  SC_MB_TX_STATUS and the exact payload bytes and DLC passed in. */
+void test_CAN_TransmitStatus_calls_dcan1_transmit(void)
+{
+    const uint8 payload[4] = {0xA1u, 0xB2u, 0xC3u, 0xD4u};
+
+    SC_CAN_TransmitStatus(payload, 4u);
+
+    TEST_ASSERT_TRUE(mock_transmit_called);
+    TEST_ASSERT_EQUAL_UINT8(SC_MB_TX_STATUS, mock_transmit_mb_index);
+    TEST_ASSERT_EQUAL_UINT8(4u, mock_transmit_dlc);
+    TEST_ASSERT_EQUAL_UINT8(0xA1u, mock_transmit_data[0]);
+    TEST_ASSERT_EQUAL_UINT8(0xB2u, mock_transmit_data[1]);
+    TEST_ASSERT_EQUAL_UINT8(0xC3u, mock_transmit_data[2]);
+    TEST_ASSERT_EQUAL_UINT8(0xD4u, mock_transmit_data[3]);
+}
+
+/** @id TC-SC-050b @verifies SWR-SC-030
+ *  SC_CAN_TransmitStatus() must silently reject NULL payload. */
+void test_CAN_TransmitStatus_rejects_null(void)
+{
+    SC_CAN_TransmitStatus(NULL_PTR, 4u);
+    TEST_ASSERT_FALSE(mock_transmit_called);
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -480,6 +558,13 @@ int main(void)
     RUN_TEST(test_can_busoff_then_recovery);
     RUN_TEST(test_can_get_message_null_data);
     RUN_TEST(test_can_get_message_null_dlc);
+
+    /* SWR-SC-029: Normal mode */
+    RUN_TEST(test_CAN_Init_normal_mode);              /* TC-SC-049 */
+
+    /* SWR-SC-030: SC_Status TX broadcast */
+    RUN_TEST(test_CAN_TransmitStatus_calls_dcan1_transmit);  /* TC-SC-050 */
+    RUN_TEST(test_CAN_TransmitStatus_rejects_null);          /* TC-SC-050b */
 
     return UNITY_END();
 }

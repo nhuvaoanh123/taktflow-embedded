@@ -426,6 +426,25 @@ void sc_posix_can_send(uint32 can_id, const uint8 *data, uint8 dlc)
 #endif
 }
 
+/**
+ * @brief  Transmit a CAN frame on DCAN1 via SocketCAN
+ *
+ * Delegates to sc_posix_can_send() using the SC_Status CAN ID (0x013).
+ * mbIndex must be SC_MB_TX_STATUS (7) — only one TX mailbox exists.
+ *
+ * @param  mbIndex  Mailbox index — must be SC_MB_TX_STATUS (7)
+ * @param  data     Payload bytes (non-NULL, length >= dlc)
+ * @param  dlc      Data length code (0-8)
+ * @note   SWR-SC-030: SC_Status broadcast (SIL implementation).
+ */
+void dcan1_transmit(uint8 mbIndex, const uint8* data, uint8 dlc)
+{
+    if (mbIndex != SC_MB_TX_STATUS) {
+        return;
+    }
+    sc_posix_can_send(SC_CAN_ID_RELAY_STATUS, data, dlc);
+}
+
 /* ==================================================================
  * Self-test hardware stubs (from sc_selftest.c:20-30)
  * ================================================================== */

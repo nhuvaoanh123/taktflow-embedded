@@ -492,29 +492,30 @@ Same as CVC (Section 5.1.5) but using **PB4** as WDI GPIO (PB0 is used for BTS79
 
 ### 5.4 SC -- Safety Controller
 
-#### 5.4.1 DCAN1 CAN Interface (Listen-Only)
+#### 5.4.1 DCAN1 CAN Interface (Normal Mode, SWR-SC-029)
 
 ```
-  TMS570LC43x                   SN65HVD230
-  +-----------+                  +------------------+
-  |           |                  |                  |
-  | DCAN1_TX  +--- (edge conn)->| TXD         CANH |--[CMC]--+-- CAN_H
-  |           |                  |                  |         |
-  | DCAN1_RX  +--- (edge conn)<-| RXD         CANL |--[CMC]--+-- CAN_L
-  |           |                  |                  |         |
-  +-----------+  3.3V --[100nF]->| VCC          GND |  [120R termination]
-                                 |                  |         |
-                                 | Rs           N/C |       CAN_L
-                                 +--+---------------+
-                                    |
-                                   GND (Rs = GND for full speed)
+  TMS570LC43x                       SN65HVD230
+  +-----------+                      +------------------+
+  |           |                      |                  |
+  | DCAN1_TX  +-- J10 pin 45 (TX) -->| TXD         CANH |--[CMC]--+-- CAN_H
+  |           |                      |                  |         |
+  | DCAN1_RX  +-- J10 pin 44 (RX) --<| RXD         CANL |--[CMC]--+-- CAN_L
+  |           |                      |                  |         |
+  +-----------+  3.3V --[100nF]----->| VCC          GND |  [120R termination]
+                                     |                  |         |
+                                     | Rs           N/C |       CAN_L
+                                     +--+---------------+
+                                        |
+                                       GND (Rs = GND for full speed)
 
-  DCAN1 TEST register bit 3 = 1 (Silent/Listen-only mode).
-  TMS570 TX drives recessive (no effect on bus).
-  TMS570 RX receives all frames without acknowledging.
+  DCAN1 runs in normal operation (TEST register NOT modified, SWR-SC-029).
+  SC transmits SC_Status (CAN ID 0x013) via mailbox 7 every 500ms.
+  SC receives heartbeat/state frames on mailboxes 1-6.
   SN65HVD230 is TI part (same vendor as TMS570).
   120R termination at SC (SC is at one end of the bus).
-  Using DCAN1 via edge connector (NOT DCAN4 due to HALCoGen bug).
+  J10 pin 44 = DCAN1RX, J10 pin 45 = DCAN1TX (verified from sprr397.pdf p.9, coord analysis).
+  NOT DCAN4 — HALCoGen v04.07.01 mailbox bug on DCAN4.
 ```
 
 #### 5.4.2 Kill Relay Circuit

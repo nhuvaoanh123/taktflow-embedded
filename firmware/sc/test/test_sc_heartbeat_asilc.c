@@ -589,6 +589,72 @@ void test_HB_confirmed_timeout_latches(void)
 }
 
 /* ==================================================================
+ * Phase 7: Content Validation (SWR-SC-027, SWR-SC-028)
+ * ================================================================== */
+
+/** @id TC-SC-047 @verifies SWR-SC-027
+ *  Equivalence class: Threshold boundary — stuck_degraded_cnt reaching
+ *  SC_HB_STUCK_DEGRADED_MAX triggers content fault; one below does not. */
+void test_HB_content_fault_stuck_degraded_threshold(void)
+{
+    uint8 i;
+    uint8 payload[4];
+
+    SC_Heartbeat_Init();
+
+    /* payload[3] bits[3:0]=2 → DEGRADED mode; FaultStatus=0 (no fault bits) */
+    payload[0] = 0u;
+    payload[1] = 0u;
+    payload[2] = 0u;
+    payload[3] = 0x02u;  /* mode=DEGRADED, FaultStatus=0 */
+
+    /* SC_HB_STUCK_DEGRADED_MAX - 1 calls → fault NOT yet latched */
+    for (i = 0u; i < (SC_HB_STUCK_DEGRADED_MAX - 1u); i++) {
+        SC_Heartbeat_ValidateContent(SC_ECU_CVC, payload);
+    }
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_CVC));
+
+    /* One more call → fault latches */
+    SC_Heartbeat_ValidateContent(SC_ECU_CVC, payload);
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsContentFault(SC_ECU_CVC));
+
+    /* Other ECUs must remain clean */
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_FZC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_RZC));
+}
+
+/** @id TC-SC-048 @verifies SWR-SC-028
+ *  Equivalence class: Threshold boundary — fault_escalate_cnt reaching
+ *  SC_HB_FAULT_ESCALATE_MAX triggers content fault; one below does not. */
+void test_HB_content_fault_escalate_threshold(void)
+{
+    uint8 i;
+    uint8 payload[4];
+
+    SC_Heartbeat_Init();
+
+    /* payload[3] bits[7:4]=0x3 → 2 FaultStatus bits set; mode=0 (NORMAL) */
+    payload[0] = 0u;
+    payload[1] = 0u;
+    payload[2] = 0u;
+    payload[3] = 0x30u;  /* FaultStatus=0x3 (2 bits), mode=NORMAL */
+
+    /* SC_HB_FAULT_ESCALATE_MAX - 1 calls → fault NOT yet latched */
+    for (i = 0u; i < (SC_HB_FAULT_ESCALATE_MAX - 1u); i++) {
+        SC_Heartbeat_ValidateContent(SC_ECU_FZC, payload);
+    }
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_FZC));
+
+    /* One more call → fault latches */
+    SC_Heartbeat_ValidateContent(SC_ECU_FZC, payload);
+    TEST_ASSERT_TRUE(SC_Heartbeat_IsContentFault(SC_ECU_FZC));
+
+    /* Other ECUs must remain clean */
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_CVC));
+    TEST_ASSERT_FALSE(SC_Heartbeat_IsContentFault(SC_ECU_RZC));
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -635,6 +701,10 @@ int main(void)
     RUN_TEST(test_HB_startup_grace_no_timeout);
     RUN_TEST(test_HB_double_init_resets_all);
     RUN_TEST(test_HB_confirmed_timeout_latches);
+
+    /* Phase 7: Content Validation (SWR-SC-027, SWR-SC-028) */
+    RUN_TEST(test_HB_content_fault_stuck_degraded_threshold);  /* TC-SC-047 */
+    RUN_TEST(test_HB_content_fault_escalate_threshold);        /* TC-SC-048 */
 
     return UNITY_END();
 }

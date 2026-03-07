@@ -534,18 +534,61 @@ static void dcan1_config_rx_mailbox(uint8 msg_num, uint16 can_id, uint8 dlc)
 }
 
 /**
- * @brief  Configure all SC receive mailboxes on DCAN1
+ * @brief  Configure DCAN1 mailbox SC_MB_TX_STATUS (7) for transmission
  *
- * Called from SC_CAN_Init() after baud rate and silent mode are set,
+ * Programs message object 7 as a TX-only mailbox for SC_Status (0x013).
+ * Sets ARB with Dir=1 (TX), MsgVal=1, and standard CAN ID.
+ * TxRqst is NOT set here — it is set per-frame in dcan1_transmit().
+ *
+ * @param  msg_num  Hardware message object number (1-indexed), must be 7
+ * @param  can_id   Standard 11-bit CAN ID for SC_Status (0x013)
+ * @param  dlc      Data length code (4 for SC_Status)
+ */
+static void dcan1_config_tx_mailbox(uint8 msg_num, uint16 can_id, uint8 dlc)
+{
+    uint32 arb;
+    uint32 mctl;
+
+    dcan1_wait_if1_ready();
+
+    /* No mask filtering for TX objects */
+    reg_write(DCAN1_BASE, DCAN_IF1MSK, 0xFFFFFFFFu);
+
+    /* ARB: standard ID in bits 28:18, MsgVal=1, Dir=1 (TX), Xtd=0 */
+    arb = ((uint32)can_id << 18u) | DCAN_ARB_MSGVAL | DCAN_ARB_DIR;
+    reg_write(DCAN1_BASE, DCAN_IF1ARB, arb);
+
+    /* MCTL: DLC, EOB=1 (bit 7). TxRqst cleared — frame not pending yet. */
+    mctl = ((uint32)dlc & 0x0Fu) | ((uint32)1u << 7u);
+    reg_write(DCAN1_BASE, DCAN_IF1MCTL, mctl);
+
+    /* Clear data registers — no payload yet */
+    reg_write(DCAN1_BASE, DCAN_IF1DATA, 0u);
+    reg_write(DCAN1_BASE, DCAN_IF1DATB, 0u);
+
+    /* Transfer IF1 → message object RAM: write all fields */
+    reg_write(DCAN1_BASE, DCAN_IF1CMD,
+              DCAN_IFCMD_WR | DCAN_IFCMD_MASK | DCAN_IFCMD_ARB |
+              DCAN_IFCMD_CONTROL | DCAN_IFCMD_DATAA | DCAN_IFCMD_DATAB |
+              ((uint32)msg_num & 0xFFu));
+
+    dcan1_wait_if1_ready();
+}
+
+/**
+ * @brief  Configure all SC receive mailboxes on DCAN1, and TX mailbox 7
+ *
+ * Called from SC_CAN_Init() after baud rate and normal mode are set,
  * but before exiting init mode.
  *
  * Mailbox assignments (from sc_cfg.h):
- *   MB1: E-Stop      (0x001)
- *   MB2: CVC HB      (0x010)
- *   MB3: FZC HB      (0x011)
- *   MB4: RZC HB      (0x012)
- *   MB5: VehicleState (0x100)
- *   MB6: MotorCurrent (0x301)
+ *   MB1: E-Stop       (0x001) RX
+ *   MB2: CVC HB       (0x010) RX
+ *   MB3: FZC HB       (0x011) RX
+ *   MB4: RZC HB       (0x012) RX
+ *   MB5: VehicleState  (0x100) RX
+ *   MB6: MotorCurrent  (0x301) RX
+ *   MB7: SC_Status     (0x013) TX only (SWR-SC-030)
  */
 void dcan1_setup_mailboxes(void)
 {
@@ -555,6 +598,7 @@ void dcan1_setup_mailboxes(void)
     dcan1_config_rx_mailbox(SC_MB_RZC_HB,        SC_CAN_ID_RZC_HB,       SC_CAN_DLC);
     dcan1_config_rx_mailbox(SC_MB_VEHICLE_STATE,  SC_CAN_ID_VEHICLE_STATE, SC_CAN_DLC);
     dcan1_config_rx_mailbox(SC_MB_MOTOR_CURRENT,  SC_CAN_ID_MOTOR_CURRENT, SC_CAN_DLC);
+    dcan1_config_tx_mailbox(SC_MB_TX_STATUS,     SC_CAN_ID_RELAY_STATUS,  SC_CAN_DLC);
 }
 
 /**
@@ -654,6 +698,69 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
     dcan1_wait_if2_ready();
 
     return TRUE;
+}
+
+/**
+ * @brief  Transmit a CAN frame via DCAN1 message object SC_MB_TX_STATUS
+ *
+ * Loads data into IF1 registers and sets TxRqst to trigger hardware
+ * transmission on the pre-configured mailbox 7 (SC_Status, CAN ID 0x013).
+ *
+ * @param  mbIndex  Mailbox index — must be SC_MB_TX_STATUS (7)
+ * @param  data     Payload bytes (must be non-NULL, length >= dlc)
+ * @param  dlc      Data length code (0-8)
+ * @note   Thread safety: call only from SC main task (no ISR context).
+ *         SWR-SC-030: SC_Status broadcast.
+ */
+void dcan1_transmit(uint8 mbIndex, const uint8* data, uint8 dlc)
+{
+    uint32 data_a;
+    uint32 data_b;
+    uint32 mctl;
+    uint8  tx_dlc;
+
+    if (mbIndex != SC_MB_TX_STATUS) {
+        return;  /* Only mailbox 7 is configured for TX */
+    }
+    if (data == NULL_PTR) {
+        return;
+    }
+
+    tx_dlc = (dlc > 8u) ? 8u : dlc;
+
+    /* Pack bytes into 32-bit words: byte0 in bits 7:0, byte1 in 15:8, etc. */
+    data_a = ((uint32)data[0])              |
+             ((uint32)data[1] << 8u)        |
+             ((uint32)data[2] << 16u)       |
+             ((uint32)data[3] << 24u);
+
+    if (tx_dlc > 4u) {
+        data_b = ((uint32)data[4])          |
+                 ((uint32)data[5] << 8u)    |
+                 ((uint32)data[6] << 16u)   |
+                 ((uint32)data[7] << 24u);
+    } else {
+        data_b = 0u;
+    }
+
+    dcan1_wait_if1_ready();
+
+    /* Write payload into IF1 data registers */
+    reg_write(DCAN1_BASE, DCAN_IF1DATA, data_a);
+    reg_write(DCAN1_BASE, DCAN_IF1DATB, data_b);
+
+    /* MCTL: DLC + TxRqst (bit 8) + EOB (bit 7) — triggers transmission */
+    mctl = ((uint32)tx_dlc & 0x0Fu) | ((uint32)1u << 8u) | ((uint32)1u << 7u);
+    reg_write(DCAN1_BASE, DCAN_IF1MCTL, mctl);
+
+    /* Transfer IF1 → message object 7: write control + data only
+     * (ARB already set by dcan1_config_tx_mailbox at init) */
+    reg_write(DCAN1_BASE, DCAN_IF1CMD,
+              DCAN_IFCMD_WR | DCAN_IFCMD_CONTROL |
+              DCAN_IFCMD_DATAA | DCAN_IFCMD_DATAB |
+              ((uint32)mbIndex & 0xFFu));
+
+    dcan1_wait_if1_ready();
 }
 
 /* ==================================================================

@@ -1,31 +1,32 @@
 # 08 — SC Circuits
 
-**Block**: Safety Controller — DCAN1, kill relay, fault LEDs, WDT, power
+**Block**: Safety Controller — DCAN1 (normal mode, TX+RX), kill relay, fault LEDs, WDT, power
 **Source**: HWDES Section 5.4
 
-## DCAN1 CAN Interface (Listen-Only)
+## DCAN1 CAN Interface (Normal Mode, SWR-SC-029)
 
 ```
-  TMS570LC43x                   SN65HVD230
-  +-----------+                  +------------------+
-  |           |                  |                  |
-  | DCAN1_TX  +--- (edge conn)->| TXD         CANH |--[CMC]--+-- CAN_H
-  |           |                  |                  |         |
-  | DCAN1_RX  +--- (edge conn)<-| RXD         CANL |--[CMC]--+-- CAN_L
-  |           |                  |                  |         |
-  +-----------+  3.3V --[100nF]->| VCC          GND |  [120R termination]
-                                 |                  |         |
-                                 | Rs           N/C |       CAN_L
-                                 +--+---------------+
-                                    |
-                                   GND (Rs = GND for full speed)
+  TMS570LC43x                       SN65HVD230
+  +-----------+                      +------------------+
+  |           |                      |                  |
+  | DCAN1_TX  +-- J10 pin 45 (TX) -->| TXD         CANH |--[CMC]--+-- CAN_H
+  |           |                      |                  |         |
+  | DCAN1_RX  +-- J10 pin 44 (RX) --<| RXD         CANL |--[CMC]--+-- CAN_L
+  |           |                      |                  |         |
+  +-----------+  3.3V --[100nF]----->| VCC          GND |  [120R termination]
+                                     |                  |         |
+                                     | Rs           N/C |       CAN_L
+                                     +--+---------------+
+                                        |
+                                       GND (Rs = GND for full speed)
 
-  DCAN1 TEST register bit 3 = 1 (Silent/Listen-only mode).
-  TMS570 TX drives recessive (no effect on bus).
-  TMS570 RX receives all frames without acknowledging.
+  DCAN1 runs in normal operation (TEST register NOT modified, SWR-SC-029).
+  SC transmits SC_Status (CAN ID 0x013) via mailbox 7 every 500ms.
+  SC receives heartbeat/state frames on mailboxes 1-6.
   SN65HVD230 is TI part (same vendor as TMS570).
   120R termination at SC (SC is at one end of the bus).
-  Using DCAN1 via edge connector (NOT DCAN4 due to HALCoGen bug).
+  J10 pin 44 = DCAN1RX, J10 pin 45 = DCAN1TX (per schematic sprr397.pdf).
+  NOT DCAN4 — HALCoGen v04.07.01 mailbox bug on DCAN4.
 ```
 
 ## Kill Relay Circuit
@@ -133,8 +134,8 @@ When something goes wrong, you need to know WHICH ECU faulted. A single "system 
 
 | # | Function | Pin | Connector | Direction | Net Name | ASIL |
 |---|----------|-----|-----------|-----------|----------|------|
-| 1 | CAN TX | DCAN1TX | J5 (edge) | OUT | SC_CAN_TX | D |
-| 2 | CAN RX | DCAN1RX | J5 (edge) | IN | SC_CAN_RX | D |
+| 1 | CAN TX | DCAN1TX | J10 pin 45 (proto header) | OUT | SC_CAN_TX | D |
+| 2 | CAN RX | DCAN1RX | J10 pin 44 (proto header) | IN | SC_CAN_RX | D |
 | 3 | Kill relay control | GIO_A0 | J3-1 (HDR1) | OUT | SC_KILL_RELAY | D |
 | 4 | CVC fault LED | GIO_A1 | J3-2 (HDR1) | OUT | SC_LED_CVC | B |
 | 5 | FZC fault LED | GIO_A2 | J3-3 (HDR1) | OUT | SC_LED_FZC | B |
@@ -146,10 +147,10 @@ When something goes wrong, you need to know WHICH ECU faulted. A single "system 
 ### DCAN1 Configuration Notes
 
 - DCAN1 module enabled via HALCoGen
-- Silent mode: DCAN1 TEST register bit 3 = 1
+- Normal mode: TEST register NOT set (SWR-SC-029 — SC transmits SC_Status on mailbox 7)
 - Bit timing: 500 kbps with 80% sample point
-- Mailboxes: objects 1-15 for heartbeat (0x010-0x012), vehicle state (0x100), torque request (0x101), motor current (0x301)
-- Edge connector wiring: DCAN1TX/RX on J5 -> SN65HVD230 breakout
+- Mailboxes: objects 1-6 for RX (heartbeat 0x010-0x012, vehicle state 0x100, torque 0x101, motor current 0x301); mailbox 7 TX-only for SC_Status 0x013
+- Edge connector wiring: DCAN1RX on J10 pin 44, DCAN1TX on J10 pin 45 (per schematic sprr397.pdf)
 
 ## BOM References
 
