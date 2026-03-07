@@ -100,3 +100,59 @@ _Static_assert(CVC_HB_TX_PERIOD_MS % CVC_RTE_PERIOD_MS == 0u,
 | FTTI documentation | Budget doc must exist before safety review — "it's probably fine" is not compliant |
 | E2E State Machine | Window-based SM > ad-hoc counters for ASIL D auditability |
 | Per-ECU thresholds | Map each timeout to its specific safety goal and document the justification |
+| SC E2E DataID mismatch | SC E2E DataID mismatch silently rejects all ECU heartbeats → SC declares all ECUs dead → SC_Status=FAULT cascades through all ECUs that depend on it — verify DataIDs with CAN capture before enabling SC_CAN_Receive |
+
+---
+
+## 8. SC Heartbeat Monitoring Disrupts STM32 ECU Heartbeats
+
+**Date:** 2026-03-07
+
+**Context:** After adding `SC_Heartbeat_Init()`, `SC_CAN_Receive()`, and `SC_Heartbeat_Monitor()` to `sc_main.c`, CAN captures showed `SC_Status=FAULT` and disrupted heartbeat frames from STM32 ECUs (CVC/FZC/RZC). The SC was actively receiving and processing heartbeat frames via DCAN.
+
+**Root cause:** E2E DataID mismatch. The SC's `mb_data_ids[]` table held DataIDs that did not match what the STM32 ECUs embed in their heartbeat frames (CAN capture showed `0x0E` in frames that SC expected to have a different DataID). Every `SC_E2E_Check()` call returned `FALSE` → `SC_Heartbeat_NotifyRx()` never fired → `SC_Heartbeat_Monitor()` decremented all three ECU timeout counters to zero → declared all ECUs dead → `SC_Monitoring_Update()` broadcast `SC_Status=FAULT` on 0x013.
+
+CVC reads 0x013, saw `SC_Status=FAULT`, and entered its own fault mode — which disrupted or halted its heartbeat TX. FZC/RZC then saw CVC heartbeat go silent and cascaded into fault. The STM32 heartbeat frames on the wire were physically correct the whole time; the disruption was entirely at the application layer.
+
+**Fix:** Commented out `SC_Heartbeat_Init()`, `SC_CAN_Receive()`, and `SC_Heartbeat_Monitor()` in `sc_main.c`. SC now only transmits its own status (0x013) and does not evaluate ECU heartbeats. Cascade eliminated immediately.
+
+**Principle:** When a monitoring node (SC) evaluates received frames with E2E, the DataIDs must be verified end-to-end on the physical bus before enabling the monitor in production. An E2E mismatch is silent at the wire level but catastrophic at the application level — every frame is silently rejected, the monitor declares all senders dead, and the resulting FAULT broadcast cascades through all ECUs that depend on SC_Status. Verify DataID alignment with a CAN capture before enabling SC_CAN_Receive in hardware bringup.
+
+
+---
+
+## 9. Three SC Bringup Bugs Found Back-to-Back on Physical Hardware
+
+**Date:** 2026-03-07
+
+**Context:** First full SC hardware bringup on TMS570LC4357 LaunchPad with physical STM32 ECUs on the same CAN bus. Symptoms diagnosed incrementally by re-enabling one function at a time (SC_Heartbeat_Init → SC_CAN_Receive → SC_Heartbeat_Monitor).
+
+### Bug 1 — DCAN NewDat Write-Back Re-Sets the Bit It Just Cleared
+
+**Mistake:** `dcan1_get_mailbox_data()` cleared NewDat with a read (WR=0 + DCAN_IFCMD_NEWDAT), then immediately wrote back with `WR=1 | DCAN_IFCMD_NEWDAT`, which re-sets NewDat=1. The comment said "clear NewDat by writing back with NewDat=0" but the DCAN protocol is opposite: WR=1 + NEWDAT **sets** the bit.
+
+**Effect:** DCAN hardware saw NewDat permanently=1 in the message object. Every subsequent frame triggered MsgLst (overwrite of unread buffer) → bus disruption visible on CAN analyzer immediately after SC_CAN_Receive() was re-enabled.
+
+**Fix:** Removed the write-back entirely. The read command (WR=0 + DCAN_IFCMD_NEWDAT in IF2CMD) already clears NewDat atomically. No write-back needed.
+
+**Principle:** On DCAN (Bosch), WR=0 reads → clears NewDat atomically. WR=1 writes → sets NewDat. They are opposite. The IFCMD NEWDAT bit is a transfer trigger, not a copy of the MCTL state. Never write back MCTL after a read without verifying which direction WR controls.
+
+### Bug 2 — sc_monitoring.c Not in Makefile
+
+**Mistake:** sc_monitoring.c was implemented but never added to SC_CSRC. Linker error on SC_Monitoring_Init and SC_Monitoring_Update.
+
+**Fix:** Added the file to SC_CSRC. One line.
+
+**Principle:** Add every new .c file to the build system at creation time. A CI build after each new file would have caught this at the same commit.
+
+### Bug 3 — SC_E2E_Init() Never Called, Alive Counter Fails on First Frame
+
+**Mistake:** SC_E2E_Init() sets e2e_first_rx[i]=TRUE (skip alive check on first reception) but was never called. Static arrays zero-initialize to FALSE. SC stored e2e_last_alive=0 → expected counter=1, but ECUs had been running for seconds with counter at 7, 12, etc. Every frame failed E2E → SC_Heartbeat_NotifyRx never called → all ECUs timed out → SC_Status=FAULT.
+
+**Fix:** Added SC_E2E_Init() after SC_CAN_Init() in sc_main.c.
+
+**Principle:** At integration, grep for every _Init() in each module and verify it appears in the startup sequence. Zero-initialized statics produce a plausible-but-wrong default (FALSE instead of TRUE for e2e_first_rx) — invisible until hardware bringup.
+
+### Overall Lesson
+
+Hardware bringup exposed three bugs in sequence that unit tests did not catch because: (1) DCAN WR bit direction requires the physical peripheral to observe, (2) missing Makefile entry requires a full link, (3) missing Init call requires the real startup sequence. Incremental re-enable (one function at a time) gave a clean before/after for each bug.

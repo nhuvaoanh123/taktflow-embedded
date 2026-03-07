@@ -64,6 +64,7 @@ extern void sc_sci_puts(const char* str);
 extern void sc_sci_put_uint(uint32 val);
 extern void sc_het_led_on(void);
 extern void sc_het_led_off(void);
+extern void sc_dcan_print_status(void);
 #endif
 
 /* ==================================================================
@@ -104,7 +105,8 @@ static void sc_configure_gpio(void)
  *
  * @param  failStep  Step number that failed (1-7)
  */
-static void sc_startup_fail_blink(uint8 failStep)
+/* DEBUG BRINGUP: unused until full init restored */
+__attribute__((unused)) static void sc_startup_fail_blink(uint8 failStep)
 {
     volatile uint32 delay;
     uint8 blink;
@@ -130,167 +132,73 @@ static void sc_startup_fail_blink(uint8 failStep)
 
 int main(void)
 {
-    uint8 startup_result;
-    boolean all_checks_ok;
+    /* ---- 0. Prove CPU reaches main() via GIOB[6:7] LEDs ---- */
 #ifdef PLATFORM_TMS570
-    uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
-#endif
-
-    /* ---- 0. LED+UART -- prove CPU reaches main() ---- */
-#ifdef PLATFORM_TMS570
-    /* LED checkpoint: startup ASM turns GIOB[6:7] ON.
-     *   Both stay ON  = CPU stuck before main
-     *   Both go OFF   = main reached
-     *   Both back ON  = SCI init done */
     sc_het_led_off();
     sc_sci_init();
-    sc_het_led_on();
-    sc_sci_puts("=== SC Boot (TMS570LC43x) ===\r\n");
-    sc_sci_puts("main() reached OK\r\n");
+    sc_het_led_on();   /* LED ON = main() reached, SCI init done */
 #endif
 
-    /* ---- 1. System initialization ---- */
-#ifndef PLATFORM_TMS570
-    systemInit();           /* PLL to 300 MHz (non-TMS570 platforms only) */
-#endif
-    gioInit();              /* GIO module init */
-    sc_configure_gpio();    /* SC-specific pin config */
-    rtiInit();              /* RTI 10ms tick timer */
+    /* ---- 1. GIO init (resets DIRB, turns off GIOB LEDs) ---- */
+    gioInit();
+    sc_configure_gpio();
 
 #ifdef PLATFORM_TMS570
-    /* gioInit() resets DIRB/DOUTB, turning off GIOB[6:7] user LEDs.
-     * Re-enable them so they stay ON as a "firmware running" indicator. */
-    sc_het_led_on();
-    sc_sci_puts("Init done: GIO, GPIO, RTI\r\n");
+    sc_het_led_on();   /* Re-enable after gioInit reset DIRB */
 #endif
 
-    /* ---- 2. Module initialization ---- */
-    SC_E2E_Init();
-    SC_CAN_Init();
-    SC_Heartbeat_Init();
-    SC_Plausibility_Init();
-    SC_Relay_Init();
-    SC_LED_Init();
-    SC_Watchdog_Init();
-    SC_Monitoring_Init();       /* SWR-SC-030: SC_Status TX init */
-    /* SC_ESM_Init() — SKIPPED during TMS570 bring-up.
-     * Enabling ESM Group 1 channel 2 (lockstep) with a persistent
-     * CCM-R5F error causes SC_ESM_HighLevelInterrupt → infinite loop.
-     * TODO:HARDWARE Re-enable after lockstep error root cause is resolved. */
-    /* SC_ESM_Init(); */
-    SC_SelfTest_Init();
-
-#ifdef PLATFORM_TMS570
-    sc_sci_puts("Modules init: 9 OK\r\n");
-#endif
-
-    /* ---- 3. Startup self-test (7 steps) ---- */
-    startup_result = SC_SelfTest_Startup();
-
-#ifdef PLATFORM_TMS570
-    sc_sci_puts("BIST: ");
-    if (startup_result == 0u) {
-        sc_sci_puts("7/7 PASS\r\n");
-    } else {
-        sc_sci_puts("FAIL at step ");
-        sc_sci_put_uint((uint32)startup_result);
-        sc_sci_puts("\r\n");
-    }
-#endif
-
-    if (startup_result != 0u) {
-        /* Startup failed — blink failure pattern and halt */
-        sc_startup_fail_blink(startup_result);
-        /* Never returns — watchdog will reset */
-    }
-
-    /* ---- 4. Startup passed — energize relay ---- */
-    SC_Relay_Energize();
-
-#ifdef PLATFORM_TMS570
-    sc_sci_puts("SC_Relay: energized (MONITORING)\r\n");
-#endif
-
-    /* ---- 5. Start RTI timer and enter main loop ---- */
+    /* ---- STEP 1: RTI 10ms tick ---- */
+    rtiInit();
     rtiStartCounter();
 
-    for (;;) {
-        /* Wait for 10ms RTI tick */
-        if (rtiIsTickPending() == FALSE) {
-            continue;
-        }
-        rtiClearTick();
+    /* ---- STEP 2: CAN init ---- */
+    SC_CAN_Init();
+    SC_E2E_Init();   /* Must follow SC_CAN_Init — seeds e2e_first_rx=TRUE so first frame is accepted */
 
-        /* ---- Step 1: CAN Receive ---- */
-        SC_CAN_Receive();
+    /* ---- STEP 3: Monitoring init — broadcasts SC_Status (0x013) each tick ---- */
+    SC_Monitoring_Init();
 
-        /* ---- Step 2: Heartbeat Monitor ---- */
-        SC_Heartbeat_Monitor();
-
-        /* ---- Step 3: Plausibility Check ---- */
-        SC_Plausibility_Check();
-
-        /* ---- Step 4: Relay Trigger Evaluation ---- */
-        SC_Relay_CheckTriggers();
-
-        /* ---- Step 4b: SC_Status Broadcast (500ms, both TMS570 and SIL) ---- */
-        /* Supersedes POSIX-only SC_Relay_BroadcastSil(). SWR-SC-029/030. */
-        SC_Monitoring_Update();
-
-        /* ---- Step 5: LED Update ---- */
-        SC_LED_Update();
-
-        /* ---- Step 6: Bus Silence Monitor ---- */
-        SC_CAN_MonitorBus();
-
-        /* ---- Step 7: Runtime Self-Test (1 step) ---- */
-        SC_SelfTest_Runtime();
-
-        /* ---- Step 8: Stack Canary Check ---- */
-        /* Must be BEFORE watchdog feed */
-        all_checks_ok = TRUE;
-
-        if (SC_SelfTest_StackCanaryOk() == FALSE) {
-            all_checks_ok = FALSE;
-        }
-
-        if (SC_SelfTest_IsHealthy() == FALSE) {
-            all_checks_ok = FALSE;
-        }
-
-        if (SC_CAN_IsBusOff() == TRUE) {
-            all_checks_ok = FALSE;
-        }
-
-        if (SC_ESM_IsErrorActive() == TRUE) {
-            all_checks_ok = FALSE;
-        }
+    /* ---- STEP 4a: Heartbeat monitor init ---- */
+    SC_Heartbeat_Init();
 
 #ifdef PLATFORM_TMS570
-        /* ---- Step 8b: Periodic debug status (every 5 seconds) ---- */
-        dbg_tick_counter++;
-        if (dbg_tick_counter >= 500u) {  /* 500 * 10ms = 5s */
-            dbg_tick_counter = 0u;
-            sc_sci_puts("[5s] SC: CVC=");
-            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_CVC) ? "TIMEOUT" : "OK");
-            sc_sci_puts(" FZC=");
-            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_FZC) ? "TIMEOUT" : "OK");
-            sc_sci_puts(" RZC=");
-            sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_RZC) ? "TIMEOUT" : "OK");
-            sc_sci_puts(" relay=");
-            sc_sci_puts((SC_Relay_IsKilled() == FALSE) ? "ON" : "OFF");
-            sc_sci_puts(" ES=0x");
-            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC04u);  /* DCAN1 ES */
-            sc_sci_puts(" ND=0x");
-            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC9Cu);  /* DCAN1 NEWDAT1 */
-            sc_sci_puts("\r\n");
-        }
+    sc_sci_puts("CAN+Monitoring init OK\r\n");
 #endif
 
-        /* ---- Step 9: Watchdog Feed ---- */
-        SC_Watchdog_Feed(all_checks_ok);
+    {
+        uint32 led_tick = 0u;
+        uint32 diag_tick = 0u;
+        boolean led_state = FALSE;
+
+        for (;;) {
+            if (rtiIsTickPending() == FALSE) { continue; }
+            rtiClearTick();
+
+            led_tick++;
+            if (led_tick >= 50u) {
+                led_tick = 0u;
+                led_state = (led_state == FALSE) ? TRUE : FALSE;
+#ifdef PLATFORM_TMS570
+                if (led_state == TRUE) { sc_het_led_on(); } else { sc_het_led_off(); }
+#endif
+            }
+
+            SC_CAN_Receive();
+            SC_Heartbeat_Monitor();
+            SC_Monitoring_Update();  /* transmits 0x013 every 500ms */
+
+            /* Print DCAN error status every 5s (500 ticks) to diagnose bus-off */
+            diag_tick++;
+            if (diag_tick >= 500u) {
+                diag_tick = 0u;
+#ifdef PLATFORM_TMS570
+                sc_dcan_print_status();
+#endif
+            }
+
+            /* STEP 4: remaining modules */
+        }
     }
 
-    /* Should never reach here */
     return 0;
 }

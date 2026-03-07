@@ -41,8 +41,10 @@ extern void canInit(void);
 
 #define DCAN_CTL_OFFSET         0x00u
 #define DCAN_ES_OFFSET          0x04u
-#define DCAN_BTR_OFFSET         0x08u
-#define DCAN_TEST_OFFSET        0x10u
+#define DCAN_ERRC_OFFSET        0x08u   /* Error Counter — read-only in normal mode */
+#define DCAN_BTR_OFFSET         0x0Cu   /* Bit Timing Register (canBASE_t.BTR) */
+#define DCAN_INT_OFFSET         0x10u   /* Interrupt Register */
+#define DCAN_TEST_OFFSET        0x14u   /* Test Register (canBASE_t.TEST) */
 #define DCAN_NWDAT1_OFFSET      0x98u
 
 /* DCAN Error Status bits */
@@ -125,10 +127,17 @@ void SC_CAN_Init(void)
     /* Configure 6 receive mailboxes with SC CAN IDs */
     dcan1_setup_mailboxes();
 
-    /* Exit init mode — normal (non-silent) operation per SWR-SC-029.
-     * Silent mode is NOT set: TEST register bit 3 is left 0.
-     * TX is constrained to mailbox SC_MB_TX_STATUS (7) by firmware discipline. */
-    dcan1_reg_write(DCAN_CTL_OFFSET, 0x00u);    /* Init and CCE cleared — normal operation */
+    /* Exit init mode.
+     * SC_DCAN_LOOPBACK: internal loopback for TX bringup diagnosis.
+     *   TX frames are ACKed internally — bus pins disconnected from loop.
+     *   TxOK in DCAN_ES will set on first successful TX, visible on UART.
+     *   Disable this flag once TX is confirmed working on the physical bus. */
+#ifdef SC_DCAN_LOOPBACK
+    dcan1_reg_write(DCAN_TEST_OFFSET, (1u << 4u));  /* LBack bit — internal loopback */
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x00u);
+#else
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x00u);    /* Normal operation per SWR-SC-029 */
+#endif
 
     can_initialized = TRUE;
 }

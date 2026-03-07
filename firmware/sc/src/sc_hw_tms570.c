@@ -176,16 +176,26 @@
 #define DCAN_IF2DATA            0x130u
 #define DCAN_IF2DATB            0x134u
 
-/** IF command register bits (MISRA 12.2: use uint32 literal for shift) */
-#define DCAN_IFCMD_BUSY         ((uint32)1u << 15u)  /* IF busy flag */
-#define DCAN_IFCMD_DATAB        ((uint32)1u << 0u)   /* Access data B */
-#define DCAN_IFCMD_DATAA        ((uint32)1u << 1u)   /* Access data A */
-#define DCAN_IFCMD_NEWDAT       ((uint32)1u << 2u)   /* Access NewDat/IntPnd */
-#define DCAN_IFCMD_CLRINTPND    ((uint32)1u << 3u)   /* Clear IntPnd */
-#define DCAN_IFCMD_CONTROL      ((uint32)1u << 4u)   /* Access control bits */
-#define DCAN_IFCMD_ARB          ((uint32)1u << 5u)   /* Access arbitration */
-#define DCAN_IFCMD_MASK         ((uint32)1u << 6u)   /* Access mask */
-#define DCAN_IFCMD_WR           ((uint32)1u << 7u)   /* Write (1) / Read (0) */
+/** IF command register bits (MISRA 12.2: use uint32 literal for shift)
+ *
+ * TMS570 DCAN IFxCMD is a 32-bit register at offset 0x100/0x120:
+ *   bits [31:24] = reserved
+ *   bits [23:16] = IFxCMD byte (command bits, in big-endian byte position)
+ *   bits [15:8]  = IFxSTAT byte (busy flag = bit 15)
+ *   bits [7:0]   = IFxNO byte (message object number 1-64)
+ *
+ * Command bits must be placed in [23:16] — shifted left by 16 from the
+ * per-byte bit position.  Message number is ORed into bits [7:0] directly.
+ */
+#define DCAN_IFCMD_BUSY         ((uint32)1u << 15u)  /* IFxSTAT bit 7 — busy flag */
+#define DCAN_IFCMD_DATAB        ((uint32)1u << 16u)  /* IFxCMD bit 0 — access data B */
+#define DCAN_IFCMD_DATAA        ((uint32)1u << 17u)  /* IFxCMD bit 1 — access data A */
+#define DCAN_IFCMD_NEWDAT       ((uint32)1u << 18u)  /* IFxCMD bit 2 — access/clear NewDat */
+#define DCAN_IFCMD_CLRINTPND    ((uint32)1u << 19u)  /* IFxCMD bit 3 — clear IntPnd */
+#define DCAN_IFCMD_CONTROL      ((uint32)1u << 20u)  /* IFxCMD bit 4 — access control */
+#define DCAN_IFCMD_ARB          ((uint32)1u << 21u)  /* IFxCMD bit 5 — access arbitration */
+#define DCAN_IFCMD_MASK         ((uint32)1u << 22u)  /* IFxCMD bit 6 — access mask */
+#define DCAN_IFCMD_WR           ((uint32)1u << 23u)  /* IFxCMD bit 7 — write IF→RAM (1) / read RAM→IF (0) */
 
 /** MCTL NewDat bit */
 #define DCAN_MCTL_NEWDAT        ((uint32)1u << 15u)
@@ -688,14 +698,12 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
 
     *dlc = msg_dlc;
 
-    /* Clear NewDat by writing back MCTL with NewDat=0 via IF2
-     * (write CONTROL + NEWDAT flags to clear it in message object) */
-    dcan1_wait_if2_ready();
-    reg_write(DCAN1_BASE, DCAN_IF2MCTL, mctl & ~DCAN_MCTL_NEWDAT);
-    reg_write(DCAN1_BASE, DCAN_IF2CMD,
-              DCAN_IFCMD_WR | DCAN_IFCMD_CONTROL | DCAN_IFCMD_NEWDAT |
-              (msg_num & 0xFFu));
-    dcan1_wait_if2_ready();
+    /* NewDat is already cleared atomically by the read command above:
+     * WR=0 + DCAN_IFCMD_NEWDAT in IF2CMD clears NewDat in the message object
+     * during the transfer. No write-back needed.
+     * NOTE: WR=1 + DCAN_IFCMD_NEWDAT would SET NewDat — the opposite of the
+     * previous write-back intent. That was a bug causing NewDat to be stuck
+     * at 1, preventing new frames from being stored (MsgLst set on overwrite). */
 
     return TRUE;
 }
@@ -1236,9 +1244,39 @@ void sc_sci_put_uint(uint32 val)
     }
 }
 
+/**
+ * @brief  Print DCAN1 error status and error counters to UART (debug bringup only)
+ *
+ * Reads DCAN_ES (0x04) and DCAN_ERRC (0x08) and prints each flag and
+ * TEC/REC individually for easy bringup diagnosis.
+ */
+void sc_dcan_print_status(void)
+{
+    uint32 es   = reg_read(DCAN1_BASE, 0x04u);  /* DCAN_ES  */
+    uint32 errc = reg_read(DCAN1_BASE, 0x08u);  /* DCAN_ERRC: TEC[7:0], REC[14:8] */
+    uint32 tec  = errc & 0xFFu;
+    uint32 rec  = (errc >> 8u) & 0x7Fu;
+
+    sc_sci_puts("DCAN_ES=0x");
+    sc_sci_put_uint(es);
+    sc_sci_puts(" TxOK=");
+    sc_sci_puts(((es & 0x08u) != 0u) ? "1" : "0");
+    sc_sci_puts(" RxOK=");
+    sc_sci_puts(((es & 0x10u) != 0u) ? "1" : "0");
+    sc_sci_puts(" EPass=");
+    sc_sci_puts(((es & 0x20u) != 0u) ? "1" : "0");
+    sc_sci_puts(" BusOff=");
+    sc_sci_puts(((es & 0x80u) != 0u) ? "1" : "0");
+    sc_sci_puts(" TEC=");
+    sc_sci_put_uint(tec);
+    sc_sci_puts(" REC=");
+    sc_sci_put_uint(rec);
+    sc_sci_puts("\r\n");
+}
+
 #endif /* PLATFORM_TMS570 */
 
-/* Appended by build fix: stub for unused EMIF referenced by HL_system.c */
+/* EMIF not used on LAUNCHXL2-570LC43� no-op stub replaces HL_emif.c */
 #ifdef PLATFORM_TMS570
 void emif_SDRAM_StartupInit(void) { /* SC does not use EMIF/SDRAM */ }
 #endif

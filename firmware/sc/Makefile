@@ -65,6 +65,7 @@ SC_CSRC := $(SC_SRC)/sc_main.c \
            $(SC_SRC)/sc_heartbeat.c \
            $(SC_SRC)/sc_hw_tms570.c \
            $(SC_SRC)/sc_led.c \
+           $(SC_SRC)/sc_monitoring.c \
            $(SC_SRC)/sc_plausibility.c \
            $(SC_SRC)/sc_relay.c \
            $(SC_SRC)/sc_selftest.c \
