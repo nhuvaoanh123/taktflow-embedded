@@ -3,9 +3,12 @@
  * @brief   DCAN1 listen-only CAN driver for Safety Controller
  * @date    2026-02-23
  *
- * @safety_req SWR-SC-001, SWR-SC-002, SWR-SC-023
+ * @safety_req SWR-SC-001, SWR-SC-002, SWR-SC-023, SWR-SC-029
  * @traces_to  SSR-SC-001, SSR-SC-002
- * @note    Safety level: ASIL D
+ * @note    Safety level: ASIL D (RX path), ASIL C (SC_Status TX path)
+ *          DCAN1 runs in normal mode per SWR-SC-029 (not silent).
+ *          Only mailbox SC_MB_TX_STATUS (7) is TX-capable.
+ *          Static analysis rule sc-tx-isolation enforces this.
  * @standard ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
  */
@@ -22,6 +25,10 @@ extern uint32  dcan1_reg_read(uint32 offset);
 extern void    dcan1_reg_write(uint32 offset, uint32 value);
 extern boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc);
 extern void    dcan1_setup_mailboxes(void);
+
+/* TX function — firmware constraint: called ONLY from SC_CAN_TransmitStatus().
+ * Defined in sc_hw_tms570.c (TMS570) and sc_hw_posix.c (SIL). */
+extern void    dcan1_transmit(uint8 mbIndex, const uint8* data, uint8 dlc);
 
 #ifdef PLATFORM_TMS570
 /** HALCoGen-generated CAN init (parity, message RAM, default config) */
@@ -118,12 +125,10 @@ void SC_CAN_Init(void)
     /* Configure 6 receive mailboxes with SC CAN IDs */
     dcan1_setup_mailboxes();
 
-    /* Enable TEST register access, then set Silent mode */
-    dcan1_reg_write(DCAN_CTL_OFFSET, 0x81u);    /* Init + Test */
-    dcan1_reg_write(DCAN_TEST_OFFSET, 0x08u);   /* Silent bit */
-
-    /* Exit init mode — keep Test bit set to retain silent mode */
-    dcan1_reg_write(DCAN_CTL_OFFSET, 0x80u);    /* Test, Init cleared */
+    /* Exit init mode — normal (non-silent) operation per SWR-SC-029.
+     * Silent mode is NOT set: TEST register bit 3 is left 0.
+     * TX is constrained to mailbox SC_MB_TX_STATUS (7) by firmware discipline. */
+    dcan1_reg_write(DCAN_CTL_OFFSET, 0x00u);    /* Init and CCE cleared — normal operation */
 
     can_initialized = TRUE;
 }
@@ -158,13 +163,17 @@ void SC_CAN_Receive(void)
                 can_msg_valid[mb] = TRUE;
                 any_valid         = TRUE;
 
-                /* Notify heartbeat module for heartbeat mailboxes */
+                /* Notify heartbeat module for heartbeat mailboxes.
+                 * Also run content validation (SWR-SC-027/028) on the same payload. */
                 if (mb == SC_MB_IDX_CVC_HB) {
                     SC_Heartbeat_NotifyRx(SC_ECU_CVC);
+                    SC_Heartbeat_ValidateContent(SC_ECU_CVC, rx_data);
                 } else if (mb == SC_MB_IDX_FZC_HB) {
                     SC_Heartbeat_NotifyRx(SC_ECU_FZC);
+                    SC_Heartbeat_ValidateContent(SC_ECU_FZC, rx_data);
                 } else if (mb == SC_MB_IDX_RZC_HB) {
                     SC_Heartbeat_NotifyRx(SC_ECU_RZC);
+                    SC_Heartbeat_ValidateContent(SC_ECU_RZC, rx_data);
                 } else {
                     /* Non-heartbeat mailbox — no heartbeat notification */
                 }
@@ -228,4 +237,15 @@ boolean SC_CAN_IsBusSilent(void)
 boolean SC_CAN_IsBusOff(void)
 {
     return bus_off;
+}
+
+void SC_CAN_TransmitStatus(const uint8* payload, uint8 dlc)
+{
+    /* Firmware constraint: this is the ONLY call site for dcan1_transmit().
+     * Static analysis rule sc-tx-isolation: dcan1_transmit() must not appear
+     * elsewhere in firmware/sc/src/. Mailbox SC_MB_TX_STATUS (7) only. */
+    if ((payload == NULL_PTR) || (dlc == 0u) || (can_initialized == FALSE)) {
+        return;
+    }
+    dcan1_transmit(SC_MB_TX_STATUS, payload, dlc);
 }

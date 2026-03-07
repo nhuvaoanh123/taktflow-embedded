@@ -60,4 +60,16 @@ boolean SC_CAN_IsBusSilent(void);
  */
 boolean SC_CAN_IsBusOff(void);
 
+/**
+ * @brief  Transmit SC_Status frame on DCAN1 mailbox 7 (SWR-SC-029, SWR-SC-030)
+ *
+ * The only TX function in the SC firmware. Mailbox 7 is pre-configured
+ * as TX with CAN ID 0x013. Called exclusively by sc_monitoring.c.
+ *
+ * @param  payload  4-byte SC_Status frame (built by SC_Monitoring_Update)
+ * @param  dlc      Data length code (must be SC_RELAY_STATUS_DLC = 4)
+ * @note   ASIL C — diagnostic TX path. Not on the ASIL D RX monitoring path.
+ */
+void SC_CAN_TransmitStatus(const uint8* payload, uint8 dlc);
+
 #endif /* SC_CAN_H */

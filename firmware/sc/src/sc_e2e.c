@@ -167,3 +167,24 @@ boolean SC_E2E_IsMsgFailed(uint8 msgIndex)
     }
     return e2e_failed[msgIndex];
 }
+
+uint8 SC_E2E_ComputeCRC8(const uint8* data, uint8 len)
+{
+    /* Standalone CRC-8 for SC_Status TX (SWR-SC-030). Poly 0x1D, init 0xFF, XOR-out 0xFF.
+     * Not guarded by PLATFORM_POSIX — SC_Status TX is active on both platforms. */
+    uint8 crc = SC_CRC8_INIT;
+    uint8 i;
+    uint8 j;
+
+    if (data == NULL_PTR) {
+        return 0u;
+    }
+    for (i = 0u; i < len; i++) {
+        crc ^= data[i];
+        for (j = 0u; j < 8u; j++) {
+            crc = ((crc & 0x80u) != 0u) ? (uint8)((crc << 1u) ^ SC_CRC8_POLY)
+                                        : (uint8)(crc << 1u);
+        }
+    }
+    return crc ^ 0xFFu;
+}

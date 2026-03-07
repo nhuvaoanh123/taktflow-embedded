@@ -27,6 +27,7 @@
 #include "sc_esm.h"
 #include "sc_selftest.h"
 #include "sc_gio.h"
+#include "sc_monitoring.h"     /* SWR-SC-029/030: SC_Status broadcast (GAP-1/2) */
 
 /* ==================================================================
  * External: Platform initialization (HALCoGen-generated or mock)
@@ -157,6 +158,9 @@ int main(void)
     rtiInit();              /* RTI 10ms tick timer */
 
 #ifdef PLATFORM_TMS570
+    /* gioInit() resets DIRB/DOUTB, turning off GIOB[6:7] user LEDs.
+     * Re-enable them so they stay ON as a "firmware running" indicator. */
+    sc_het_led_on();
     sc_sci_puts("Init done: GIO, GPIO, RTI\r\n");
 #endif
 
@@ -168,6 +172,7 @@ int main(void)
     SC_Relay_Init();
     SC_LED_Init();
     SC_Watchdog_Init();
+    SC_Monitoring_Init();       /* SWR-SC-030: SC_Status TX init */
     /* SC_ESM_Init() — SKIPPED during TMS570 bring-up.
      * Enabling ESM Group 1 channel 2 (lockstep) with a persistent
      * CCM-R5F error causes SC_ESM_HighLevelInterrupt → infinite loop.
@@ -228,10 +233,9 @@ int main(void)
         /* ---- Step 4: Relay Trigger Evaluation ---- */
         SC_Relay_CheckTriggers();
 
-#ifdef PLATFORM_POSIX
-        /* ---- Step 4b: SIL Relay Status Broadcast (50ms) ---- */
-        SC_Relay_BroadcastSil();
-#endif
+        /* ---- Step 4b: SC_Status Broadcast (500ms, both TMS570 and SIL) ---- */
+        /* Supersedes POSIX-only SC_Relay_BroadcastSil(). SWR-SC-029/030. */
+        SC_Monitoring_Update();
 
         /* ---- Step 5: LED Update ---- */
         SC_LED_Update();

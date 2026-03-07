@@ -81,12 +81,12 @@ Daisy-chain wiring: main trunk wire runs along base plate edge, continuous throu
 | Parameter | STM32G474RE (FDCAN) | TMS570LC43x (DCAN) |
 |-----------|--------------------|--------------------|
 | Input clock | 170 MHz (PCLK1) | 75 MHz (VCLK1) |
-| Prescaler | 34 | 15 |
-| Nominal bit rate clock | 5 MHz | 5 MHz |
-| Time quanta per bit | 10 | 10 |
-| TSEG1 | 7 tq | 7 tq |
-| TSEG2 | 2 tq | 2 tq |
-| SJW | 2 tq | 2 tq |
+| Prescaler | 17 | 10 (BRP field=9, +1 encoding) |
+| Nominal bit rate clock | 10 MHz | 7.5 MHz |
+| Time quanta per bit | 20 | 15 |
+| TSEG1 | 15 tq | 11 tq (field=10, +1 encoding) |
+| TSEG2 | 4 tq | 3 tq (field=2, +1 encoding) |
+| SJW | 4 tq | 4 tq (field=3, max for 2-bit BTR field) |
 | Sample point | 80% | 80% |
 | Actual bit rate | 500.000 kbps | 500.000 kbps |
 

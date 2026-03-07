@@ -203,6 +203,52 @@
 #define SC_STATE_KILL               3u
 
 /* ==================================================================
+ * Heartbeat Content Validation Thresholds (SWR-SC-027, SWR-SC-028)
+ *
+ * Both counters count heartbeat receptions (~50ms each).
+ * STUCK_DEGRADED: 100 × 50ms = 5 s stuck in DEGRADED/LIMP.
+ * FAULT_ESCALATE:  20 × 50ms = 1 s with >=2 FaultStatus bits.
+ * ================================================================== */
+
+#define SC_HB_STUCK_DEGRADED_MAX    100u   /* receptions in DEGRADED/LIMP -> content fault */
+#define SC_HB_FAULT_ESCALATE_MAX     20u   /* receptions with >=2 fault bits -> content fault */
+
+/* ==================================================================
+ * SC_Status TX Period (SWR-SC-030)
+ * ================================================================== */
+
+#define SC_MONITORING_TX_PERIOD      50u   /* 50 × 10ms = 500ms SC_Status broadcast */
+
+/* ==================================================================
+ * SC_Status Byte 2: Mode (low nibble) and Fault Flags (high nibble)
+ * ================================================================== */
+
+#define SC_STATUS_MODE_INIT          0u
+#define SC_STATUS_MODE_MONITORING    1u
+#define SC_STATUS_MODE_FAULT         2u
+#define SC_STATUS_MODE_SAFE_STOP     3u
+
+#define SC_STATUS_FAULT_CVC_HB       0x01u
+#define SC_STATUS_FAULT_FZC_HB       0x02u
+#define SC_STATUS_FAULT_RZC_HB       0x04u
+#define SC_STATUS_FAULT_PLAUS        0x08u
+
+/* ==================================================================
+ * SC_Status Byte 3: FaultReason (bits [6:3])
+ * ================================================================== */
+
+#define SC_STATUS_REASON_HB_TIMEOUT  0x01u
+#define SC_STATUS_REASON_PLAUS       0x02u
+#define SC_STATUS_REASON_SELFTEST    0x04u
+#define SC_STATUS_REASON_CONTENT     0x08u
+
+/* ==================================================================
+ * TX Mailbox for SC_Status (SWR-SC-029) — firmware-only TX mailbox
+ * ================================================================== */
+
+#define SC_MB_TX_STATUS              7u    /* DCAN1 mailbox 7: TX only, CAN ID 0x013 */
+
+/* ==================================================================
  * Torque Lookup Table Size
  * ================================================================== */
 

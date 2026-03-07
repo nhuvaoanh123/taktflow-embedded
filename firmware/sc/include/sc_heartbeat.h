@@ -57,4 +57,27 @@ boolean SC_Heartbeat_IsAnyConfirmed(void);
  */
 boolean SC_Heartbeat_IsFzcBrakeFault(void);
 
+/**
+ * @brief  Validate heartbeat payload content (SWR-SC-027, SWR-SC-028)
+ *
+ * Extracts OperatingMode and FaultStatus from heartbeat byte 3.
+ * Increments stuck_degraded_cnt when mode is DEGRADED/LIMP (SWR-SC-027).
+ * Increments fault_escalate_cnt when >=2 FaultStatus bits are set (SWR-SC-028).
+ * Sets content_fault flag if either counter exceeds its threshold.
+ * Call AFTER SC_Heartbeat_NotifyRx for the same ECU, with same validated payload.
+ *
+ * @param  ecuIndex  SC_ECU_CVC, SC_ECU_FZC, or SC_ECU_RZC
+ * @param  payload   Validated 4-byte heartbeat payload (bytes 0-3)
+ * @note   ASIL C per SWR-SC-027/028.
+ */
+void SC_Heartbeat_ValidateContent(uint8 ecuIndex, const uint8* payload);
+
+/**
+ * @brief  Check if content validation fault is active for an ECU
+ *
+ * @param  ecuIndex  SC_ECU_CVC, SC_ECU_FZC, or SC_ECU_RZC
+ * @return TRUE if stuck_degraded or fault_escalate threshold exceeded
+ */
+boolean SC_Heartbeat_IsContentFault(uint8 ecuIndex);
+
 #endif /* SC_HEARTBEAT_H */

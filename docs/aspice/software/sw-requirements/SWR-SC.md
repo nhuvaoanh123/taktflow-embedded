@@ -531,7 +531,114 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 
 ---
 
-## 17. Traceability Summary
+## 17. CAN Hardening Requirements
+
+> Added: 2026-03-07 — see plan-sc-can-hardening.md. Addresses GAP-1 (no SC TX), GAP-2 (no
+> diagnostic message), GAP-3 (heartbeat content not validated). SWR-SC-029 supersedes the
+> silent-mode constraint in SWR-SC-001 (see rationale in plan).
+
+### SWR-SC-027: Heartbeat OperatingMode Content Validation
+
+- **ASIL**: C
+- **Traces up**: SYS-022, TSR-027, SSR-SC-003
+- **Traces down**: firmware/sc/src/sc_heartbeat.c:SC_Heartbeat_ValidateContent()
+- **Verified by**: TC-SC-047
+- **Verification method**: Unit test + SIL + fault injection
+- **Status**: draft
+
+For each zone ECU heartbeat that passes E2E check (SWR-SC-003), the SC software shall extract
+the `OperatingMode` field (bits [3:0] of byte 3) and compare with the last observed mode. The SC
+shall maintain a per-ECU `stuck_degraded_cnt` counter that increments each main loop iteration
+when the ECU's OperatingMode is DEGRADED (2) or LIMP (3). The counter resets when the mode
+transitions back to RUN (1). If `stuck_degraded_cnt` exceeds 100 (5 seconds at 50 ms heartbeat
+period), the SC shall set the `content_fault` flag for that ECU, activate the corresponding fault
+LED (per SWR-SC-005 pattern), and invoke relay de-energize via SWR-SC-011. The threshold of 5
+seconds is intentionally longer than the heartbeat-timeout relay trigger (200 ms) so that
+legitimate degraded recovery is not penalized.
+
+---
+
+### SWR-SC-028: Heartbeat FaultStatus Escalation
+
+- **ASIL**: C
+- **Traces up**: SYS-022, TSR-027, SSR-SC-003
+- **Traces down**: firmware/sc/src/sc_heartbeat.c:SC_Heartbeat_ValidateContent()
+- **Verified by**: TC-SC-048
+- **Verification method**: Unit test + SIL + fault injection
+- **Status**: draft
+
+For each zone ECU heartbeat that passes E2E check, the SC software shall inspect the
+`FaultStatus` bitmask (bits [7:4] of byte 3). The SC shall maintain a per-ECU
+`fault_escalate_cnt` counter that increments each main loop iteration when 2 or more FaultStatus
+bits are simultaneously set. The counter resets when fewer than 2 bits are set. If
+`fault_escalate_cnt` exceeds 20 (1 second at 50 ms heartbeat period), the SC shall set the
+`content_fault` flag for that ECU and add `SC_FAULT_CONTENT` to `sc_fault_flags`. The content
+fault shall be reflected in the SC_Status broadcast (SWR-SC-030) but shall NOT by itself trigger
+relay de-energize — the relay is triggered only if the `stuck_degraded_cnt` threshold of
+SWR-SC-027 is also exceeded. This two-tier design allows the operator to observe a
+multi-fault-flag condition before SC escalates to relay action.
+
+---
+
+### SWR-SC-029: SC DCAN1 TX Configuration for Monitoring
+
+- **ASIL**: C
+- **Traces up**: plan-sc-can-hardening.md §2 (Architecture Decision C)
+- **Traces down**: firmware/sc/src/sc_can.c:SC_CAN_Init()
+- **Verified by**: TC-SC-049
+- **Verification method**: Static analysis + PIL
+- **Status**: draft
+
+The SC software shall configure DCAN1 in **normal (non-silent) mode** — superseding the
+listen-only constraint of SWR-SC-001. The following firmware enforcement applies:
+(a) only mailbox 7 shall be configured for TX (direction=TX, CAN ID 0x013, DLC 4),
+(b) mailboxes 1–6 shall remain RX-only (direction=RX),
+(c) no `canTransmit` call shall appear outside `sc_monitoring.c:SC_Monitoring_Update()` —
+enforced via static analysis (cppcheck custom rule `sc-tx-isolation`).
+
+Rationale: CAN ID 0x013 (SC_Status) is a read-only diagnostic broadcast. It carries no control
+signal and zone ECUs are not required to act on it (ASIL QM for receivers). This change enables
+SC health visibility (GAP-1, GAP-2) while maintaining the invariant that SC never transmits
+any control frame.
+
+Production note: Upgrade to DCAN2 (dedicated transceiver, hardware-enforced TX isolation) before
+series production.
+
+---
+
+### SWR-SC-030: SC Status Message Transmission
+
+- **ASIL**: C
+- **Traces up**: plan-sc-can-hardening.md §3
+- **Traces down**: firmware/sc/src/sc_monitoring.c:SC_Monitoring_Update()
+- **Verified by**: TC-SC-050
+- **Verification method**: SIL + PIL + integration test
+- **Status**: draft
+
+The SC software shall transmit a SC_Status frame (CAN ID 0x013, DLC 4) every 500 ms
+(50 main loop iterations at 10 ms). The frame payload shall be:
+
+| Byte | Bits | Signal | Value |
+|------|------|--------|-------|
+| 0 | [7:0] | SC_AliveCounter | 8-bit wrapping counter, increments each TX |
+| 1 | [7:0] | SC_CRC8 | CRC-8 (poly 0x1D, init 0xFF) over bytes 0, 2, 3 |
+| 2 | [3:0] | SC_Mode | SC_MODE_INIT=0, MONITORING=1, FAULT_DETECTED=2, SAFE_STOP=3 |
+| 2 | [7:4] | SC_FaultFlags | bit0=CVC_HB, bit1=FZC_HB, bit2=RZC_HB, bit3=PLAUS |
+| 3 | [2:0] | ECU_Health | bit0=CVC_ok, bit1=FZC_ok, bit2=RZC_ok |
+| 3 | [6:3] | FaultReason | bit0=HB_timeout, bit1=plaus, bit2=selftest, bit3=content |
+| 3 | [7] | RelayState | 1=energized, 0=de-energized |
+
+The SC shall continue transmitting SC_Status in FAULT_DETECTED and SAFE_STOP modes so that
+the fault reason is available to the gateway and cloud logger after the relay de-energizes.
+The SC_AliveCounter shall allow ICU and gateway to detect if the SC itself has halted.
+
+Note on E2E DataID: all 16 DataIDs (0x00–0x0F) are allocated in the CAN matrix. SC_Status
+uses a simplified E2E (alive counter + CRC without DataID mixing), sufficient for ASIL C
+since there is exactly one SC transmitter and the ICU/gateway receivers are QM.
+
+---
+
+## 18. Traceability Summary
 
 ### 17.1 SWR to Upstream Mapping
 
@@ -563,8 +670,12 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 | SWR-SC-024 | — | TSR-049 | SSR-SC-015 |
 | SWR-SC-025 | SYS-053 | TSR-046 | SSR-SC-014 |
 | SWR-SC-026 | SYS-024, SYS-025, SYS-026, SYS-027 | — | — |
+| SWR-SC-027 | SYS-022 | TSR-027 | SSR-SC-003 |
+| SWR-SC-028 | SYS-022 | TSR-027 | SSR-SC-003 |
+| SWR-SC-029 | — | — | — |
+| SWR-SC-030 | — | — | — |
 
-### 17.2 ASIL Distribution
+### 18.2 ASIL Distribution
 
 | ASIL | Count | SWR IDs |
 |------|-------|---------|
@@ -573,7 +684,7 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 | QM | 5 | SWR-SC-005, 013, 020 |
 | **Total** | **26** | |
 
-### 17.3 Verification Method Summary
+### 18.3 Verification Method Summary
 
 | Method | Count |
 |--------|-------|
@@ -590,9 +701,9 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 
 ---
 
-## 18. Open Items and Assumptions
+## 19. Open Items and Assumptions
 
-### 18.1 Assumptions
+### 19.1 Assumptions
 
 | ID | Assumption | Impact |
 |----|-----------|--------|
@@ -602,7 +713,7 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 | SWR-SC-A-004 | Kill relay dropout time is less than 10 ms (electromechanical) | FTTI analysis in TSR-046 |
 | SWR-SC-A-005 | Total SC code size is approximately 400 LOC | Finishability constraint |
 
-### 18.2 Open Items
+### 19.2 Open Items
 
 | ID | Item | Owner | Target |
 |----|------|-------|--------|
@@ -611,10 +722,13 @@ The total initialization time (including self-test) shall not exceed 5 seconds. 
 | SWR-SC-O-003 | Measure main loop WCET on target hardware | SW Engineer | SWE.3 |
 | SWR-SC-O-004 | Verify PBIST execution time does not exceed 2 seconds | SW Engineer | PIL |
 | SWR-SC-O-005 | Verify ESM lockstep self-test does not cause unintended reset | SW Engineer | PIL |
+| SWR-SC-O-006 | GAP-4 deferred: actuator command vs feedback plausibility (Steering_Status 0x200, Brake_Status 0x201) | SW Engineer | Post-HIL |
+| SWR-SC-O-007 | LOC target increase from ~400 to ~500 due to hardening additions — verify WCET stays within 2 ms | SW Engineer | SWE.3 |
+| SWR-SC-O-008 | Production: upgrade DCAN1 TX to DCAN2 (dedicated transceiver) per SWR-SC-029 production note | HW Engineer | Production |
 
 ---
 
-## 19. Revision History
+## 20. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|

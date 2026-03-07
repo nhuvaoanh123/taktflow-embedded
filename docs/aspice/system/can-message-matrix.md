@@ -112,6 +112,7 @@ CAN IDs are assigned by safety priority. Lower CAN ID wins arbitration (higher p
 | 0x010 | CVC_Heartbeat | CVC | SC, FZC, RZC, ICU | 4 | 50 | Yes | C | 0x02 |
 | 0x011 | FZC_Heartbeat | FZC | SC, CVC, ICU | 4 | 50 | Yes | C | 0x03 |
 | 0x012 | RZC_Heartbeat | RZC | SC, CVC, ICU | 4 | 50 | Yes | C | 0x04 |
+| 0x013 | SC_Status | SC | ALL (ICU, GW — passive) | 4 | 500 | Simplified* | C | — |
 | 0x100 | Vehicle_State | CVC | FZC, RZC, BCM, ICU | 6 | 10 | Yes | D | 0x05 |
 | 0x101 | Torque_Request | CVC | RZC | 8 | 10 | Yes | D | 0x06 |
 | 0x102 | Steer_Command | CVC | FZC | 8 | 10 | Yes | D | 0x07 |
@@ -139,9 +140,14 @@ CAN IDs are assigned by safety priority. Lower CAN ID wins arbitration (higher p
 | 0x7E9 | UDS_Resp_FZC | FZC | Tester | 8 | On-demand | No | QM | -- |
 | 0x7EA | UDS_Resp_RZC | RZC | Tester | 8 | On-demand | No | QM | -- |
 
-**Total defined message types**: 31 (including per-ECU UDS variants).
-**E2E protected messages**: 16 (all ASIL A or higher).
+**Total defined message types**: 32 (including per-ECU UDS variants).
+**E2E protected messages**: 16 (all ASIL A or higher). SC_Status uses simplified E2E (see note below).
 **Data ID assignment**: 16 unique Data IDs (0x00-0x0F) for E2E protected messages, fitting within the 4-bit Data ID field.
+
+> \*SC_Status E2E note: All 16 DataID slots (0x00–0x0F) are allocated. SC_Status uses a simplified
+> E2E scheme — 8-bit alive counter (byte 0) + CRC-8 over bytes 0/2/3 (byte 1) — without DataID
+> field mixing. This is sufficient for ASIL C since there is exactly one SC transmitter and all
+> receivers (ICU, gateway) are QM. See SWR-SC-030 and plan-sc-can-hardening.md §3.
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-CAN-003 -->
 **HITL Review (An Dao) -- Reviewed: 2026-02-26:** 31 message types with 16 E2E-protected is a well-scoped matrix. Cycle times are appropriate: 10 ms for control-loop messages (Vehicle_State, Torque_Request, Steer_Command, Brake_Command, Motor_Current, Lidar_Distance), 20 ms for status feedback (Steering_Status, Brake_Status, Motor_Status), 50 ms for heartbeats, and 100-1000 ms for QM/body messages. The 16 unique Data IDs (0x00-0x0F) fit within a 4-bit field, which is efficient. Event-driven messages (E-stop, Brake_Fault, Motor_Cutoff_Req, DTC_Broadcast) correctly use event-based transmission with 10 ms repeat for critical ones. DLC choices are tight: DLC 4 for small messages (heartbeats, faults), DLC 8 for data-rich messages (control, status), DLC 2 for minimal data (door lock). **Why:** The 10 ms control cycle matches typical automotive powertrain CAN timing and provides adequate control bandwidth for the servo and motor actuators. **Tradeoff:** 10 ms cycle for 4 control messages from CVC means CVC transmits 400 safety frames/second, which is the dominant contributor to bus load. Doubling the control cycle to 20 ms would halve bus load but increase control latency. **Alternative:** Event-driven transmission for control messages (send only on value change) would reduce bus load further but makes E2E timeout monitoring more complex and less deterministic.
@@ -198,6 +204,18 @@ All signals use **little-endian** (Intel) byte order. Bit numbering follows the 
 | ECU_ID | 16 | 8 | 1 | 0 | -- | 3 | 3 | 3 | ECU ID = 0x03 (RZC) |
 | OperatingMode | 24 | 4 | 1 | 0 | enum | 0 | 5 | 0 | Same enum as CVC heartbeat |
 | FaultStatus | 28 | 4 | 1 | 0 | bitmask | 0 | 15 | 0 | bit0=overcurrent,bit1=overtemp,bit2=direction,bit3=CAN |
+
+### 6.4a SC_Status (0x013) -- DLC 4  [Added 2026-03-07, see SWR-SC-030]
+
+| Signal | Start Bit | Length | Factor | Offset | Unit | Min | Max | Init | Description |
+|--------|-----------|--------|--------|--------|------|-----|-----|------|-------------|
+| SC_AliveCounter | 0 | 8 | 1 | 0 | -- | 0 | 255 | 0 | 8-bit wrapping alive counter |
+| SC_CRC8 | 8 | 8 | 1 | 0 | -- | 0 | 255 | 0xFF | CRC-8 (0x1D) over bytes 0, 2, 3 |
+| SC_Mode | 16 | 4 | 1 | 0 | enum | 0 | 3 | 0 | 0=INIT,1=MONITORING,2=FAULT_DETECTED,3=SAFE_STOP |
+| SC_FaultFlags | 20 | 4 | 1 | 0 | bitmask | 0 | 15 | 0 | bit0=CVC_HB,bit1=FZC_HB,bit2=RZC_HB,bit3=PLAUS |
+| ECU_Health | 24 | 3 | 1 | 0 | bitmask | 0 | 7 | 0 | bit0=CVC_ok,bit1=FZC_ok,bit2=RZC_ok |
+| FaultReason | 27 | 4 | 1 | 0 | bitmask | 0 | 15 | 0 | bit0=HB_timeout,bit1=plaus,bit2=selftest,bit3=content |
+| RelayState | 31 | 1 | 1 | 0 | bool | 0 | 1 | 0 | 1=energized, 0=de-energized |
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-CAN-005 -->
 **HITL Review (An Dao) -- Reviewed: 2026-02-26:** Heartbeat messages for all three physical ECUs (CVC 0x010, FZC 0x011, RZC 0x012) share an identical layout: E2E header, ECU_ID, OperatingMode (6-state enum), and FaultStatus (4-bit bitmask). The 50 ms cycle with 200 ms E2E timeout means 4 missed heartbeats trigger DEGRADED state -- this provides a good balance between detection speed and noise immunity. ECU-specific FaultStatus bits (pedal/CAN/NVM/WDT for CVC, steering/brake/lidar/CAN for FZC, overcurrent/overtemp/direction/CAN for RZC) enable targeted fault isolation. ASIL C for heartbeats is appropriate since heartbeat loss triggers degradation, not immediate shutdown. Per SYS-021 and SYS-022. **Why:** Uniform heartbeat structure across ECUs simplifies the SC monitoring logic and reduces the risk of message-specific parsing bugs. **Tradeoff:** 4-bit FaultStatus limits to 4 fault flags per ECU; a more detailed fault bitmap (8 or 16 bits) would provide finer granularity but would require DLC 6 or 8. **Alternative:** Individual heartbeat-per-subsystem (e.g., separate pedal heartbeat, steering heartbeat) would provide finer-grained monitoring but multiplies the message count.

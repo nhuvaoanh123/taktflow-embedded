@@ -47,4 +47,17 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
  */
 boolean SC_E2E_IsMsgFailed(uint8 msgIndex);
 
+/**
+ * @brief  Compute CRC-8 over arbitrary bytes (for SC_Status TX, SWR-SC-030)
+ *
+ * Same polynomial (0x1D, init 0xFF, XOR-out 0xFF) as the RX validation path.
+ * Called by sc_monitoring.c to protect the outgoing SC_Status frame.
+ *
+ * @param  data  Pointer to input bytes (must not be NULL if len > 0)
+ * @param  len   Number of bytes
+ * @return Computed CRC-8 value
+ * @note   ASIL C — TX diagnostic path only. Not on the ASIL D RX path.
+ */
+uint8 SC_E2E_ComputeCRC8(const uint8* data, uint8 len);
+
 #endif /* SC_E2E_H */

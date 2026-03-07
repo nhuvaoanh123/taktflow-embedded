@@ -35,6 +35,20 @@ static uint8 hb_recovery_count[SC_ECU_COUNT];
 /** Startup grace counter — skip monitoring until ECUs have time to boot */
 static uint16 hb_startup_grace;
 
+/* --- Content validation state (SWR-SC-027, SWR-SC-028) ------------------ */
+
+/** Consecutive heartbeats received while ECU is in DEGRADED or LIMP mode */
+static uint8 hb_stuck_degraded_cnt[SC_ECU_COUNT];
+
+/** Consecutive heartbeats received with >=2 FaultStatus bits set */
+static uint8 hb_fault_escalate_cnt[SC_ECU_COUNT];
+
+/** Content validation fault flag (latched until power cycle) */
+static boolean hb_content_fault[SC_ECU_COUNT];
+
+/** Last observed FaultStatus bitmask per ECU (for IsFzcBrakeFault) */
+static uint8 hb_last_fault_status[SC_ECU_COUNT];
+
 /* ==================================================================
  * LED pin lookup by ECU index
  * ================================================================== */
@@ -53,8 +67,12 @@ void SC_Heartbeat_Init(void)
 {
     uint8 i;
     for (i = 0u; i < SC_ECU_COUNT; i++) {
-        hb_counter[i]         = 0u;
-        hb_timed_out[i]       = FALSE;
+        hb_counter[i]              = 0u;
+        hb_timed_out[i]            = FALSE;
+        hb_stuck_degraded_cnt[i]   = 0u;
+        hb_fault_escalate_cnt[i]   = 0u;
+        hb_content_fault[i]        = FALSE;
+        hb_last_fault_status[i]    = 0u;
         hb_confirm_counter[i] = 0u;
         hb_confirmed[i]       = FALSE;
         hb_recovery_count[i]  = 0u;
@@ -159,7 +177,63 @@ boolean SC_Heartbeat_IsAnyConfirmed(void)
 
 boolean SC_Heartbeat_IsFzcBrakeFault(void)
 {
-    /* TODO:POST-BETA — Parse FZC heartbeat payload byte 1 for brake fault flag.
-     * Currently returns FALSE (no brake-fault detection via heartbeat data). */
-    return FALSE;
+    /* FZC_Heartbeat byte 3 FaultStatus bitmask: bit 1 = brake fault.
+     * hb_last_fault_status is populated by SC_Heartbeat_ValidateContent (SWR-SC-024). */
+    return ((hb_last_fault_status[SC_ECU_FZC] & 0x02u) != 0u) ? TRUE : FALSE;
+}
+
+void SC_Heartbeat_ValidateContent(uint8 ecuIndex, const uint8* payload)
+{
+    uint8 mode;
+    uint8 faults;
+    uint8 bit_count;
+
+    if ((ecuIndex >= SC_ECU_COUNT) || (payload == NULL_PTR)) {
+        return;
+    }
+
+    /* Heartbeat byte 3: bits [3:0] = OperatingMode, bits [7:4] = FaultStatus.
+     * Per CAN matrix FZC/CVC/RZC_Heartbeat signal definitions. */
+    mode   = payload[3] & 0x0Fu;
+    faults = (payload[3] >> 4u) & 0x0Fu;
+
+    hb_last_fault_status[ecuIndex] = faults;
+
+    /* SWR-SC-027: count consecutive receptions in DEGRADED (2) or LIMP (3) */
+    if ((mode == 2u) || (mode == 3u)) {
+        if (hb_stuck_degraded_cnt[ecuIndex] < 0xFFu) {
+            hb_stuck_degraded_cnt[ecuIndex]++;
+        }
+    } else {
+        hb_stuck_degraded_cnt[ecuIndex] = 0u;
+    }
+
+    /* SWR-SC-028: count consecutive receptions with >=2 FaultStatus bits set */
+    bit_count = 0u;
+    bit_count += ((faults & 0x01u) != 0u) ? 1u : 0u;
+    bit_count += ((faults & 0x02u) != 0u) ? 1u : 0u;
+    bit_count += ((faults & 0x04u) != 0u) ? 1u : 0u;
+    bit_count += ((faults & 0x08u) != 0u) ? 1u : 0u;
+
+    if (bit_count >= 2u) {
+        if (hb_fault_escalate_cnt[ecuIndex] < 0xFFu) {
+            hb_fault_escalate_cnt[ecuIndex]++;
+        }
+    } else {
+        hb_fault_escalate_cnt[ecuIndex] = 0u;
+    }
+
+    /* Latch content fault if either threshold exceeded */
+    if ((hb_stuck_degraded_cnt[ecuIndex] >= SC_HB_STUCK_DEGRADED_MAX) ||
+        (hb_fault_escalate_cnt[ecuIndex] >= SC_HB_FAULT_ESCALATE_MAX)) {
+        hb_content_fault[ecuIndex] = TRUE;
+    }
+}
+
+boolean SC_Heartbeat_IsContentFault(uint8 ecuIndex)
+{
+    if (ecuIndex >= SC_ECU_COUNT) {
+        return FALSE;
+    }
+    return hb_content_fault[ecuIndex];
 }
