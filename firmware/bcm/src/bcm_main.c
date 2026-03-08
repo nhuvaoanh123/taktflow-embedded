@@ -17,6 +17,7 @@
  * @copyright Taktflow Systems 2026
  */
 #include "Std_Types.h"
+#include "Sil_Time.h"
 #include "Bcm_Cfg.h"
 
 /* ==================================================================
@@ -224,7 +225,7 @@ int main(void)
     /* ---- Step 5: Main loop — 10ms tick via usleep ---- */
     while (shutdown_requested == 0u) {
         /* Sleep 10ms (10000 microseconds) */
-        (void)usleep(10000u);
+        Sil_Time_Sleep(10000u); /* 10ms virtual tick */
 
         /* RTE scheduler dispatches all configured runnables */
         Rte_MainFunction();

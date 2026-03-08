@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #include "Std_Types.h"
+#include "Sil_Time.h"
 #include "Can.h"
 #include "CanIf.h"
 #include "PduR.h"
@@ -162,7 +163,7 @@ int main(void)
 
     while (tcu_shutdown_requested == FALSE) {
         Rte_MainFunction();
-        usleep(10000u);  /* 10ms */
+        Sil_Time_Sleep(10000u); /* 10ms virtual tick */
     }
 
     /* ---- Shutdown ---- */

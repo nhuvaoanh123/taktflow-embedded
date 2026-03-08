@@ -65,6 +65,7 @@ MCAL_POSIX    = $(BSW_DIR)/mcal/posix
 ECUAL_DIR     = $(BSW_DIR)/ecual
 SERVICES_DIR  = $(BSW_DIR)/services
 RTE_DIR       = $(BSW_DIR)/rte
+SIL_DIR       = $(BSW_DIR)/sil
 UNITY_DIR     = $(BSW_DIR)/test/unity
 BUILD_DIR     = build
 
@@ -122,7 +123,8 @@ BSW_SRCS = \
     $(SERVICES_DIR)/Det.c \
     $(SERVICES_DIR)/SchM.c \
     $(SERVICES_DIR)/CanTp.c \
-    $(RTE_DIR)/Rte.c
+    $(RTE_DIR)/Rte.c \
+    $(SIL_DIR)/Sil_Time.c
 
 # --- FZC additionally needs Uart MCAL ---
 ifeq ($(TARGET),fzc)

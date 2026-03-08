@@ -13,6 +13,7 @@
 
 #include "Platform_Types.h"
 #include "Std_Types.h"
+#include "Sil_Time.h"
 
 #ifndef PLATFORM_POSIX_TEST
 #include <time.h>
@@ -24,10 +25,6 @@
  * ================================================================== */
 
 static uint32 tick_period_us = 10000u;  /* Default 10ms tick */
-
-#ifndef PLATFORM_POSIX_TEST
-static struct timespec tick_origin;
-#endif
 
 /* ==================================================================
  * Timing stubs (Main_Hw_* from main.c:70-74)
@@ -57,35 +54,28 @@ void Main_Hw_SysTickInit(uint32 periodUs)
 {
     tick_period_us = periodUs;
 #ifndef PLATFORM_POSIX_TEST
-    clock_gettime(CLOCK_MONOTONIC, &tick_origin);
+    Sil_Time_Init();
 #endif
 }
 
 /**
- * @brief  Wait for interrupt — sleep for 1ms on POSIX
+ * @brief  Wait for interrupt — timerfd-accelerated sleep on POSIX
  */
 void Main_Hw_Wfi(void)
 {
 #ifndef PLATFORM_POSIX_TEST
-    usleep(1000u); /* 1ms sleep — simulates idle wait */
+    Sil_Time_Sleep(1000u); /* 1ms virtual — actual duration = 1ms / SIL_TIME_SCALE */
 #endif
 }
 
 /**
- * @brief  Get elapsed time since SysTickInit in microseconds
- * @return Elapsed microseconds (wraps at uint32 max)
+ * @brief  Get virtual elapsed time since SysTickInit in microseconds
+ * @return Virtual elapsed microseconds (wall_elapsed × SIL_TIME_SCALE)
  */
 uint32 Main_Hw_GetTick(void)
 {
 #ifndef PLATFORM_POSIX_TEST
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    uint32 elapsed_us = (uint32)(
-        ((now.tv_sec - tick_origin.tv_sec) * 1000000u) +
-        ((now.tv_nsec - tick_origin.tv_nsec) / 1000u)
-    );
-    return elapsed_us;
+    return Sil_Time_GetTickUs();
 #else
     return 0u;
 #endif

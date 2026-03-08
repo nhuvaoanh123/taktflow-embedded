@@ -25,6 +25,7 @@
  */
 
 #include "Std_Types.h"
+#include "Sil_Time.h"
 #include "Icu_Cfg.h"
 
 /* ==================================================================
@@ -241,7 +242,7 @@ int main(void)
     /* ---- Step 6: Main loop — 50ms tick (20 Hz) ---- */
     while (running != 0) {
         /* Sleep 50ms (50000 microseconds) */
-        (void)usleep(50000u);
+        Sil_Time_Sleep(50000u); /* 50ms virtual tick */
 
         /* Process received CAN frames */
         Can_MainFunction_Read();
