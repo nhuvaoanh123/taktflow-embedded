@@ -153,6 +153,10 @@ class PlantSimulator:
             soc = int(cmd.get("soc", 10))
             self.battery.inject_voltage(mv, soc)
             log.info("Injected battery voltage: %dmV, %d%% SOC", mv, soc)
+        elif cmd_type == "inject_temp":
+            temp_c = float(cmd.get("temp_c", 95.0))
+            self.motor.temp_c = temp_c
+            log.info("Injected motor temperature: %.1f°C", temp_c)
         elif cmd_type == "steer_fault":
             self.steering.fault = True
             log.info("Injected steering fault")

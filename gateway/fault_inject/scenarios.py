@@ -36,6 +36,7 @@ from .plant_inject import (
     inject_overcurrent as plant_inject_overcurrent,
     inject_stall as plant_inject_stall,
     inject_steer_fault,
+    inject_temp as plant_inject_temp,
     inject_voltage as plant_inject_voltage,
     reset_plant_faults,
 )
@@ -310,6 +311,37 @@ def brake_fault() -> str:
             "DTC 0xE202 broadcast + physics -> SAFE_STOP.")
 
 
+def motor_overtemp() -> str:
+    """Ramp motor temperature via MQTT plant-sim injection.
+
+    Phase 1 (2.0 s): 25 C -> 85 C  (derating zone, above 80 C threshold)
+    Phase 2 (2.0 s): 85 C -> 110 C (overtemp zone, above 100 C threshold)
+
+    This bypasses the physics model heating (which requires sustained current
+    and would trigger overcurrent detection before overtemp).  Direct temp
+    injection lets us test the RZC thermal protection chain in isolation.
+    """
+    if _mqtt_client is None:
+        return "Motor overtemp: MQTT client not available"
+
+    # Phase 1: ramp from 25 C to 85 C over 2.0 s (derating zone)
+    for i in range(20):
+        frac = i / 19.0
+        temp = 25.0 + (85.0 - 25.0) * frac
+        plant_inject_temp(_mqtt_client, temp)
+        _scaled_sleep(0.1)
+
+    # Phase 2: ramp from 85 C to 110 C over 2.0 s (overtemp zone)
+    for i in range(20):
+        frac = i / 19.0
+        temp = 85.0 + (110.0 - 85.0) * frac
+        plant_inject_temp(_mqtt_client, temp)
+        _scaled_sleep(0.1)
+
+    return ("Motor overtemp: 25 C -> 110 C over 4 s via MQTT.  "
+            "Derating at 80 C, shutdown at 100 C.")
+
+
 def battery_low() -> str:
     """Simulate battery undervoltage via MQTT plant-sim injection.
 
@@ -319,7 +351,7 @@ def battery_low() -> str:
     After the drain sequence, sends a DTC_BATTERY_UV broadcast.
 
     Phase 1 (1.5 s): 12.6 V -> 10.4 V (approach UV_warn zone)
-    Phase 2 (2.0 s): 10.4 V ->  9.2 V (UV_warn zone — status=1, RZC threshold 10.5 V)
+    Phase 2 (3.5 s): 10.4 V ->  9.2 V (UV_warn zone — status=1, RZC threshold 10.5 V)
     Phase 3 (2.5 s): 9.2 V  ->  7.0 V (critical_UV zone — status=0, RZC threshold 9.0 V) + DTC
     """
     if _mqtt_client is None:
@@ -335,11 +367,11 @@ def battery_low() -> str:
             plant_inject_voltage(_mqtt_client, v, soc)
             _scaled_sleep(0.1)
 
-        # Phase 2: voltage drops from 10.4 V to 9.2 V (UV_warn) over 2 s
-        # Stays in warn zone (10500..9000 mV) long enough for CVC to
-        # sample battery_status=1 and trigger EVT_BATTERY_WARN -> DEGRADED
-        for i in range(20):
-            frac = i / 19.0
+        # Phase 2: voltage drops from 10.4 V to 9.2 V (UV_warn) over 3.5 s
+        # Dwell in warn zone (10500..9000 mV) long enough for RZC's 100ms
+        # sample + 4-sample average to settle, and CVC to read battery_status=1
+        for i in range(35):
+            frac = i / 34.0
             v = int(10400 - (10400 - 9200) * frac)
             soc = int(30 - (30 - 15) * frac)
             plant_inject_voltage(_mqtt_client, v, soc)
@@ -359,7 +391,7 @@ def battery_low() -> str:
               _dtc_frame(DTC_BATTERY_UV, ECU_RZC))
     finally:
         bus.shutdown()
-    return ("Battery drain: 12.6 V -> 7.0 V over 6 s via MQTT + DTC 0xE401.  "
+    return ("Battery drain: 12.6 V -> 7.0 V over 7.5 s via MQTT + DTC 0xE401.  "
             "Plant sim restores normal values within ~8 s after scenario ends.")
 
 
@@ -740,6 +772,13 @@ SCENARIOS: dict[str, dict] = {
         "description": (
             "Brake fault: MQTT inject to plant-sim sets brake fault.  "
             "DTC 0xE202 broadcast + physics cascade -> SAFE_STOP."
+        ),
+    },
+    "motor_overtemp": {
+        "fn": motor_overtemp,
+        "description": (
+            "Motor overtemp: ramp temp 25->110 C over 4s via MQTT.  "
+            "Derating at 80 C, shutdown at 100 C."
         ),
     },
     "battery_low": {

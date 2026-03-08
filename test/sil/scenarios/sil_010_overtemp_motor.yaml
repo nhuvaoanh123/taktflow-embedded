@@ -14,12 +14,11 @@
 name: "Motor Overtemperature"
 id: "SIL-010"
 description: >
-  Inject sustained high torque via normal_drive to cause the plant sim
-  motor model temperature to rise over time.  Monitor MotorTemp frames
-  (0x302) on CAN.  Verify power derating activates when temperature
-  exceeds 80C, and motor shutdown occurs when temperature exceeds 100C
-  (overtemp threshold).  This exercises the full thermal protection path
-  from sensor reading through derating to shutdown.
+  Inject motor temperature ramp via MQTT plant-sim injection.  Ramp
+  from 25C to 110C over ~4s, bypassing physics model heating (which
+  would trigger overcurrent before overtemp).  Monitor MotorTemp frames
+  (0x302) on CAN.  Verify power derating activates above 80C and motor
+  shutdown occurs above 100C.  Tests RZC thermal protection chain.
 verifies:
   - "SWR-RZC-003"   # RZC motor thermal management and overtemp protection
 aspice: "SWE.5"
@@ -39,22 +38,13 @@ setup:
 
 steps:
   - action: inject_scenario
-    name: normal_drive
-    description: "Apply 50% torque to begin heating the motor"
+    name: motor_overtemp
+    description: >
+      Ramp motor temperature 25->110 C via MQTT injection over ~4 s.
+      Bypasses physics model (avoids overcurrent before overtemp).
   - action: wait
     seconds: 10
-    description: "Allow motor temperature to rise under sustained load"
-  - action: inject_scenario
-    name: overcurrent
-    description: >
-      Switch to overcurrent scenario (95% torque + brake) to accelerate
-      heating — high current at stall generates maximum I2R losses.
-  - action: wait
-    seconds: 20
-    description: "Allow temperature to reach derating threshold (~80C)"
-  - action: wait
-    seconds: 15
-    description: "Continue to overtemp threshold (~100C) if model permits"
+    description: "Allow RZC to detect overtemp via virtual sensor and respond"
 
 verdicts:
   - type: can_message
@@ -68,12 +58,12 @@ verdicts:
     description: "Power derating must activate when motor temp > 80C"
 
   - type: motor_shutdown
-    within_ms: 45000
+    within_ms: 15000
     description: "Motor must shut down when temperature exceeds 100C overtemp threshold"
 
   - type: vehicle_state
     expected: DEGRADED
-    within_ms: 45000
+    within_ms: 15000
     description: "Vehicle must enter DEGRADED when overtemp triggers motor derating/cutoff"
 
 teardown:

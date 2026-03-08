@@ -44,6 +44,14 @@ def inject_voltage(mqtt_client: paho_mqtt.Client, mv: int,
     log.info("Plant inject: voltage %dmV, %d%% SOC", mv, soc)
 
 
+def inject_temp(mqtt_client: paho_mqtt.Client, temp_c: float) -> None:
+    """Tell plant-sim to set motor temperature directly."""
+    mqtt_client.publish(
+        TOPIC, json.dumps({"type": "inject_temp", "temp_c": temp_c}), qos=1,
+    )
+    log.info("Plant inject: motor temp %.1f°C", temp_c)
+
+
 def inject_steer_fault(mqtt_client: paho_mqtt.Client) -> None:
     """Tell plant-sim to set steering fault flag."""
     mqtt_client.publish(
