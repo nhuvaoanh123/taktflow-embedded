@@ -1,0 +1,87 @@
+# =============================================================================
+# docker-compose.pil.yml — PIL Override (Processor-in-the-Loop)
+#
+# Disables physical ECU containers (CVC, FZC, RZC, SC — running on real
+# hardware) and switches all remaining services to use physical CAN (can0)
+# instead of virtual CAN (vcan0).
+#
+# Usage (on Raspberry Pi with USB-CAN adapter):
+#   docker compose -f docker-compose.yml -f docker-compose.pil.yml up --build
+#   docker compose -f docker-compose.yml -f docker-compose.pil.yml down
+#
+# Prerequisites:
+#   - Physical CAN adapter (CANable, PCAN-USB, etc.) connected and UP:
+#       sudo ip link set can0 type can bitrate 500000
+#       sudo ip link set can0 up
+#   - Physical ECUs (CVC, FZC, RZC, SC) flashed and on the same CAN bus
+# =============================================================================
+
+services:
+  # --- Disable physical ECU containers (they run on real hardware) ---
+  cvc:
+    profiles: ["sil-only"]
+  fzc:
+    profiles: ["sil-only"]
+  rzc:
+    profiles: ["sil-only"]
+  sc:
+    profiles: ["sil-only"]
+
+  # --- Override can-setup: verify can0 exists instead of creating vcan0 ---
+  can-setup:
+    command: >
+      /bin/sh -c "
+        if ip link show can0 > /dev/null 2>&1; then
+          ip link set can0 up 2>/dev/null || true;
+          echo '[can-setup] can0 is UP (physical CAN adapter)';
+          ip -d link show can0;
+        else
+          echo '[can-setup] ERROR: can0 not found';
+          echo '[can-setup] Is the USB-CAN adapter plugged in?';
+          echo '[can-setup] Run: sudo ip link set can0 type can bitrate 500000 && sudo ip link set can0 up';
+          exit 1;
+        fi
+      "
+
+  # --- Simulated ECUs: switch to physical CAN ---
+  bcm:
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=bcm
+
+  icu:
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=icu
+
+  tcu:
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=tcu
+
+  # --- Plant simulator: switch to physical CAN ---
+  # In PIL with real sensors, plant-sim acts as a monitor and fault injector.
+  # Virtual sensor messages (0x400, 0x401) are ignored by physical ECUs
+  # (sensor feeder SWCs compiled out on STM32).
+  plant-sim:
+    environment:
+      - CAN_CHANNEL=can0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+
+  # --- Gateway services: switch to physical CAN ---
+  can-gateway:
+    environment:
+      - CAN_CHANNEL=can0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - SAP_QM_API_URL=http://localhost:8090
+
+  fault-inject:
+    environment:
+      - CAN_CHANNEL=can0
+      - FAULT_PORT=8091
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
