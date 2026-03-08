@@ -30,6 +30,32 @@ CAN_ID_NAMES = {
     0x7DF: "UDS Broadcast",    0x7E0: "UDS Request",
 }
 
+# Per-message sender/receiver routing for table display.
+CAN_ID_ROUTES = {
+    0x001: ("CVC", "ALL"),
+    0x010: ("CVC", "ALL"),
+    0x100: ("CVC", "ALL"),
+    0x101: ("CVC", "RZC"),
+    0x102: ("CVC", "FZC"),
+    0x103: ("CVC", "FZC"),
+    0x350: ("CVC", "ALL"),
+    0x500: ("ALL", "ALL"),
+    0x7DF: ("TESTER", "ALL"),
+    0x7E0: ("TESTER", "CVC"),
+    0x7E8: ("CVC", "TESTER"),
+    0x011: ("FZC", "CVC"),
+    0x200: ("FZC", "CVC"),
+    0x201: ("FZC", "CVC"),
+    0x210: ("FZC", "CVC"),
+    0x211: ("FZC", "CVC"),
+    0x220: ("FZC", "CVC"),
+    0x012: ("RZC", "CVC"),
+    0x300: ("RZC", "CVC"),
+    0x301: ("RZC", "CVC"),
+    0x302: ("RZC", "CVC"),
+    0x303: ("RZC", "CVC"),
+}
+
 VSM_NAMES = {0: "INIT", 1: "INIT", 2: "RUN", 3: "SAFE_STOP", 4: "FAULT"}
 
 # ECU color tags
@@ -49,6 +75,11 @@ def ecu_of(can_id):
     elif can_id <= 0x2FF:
         return "RZC"
     return "???"
+
+
+def route_of(can_id):
+    sender, receiver = CAN_ID_ROUTES.get(can_id, (ecu_of(can_id), "???"))
+    return sender, receiver
 
 
 class CanMonitor:
@@ -136,7 +167,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Taktflow CAN Bus Monitor")
-        self.root.geometry("920x620")
+        self.root.geometry("1460x620")
         self.root.configure(bg="#1e1b2e")
 
         self.monitor = CanMonitor()
@@ -179,21 +210,45 @@ class App:
                   background=[("selected", "#4c1d95")],
                   foreground=[("selected", "#ffffff")])
 
-        cols = ("id", "name", "data", "count", "rate", "age")
+        cols = (
+            "id", "name", "sender", "receiver", "dlc",
+            "b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7",
+            "count", "rate", "age"
+        )
         self.tree = ttk.Treeview(
             table_frame, columns=cols, show="headings",
             style="Can.Treeview"
         )
         self.tree.heading("id", text="CAN ID")
         self.tree.heading("name", text="Message")
-        self.tree.heading("data", text="Data")
+        self.tree.heading("sender", text="Sender")
+        self.tree.heading("receiver", text="Receiver")
+        self.tree.heading("dlc", text="DLC")
+        self.tree.heading("b0", text="B0")
+        self.tree.heading("b1", text="B1")
+        self.tree.heading("b2", text="B2")
+        self.tree.heading("b3", text="B3")
+        self.tree.heading("b4", text="B4")
+        self.tree.heading("b5", text="B5")
+        self.tree.heading("b6", text="B6")
+        self.tree.heading("b7", text="B7")
         self.tree.heading("count", text="Count")
         self.tree.heading("rate", text="Rate")
         self.tree.heading("age", text="Age")
 
         self.tree.column("id", width=70, anchor="center")
-        self.tree.column("name", width=200, anchor="w")
-        self.tree.column("data", width=260, anchor="w")
+        self.tree.column("name", width=170, anchor="w")
+        self.tree.column("sender", width=90, anchor="center")
+        self.tree.column("receiver", width=90, anchor="center")
+        self.tree.column("dlc", width=50, anchor="center")
+        self.tree.column("b0", width=48, anchor="center")
+        self.tree.column("b1", width=48, anchor="center")
+        self.tree.column("b2", width=48, anchor="center")
+        self.tree.column("b3", width=48, anchor="center")
+        self.tree.column("b4", width=48, anchor="center")
+        self.tree.column("b5", width=48, anchor="center")
+        self.tree.column("b6", width=48, anchor="center")
+        self.tree.column("b7", width=48, anchor="center")
         self.tree.column("count", width=80, anchor="e")
         self.tree.column("rate", width=80, anchor="e")
         self.tree.column("age", width=60, anchor="e")
@@ -274,17 +329,25 @@ class App:
         for cid in sorted(snapshot.keys()):
             entry = snapshot[cid]
             name = CAN_ID_NAMES.get(cid, "???")
-            data_hex = " ".join(f"{b:02X}" for b in entry["data"])
+            payload = list(entry["data"])
             count = entry["count"]
             rate = f"{count / max(elapsed, 0.001):.1f}/s"
             age = elapsed - entry["timestamp"]
             age_str = f"{age:.1f}s" if age < 10 else f"{age:.0f}s"
             id_str = f"0x{cid:03X}"
+            sender, receiver = route_of(cid)
+            dlc = str(len(payload))
+            byte_cells = [f"{b:02X}" for b in payload] + ["--"] * (8 - len(payload))
 
             ecu = ecu_of(cid)
             tag = ecu.lower() if ecu != "???" else "unknown"
 
-            values = (id_str, name, data_hex, f"{count:,}", rate, age_str)
+            values = (
+                id_str, name, sender, receiver, dlc,
+                byte_cells[0], byte_cells[1], byte_cells[2], byte_cells[3],
+                byte_cells[4], byte_cells[5], byte_cells[6], byte_cells[7],
+                f"{count:,}", rate, age_str
+            )
 
             # Update existing or insert new
             found = False

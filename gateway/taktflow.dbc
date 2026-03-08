@@ -37,6 +37,15 @@ BO_ 18 RZC_Heartbeat: 4 RZC
  SG_ OperatingMode : 24|4@1+ (1,0) [0|5] "" SC,CVC,ICU
  SG_ FaultStatus : 28|4@1+ (1,0) [0|15] "" SC,CVC,ICU
 
+BO_ 19 SC_Status: 4 SC
+ SG_ SC_AliveCounter : 0|8@1+ (1,0) [0|255] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ SC_CRC8 : 8|8@1+ (1,0) [0|255] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ SC_Mode : 16|4@1+ (1,0) [0|3] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ SC_FaultFlags : 20|4@1+ (1,0) [0|15] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ ECU_Health : 24|3@1+ (1,0) [0|7] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ FaultReason : 27|4@1+ (1,0) [0|15] "" CVC,FZC,RZC,BCM,ICU,TCU
+ SG_ RelayState : 31|1@1+ (1,0) [0|1] "" CVC,FZC,RZC,BCM,ICU,TCU
+
 BO_ 256 Vehicle_State: 6 CVC
  SG_ E2E_DataID : 0|4@1+ (1,0) [0|15] "" FZC,RZC,BCM,ICU,SC
  SG_ E2E_AliveCounter : 4|4@1+ (1,0) [0|15] "" FZC,RZC,BCM,ICU,SC
