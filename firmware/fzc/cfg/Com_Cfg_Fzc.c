@@ -34,7 +34,7 @@ static uint8  sig_rx_vehicle_state;
 static sint16 sig_rx_steer_cmd;
 static uint8  sig_rx_brake_cmd;
 
-/* RX virtual sensor buffers (SIL: from plant-sim via CAN 0x400) */
+/* RX virtual sensor buffers (SIL: from plant-sim via CAN 0x600) */
 static uint16 sig_rx_virt_steer_angle;
 static uint16 sig_rx_virt_brake_pos;
 static uint16 sig_rx_virt_brake_current;
@@ -64,7 +64,7 @@ static const Com_SignalConfigType fzc_signal_config[] = {
     { 12u,   16u,    16u, COM_SINT16, FZC_COM_RX_STEER_CMD,         &sig_rx_steer_cmd      },
     { 13u,   16u,     8u, COM_UINT8,  FZC_COM_RX_BRAKE_CMD,         &sig_rx_brake_cmd      },
 
-    /* RX virtual sensor signals (CAN 0x400 — no E2E, raw payload) */
+    /* RX virtual sensor signals (CAN 0x600 — no E2E, raw payload) */
     { 14u,    0u,    16u, COM_UINT16, FZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_steer_angle  },
     { 15u,   16u,    16u, COM_UINT16, FZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_brake_pos    },
     { 16u,   32u,    16u, COM_UINT16, FZC_COM_RX_VIRT_SENSORS,      &sig_rx_virt_brake_current},

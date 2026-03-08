@@ -4,7 +4,7 @@
  * @date    2026-03-03
  *
  * @details  SIL-only module. Reads virtual sensor values from Com RX
- *           (CAN 0x400, sent by plant-sim at 10ms) and injects them into
+ *           (CAN 0x600, sent by plant-sim at 10ms) and injects them into
  *           MCAL POSIX stubs so that existing SWC fault detection code
  *           (Swc_Steering, Swc_Brake) receives realistic physics data.
  *
@@ -55,7 +55,7 @@ void Swc_FzcSensorFeeder_Init(void)
 #ifdef PLATFORM_POSIX
     /* Inject safe center values immediately so that SWC fault detection
      * sees nominal sensor readings from the very first cycle — before
-     * plant-sim has started sending CAN 0x400.
+     * plant-sim has started sending CAN 0x600.
      * Center steering: 8191 = 14-bit midpoint → 0° actual angle.
      * Brake: 0 raw ADC = no brake applied (matches idle cmd=0). */
     Spi_Posix_InjectAngle(8191u);
@@ -64,7 +64,7 @@ void Swc_FzcSensorFeeder_Init(void)
 
 #ifdef PLATFORM_HIL
     /* HIL: inject nominal defaults via IoHwAb override so SWCs see safe
-     * sensor readings before the Pi rest-bus starts sending CAN 0x400. */
+     * sensor readings before the Pi rest-bus starts sending CAN 0x600. */
     IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_STEERING, 8191u);  /* 14-bit center = 0 deg */
     IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BRAKE, 0u);        /* no brake */
 #endif
@@ -80,15 +80,15 @@ void Swc_FzcSensorFeeder_MainFunction(void)
     uint32 steer_angle = 0u;
     uint32 brake_pos   = 0u;
 
-    /* Read virtual sensor signals from Com RX (CAN 0x400 from plant-sim) */
+    /* Read virtual sensor signals from Com RX (CAN 0x600 from plant-sim) */
     (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_STEER_ANGLE, &steer_angle);
     (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_BRAKE_POS,   &brake_pos);
 
     /* Substitute center when steer_angle is 0 (14-bit raw 0 = -45° full lock).
      * steer_angle==0 occurs in two scenarios:
-     *   (a) Com shadow buffer initial state (no CAN 0x400 received yet)
+     *   (a) Com shadow buffer initial state (no CAN 0x600 received yet)
      *   (b) Com RX deadline timeout zeroed the shadow buffer (plant-sim
-     *       stopped during container restart — CAN 0x400 gap > 100ms)
+     *       stopped during container restart — CAN 0x600 gap > 100ms)
      * In both cases, injecting center (8191 = 0°) is safe because:
      *   - At boot/restart the vehicle starts centered (never at -45°)
      *   - Injecting 0 would trigger false steering plausibility fault

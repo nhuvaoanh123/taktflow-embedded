@@ -48,8 +48,8 @@ TX_BATTERY_STATUS = 0x303
 TX_DTC_BROADCAST = 0x500
 
 # Virtual sensor CAN IDs (plant-sim → ECU sensor feeders, SIL only, no E2E)
-TX_FZC_VIRTUAL_SENSORS = 0x400   # steering angle, brake pos, brake current
-TX_RZC_VIRTUAL_SENSORS = 0x401   # motor current, motor temp, battery voltage
+TX_FZC_VIRTUAL_SENSORS = 0x600   # steering angle, brake pos, brake current
+TX_RZC_VIRTUAL_SENSORS = 0x601   # motor current, motor temp, battery voltage
 
 # DTC codes — 24-bit big-endian, must match firmware Dem_SetDtcCode() values
 DTC_OVERCURRENT = 0x00E301   # RZC: Dem_SetDtcCode(RZC_DTC_OVERCURRENT, 0x00E301u)
@@ -248,7 +248,7 @@ class PlantSimulator:
         # NOTE: CAN 0x303 handler removed — RZC is sole authority for
         # Battery_Status on the CAN bus. Processing 0x303 here created a
         # feedback loop (RZC TX → plant-sim override → plant-sim TX on
-        # 0x401 → RZC reads → RZC TX). Battery overrides now use MQTT
+        # 0x601 → RZC reads → RZC TX). Battery overrides now use MQTT
         # only (taktflow/command/plant_inject {"type":"voltage"}).
 
         elif arb_id == RX_TORQUE_REQUEST:
@@ -464,7 +464,7 @@ class PlantSimulator:
                                   data=data, is_extended_id=False))
 
     def _tx_fzc_virtual_sensors(self):
-        """Send FZC virtual sensor data (0x400) every 10ms. No E2E.
+        """Send FZC virtual sensor data (0x600) every 10ms. No E2E.
 
         Plant-sim physics → this CAN message → FZC sensor feeder SWC →
         MCAL injection → IoHwAb → SWC fault detection.
@@ -494,7 +494,7 @@ class PlantSimulator:
                                   data=bytes(payload), is_extended_id=False))
 
     def _tx_rzc_virtual_sensors(self):
-        """Send RZC virtual sensor data (0x401) every 10ms. No E2E.
+        """Send RZC virtual sensor data (0x601) every 10ms. No E2E.
 
         Plant-sim physics → this CAN message → RZC sensor feeder SWC →
         ADC injection → IoHwAb → SWC fault detection.
@@ -635,7 +635,7 @@ class PlantSimulator:
                 # Note: Motor status (0x300), motor current (0x301), motor
                 # temperature (0x302), and battery status (0x303) broadcasts
                 # removed — RZC firmware is the sole authority for these CAN
-                # IDs.  Plant-sim sends virtual sensor data (0x401) which the
+                # IDs.  Plant-sim sends virtual sensor data (0x601) which the
                 # RZC sensor feeder injects into MCAL ADC stubs, so RZC SWCs
                 # read real physics values and transmit correct telemetry.
 

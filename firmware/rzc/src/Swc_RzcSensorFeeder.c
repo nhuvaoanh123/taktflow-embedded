@@ -3,12 +3,12 @@
  * @brief   RZC sensor feeder — injects virtual sensor data into MCAL (SIL only)
  * @date    2026-03-03
  *
- * @details  Reads virtual sensor CAN signals from plant-sim (CAN 0x401) via
+ * @details  Reads virtual sensor CAN signals from plant-sim (CAN 0x601) via
  *           Com_ReceiveSignal and injects values into MCAL ADC stubs using
  *           Adc_Posix_InjectValue().  This bridges the gap between plant-sim
  *           physics and firmware sensor APIs in SIL mode.
  *
- *           Signal mapping (CAN 0x401 -> ADC injection):
+ *           Signal mapping (CAN 0x601 -> ADC injection):
  *           - motor_current  (bytes 0-1) -> ADC group 0, ch 0
  *           - motor_temp     (bytes 2-3) -> ADC group 1, ch 0
  *           - battery_voltage (bytes 4-5) -> ADC group 2, ch 0
@@ -66,7 +66,7 @@ void Swc_RzcSensorFeeder_Init(void)
 #ifdef PLATFORM_POSIX
     SensorFeeder_DataValid = 0u;
     SensorFeeder_EncCount  = 0u;
-    /* Inject nominal defaults before plant-sim starts sending 0x401.
+    /* Inject nominal defaults before plant-sim starts sending 0x601.
      * Motor current=0, motor temp=0 are safe (no overcurrent/overtemp).
      * Battery voltage needs nominal value to prevent false undervoltage
      * (RZC_BATT_DISABLE_LOW_MV = 8000 mV).
@@ -80,7 +80,7 @@ void Swc_RzcSensorFeeder_Init(void)
     SensorFeeder_HilDataValid = 0u;
     SensorFeeder_HilEncCount  = 0u;
     /* HIL: inject nominal battery voltage via IoHwAb override to prevent
-     * false undervoltage fault before Pi rest-bus sends CAN 0x401. */
+     * false undervoltage fault before Pi rest-bus sends CAN 0x601. */
     IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BATTERY, RZC_BATT_NOMINAL_MV);
     IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_CURRENT, 0u);
     IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_TEMP, 250u);  /* 25.0 dC */
@@ -107,12 +107,12 @@ void Swc_RzcSensorFeeder_MainFunction(void)
     motor_temp      = 0u;
     battery_voltage = 0u;
 
-    /* Read virtual sensor signals from Com (populated by CAN 0x401 RX) */
+    /* Read virtual sensor signals from Com (populated by CAN 0x601 RX) */
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_CURRENT,   &motor_current);
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_TEMP,      &motor_temp);
     (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_BATTERY_VOLTAGE, &battery_voltage);
 
-    /* Hold nominal defaults until plant-sim sends real data on CAN 0x401.
+    /* Hold nominal defaults until plant-sim sends real data on CAN 0x601.
      * Com shadow buffer defaults to 0.  Plant-sim sends battery_voltage in
      * mV (nominal ~12600) — any non-zero value means real data arrived. */
     if (SensorFeeder_DataValid == 0u)

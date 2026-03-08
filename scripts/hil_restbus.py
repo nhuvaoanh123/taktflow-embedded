@@ -2,15 +2,15 @@
 """
 HIL Rest-Bus Simulation — sends nominal virtual sensor CAN frames to ECUs.
 
-Sends CAN 0x400 (FZC virtual sensors) and CAN 0x401 (RZC virtual sensors)
+Sends CAN 0x600 (FZC virtual sensors) and CAN 0x601 (RZC virtual sensors)
 at 10ms intervals with nominal values so that firmware built with
 -DPLATFORM_HIL receives safe sensor readings via IoHwAb_Hil_SetOverride().
 
 No E2E (CRC8/alive) needed — these PDUs bypass E2E on the ECU side.
 
 Signal layout (little-endian uint16):
-  CAN 0x400:  [steer_angle:16][brake_pos:16][brake_current:16][reserved:16]
-  CAN 0x401:  [motor_current:16][motor_temp:16][battery_voltage:16][motor_rpm:16]
+  CAN 0x600:  [steer_angle:16][brake_pos:16][brake_current:16][reserved:16]
+  CAN 0x601:  [motor_current:16][motor_temp:16][battery_voltage:16][motor_rpm:16]
 
 Usage:
   python3 hil_restbus.py                     # defaults: can0, nominal values
@@ -30,12 +30,12 @@ import can
 
 
 def build_fzc_frame(steer_angle, brake_pos, brake_current):
-    """Build CAN 0x400 payload — FZC virtual sensors."""
+    """Build CAN 0x600 payload — FZC virtual sensors."""
     return struct.pack('<HHHxx', steer_angle, brake_pos, brake_current)
 
 
 def build_rzc_frame(motor_current, motor_temp, battery_voltage, motor_rpm):
-    """Build CAN 0x401 payload — RZC virtual sensors."""
+    """Build CAN 0x601 payload — RZC virtual sensors."""
     return struct.pack('<HHHH', motor_current, motor_temp, battery_voltage, motor_rpm)
 
 
@@ -54,13 +54,13 @@ def main():
     bus = can.interface.Bus(channel=args.interface, interface='socketcan')
 
     fzc_msg = can.Message(
-        arbitration_id=0x400,
+        arbitration_id=0x600,
         data=build_fzc_frame(args.steer_angle, args.brake_pos, 0),
         is_extended_id=False
     )
 
     rzc_msg = can.Message(
-        arbitration_id=0x401,
+        arbitration_id=0x601,
         data=build_rzc_frame(args.motor_current, args.motor_temp, args.battery, args.motor_rpm),
         is_extended_id=False
     )
@@ -76,8 +76,8 @@ def main():
     signal.signal(signal.SIGTERM, stop)
 
     print(f"HIL rest-bus: sending on {args.interface} every {args.period_ms}ms")
-    print(f"  0x400 FZC: steer={args.steer_angle}, brake={args.brake_pos}")
-    print(f"  0x401 RZC: current={args.motor_current}mA, temp={args.motor_temp}dC, "
+    print(f"  0x600 FZC: steer={args.steer_angle}, brake={args.brake_pos}")
+    print(f"  0x601 RZC: current={args.motor_current}mA, temp={args.motor_temp}dC, "
           f"batt={args.battery}mV, rpm={args.motor_rpm}")
     print("Press Ctrl+C to stop.")
 

@@ -13,7 +13,7 @@ sensor feeders (`Swc_FzcSensorFeeder`, `Swc_RzcSensorFeeder`) only compile under
 `PLATFORM_POSIX` for SIL — they inject into MCAL POSIX stubs that don't exist on STM32.
 
 We need a way to run real STM32 firmware with simulated sensor values from the Pi
-(rest-bus simulation via CAN 0x400/0x401), allowing step-by-step connection of real
+(rest-bus simulation via CAN 0x600/0x601), allowing step-by-step connection of real
 peripherals.
 
 ## Design
@@ -80,8 +80,8 @@ the ADC→engineering conversion).
 ### Pi rest-bus script
 
 `scripts/hil_restbus.py` — python-can + cantools script that sends:
-- CAN 0x400: steering_angle=8191 (center), brake_pos=0 (idle)
-- CAN 0x401: motor_current=0, motor_temp=250 (25°C), battery_voltage=12600, motor_rpm=0
+- CAN 0x600: steering_angle=8191 (center), brake_pos=0 (idle)
+- CAN 0x601: motor_current=0, motor_temp=250 (25°C), battery_voltage=12600, motor_rpm=0
 
 With E2E (CRC8 + alive counter) matching the DBC spec.
 
@@ -115,5 +115,5 @@ With E2E (CRC8 + alive counter) matching the DBC spec.
 - **Per-channel active flag**: allows step-by-step peripheral connection — clear one
   override when real sensor is wired up
 - **PLATFORM_POSIX untouched**: SIL continues to work exactly as before
-- **E2E on rest-bus CAN**: Pi must compute CRC8 + alive counter for 0x400/0x401
+- **E2E on rest-bus CAN**: Pi must compute CRC8 + alive counter for 0x600/0x601
   so Com/E2E validation passes on ECU side

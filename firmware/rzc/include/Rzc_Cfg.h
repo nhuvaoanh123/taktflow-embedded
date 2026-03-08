@@ -66,7 +66,7 @@
 
 #define RZC_COM_RX_ESTOP           0u   /* CAN 0x001 */
 #define RZC_COM_RX_VEHICLE_TORQUE  1u   /* CAN 0x100 — Vehicle_State + Torque */
-#define RZC_COM_RX_VIRT_SENSORS    2u   /* CAN 0x401 — virtual sensors from plant-sim */
+#define RZC_COM_RX_VIRT_SENSORS    2u   /* CAN 0x601 — virtual sensors from plant-sim */
 
 /* ====================================================================
  * Com Signal IDs for Virtual Sensors (RX from plant-sim, SIL only)

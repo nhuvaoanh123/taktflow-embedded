@@ -154,7 +154,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     /* canId,  upperPduId,                  dlc, isExtended */
     { 0x001u, RZC_COM_RX_ESTOP,           8u, FALSE },  /* E-stop broadcast     */
     { 0x100u, RZC_COM_RX_VEHICLE_TORQUE,  8u, FALSE },  /* Vehicle_State+Torque */
-    { 0x401u, RZC_COM_RX_VIRT_SENSORS,   8u, FALSE },  /* Virtual sensors (SIL)*/
+    { 0x601u, RZC_COM_RX_VIRT_SENSORS,   8u, FALSE },  /* Virtual sensors (SIL)*/
 };
 
 static const CanIf_ConfigType canif_config = {

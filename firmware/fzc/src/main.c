@@ -152,7 +152,7 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
     { 0x100u, FZC_COM_RX_VEHICLE_STATE,    8u, FALSE },  /* Vehicle state      */
     { 0x102u, FZC_COM_RX_STEER_CMD,        8u, FALSE },  /* Steering command   */
     { 0x103u, FZC_COM_RX_BRAKE_CMD,        8u, FALSE },  /* Brake command      */
-    { 0x400u, FZC_COM_RX_VIRT_SENSORS,     8u, FALSE },  /* Virtual sensors (SIL) */
+    { 0x600u, FZC_COM_RX_VIRT_SENSORS,     8u, FALSE },  /* Virtual sensors (SIL) */
 };
 
 static const CanIf_ConfigType canif_config = {

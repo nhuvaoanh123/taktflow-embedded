@@ -76,8 +76,8 @@ Steps from IoHwAb onward are **identical** between real HW and SIL. Only the sen
 ### Phase 2: Plant-Sim Virtual Sensor TX — DONE
 
 **File:** `gateway/plant_sim/simulator.py`
-- [x] Added `_tx_fzc_virtual_sensors()` -> CAN 0x400 at 10ms (steering angle, brake position, brake current)
-- [x] Added `_tx_rzc_virtual_sensors()` -> CAN 0x401 at 10ms (motor current, motor temp, battery voltage)
+- [x] Added `_tx_fzc_virtual_sensors()` -> CAN 0x600 at 10ms (steering angle, brake position, brake current)
+- [x] Added `_tx_rzc_virtual_sensors()` -> CAN 0x601 at 10ms (motor current, motor temp, battery voltage)
 - [x] Added both to 10ms TX schedule
 
 ### Phase 3: FZC Sensor Feeder + CAN Wiring — DONE
@@ -85,7 +85,7 @@ Steps from IoHwAb onward are **identical** between real HW and SIL. Only the sen
 **Files (6-file wiring pattern):**
 - [x] `firmware/fzc/include/Fzc_Cfg.h` -- added `FZC_COM_RX_VIRT_SENSORS (4u)`, signal IDs 14-16, ADC group/channel constants
 - [x] `firmware/fzc/cfg/Com_Cfg_Fzc.c` -- added shadow buffers, 3 signal config entries (IDs 14-16), RX PDU entry
-- [x] `firmware/fzc/src/main.c` -- added CAN 0x400 to CanIf RX table, PduR routing, IoHwAb BrakePositionAdcGroup, sensor feeder init
+- [x] `firmware/fzc/src/main.c` -- added CAN 0x600 to CanIf RX table, PduR routing, IoHwAb BrakePositionAdcGroup, sensor feeder init
 - [x] `firmware/fzc/cfg/Rte_Cfg_Fzc.c` -- added sensor feeder runnable (prio 11), also fixed missing `Swc_FzcSafety_MainFunction` (was dead code!)
 - [x] `firmware/fzc/src/Swc_FzcSensorFeeder.c` -- **NEW** module (reads Com -> injects Spi/Adc via POSIX APIs)
 - [x] `firmware/fzc/include/Swc_FzcSensorFeeder.h` -- **NEW** header
@@ -106,7 +106,7 @@ Steps from IoHwAb onward are **identical** between real HW and SIL. Only the sen
 **Files (6-file wiring pattern):**
 - [x] `firmware/rzc/include/Rzc_Cfg.h` -- added `RZC_COM_RX_VIRT_SENSORS (2u)`, signal IDs 18-20, ADC group/channel constants
 - [x] `firmware/rzc/cfg/Com_Cfg_Rzc.c` -- added shadow buffers, 3 signal config entries (IDs 18-20), RX PDU entry
-- [x] `firmware/rzc/src/main.c` -- added CAN 0x401 to CanIf RX table, PduR routing, sensor feeder init
+- [x] `firmware/rzc/src/main.c` -- added CAN 0x601 to CanIf RX table, PduR routing, sensor feeder init
 - [x] `firmware/rzc/cfg/Rte_Cfg_Rzc.c` -- added sensor feeder runnable (prio 6, between Com RX and Motor SWC)
 - [x] `firmware/rzc/src/Swc_RzcSensorFeeder.c` -- **NEW** module (reads Com -> injects Adc via POSIX API)
 - [x] `firmware/rzc/include/Swc_RzcSensorFeeder.h` -- **NEW** header
@@ -161,5 +161,5 @@ Steps from IoHwAb onward are **identical** between real HW and SIL. Only the sen
 ## Notes
 
 - All MCAL injection code guarded by `#ifdef PLATFORM_POSIX` -- zero impact on real hardware builds
-- Virtual sensor CAN IDs (0x400, 0x401) only transmitted by plant-sim (SIL container) -- not present on real CAN bus
+- Virtual sensor CAN IDs (0x600, 0x601) only transmitted by plant-sim -- not present on real CAN bus without plant-sim
 - Compatible with parallel hardware integration -- real sensor drivers will replace MCAL stubs when hardware arrives

@@ -4,7 +4,7 @@
  * @date    2026-03-03
  *
  * @details  SIL-only module (PLATFORM_POSIX). Reads virtual sensor CAN data
- *           from Com RX (CAN 0x400, sent by plant-sim) and injects values into
+ *           from Com RX (CAN 0x600, sent by plant-sim) and injects values into
  *           MCAL stubs (Spi_Posix, Adc_Posix) so that SWC fault detection
  *           reads realistic physics data instead of hardcoded "OK" values.
  *
