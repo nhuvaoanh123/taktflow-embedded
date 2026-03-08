@@ -600,7 +600,9 @@ class ScenarioExecutor:
         timeout_sec = scenario.get(
             "timeout_sec", self._default_timeout_sec
         )
-        wall_timeout_sec = timeout_sec / _SIL_SCALE
+        # Scenario timeout is wall-clock (guards overall execution including
+        # Docker restarts), not virtual time — do not scale
+        wall_timeout_sec = timeout_sec
 
         log.info(
             "%s--- Scenario: %s (%s) ---%s",
@@ -608,8 +610,7 @@ class ScenarioExecutor:
         )
         log.info("  Description: %s", description)
         log.info("  Verifies: %s", ", ".join(verifies))
-        log.info("  Timeout: %ds virtual (%.1fs wall, scale=%d)",
-                 timeout_sec, wall_timeout_sec, _SIL_SCALE)
+        log.info("  Timeout: %ds", timeout_sec)
 
         start_time = time.monotonic()
 
@@ -763,13 +764,14 @@ class ScenarioExecutor:
         elif action == "wait_state":
             state_name = step.get("state", "RUN")
             target = VEHICLE_STATE_NAMES.get(state_name, VehicleState.RUN)
+            # wait_state uses wall-clock timeout — not scaled, because it
+            # waits for real infrastructure events (container boot, ECU init)
             timeout = float(step.get("timeout", DEFAULT_STATE_WAIT_TIMEOUT_SEC))
-            wall_timeout = timeout / _SIL_SCALE
             log.info(
-                "  [STEP] Waiting for vehicle state %s (timeout: %.0fs virtual, %.1fs wall)...",
-                state_name, timeout, wall_timeout,
+                "  [STEP] Waiting for vehicle state %s (timeout: %.0fs wall)...",
+                state_name, timeout,
             )
-            reached = self._can.wait_for_state(target, timeout_sec=wall_timeout)
+            reached = self._can.wait_for_state(target, timeout_sec=timeout)
             if not reached:
                 raise TimeoutError(
                     f"Vehicle did not reach state {state_name} "
