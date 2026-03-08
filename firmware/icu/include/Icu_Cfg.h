@@ -7,7 +7,7 @@
  *          Contains RTE signal IDs, Com RX PDU IDs, temperature/battery
  *          zone thresholds, heartbeat timeout, and ncurses color pairs.
  *
- *          ICU is a listen-only consumer — no TX PDU IDs.
+ *          ICU transmits a single heartbeat PDU (CAN 0x014).
  *
  * @safety_req SWR-ICU-001 to SWR-ICU-010
  * @traces_to  SSR-ICU-001 to SSR-ICU-010, TSR-022, TSR-046
@@ -38,7 +38,13 @@
 #define ICU_SIG_COUNT             29u
 
 /* ====================================================================
- * Com RX PDU IDs (ICU is listen-only, no TX)
+ * Com TX PDU IDs
+ * ==================================================================== */
+
+#define ICU_COM_TX_HEARTBEAT      0u   /* CAN 0x014 — ICU heartbeat */
+
+/* ====================================================================
+ * Com RX PDU IDs
  * ==================================================================== */
 
 #define ICU_COM_RX_ESTOP          0u   /* CAN 0x001 */

@@ -1,14 +1,13 @@
 /**
  * @file    Com_Cfg_Icu.c
- * @brief   Com module configuration for ICU — RX-only PDUs and signal mappings
+ * @brief   Com module configuration for ICU — heartbeat TX + RX PDU/signal mappings
  * @date    2026-02-23
  *
  * @safety_req SWR-ICU-001 to SWR-ICU-010
  * @traces_to  SSR-ICU-001 to SSR-ICU-010, TSR-022, TSR-023, TSR-024
  *
- * @details  ICU is a listen-only consumer. It subscribes to all CAN
- *           messages on the bus but transmits nothing. Therefore this
- *           configuration has RX PDUs and signals only — no TX config.
+ * @details  ICU subscribes to all CAN messages on the bus and transmits
+ *           a single heartbeat PDU (CAN 0x014) for presence monitoring.
  *
  * @standard AUTOSAR Com, ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -17,9 +16,14 @@
 #include "Icu_Cfg.h"
 
 /* ==================================================================
- * Shadow Buffers (static RAM for RX signal read)
- * ICU is listen-only — no TX shadow buffers needed.
+ * Shadow Buffers
  * ================================================================== */
+
+/* TX: ICU heartbeat (CAN 0x014) */
+static uint8  sig_tx_hb_alive;
+static uint8  sig_tx_hb_ecu_id;
+
+/* RX shadow buffers */
 
 /* E-stop broadcast (CAN 0x001) */
 static uint8  sig_rx_estop_active;
@@ -71,7 +75,7 @@ static uint8  sig_rx_overcurrent_flag;
 /* ==================================================================
  * Signal Configuration Table
  * Maps signal ID -> bit position, size, type, parent PDU, shadow buffer
- * All RX signals — ICU transmits nothing.
+ * RX signals (0-18) + TX heartbeat signals (19-20).
  * ================================================================== */
 
 static const Com_SignalConfigType icu_signal_config[] = {
@@ -95,16 +99,24 @@ static const Com_SignalConfigType icu_signal_config[] = {
     { 16u,   16u,     8u, COM_UINT8,  ICU_COM_RX_INDICATOR,      &sig_rx_indicator_state   },
     { 17u,   16u,     8u, COM_UINT8,  ICU_COM_RX_DOOR_LOCK,      &sig_rx_door_lock         },
     { 18u,   16u,    32u, COM_UINT16, ICU_COM_RX_DTC_BCAST,      &sig_rx_dtc_broadcast     },
+
+    /* TX: ICU heartbeat (CAN 0x014) */
+    { 19u,   16u,     8u, COM_UINT8,  ICU_COM_TX_HEARTBEAT,     &sig_tx_hb_alive          },
+    { 20u,   24u,     8u, COM_UINT8,  ICU_COM_TX_HEARTBEAT,     &sig_tx_hb_ecu_id         },
 };
 
 #define ICU_COM_SIGNAL_COUNT  (sizeof(icu_signal_config) / sizeof(icu_signal_config[0]))
 
 /* ==================================================================
  * TX PDU Configuration Table
- * ICU is listen-only — empty TX config.
  * ================================================================== */
 
-/* No TX PDUs for ICU */
+static const Com_TxPduConfigType icu_tx_pdu_config[] = {
+    /* pduId,                    dlc, cycleTimeMs */
+    { ICU_COM_TX_HEARTBEAT,       8u,  500u },   /* ICU heartbeat (CAN 0x014) */
+};
+
+#define ICU_COM_TX_PDU_COUNT_ACTUAL  (sizeof(icu_tx_pdu_config) / sizeof(icu_tx_pdu_config[0]))
 
 /* ==================================================================
  * RX PDU Configuration Table
@@ -138,8 +150,8 @@ static const Com_RxPduConfigType icu_rx_pdu_config[] = {
 const Com_ConfigType icu_com_config = {
     .signalConfig = icu_signal_config,
     .signalCount  = (uint8)ICU_COM_SIGNAL_COUNT,
-    .txPduConfig  = NULL_PTR,  /* No TX PDUs — ICU is listen-only */
-    .txPduCount   = 0u,
+    .txPduConfig  = icu_tx_pdu_config,
+    .txPduCount   = (uint8)ICU_COM_TX_PDU_COUNT_ACTUAL,
     .rxPduConfig  = icu_rx_pdu_config,
     .rxPduCount   = (uint8)ICU_COM_RX_PDU_COUNT_ACTUAL,
 };

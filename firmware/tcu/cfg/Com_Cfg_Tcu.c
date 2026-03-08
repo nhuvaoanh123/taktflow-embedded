@@ -17,6 +17,9 @@
 /* TX: UDS response (0x644) */
 static uint8 tcu_tx_uds_rsp_buf[COM_PDU_SIZE];
 
+/* TX: TCU heartbeat (0x015) */
+static uint8 tcu_tx_hb_buf[COM_PDU_SIZE];
+
 /* RX shadow buffers for UDS and heartbeat PDUs — not yet wired to
  * Com signal config (no mapped signals).  Restore when Com routing
  * is extended to cover these PDUs. */
@@ -97,6 +100,26 @@ static const Com_SignalConfigType tcu_signal_config[] = {
         .PduId        = TCU_COM_RX_DTC_BCAST,
         .ShadowBuffer = tcu_rx_dtc_bcast_buf,
     },
+
+    /* TX: TCU heartbeat alive counter (byte 2 of CAN 0x015) */
+    {
+        .SignalId     = 6u,
+        .BitPosition  = 16u,
+        .BitSize      = 8u,
+        .Type         = COM_UINT8,
+        .PduId        = TCU_COM_TX_HEARTBEAT,
+        .ShadowBuffer = tcu_tx_hb_buf,
+    },
+
+    /* TX: TCU heartbeat ECU ID (byte 3 of CAN 0x015) */
+    {
+        .SignalId     = 7u,
+        .BitPosition  = 24u,
+        .BitSize      = 8u,
+        .Type         = COM_UINT8,
+        .PduId        = TCU_COM_TX_HEARTBEAT,
+        .ShadowBuffer = tcu_tx_hb_buf,
+    },
 };
 
 /* ---- TX PDU Configuration ---- */
@@ -107,6 +130,12 @@ static const Com_TxPduConfigType tcu_tx_pdu_config[] = {
         .PduId       = TCU_COM_TX_UDS_RSP,
         .Dlc         = 8u,
         .CycleTimeMs = 0u,  /* Event-triggered, not periodic */
+    },
+    /* TCU heartbeat -- 500ms cyclic */
+    {
+        .PduId       = TCU_COM_TX_HEARTBEAT,
+        .Dlc         = 8u,
+        .CycleTimeMs = 500u,
     },
 };
 

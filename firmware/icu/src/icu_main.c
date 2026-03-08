@@ -75,8 +75,13 @@ static const Can_ConfigType can_config = {
     .controllerId = 0u,
 };
 
-/** CanIf RX PDU routing: CAN ID -> Com RX PDU
- *  ICU is listen-only — no TX PDU routing needed. */
+/** CanIf TX PDU routing: Com TX PDU -> CAN ID */
+static const CanIf_TxPduConfigType canif_tx_config[] = {
+    /* canId,  upperPduId,                dlc, hth */
+    { 0x014u, ICU_COM_TX_HEARTBEAT,       8u, 0u },  /* ICU heartbeat */
+};
+
+/** CanIf RX PDU routing: CAN ID -> Com RX PDU */
 static const CanIf_RxPduConfigType canif_rx_config[] = {
     /* canId,  upperPduId,               dlc, isExtended */
     { 0x001u, ICU_COM_RX_ESTOP,           8u, FALSE },  /* E-stop broadcast    */
@@ -95,8 +100,8 @@ static const CanIf_RxPduConfigType canif_rx_config[] = {
 };
 
 static const CanIf_ConfigType canif_config = {
-    .txPduConfig = NULL_PTR,  /* No TX PDUs */
-    .txPduCount  = 0u,
+    .txPduConfig = canif_tx_config,
+    .txPduCount  = (uint8)(sizeof(canif_tx_config) / sizeof(canif_tx_config[0])),
     .rxPduConfig = canif_rx_config,
     .rxPduCount  = (uint8)(sizeof(canif_rx_config) / sizeof(canif_rx_config[0])),
     .e2eRxCheck  = NULL_PTR,
@@ -123,6 +128,29 @@ static const PduR_ConfigType pdur_config = {
     .routingTable = pdur_routing,
     .routingCount = (uint8)(sizeof(pdur_routing) / sizeof(pdur_routing[0])),
 };
+
+/* ==================================================================
+ * ICU Heartbeat — transmits CAN 0x014 every 500ms
+ * ================================================================== */
+
+/** Alive counter for ICU heartbeat (wraps 0-255) */
+static uint8 icu_hb_alive_counter = 0u;
+
+/**
+ * @brief  ICU heartbeat transmit — called every 500ms by RTE scheduler
+ * @note   Packs alive counter (signal 19) and ECU ID (signal 20) into
+ *         TX PDU 0 (CAN 0x014) via Com_SendSignal.
+ */
+void Icu_Heartbeat_500ms(void)
+{
+    uint8 alive = icu_hb_alive_counter;
+    uint8 ecu_id = 0x04u;  /* ICU = ECU 4 */
+
+    (void)Com_SendSignal(19u, &alive);
+    (void)Com_SendSignal(20u, &ecu_id);
+
+    icu_hb_alive_counter++;
+}
 
 /* ==================================================================
  * Signal Handler — clean up ncurses on SIGINT/SIGTERM

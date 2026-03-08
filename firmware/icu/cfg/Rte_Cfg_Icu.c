@@ -18,9 +18,11 @@
 
 extern void Swc_Dashboard_50ms(void);
 extern void Swc_DtcDisplay_50ms(void);
+extern void Com_MainFunction_Rx(void);
 extern void Com_MainFunction_Tx(void);
 extern void Can_MainFunction_Read(void);
 extern void Can_MainFunction_BusOff(void);
+extern void Icu_Heartbeat_500ms(void);
 
 /* ==================================================================
  * Signal Configuration Table
@@ -65,15 +67,17 @@ static const Rte_SignalConfigType icu_signal_config[ICU_SIG_COUNT] = {
  * Runnable Configuration Table
  * Priority: higher number = executes first within same period
  *
- * ICU runs at 50ms base tick (20 Hz). CAN read at 10ms for
- * timely message processing.
+ * ICU runs at 50ms base tick (20 Hz). Period values are in
+ * ticks, not ms (1 tick = 50ms actual wall time).
  * ================================================================== */
 
 static const Rte_RunnableConfigType icu_runnable_config[] = {
     /* func,                    periodMs, priority, seId */
-    { Can_MainFunction_Read,       10u,      5u,     0xFFu },  /* CAN RX first            */
-    { Swc_Dashboard_50ms,          50u,      4u,     0u    },  /* Dashboard (20 Hz)       */
-    { Swc_DtcDisplay_50ms,         50u,      3u,     1u    },  /* DTC display (20 Hz)     */
+    { Can_MainFunction_Read,       10u,      7u,     0xFFu },  /* CAN RX first            */
+    { Com_MainFunction_Rx,         10u,      6u,     0xFFu },  /* COM RX unpack           */
+    { Swc_Dashboard_50ms,          50u,      5u,     0u    },  /* Dashboard (20 Hz)       */
+    { Swc_DtcDisplay_50ms,         50u,      4u,     1u    },  /* DTC display (20 Hz)     */
+    { Icu_Heartbeat_500ms,         10u,      3u,     0xFFu },  /* ICU heartbeat (~500ms)  */
     { Com_MainFunction_Tx,         10u,      2u,     0xFFu },  /* COM TX (after all SWCs) */
     { Can_MainFunction_BusOff,     50u,      1u,     0xFFu },  /* Bus-off check           */
 };

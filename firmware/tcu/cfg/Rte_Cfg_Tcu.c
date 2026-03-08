@@ -19,6 +19,8 @@ extern void Swc_DtcStore_10ms(void);
 extern void Com_MainFunction_Tx(void);
 extern void Can_MainFunction_Read(void);
 extern void Can_MainFunction_BusOff(void);
+extern void Com_MainFunction_Rx(void);
+extern void Tcu_Heartbeat_500ms(void);
 extern void Dcm_MainFunction(void);
 
 /* ---- Signal Configuration ---- */
@@ -89,10 +91,22 @@ static const Rte_RunnableConfigType tcu_runnable_config[] = {
         .seId     = 0u,
     },
     {
+        .func     = Com_MainFunction_Rx,
+        .periodMs = 1u,
+        .priority = 6u,
+        .seId     = 0xFFu,
+    },
+    {
+        .func     = Tcu_Heartbeat_500ms,
+        .periodMs = 50u,   /* 50 ticks * 10ms = 500ms */
+        .priority = 2u,
+        .seId     = 0xFFu,
+    },
+    {
         .func     = Com_MainFunction_Tx,
-        .periodMs = 10u,
+        .periodMs = 1u,
         .priority = 1u,
-        .seId     = 0u,
+        .seId     = 0xFFu,
     },
 };
 

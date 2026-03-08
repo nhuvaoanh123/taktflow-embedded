@@ -25,6 +25,9 @@
 /* ---- Com TX PDU IDs ---- */
 
 #define TCU_COM_TX_UDS_RSP        0u  /**< CAN 0x644 */
+#define TCU_COM_TX_HEARTBEAT      1u  /**< CAN 0x015 — TCU heartbeat */
+
+#define TCU_COM_TX_PDU_COUNT_ACTUAL 2u
 
 /* ---- Com RX PDU IDs ---- */
 
