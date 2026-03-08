@@ -2105,7 +2105,9 @@ class ScenarioExecutor:
         # Scale nominal interval by SIL_TIME_SCALE: wall-clock intervals
         # are shorter by the acceleration factor.
         nominal_ms = float(vdef.get("nominal_interval_ms", 50)) / _SIL_SCALE
-        max_jitter_ms = float(vdef.get("max_jitter_ms", 10)) / _SIL_SCALE
+        # Do NOT scale max_jitter_ms — Docker scheduling jitter is absolute
+        # wall-clock (~2-5 ms) regardless of time acceleration factor.
+        max_jitter_ms = float(vdef.get("max_jitter_ms", 10))
 
         results: list[str] = []
         all_passed = True

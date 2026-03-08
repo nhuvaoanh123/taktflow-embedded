@@ -36,8 +36,8 @@ static const Swc_CvcCom_TxEntryType CvcCom_TxTable[5] = {
     { 0x001u,  10u, CVC_E2E_ESTOP_DATA_ID,     8u },  /* E-stop: 10ms      */
     { 0x010u,  50u, CVC_E2E_HEARTBEAT_DATA_ID,  8u },  /* Heartbeat: 50ms   */
     { 0x100u,  20u, CVC_E2E_VEHSTATE_DATA_ID,   8u },  /* Vehicle state:20ms*/
-    { 0x200u,  10u, CVC_E2E_TORQUE_DATA_ID,     8u },  /* Torque req: 10ms  */
-    { 0x201u,  20u, 0x07u,                       8u },  /* Steer cmd: 20ms   */
+    { 0x101u,  10u, CVC_E2E_TORQUE_DATA_ID,     8u },  /* Torque req: 10ms  */
+    { 0x102u,  20u, 0x07u,                       8u },  /* Steer cmd: 20ms   */
 };
 
 #define CVCCOM_TX_TABLE_SIZE  5u

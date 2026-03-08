@@ -31,6 +31,8 @@ class MotorModel:
         self.overtemp = False
         self.stall_fault = False
         self._hw_disabled = False    # firmware overcurrent/overtemp disable
+        self._overcurrent_latch = False  # injected overcurrent persists
+        self._injected_current_ma = 0.0
         self._last_time = time.monotonic()
 
     def update(self, duty_pct: float, direction: int, dt: float = None,
@@ -73,7 +75,10 @@ class MotorModel:
                 self.rpm = 0.0
 
         # Current model: proportional to torque load
-        if self.enabled:
+        if self._overcurrent_latch:
+            # Injected overcurrent — hold at injected level, motor disabled
+            self.current_ma = self._injected_current_ma
+        elif self.enabled:
             load_factor = 1.0 - (self.rpm / self.NO_LOAD_RPM)
             load_factor = max(load_factor, brake_load)
             load_factor = max(0.0, min(1.0, load_factor))
@@ -95,9 +100,12 @@ class MotorModel:
             self._hw_disabled = True
 
     def inject_overcurrent(self, current_ma: float = 28000.0):
-        """Inject an overcurrent fault for demo."""
+        """Inject an overcurrent fault — latched until reset_faults()."""
         self.current_ma = current_ma
+        self._injected_current_ma = current_ma
+        self._overcurrent_latch = True
         self.overcurrent = True
+        self._hw_disabled = True
 
     def inject_stall(self):
         """Inject a stall fault for demo."""
@@ -110,6 +118,8 @@ class MotorModel:
         self.overcurrent = False
         self.overtemp = False
         self._hw_disabled = False
+        self._overcurrent_latch = False
+        self._injected_current_ma = 0.0
 
     @property
     def temp_c_int(self) -> int:

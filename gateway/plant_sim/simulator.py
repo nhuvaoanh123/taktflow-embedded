@@ -647,9 +647,9 @@ class PlantSimulator:
                 # RZC sensor feeder injects into MCAL ADC stubs, so RZC SWCs
                 # read real physics values and transmit correct telemetry.
 
-                # Every 100ms: DTC check
-                if self._tick % 10 == 0:
-                    self._check_and_send_dtcs()
+                # Every tick (10ms): DTC check — must be frequent enough
+                # to catch transient faults before physics model clears them
+                self._check_and_send_dtcs()
 
                 self._tick += 1
 
