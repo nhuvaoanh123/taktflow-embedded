@@ -93,7 +93,8 @@ void Sil_Time_Sleep(uint32 period_us)
 
             if (timerfd_settime(tfd, 0, &its, NULL) == 0) {
                 uint64_t expirations;
-                (void)read(tfd, &expirations, sizeof(expirations));
+                ssize_t n = read(tfd, &expirations, sizeof(expirations));
+                (void)n; /* Block until timer fires; value unused */
             }
             close(tfd);
         } else {
