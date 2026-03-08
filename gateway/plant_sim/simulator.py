@@ -111,7 +111,14 @@ class PlantSimulator:
     # ------------------------------------------------------------------
 
     def _init_mqtt(self):
-        """Connect to MQTT broker and subscribe to plant injection commands."""
+        """Connect to MQTT broker and subscribe to plant injection commands.
+
+        Uses synchronous connect with retry to guarantee the subscription is
+        active before the main simulation loop starts.  This eliminates the
+        race condition where fault-inject MQTT commands arrive before the
+        plant-sim subscription is established (QoS 1 messages are dropped by
+        the broker if no subscriber exists at publish time).
+        """
         host = os.environ.get("MQTT_HOST", "localhost")
         port = int(os.environ.get("MQTT_PORT", "1883"))
         self._mqtt = paho_mqtt.Client(
@@ -122,9 +129,20 @@ class PlantSimulator:
         self._mqtt.message_callback_add(
             "taktflow/command/plant_inject", self._on_inject_cmd
         )
-        self._mqtt.connect_async(host, port, keepalive=30)
+        # Synchronous connect with retry — broker may still be starting
+        for attempt in range(15):
+            try:
+                self._mqtt.connect(host, port, keepalive=30)
+                break
+            except (ConnectionRefusedError, OSError) as exc:
+                log.warning("MQTT connect attempt %d failed: %s", attempt + 1, exc)
+                time.sleep(1)
+        else:
+            log.error("MQTT connection failed after 15 attempts")
         self._mqtt.loop_start()
-        log.info("MQTT connecting to %s:%d", host, port)
+        # Subscribe immediately (also done in _on_mqtt_connect for reconnects)
+        self._mqtt.subscribe("taktflow/command/plant_inject", qos=1)
+        log.info("MQTT connected to %s:%d — subscribed", host, port)
 
     def _on_mqtt_connect(self, client, userdata, flags, rc, properties=None):
         """Subscribe to injection topic on (re)connect."""

@@ -30,24 +30,23 @@ setup:
   - action: reset
     description: "Clear residual state and previous reports"
   - action: wait
-    seconds: 5
-    description: "Allow all containers and SAP QM mock API to initialize"
+    seconds: 30
+    description: "Allow all containers and SAP QM mock API to initialize (30 / scale=10 = 3s wall)"
 
 steps:
   - action: wait_state
     state: RUN
     timeout: 15
     description: "Wait for INIT hold (10s) + E2E stabilization"
-  - action: inject_fault
-    type: overcurrent
-    value: 22.0
-    description: "Inject overcurrent to trigger DTC (Dem records DTC 0x110001)"
   - action: wait
-    seconds: 5
-    description: "Wait for DTC to propagate via CAN to gateway"
+    seconds: 12
+    description: "Allow CVC post-INIT grace period (10s) to expire"
+  - action: inject_scenario
+    name: overcurrent
+    description: "Inject overcurrent to trigger DTC 0xE301 (via MQTT + direct CAN injection)"
   - action: wait
-    seconds: 3
-    description: "Wait for gateway to forward DTC to SAP QM mock and generate report"
+    seconds: 80
+    description: "Wait for DTC to propagate via CAN to gateway and SAP QM (80 / scale=10 = 8s wall)"
 
 verdicts:
   - type: mqtt_message

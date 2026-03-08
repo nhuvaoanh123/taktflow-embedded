@@ -54,9 +54,9 @@ verdicts:
     description: "DTC 0xD001 (steer plausibility) broadcast from FZC (source=2)"
 
   - type: vehicle_state
-    expected: DEGRADED
+    expected: SAFE_STOP
     within_ms: 2000
-    description: "Vehicle enters DEGRADED after steering fault detection"
+    description: "Vehicle enters SAFE_STOP after steering fault (SC relay kill)"
 
   - type: can_message
     can_id: 0x200

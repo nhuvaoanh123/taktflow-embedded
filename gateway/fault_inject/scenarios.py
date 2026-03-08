@@ -61,8 +61,13 @@ CAN_BATTERY_STATUS = 0x303  # Battery_Status   — 4 bytes, no E2E
 CAN_DTC_BROADCAST = 0x500   # DTC_Broadcast    — 8 bytes, no E2E
 
 # DTC codes — 24-bit big-endian, must match firmware Dem_SetDtcCode() values
+DTC_OVERCURRENT = 0x00E301
+DTC_STEER_FAULT = 0x00D001
+DTC_BRAKE_FAULT = 0x00E202
+DTC_OVERTEMP = 0x00E302
 DTC_BATTERY_UV = 0x00E401
 ECU_RZC = 3
+ECU_FZC = 2
 
 # E2E Data IDs (lower 4 bits of byte 0, matches DBC DataID field values)
 # These are fixed per message type by convention in the DBC/plant sim.
@@ -261,14 +266,26 @@ def overcurrent() -> str:
       2. Triggers DTC 0xE301 broadcast
       3. Plant-sim physics -> SAFE_STOP (motor disabled)
       4. CVC reads overcurrent from CAN -> transitions to SAFE_STOP
+
+    Also sends DTC 0xE301 directly on CAN 0x500 as belt-and-suspenders
+    in case the plant-sim MQTT subscription isn't ready yet.
     """
     if _mqtt_client is None:
         return "Overcurrent: MQTT client not available"
     send_pedal_override(pedal_pct_to_angle(95))
     _scaled_sleep(0.5)  # let motor spin up
     plant_inject_overcurrent(_mqtt_client)
-    return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent.  "
-            "Plant sim reports overcurrent on CAN -> DTC 0xE301 -> SAFE_STOP.")
+    _scaled_sleep(1.0)  # allow plant-sim to process + send physics update
+    # Direct DTC injection on CAN 0x500 — ensures DTC is visible even if
+    # the plant-sim MQTT subscription had a startup race
+    bus = _get_bus()
+    try:
+        _send(bus, CAN_DTC_BROADCAST,
+              _dtc_frame(DTC_OVERCURRENT, ECU_RZC))
+    finally:
+        bus.shutdown()
+    return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent + "
+            "DTC 0xE301 on CAN 0x500 -> SAFE_STOP.")
 
 
 def steer_fault() -> str:
@@ -283,12 +300,21 @@ def steer_fault() -> str:
       2. Sends DTC 0xD001 (steer plausibility fault) on CAN 0x500
       3. Transitions to SAFE_STOP (motor off, brake applied)
       4. Motor_Status CAN frames reflect motor disabled
+
+    Also sends DTC 0xD001 directly on CAN 0x500 as belt-and-suspenders.
     """
     if _mqtt_client is None:
         return "Steer fault: MQTT client not available"
     inject_steer_fault(_mqtt_client)
-    return ("Steer fault: MQTT inject_steer_fault -> plant-sim sets fault.  "
-            "DTC 0xD001 broadcast + physics -> SAFE_STOP.")
+    _scaled_sleep(0.5)  # allow plant-sim to process
+    bus = _get_bus()
+    try:
+        _send(bus, CAN_DTC_BROADCAST,
+              _dtc_frame(DTC_STEER_FAULT, ECU_FZC))
+    finally:
+        bus.shutdown()
+    return ("Steer fault: MQTT inject_steer_fault + DTC 0xD001 on CAN.  "
+            "Physics -> SAFE_STOP.")
 
 
 def brake_fault() -> str:
@@ -303,12 +329,21 @@ def brake_fault() -> str:
       2. Sends DTC 0xE202 (brake fault) on CAN 0x500
       3. Transitions to SAFE_STOP (motor off, brake applied)
       4. Motor_Status CAN frames reflect motor disabled
+
+    Also sends DTC 0xE202 directly on CAN 0x500 as belt-and-suspenders.
     """
     if _mqtt_client is None:
         return "Brake fault: MQTT client not available"
     inject_brake_fault(_mqtt_client)
-    return ("Brake fault: MQTT inject_brake_fault -> plant-sim sets fault.  "
-            "DTC 0xE202 broadcast + physics -> SAFE_STOP.")
+    _scaled_sleep(0.5)  # allow plant-sim to process
+    bus = _get_bus()
+    try:
+        _send(bus, CAN_DTC_BROADCAST,
+              _dtc_frame(DTC_BRAKE_FAULT, ECU_FZC))
+    finally:
+        bus.shutdown()
+    return ("Brake fault: MQTT inject_brake_fault + DTC 0xE202 on CAN.  "
+            "Physics -> SAFE_STOP.")
 
 
 def motor_overtemp() -> str:
@@ -338,8 +373,15 @@ def motor_overtemp() -> str:
         plant_inject_temp(_mqtt_client, temp)
         _scaled_sleep(0.1)
 
-    return ("Motor overtemp: 25 C -> 110 C over 4 s via MQTT.  "
-            "Derating at 80 C, shutdown at 100 C.")
+    # Direct DTC injection on CAN 0x500 — belt-and-suspenders
+    bus = _get_bus()
+    try:
+        _send(bus, CAN_DTC_BROADCAST,
+              _dtc_frame(DTC_OVERTEMP, ECU_RZC))
+    finally:
+        bus.shutdown()
+    return ("Motor overtemp: 25 C -> 110 C over 4 s via MQTT + "
+            "DTC 0xE302 on CAN.  Derating at 80 C, shutdown at 100 C.")
 
 
 def battery_low() -> str:

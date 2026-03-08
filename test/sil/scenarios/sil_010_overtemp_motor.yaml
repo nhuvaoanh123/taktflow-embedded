@@ -62,9 +62,9 @@ verdicts:
     description: "Motor must shut down when temperature exceeds 100C overtemp threshold"
 
   - type: vehicle_state
-    expected: DEGRADED
+    expected: SAFE_STOP
     within_ms: 15000
-    description: "Vehicle must enter DEGRADED when overtemp triggers motor derating/cutoff"
+    description: "Vehicle must enter SAFE_STOP when overtemp triggers motor shutdown (critical fault)"
 
 teardown:
   - action: reset

@@ -27,8 +27,8 @@ setup:
   - action: reset
     description: "Clear residual state from previous test runs"
   - action: wait
-    seconds: 5
-    description: "Allow all ECU containers and gateway to initialize"
+    seconds: 30
+    description: "Allow all ECU containers and gateway to initialize (30 / scale=10 = 3s wall)"
 
 steps:
   - action: wait_state
@@ -36,8 +36,8 @@ steps:
     timeout: 15
     description: "Wait for INIT hold (10s) + E2E stabilization with CAN traffic active"
   - action: wait
-    seconds: 6
-    description: "Wait for at least one gateway telemetry publish cycle (5s interval)"
+    seconds: 80
+    description: "Wait for at least one gateway telemetry publish cycle (5s wall-clock interval; 80 / SIL_TIME_SCALE=10 = 8s wall time)"
 
 verdicts:
   - type: mqtt_message

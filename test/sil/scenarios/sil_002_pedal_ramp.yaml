@@ -32,6 +32,9 @@ setup:
     state: RUN
     timeout: 15
     description: "Wait for INIT hold (10s) + E2E stabilization before applying torque"
+  - action: wait
+    seconds: 12
+    description: "Allow CVC post-INIT grace period (10s) to expire before torque injection"
 
 steps:
   - action: inject_scenario
