@@ -26,7 +26,7 @@ static uint8  iohwab_enc_dir_inject   = 0u;  /* IOHWAB_MOTOR_FORWARD */
 #endif
 
 #ifdef PLATFORM_HIL
-static uint8  iohwab_hil_active[IOHWAB_HIL_CH_COUNT];
+static boolean iohwab_hil_active[IOHWAB_HIL_CH_COUNT];
 static uint32 iohwab_hil_value[IOHWAB_HIL_CH_COUNT];
 #endif
 
@@ -143,7 +143,7 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
     /* Select chip select based on sensor ID */
     if (SensorId == 0u) {
 #ifdef PLATFORM_HIL
-        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_0]) {
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_0] != FALSE) {
             *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_0];
             return E_OK;
         }
@@ -151,7 +151,7 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
         cs_channel = iohwab_config->PedalCsChannel0;
     } else {
 #ifdef PLATFORM_HIL
-        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_1]) {
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_1] != FALSE) {
             *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_1];
             return E_OK;
         }
@@ -178,7 +178,7 @@ Std_ReturnType IoHwAb_ReadSteeringAngle(uint16* Angle)
     }
 
 #ifdef PLATFORM_HIL
-    if (iohwab_hil_active[IOHWAB_HIL_CH_STEERING]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_STEERING] != FALSE) {
         *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_STEERING];
         return E_OK;
     }
@@ -206,7 +206,7 @@ Std_ReturnType IoHwAb_ReadMotorCurrent(uint16* Current_mA)
     }
 
 #ifdef PLATFORM_HIL
-    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_CURRENT]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_CURRENT] != FALSE) {
         *Current_mA = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_CURRENT];
         return E_OK;
     }
@@ -245,7 +245,7 @@ Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC)
     }
 
 #ifdef PLATFORM_HIL
-    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_TEMP]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_TEMP] != FALSE) {
         *Temp_dC = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_TEMP];
         return E_OK;
     }
@@ -282,7 +282,7 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
     }
 
 #ifdef PLATFORM_HIL
-    if (iohwab_hil_active[IOHWAB_HIL_CH_BATTERY]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BATTERY] != FALSE) {
         *Voltage_mV = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BATTERY];
         return E_OK;
     }
@@ -321,7 +321,7 @@ Std_ReturnType IoHwAb_ReadBrakePosition(uint16* Position)
     }
 
 #ifdef PLATFORM_HIL
-    if (iohwab_hil_active[IOHWAB_HIL_CH_BRAKE]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BRAKE] != FALSE) {
         *Position = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BRAKE];
         return E_OK;
     }
@@ -446,7 +446,7 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
 #ifdef PLATFORM_POSIX
     *Count = iohwab_enc_count_inject;
 #elif defined(PLATFORM_HIL)
-    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_COUNT]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_COUNT] != FALSE) {
         *Count = iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_COUNT];
     } else {
         /* TODO:HARDWARE Real encoder read via timer capture */
@@ -475,7 +475,7 @@ Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
 #ifdef PLATFORM_POSIX
     *Dir = iohwab_enc_dir_inject;
 #elif defined(PLATFORM_HIL)
-    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_DIR]) {
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_DIR] != FALSE) {
         *Dir = (uint8)iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_DIR];
     } else {
         /* TODO:HARDWARE Real encoder direction via DIO */
@@ -506,14 +506,14 @@ void IoHwAb_Hil_SetOverride(uint8 Channel, uint32 Value)
 {
     if (Channel < IOHWAB_HIL_CH_COUNT) {
         iohwab_hil_value[Channel]  = Value;
-        iohwab_hil_active[Channel] = 1u;
+        iohwab_hil_active[Channel] = TRUE;
     }
 }
 
 void IoHwAb_Hil_ClearOverride(uint8 Channel)
 {
     if (Channel < IOHWAB_HIL_CH_COUNT) {
-        iohwab_hil_active[Channel] = 0u;
+        iohwab_hil_active[Channel] = FALSE;
     }
 }
 #endif
