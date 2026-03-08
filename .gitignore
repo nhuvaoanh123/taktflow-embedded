@@ -48,13 +48,11 @@ tools/misra/*.txt
 # Dependencies
 node_modules/
 
-# CubeMX generated code (regenerate from .ioc files)
-cubecvccfg/*
-!cubecvccfg/cubeCVCcfg.ioc
-cubeFZCcfg/*
-!cubeFZCcfg/cubeFZCcfg.ioc
-cuberzccfg/*
-!cuberzccfg/cubeRZCcfg.ioc
+# CubeMX generated code (regenerate from .ioc files in firmware/*/cfg/)
+# Legacy root-level paths (kept for safety until all branches merged)
+cubecvccfg/
+cubeFZCcfg/
+cuberzccfg/
 
 # Datasheets (copyrighted, not redistributable)
 hardware/datasheets/

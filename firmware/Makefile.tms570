@@ -42,7 +42,7 @@ endif
 
 # --- Directories ---
 SC_DIR       = sc
-HALCOGEN_DIR = ../halcogencfg/TMS570LC4357
+HALCOGEN_DIR = sc/cfg/halcogen
 BUILD_DIR    = build/tms570
 
 # --- Include paths (shared) ---
@@ -129,7 +129,7 @@ $(ELF): $(ALL_OBJS) | $(BUILD_DIR)
 	$(CC) $(LDFLAGS) $(ALL_OBJS) $(LDSCRIPT) -o $@
 
 # --- Compile HALCoGen sources (relaxed warnings) ---
-$(BUILD_DIR)/../halcogencfg/%.o: ../halcogencfg/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/halcogen/%.o: $(HALCOGEN_DIR)/%.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(HAL_CFLAGS) -c $< -o $@
 
@@ -139,7 +139,7 @@ $(BUILD_DIR)/sc/%.o: sc/%.c | $(BUILD_DIR)
 	$(CC) $(SC_CFLAGS) -c $< -o $@
 
 # --- Assemble .asm (TI assembler syntax — requires -x ti-asm for LLVM) ---
-$(BUILD_DIR)/../halcogencfg/%.o: ../halcogencfg/%.asm | $(BUILD_DIR)
+$(BUILD_DIR)/halcogen/%.o: $(HALCOGEN_DIR)/%.asm | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(MCU_FLAGS) -x ti-asm -c $< -o $@
 
@@ -157,8 +157,7 @@ size: $(ELF)
 	@echo "=== Firmware size: SC (TMS570) ==="
 	$(SZ) $(ELF)
 
-# --- Clean (HALCoGen objects land in build/halcogencfg due to ../halcogencfg path) ---
+# --- Clean ---
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -rf build/halcogencfg
 	@echo "=== Cleaned TMS570 build directory ==="

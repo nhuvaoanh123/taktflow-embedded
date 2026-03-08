@@ -30,7 +30,7 @@
 /**
  * @brief  Error handler — infinite loop, watchdog will reset
  * @note   Called by HAL init functions on failure. Declared in
- *         cubecvccfg/Core/Inc/main.h, defined here (CubeMX main.c
+ *         firmware/cvc/cfg/Core/Inc/main.h, defined here (CubeMX main.c
  *         is NOT in the build).
  */
 void Error_Handler(void)
@@ -48,7 +48,7 @@ void Error_Handler(void)
 
 /**
  * @brief  Configure system clocks: HSI 16 MHz → PLL → 170 MHz
- * @note   Derived from CubeMX cubecvccfg/Core/Src/main.c:136-176.
+ * @note   Derived from CubeMX firmware/cvc/cfg/Core/Src/main.c:136-176.
  *         Voltage Scale 1 Boost, Flash latency 4 WS,
  *         APB1/APB2 divider = 1 (both 170 MHz).
  */

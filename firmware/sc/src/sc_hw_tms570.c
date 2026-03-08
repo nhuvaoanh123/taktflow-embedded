@@ -13,7 +13,7 @@
  *
  *          The SC is bare-metal — no AUTOSAR BSW. Uses sc_types.h
  *          for type definitions. All HALCoGen-generated code is in
- *          halcogencfg/source/ and linked at build time.
+ *          firmware/sc/cfg/halcogen/source/ and linked at build time.
  *
  * @safety_req SWR-SC-001 to SWR-SC-026
  * @traces_to  SSR-SC-001 to SSR-SC-017

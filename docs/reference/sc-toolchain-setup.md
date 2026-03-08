@@ -25,9 +25,9 @@
 | Component | Details |
 |-----------|---------|
 | Version | HALCoGen v04.07.01 |
-| Config | `halcogencfg/TMS570LC4357/` |
-| Sources | `halcogencfg/TMS570LC4357/source/` (C + ASM) |
-| Headers | `halcogencfg/TMS570LC4357/include/` |
+| Config | `firmware/sc/cfg/halcogen/` |
+| Sources | `firmware/sc/cfg/halcogen/source/` (C + ASM) |
+| Headers | `firmware/sc/cfg/halcogen/include/` |
 
 ## Build
 

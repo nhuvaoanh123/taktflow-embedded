@@ -11,7 +11,7 @@ HALCoGen v04.07.01 generates initialization code for TI TMS570 MCUs. The GUI con
 
 - **Device**: TMS570LC4357ZWT
 - **HALCoGen version**: 04.07.01
-- **Output directory**: `halcogencfg/TMS570LC4357/`
+- **Output directory**: `firmware/sc/cfg/halcogen/`
 
 ## Peripheral Configuration
 
@@ -126,7 +126,7 @@ Without these, DSLite cannot map the ICEPick → CS_DAP → Cortex-R5 debug path
 
 ### 9. HALCoGen Object Output Path Escapes Build Directory
 
-The Makefile pattern `$(BUILD_DIR)/../halcogencfg/%.o` resolves to `build/halcogencfg/...` — **outside** `build/tms570/`. The `clean` target must explicitly remove `build/halcogencfg/` in addition to `build/tms570/`, otherwise stale objects survive `make clean`.
+HALCoGen sources now live under `firmware/sc/cfg/halcogen/` and objects land under `build/tms570/sc/cfg/halcogen/` — inside the normal build directory. No special clean handling needed.
 
 ### 10. XDS110 Firmware Auto-Update
 

@@ -75,7 +75,7 @@ BUILD_DIR     = build/stm32
 # All 3 ECUs share the same STM32G474RETx chip; CVC's output provides
 # HAL/CMSIS/linker/startup. Per-ECU differences (hal_msp, interrupts)
 # only matter when implementing real peripherals (Phase F2+).
-CUBEMX_DIR    = ../cubecvccfg
+CUBEMX_DIR    = cvc/cfg
 HAL_DIR       = $(CUBEMX_DIR)/Drivers/STM32G4xx_HAL_Driver
 CMSIS_DIR     = $(CUBEMX_DIR)/Drivers/CMSIS
 CUBEMX_INC    = $(CUBEMX_DIR)/Core/Inc

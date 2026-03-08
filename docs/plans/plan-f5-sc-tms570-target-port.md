@@ -37,7 +37,7 @@ The TMS570LC43x LaunchPad (LAUNCHXL2-570LC43) arrives tomorrow. SC is the hardes
 
 | # | File | Action |
 |---|------|--------|
-| 1 | `halcogencfg/` | NEW — HALCoGen project for TMS570LC43x (manual GUI tool) |
+| 1 | `firmware/sc/cfg/halcogen/` | NEW — HALCoGen project for TMS570LC43x (manual GUI tool) |
 | 2 | `firmware/Makefile.tms570` | NEW — Build system for SC target |
 | 3 | `firmware/sc/src/sc_hw_tms570.c` | NEW — All 19 extern hardware functions |
 | 4 | `firmware/sc/include/sc_cfg.h` | MODIFY — Add SJW config, update DCAN comments |

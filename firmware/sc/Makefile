@@ -20,7 +20,7 @@ LNK       := $(CGT_ROOT)/bin/tiarmclang.exe
 # ---- Paths ----
 SC_SRC    := src
 SC_INC    := include
-HCG_ROOT  := ../../halcogencfg/TMS570LC4357
+HCG_ROOT  := cfg/halcogen
 HCG_SRC   := $(HCG_ROOT)/source
 HCG_INC   := $(HCG_ROOT)/include
 BUILD     := build/tms570

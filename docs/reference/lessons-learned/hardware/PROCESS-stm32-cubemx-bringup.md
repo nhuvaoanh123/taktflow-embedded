@@ -167,7 +167,7 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 - WDT, LEDs, buzzer (PB0, PB1, PB4, PB5) = **Low** — off until firmware reaches RUN state
 
 **Screenshots**: 25 files in `hardware/schematics/imagehw/fzc/`, naming convention `<peripheral>-<detail>-fzc.PNG`.
-**Project file**: `cubefzccfg/cubeFZCcfg.ioc`
+**Project file**: `firmware/fzc/cfg/cubeFZCcfg.ioc`
 
 **Principle**: Document GPIO initial states with explicit reasoning. SPI CS = High (idle deselected). Safety outputs = Low (safe state until firmware proves healthy).
 
@@ -176,7 +176,7 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 ## 2026-03-03 — FZC CubeMX project saved, starting per-ECU split
 
 **Context**: After discovering the pin conflict issue, saved the current CubeMX project (with all FZC peripherals configured) as the FZC base.
-**Action**: Saved to `cubefzccfg/cubeFZCcfg.ioc` in the repo root. This project contains: clock tree 170 MHz, FDCAN1 500 kbps, SPI2, USART2, TIM2 (50 Hz servo), GPIO (PB12 CS, PB0/PB1/PB4/PB5 outputs).
+**Action**: Saved to `firmware/fzc/cfg/cubeFZCcfg.ioc` in the repo root. This project contains: clock tree 170 MHz, FDCAN1 500 kbps, SPI2, USART2, TIM2 (50 Hz servo), GPIO (PB12 CS, PB0/PB1/PB4/PB5 outputs).
 **Next**: Clone this .ioc file for CVC (swap SPI2→SPI1, add I2C1, remove TIM2/USART2) and RZC (remove TIM2/SPI2/USART2, add ADC1 6ch + TIM1 + TIM4 encoder).
 **Principle**: Save a known-good CubeMX config before cloning/modifying. The .ioc file is the source of truth — generated code can always be regenerated.
 
@@ -186,7 +186,7 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 
 **Context**: Needed to create RZC CubeMX project by cloning FZC and changing peripherals (remove TIM2/SPI2/USART2, add ADC1/TIM4).
 **Discovery**: The `.ioc` file is plain text key=value format, not binary. Every CubeMX setting maps to a line like `FDCAN1.NominalPrescaler=17` or `PA0.Signal=ADC1_IN1`.
-**Action**: Edited `cubeRZCcfg.ioc` directly instead of going through the GUI. Changes made:
+**Action**: Edited `firmware/rzc/cfg/cubeRZCcfg.ioc` directly instead of going through the GUI. Changes made:
 - Removed: TIM2, SPI1, SPI2, USART2, I2C1 sections and their pin assignments
 - Added: ADC1 (6 channels IN1-IN5+IN15, 12-bit, scan mode, DMA circular, 247.5 cycle sampling)
 - Added: TIM4 encoder mode (TI1+TI2 on PB6/PB7, ARR=65535)
@@ -249,10 +249,10 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 
 ## 2026-03-03 — CubeMX configuration status checkpoint
 
-**FZC: COMPLETE** — `cubefzccfg/cubeFZCcfg.ioc`, 14 pins, 25 screenshots in `hardware/schematics/imagehw/fzc/`
+**FZC: COMPLETE** — `firmware/fzc/cfg/cubeFZCcfg.ioc`, 14 pins, 25 screenshots in `hardware/schematics/imagehw/fzc/`
 - Clock 170 MHz, FDCAN1 500 kbps, SPI2, USART2, TIM2 (50 Hz), GPIO (PB0 WDT, PB1 LED red, PB4 buzzer, PB5 LED grn, PB12 CS)
 
-**RZC: COMPLETE** — `cuberzccfg/cubeRZCcfg.ioc`, 17 pins, pinout screenshot in `hardware/schematics/imagehw/rzc/`
+**RZC: COMPLETE** — `firmware/rzc/cfg/cubeRZCcfg.ioc`, 17 pins, pinout screenshot in `hardware/schematics/imagehw/rzc/`
 - Clock 170 MHz, FDCAN1 500 kbps, ADC1 (4ch PA0-PA3), ADC2 (2ch PA4+PB15), TIM1 (20 kHz motor PWM), TIM4 (encoder PB6/PB7)
 - GPIO: PB0 MOT_REN, PB1 MOT_LEN, PB3 LED red, PB4 WDT, PB5 LED grn
 
@@ -314,9 +314,9 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 
 | ECU | Folder | Pins | Peripherals | Screenshots | Status |
 |-----|--------|------|-------------|-------------|--------|
-| FZC | `cubeFZCcfg/` | 14 | FDCAN1, SPI2, USART2, TIM2 (50Hz), GPIO×5 | 25 files | COMPLETE |
-| RZC | `cuberzccfg/` | 17 | FDCAN1, ADC1 (4ch), ADC2 (2ch), TIM1 (20kHz), TIM4 (encoder), GPIO×5 | 5 files | COMPLETE |
-| CVC | `cubecvccfg/` | 13 | FDCAN1, SPI1, I2C1, EXTI, GPIO×5 | 4 files | COMPLETE |
+| FZC | `firmware/fzc/cfg/` | 14 | FDCAN1, SPI2, USART2, TIM2 (50Hz), GPIO×5 | 25 files | COMPLETE |
+| RZC | `firmware/rzc/cfg/` | 17 | FDCAN1, ADC1 (4ch), ADC2 (2ch), TIM1 (20kHz), TIM4 (encoder), GPIO×5 | 5 files | COMPLETE |
+| CVC | `firmware/cvc/cfg/` | 13 | FDCAN1, SPI1, I2C1, EXTI, GPIO×5 | 4 files | COMPLETE |
 
 **Shared across all 3**: Clock 170 MHz (HSE 24 MHz → PLL), FDCAN1 500 kbps (PSC=17, Seg1=15, Seg2=4), SWD debug, Makefile toolchain.
 
@@ -326,7 +326,7 @@ Also present from shared project (CVC peripherals, will move to CVC project): SP
 
 **Context**: Makefile.stm32 expected CubeMX output at `firmware/target/stm32/cubemx/` with filenames `STM32G474RETx_FLASH.ld` and `startup_stm32g474retx.s`.
 **Actual CubeMX output**:
-- Location: `cubecvccfg/` (project location locked to repo root, not changeable)
+- Location: `firmware/cvc/cfg/` (project location locked to repo root, not changeable)
 - Inc/Src: `Core/Inc/` and `Core/Src/` (not top-level `Inc/`/`Src/`)
 - Linker script: `STM32G474XX_FLASH.ld` (generic XX, not specific RETx)
 - Startup: `startup_stm32g474xx.s` (same generic naming)
