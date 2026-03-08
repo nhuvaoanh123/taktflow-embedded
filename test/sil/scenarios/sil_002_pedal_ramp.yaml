@@ -41,14 +41,14 @@ steps:
     name: normal_drive
     description: "Apply 50% torque forward, steer 0 deg, brake 0%"
   - action: wait
-    seconds: 3
-    description: "Allow motor to ramp up and reach steady-state RPM"
+    seconds: 30
+    description: "Allow motor to ramp up and reach steady-state RPM (30 / scale=10 = 3s wall)"
   - action: inject_scenario
     name: reset
     description: "Ramp torque back to 0% (deceleration phase)"
   - action: wait
-    seconds: 3
-    description: "Allow motor to decelerate and return to idle"
+    seconds: 30
+    description: "Allow motor to decelerate and return to idle (30 / scale=10 = 3s wall)"
 
 verdicts:
   - type: vehicle_state

@@ -74,14 +74,14 @@
 
 #ifndef SC_HB_TIMEOUT_TICKS
   #ifdef PLATFORM_POSIX
-    #define SC_HB_TIMEOUT_TICKS     30u    /* 300ms — Docker CPU jitter margin (3x bare metal) */
+    #define SC_HB_TIMEOUT_TICKS     150u   /* 1500ms — SIL_TIME_SCALE=10 shrinks wall time to 150ms; CI Docker jitter needs wide margin */
   #else
     #define SC_HB_TIMEOUT_TICKS     10u    /* 100ms = 2x 50ms heartbeat period (SG-008 FTTI) */
   #endif
 #endif
 #ifndef SC_HB_CONFIRM_TICKS
   #ifdef PLATFORM_POSIX
-    #define SC_HB_CONFIRM_TICKS     5u     /* 50ms — wider confirmation for SIL scheduling */
+    #define SC_HB_CONFIRM_TICKS     20u    /* 200ms — wider confirmation for SIL scheduling at TIME_SCALE=10 */
   #else
     #define SC_HB_CONFIRM_TICKS     3u     /* 30ms additional confirmation */
   #endif

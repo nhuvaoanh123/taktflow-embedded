@@ -242,8 +242,14 @@ def normal_drive() -> str:
     Injects pedal sensor value at the MCAL layer so the CVC processes
     it through its full pipeline (plausibility, ramp limit, torque lookup).
     The CVC naturally generates the Torque_Request CAN frame.
+
+    Sends 5 UDP pedal override packets at 50ms intervals to ensure
+    the CVC SPI stub reliably receives the override despite CI jitter.
     """
-    send_pedal_override(pedal_pct_to_angle(50))
+    angle = pedal_pct_to_angle(50)
+    for _ in range(5):
+        send_pedal_override(angle)
+        _scaled_sleep(0.05)
     bus = _get_bus()
     try:
         _send(bus, CAN_STEER_COMMAND, _steer_frame(0.0))

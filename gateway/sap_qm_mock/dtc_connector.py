@@ -207,7 +207,13 @@ class DTCConnector:
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
-        """Start the MQTT client as a background task."""
+        """Start the MQTT client with synchronous connect + retry.
+
+        Uses blocking connect (not connect_async) to guarantee the
+        subscription is active before any DTC alerts arrive.  This
+        prevents the race where connect_async returns before the broker
+        handshake completes, causing early messages to be lost.
+        """
         self._loop = asyncio.get_running_loop()
         self._client = mqtt.Client(
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
@@ -217,13 +223,25 @@ class DTCConnector:
         self._client.on_message = self._on_message  # type: ignore[assignment]
         self._client.on_disconnect = self._on_disconnect  # type: ignore[assignment]
 
-        try:
-            self._client.connect_async(MQTT_HOST, MQTT_PORT)
-            self._client.loop_start()
-            self._running = True
-            logger.info("DTC connector started (target %s:%d)", MQTT_HOST, MQTT_PORT)
-        except Exception as exc:
-            logger.error("Failed to start DTC connector: %s", exc)
+        for attempt in range(15):
+            try:
+                self._client.connect(MQTT_HOST, MQTT_PORT, keepalive=30)
+                break
+            except (ConnectionRefusedError, OSError) as exc:
+                logger.warning(
+                    "MQTT connect attempt %d failed: %s", attempt + 1, exc
+                )
+                await asyncio.sleep(1)
+        else:
+            logger.error("MQTT connection failed after 15 attempts")
+
+        self._client.loop_start()
+        self._client.subscribe(SUBSCRIBE_TOPIC, qos=1)
+        self._running = True
+        logger.info(
+            "DTC connector started — subscribed to %s on %s:%d",
+            SUBSCRIBE_TOPIC, MQTT_HOST, MQTT_PORT,
+        )
 
     async def stop(self) -> None:
         """Stop the MQTT client gracefully."""

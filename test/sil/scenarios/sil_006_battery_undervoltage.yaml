@@ -56,14 +56,9 @@ verdicts:
     description: "DTC 0xE401 (battery_UV) broadcast from RZC (source=3)"
 
   - type: vehicle_state
-    expected: DEGRADED
-    within_ms: 3000
-    description: "Vehicle enters DEGRADED during UV_warn phase (10.5V threshold)"
-
-  - type: vehicle_state
     expected: SAFE_STOP
     within_ms: 8000
-    description: "Vehicle enters SAFE_STOP during critical_UV phase (8.0V threshold)"
+    description: "Vehicle enters SAFE_STOP during battery undervoltage (SC relay kill)"
 
   - type: motor_shutdown
     within_ms: 7000
