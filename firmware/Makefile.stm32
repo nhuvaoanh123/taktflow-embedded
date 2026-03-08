@@ -45,7 +45,9 @@ ifdef DIAG
   CFLAGS += -DSIL_DIAG
 endif
 
-# --- Validate TARGET ---
+# --- Validate TARGET (skip for standalone flash-* targets) ---
+STANDALONE_FLASH_GOALS = flash-cvc flash-fzc flash-rzc flash-all
+ifeq ($(filter $(MAKECMDGOALS),$(STANDALONE_FLASH_GOALS)),)
 ifndef TARGET
   $(error TARGET is required. Usage: make -f Makefile.stm32 TARGET=cvc|fzc|rzc)
 endif
@@ -53,6 +55,7 @@ endif
 VALID_TARGETS = cvc fzc rzc
 ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
   $(error Invalid TARGET='$(TARGET)'. Must be one of: $(VALID_TARGETS))
+endif
 endif
 
 # --- Directories ---
@@ -111,6 +114,7 @@ BSW_SRCS = \
     $(MCAL_DIR)/Adc.c \
     $(MCAL_DIR)/Dio.c \
     $(MCAL_DIR)/Pwm.c \
+    $(MCAL_DIR)/Gpt.c \
     $(MCAL_TARGET)/Can_Hw_STM32.c \
     $(MCAL_TARGET)/Gpt_Hw_STM32.c \
     $(MCAL_TARGET)/Dio_Hw_STM32.c \
@@ -160,6 +164,10 @@ HAL_SRCS = \
     $(HAL_DIR)/Src/stm32g4xx_hal_uart_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_usart.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_usart_ex.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_adc.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_adc_ex.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_tim.c \
+    $(HAL_DIR)/Src/stm32g4xx_hal_tim_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_flash.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_flash_ex.c \
     $(HAL_DIR)/Src/stm32g4xx_hal_flash_ramfunc.c
@@ -198,7 +206,7 @@ FLASH_BUDGET = 409600
 # Targets
 # =============================================================================
 
-.PHONY: all flash size clean
+.PHONY: all flash size clean flash-cvc flash-fzc flash-rzc flash-all
 
 all: $(BIN)
 	@echo "=== Built $(ELF) and $(BIN) ==="
@@ -225,11 +233,30 @@ $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# --- Flash via OpenOCD ---
+# --- ST-LINK serial numbers (identified per physical board) ---
+STLINK_SN_cvc = 0027003C3235510B37333439
+STLINK_SN_fzc = 001A00363235510B37333439
+STLINK_SN_rzc = 0049002D3235510C37333439
+STLINK_SN     = $(STLINK_SN_$(TARGET))
+
+# --- Flash via OpenOCD (targets specific probe by serial) ---
 flash: $(BIN)
-	@echo "=== Flashing $(TARGET) via OpenOCD ==="
+	@echo "=== Flashing $(TARGET) via OpenOCD (SN: $(STLINK_SN)) ==="
 	$(OCD) -f target/stm32/openocd.cfg \
+		-c "hla_serial $(STLINK_SN)" \
 		-c "program $(ELF) verify reset exit"
+
+# --- Per-ECU standalone flash targets (no TARGET= needed) ---
+flash-cvc:
+	$(MAKE) -f Makefile.stm32 TARGET=cvc flash
+
+flash-fzc:
+	$(MAKE) -f Makefile.stm32 TARGET=fzc flash
+
+flash-rzc:
+	$(MAKE) -f Makefile.stm32 TARGET=rzc flash
+
+flash-all: flash-cvc flash-fzc flash-rzc
 
 # --- Firmware size report ---
 size: $(ELF)

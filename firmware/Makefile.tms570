@@ -26,6 +26,8 @@ MCU_FLAGS = -mcpu=cortex-r5 -marm -mfpu=vfpv3-d16 -mfloat-abi=hard -mbig-endian
 COMMON_CFLAGS  = $(MCU_FLAGS)
 COMMON_CFLAGS += -std=c99
 COMMON_CFLAGS += -DPLATFORM_TMS570
+COMMON_CFLAGS += -D__big_endian__
+COMMON_CFLAGS += -DDEVICE_ENDIANNESS=be32
 COMMON_CFLAGS += -fdata-sections -ffunction-sections
 
 # --- Build mode (default: debug for bring-up phase) ---
@@ -38,6 +40,13 @@ endif
 # --- Diagnostic logging (pass DIAG=1 to enable) ---
 ifdef DIAG
   COMMON_CFLAGS += -DSIL_DIAG
+endif
+
+# --- DCAN internal loopback test (pass LOOPBACK=1 to diagnose TX bringup) ---
+# TxOK in DCAN_ES will set on first TX — visible on UART via sc_dcan_print_status.
+# Disable once TX confirmed working on physical bus.
+ifdef LOOPBACK
+  COMMON_CFLAGS += -DSC_DCAN_LOOPBACK
 endif
 
 # --- Directories ---
@@ -66,6 +75,7 @@ LDSCRIPT = $(HALCOGEN_DIR)/source/HL_sys_link.cmd
 LDFLAGS  = $(MCU_FLAGS)
 LDFLAGS += -Wl,-m,$(BUILD_DIR)/sc.map
 LDFLAGS += -Wl,--rom_model
+LDFLAGS += -Wl,--be32
 
 # --- HALCoGen C sources (exclude files with conflicting symbols) ---
 # Excluded:
@@ -79,7 +89,8 @@ HALCOGEN_SRCS_ALL = $(wildcard $(HALCOGEN_DIR)/source/*.c)
 HALCOGEN_EXCLUDE  = $(HALCOGEN_DIR)/source/HL_sys_main.c \
                     $(HALCOGEN_DIR)/source/HL_gio.c \
                     $(HALCOGEN_DIR)/source/HL_rti.c \
-                    $(HALCOGEN_DIR)/source/HL_notification.c
+                    $(HALCOGEN_DIR)/source/HL_notification.c \
+                    $(HALCOGEN_DIR)/source/HL_emif.c
 HALCOGEN_SRCS = $(filter-out $(HALCOGEN_EXCLUDE),$(HALCOGEN_SRCS_ALL))
 
 # --- HALCoGen assembly (.asm — TI assembler syntax) ---
