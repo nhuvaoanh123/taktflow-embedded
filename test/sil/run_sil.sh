@@ -56,6 +56,7 @@ RUN_RESULTS_DIR="$RESULTS_DIR/$RUN_TS"
 # ---------------------------------------------------------------------------
 KEEP_CONTAINERS=false
 SINGLE_SCENARIO=""
+SCENARIO_LIST=""
 DEFAULT_TIMEOUT=60
 HEALTH_WAIT_MAX=120     # Max seconds to wait for services to become healthy
 HEALTH_POLL_INTERVAL=3  # Seconds between health checks
@@ -73,6 +74,9 @@ for arg in "$@"; do
             ;;
         --scenario=*)
             SINGLE_SCENARIO="${arg#*=}"
+            ;;
+        --scenarios=*)
+            SCENARIO_LIST="${arg#*=}"
             ;;
         --timeout=*)
             DEFAULT_TIMEOUT="${arg#*=}"
@@ -153,13 +157,26 @@ fi
 if [ -n "$SINGLE_SCENARIO" ]; then
     SCENARIO_FILES=("$SCENARIOS_DIR/${SINGLE_SCENARIO}.yaml")
     if [ ! -f "${SCENARIO_FILES[0]}" ]; then
-        # Try .yml extension
         SCENARIO_FILES=("$SCENARIOS_DIR/${SINGLE_SCENARIO}.yml")
         if [ ! -f "${SCENARIO_FILES[0]}" ]; then
             fail "Scenario file not found: ${SINGLE_SCENARIO}.yaml or ${SINGLE_SCENARIO}.yml"
             exit 1
         fi
     fi
+elif [ -n "$SCENARIO_LIST" ]; then
+    # Comma-separated list of scenario names (without extension)
+    SCENARIO_FILES=()
+    IFS=',' read -ra NAMES <<< "$SCENARIO_LIST"
+    for name in "${NAMES[@]}"; do
+        name="$(echo "$name" | xargs)"  # trim whitespace
+        f="$SCENARIOS_DIR/${name}.yaml"
+        [ ! -f "$f" ] && f="$SCENARIOS_DIR/${name}.yml"
+        if [ ! -f "$f" ]; then
+            fail "Scenario file not found: ${name}.yaml or ${name}.yml"
+            exit 1
+        fi
+        SCENARIO_FILES+=("$f")
+    done
 else
     SCENARIO_FILES=()
     for f in "$SCENARIOS_DIR"/*.yaml "$SCENARIOS_DIR"/*.yml; do
