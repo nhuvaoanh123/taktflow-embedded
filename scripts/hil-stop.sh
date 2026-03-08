@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
-# pil-stop.sh — Stop PIL platform Docker services
+# hil-stop.sh — Stop HIL platform Docker services
 #
-# Usage:  sudo ./scripts/pil-stop.sh
+# Usage:  sudo ./scripts/hil-stop.sh
 # =============================================================================
 
 set -euo pipefail
 
-echo "=== Taktflow PIL — Stopping Platform ==="
+echo "=== Taktflow HIL — Stopping Platform ==="
 
 cd "$(dirname "$0")/../docker"
-docker compose -f docker-compose.yml -f docker-compose.pil.yml down
+docker compose -f docker-compose.yml -f docker-compose.hil.yml down
 
 echo ""
 echo "=== Docker services stopped. Physical ECUs still running on CAN bus. ==="

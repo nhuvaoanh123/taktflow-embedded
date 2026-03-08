@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # =============================================================================
-# pil-start.sh — Start PIL platform (3 Docker ECUs + gateway on physical CAN)
+# hil-start.sh — Start HIL platform (3 Docker ECUs + gateway on physical CAN)
 #
 # Requires:
 #   - USB-CAN adapter plugged in (CANable, PCAN-USB, Waveshare HAT, etc.)
 #   - Physical ECUs (CVC, FZC, RZC, SC) powered and on the CAN bus
 #   - Docker and Docker Compose installed
 #
-# Usage:  sudo ./scripts/pil-start.sh
+# Usage:  sudo ./scripts/hil-start.sh
 # =============================================================================
 
 set -euo pipefail
 
-echo "=== Taktflow PIL — Starting Processor-in-the-Loop Platform ==="
+echo "=== Taktflow HIL — Starting Hardware-in-the-Loop Platform ==="
 echo ""
 
 # --- Bring up physical CAN interface ---
@@ -59,23 +59,23 @@ fi
 echo ""
 echo "[3/4] Starting Docker services (BCM, ICU, TCU + gateway)..."
 cd "$(dirname "$0")/../docker"
-docker compose -f docker-compose.yml -f docker-compose.pil.yml up --build -d
+docker compose -f docker-compose.yml -f docker-compose.hil.yml up --build -d
 
 # --- Status report ---
 echo ""
-echo "[4/4] PIL platform status:"
+echo "[4/4] HIL platform status:"
 echo ""
-docker compose -f docker-compose.yml -f docker-compose.pil.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+docker compose -f docker-compose.yml -f docker-compose.hil.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 
 echo ""
-echo "=== PIL Platform Running ==="
+echo "=== HIL Platform Running ==="
 echo ""
 echo "  Physical ECUs:  CVC, FZC, RZC, SC (on CAN bus)"
 echo "  Docker ECUs:    BCM, ICU, TCU (on can0)"
 echo "  Gateway:        MQTT + CAN-GW + WS-Bridge + ML + Fault-Inject"
 echo ""
 echo "  Monitor CAN:    candump can0"
-echo "  View logs:      docker compose -f docker-compose.yml -f docker-compose.pil.yml logs -f"
-echo "  Plant-sim:      docker compose -f docker-compose.yml -f docker-compose.pil.yml logs -f plant-sim"
-echo "  Stop:           sudo ./scripts/pil-stop.sh"
+echo "  View logs:      docker compose -f docker-compose.yml -f docker-compose.hil.yml logs -f"
+echo "  Plant-sim:      docker compose -f docker-compose.yml -f docker-compose.hil.yml logs -f plant-sim"
+echo "  Stop:           sudo ./scripts/hil-stop.sh"
 echo ""

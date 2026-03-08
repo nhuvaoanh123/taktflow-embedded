@@ -26,7 +26,7 @@ docker/                  — Dockerfiles for simulated ECUs
 gateway/                 — RPi edge gateway, SAP QM mock
 hardware/                — Pin mappings, BOM, schematics
 scripts/                 — Build scripts, trace-gen, baseline-tag
-test/{mil,sil,pil}/      — xIL testing
+test/{mil,sil,hil}/      — xIL testing
 docs/INDEX.md            — Master document registry
 docs/plans/              — Master plan (source of truth)
 docs/safety/             — ISO 26262 (concept, plan, analysis, requirements, validation)

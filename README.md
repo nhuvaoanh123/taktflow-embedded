@@ -40,7 +40,7 @@ A complete automotive functional safety project built from scratch: 7 ECUs, AUTO
 |--------|-------|
 | ECUs | **7** (4 physical + 3 simulated) |
 | Safety Goals | **8** (ASIL A through D) |
-| Unit Tests | **1,067** (100% statement, branch, MC/DC) |
+| Unit Tests | **1,590** (current test inventory from `RUN_TEST(...)` count) |
 | C Source Files | **278** across all ECUs |
 | BSW Modules | **18** (AUTOSAR-like: MCAL, ECUAL, Services, RTE) |
 | Safety Requirements | **548** (SG→FSR→TSR→SSR→HSR→SWR) |
@@ -101,7 +101,7 @@ The SC runs on a **TI TMS570 with dual Cortex-R5F lockstep cores** — a complet
 
 ### Test-Driven Development
 Every source file has tests **written before the implementation** (enforced by hook):
-- **1,067 unit tests** using Unity framework
+- **1,590 unit tests** using Unity framework
 - 100% statement, branch, and MC/DC coverage for safety paths
 - Boundary value analysis, fault injection, NULL pointer tests
 - Test code is 4x the size of production code (39,040 vs 9,799 LOC)
@@ -158,7 +158,7 @@ taktflow-embedded/
 │   ├── sap_qm_mock/              — SAP QM mock API
 │   └── models/                    — ML anomaly detection models
 ├── hardware/                      — Pin mappings, BOM, schematics
-├── test/mil/, sil/, pil/          — xIL testing
+├── test/mil/, sil/, hil/          — xIL testing
 ├── docs/
 │   ├── safety/                    — ISO 26262 (15 documents)
 │   │   ├── concept/               — Item definition, HARA, safety goals
@@ -179,7 +179,7 @@ taktflow-embedded/
 # Build all firmware (POSIX/SIL target)
 make build
 
-# Run all 1,067 unit tests
+# Run all 1,590 unit tests
 make test
 
 # Start the SIL environment (all 7 ECUs + gateway + dashboard)

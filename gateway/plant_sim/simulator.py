@@ -100,6 +100,10 @@ class PlantSimulator:
         self._active_dtcs: set[int] = set()
         self._dtc_occurrence: dict[int, int] = {}
 
+        # HIL mode — disable virtual sensor TX (0x400, 0x401) to avoid
+        # CAN ID collision with BCM (which owns 0x400/0x401 for body status)
+        self.hil_mode = os.environ.get("HIL_MODE", "0") == "1"
+
         # Timing counters (10ms base tick)
         self._tick = 0
 
@@ -527,6 +531,8 @@ class PlantSimulator:
                                      interface="socketcan")
         self._init_mqtt()
         log.info("Plant simulator started on %s", self.channel)
+        if self.hil_mode:
+            log.info("HIL MODE — virtual sensor TX (0x400, 0x401) disabled")
         log.info("Loaded DBC with %d messages", len(self.db.messages))
 
         dt = 0.01  # 10ms
@@ -627,17 +633,14 @@ class PlantSimulator:
                     log.info("Vehicle state -> RUN (faults cleared)")
 
                 # TX schedule
-                # Every 10ms: lidar, virtual sensors
+                # Every 10ms: lidar (always), virtual sensors (SIL only)
                 self._tx_lidar_distance()
-                self._tx_fzc_virtual_sensors()
-                self._tx_rzc_virtual_sensors()
-
-                # Note: Motor status (0x300), motor current (0x301), motor
-                # temperature (0x302), and battery status (0x303) broadcasts
-                # removed — RZC firmware is the sole authority for these CAN
-                # IDs.  Plant-sim sends virtual sensor data (0x401) which the
-                # RZC sensor feeder injects into MCAL ADC stubs, so RZC SWCs
-                # read real physics values and transmit correct telemetry.
+                if not self.hil_mode:
+                    # Virtual sensor messages (0x400, 0x401) — SIL only.
+                    # In HIL, BCM owns 0x400/0x401 for body status, and
+                    # physical ECUs read real sensors instead of injected data.
+                    self._tx_fzc_virtual_sensors()
+                    self._tx_rzc_virtual_sensors()
 
                 # Every 100ms: DTC check
                 if self._tick % 10 == 0:

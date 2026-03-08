@@ -1,7 +1,7 @@
 ﻿---
-document_id: PIL-RPT
-title: "PIL Test Report"
-version: "0.1"
+document_id: HIL-SWE5-RPT
+title: "HIL Integration Test Report (SWE.5)"
+version: "0.2"
 status: planned
 aspice_process: SWE.5
 ---
@@ -21,9 +21,11 @@ aspice_process: SWE.5
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
 
-# Processor-in-the-Loop (PIL) Test Report
+# HIL Integration Test Report (SWE.5)
 
 <!-- Phase 12 deliverable -->
+<!-- Note: Our setup (4 physical ECUs + 3 Docker ECUs + plant-sim on Pi)
+     is HIL. See hil-report.md (SYS.4) for full system validation. -->
 
 ## Purpose
 
@@ -31,9 +33,10 @@ Validate real-time behavior on target MCU with simulated plant via CAN bridge.
 
 ## Configuration
 
-- 1+ STM32 on real CAN bus
-- CANable on PC bridges to plant simulator
-- Remaining ECUs simulated
+- 4 physical ECUs (CVC, FZC, RZC on STM32G474RE + SC on TMS570) on real CAN bus
+- 3 Docker ECUs (BCM, ICU, TCU) on Raspberry Pi via USB-CAN adapter
+- Plant-sim provides lidar simulation (0x220); virtual sensor TX disabled in HIL mode
+- `docker-compose.hil.yml` override switches all services to can0
 
 ## Test Scenarios
 
@@ -41,9 +44,9 @@ Validate real-time behavior on target MCU with simulated plant via CAN bridge.
 |----------|-----------|---------------|------------|
 | — | — | — | — |
 
-## SIL vs PIL Comparison
+## SIL vs HIL Comparison
 
-| Metric | SIL | PIL | Delta |
+| Metric | SIL | HIL | Delta |
 |--------|-----|-----|-------|
 | Loop time | — | — | — |
 | CAN latency | — | — | — |

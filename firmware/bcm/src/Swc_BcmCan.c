@@ -40,6 +40,7 @@
 #include <net/if.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 /* cppcheck-suppress misra-c2012-21.10
  * Deviation: time.h is required for clock_gettime() in the Docker-simulated
  * BCM ECU (POSIX simulation, not safety-critical firmware). */
@@ -208,12 +209,37 @@ Std_ReturnType BCM_CAN_Init(void)
             continue;
         }
 
-        /* Step 2: Bind to vcan0 */
+        /* Step 2: Bind to CAN interface (from CAN_INTERFACE env var) */
         uint8 bind_addr[16];
         uint8 j;
         for (j = 0u; j < 16u; j++) {
             bind_addr[j] = 0u;
         }
+
+        /* sockaddr_can layout: bytes 0-1 = can_family (AF_CAN=29),
+         * bytes 4-7 = can_ifindex (little-endian on ARM/x86).
+         * Resolve interface name to ifindex via CAN_INTERFACE env var. */
+        bind_addr[0] = 29u;  /* AF_CAN */
+
+#ifndef BCM_CAN_USE_MOCK
+        {
+            const char* iface = getenv("CAN_INTERFACE");
+            if (iface == NULL) {
+                iface = "vcan0";
+            }
+            uint32 ifidx = if_nametoindex(iface);
+            if (ifidx == 0u) {
+                /* Interface not found — retry */
+                (void)POSIX_USLEEP(BCM_CAN_RETRY_DELAY_US);
+                continue;
+            }
+            /* Set can_ifindex at bytes 4-7 (little-endian) */
+            bind_addr[4] = (uint8)(ifidx & 0xFFu);
+            bind_addr[5] = (uint8)((ifidx >> 8u) & 0xFFu);
+            bind_addr[6] = (uint8)((ifidx >> 16u) & 0xFFu);
+            bind_addr[7] = (uint8)((ifidx >> 24u) & 0xFFu);
+        }
+#endif /* !BCM_CAN_USE_MOCK */
 
         /* cppcheck-suppress misra-c2012-11.3
          * Deviation: bind() requires (const struct sockaddr*) per POSIX API.

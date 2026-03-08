@@ -1,4 +1,4 @@
-# PIL Plant Setup Plan — Processor-in-the-Loop Integration
+# HIL Plant Setup Plan — Hardware-in-the-Loop Integration
 
 **Status**: IN PROGRESS
 **Created**: 2026-03-08
@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-PIL (Processor-in-the-Loop) bridges the gap between pure software simulation (SIL) and full hardware-in-the-loop (HIL). In PIL mode:
+HIL (Hardware-in-the-Loop) integrates real ECU hardware with a simulated plant environment. In HIL mode:
 
 - **4 physical ECUs** (CVC, FZC, RZC on STM32G474RE + SC on TMS570LC4357) run real firmware on real MCUs, communicating over a physical CAN bus at 500 kbps
 - **3 simulated ECUs** (BCM, ICU, TCU) run as Docker containers on a Raspberry Pi, connected to the same CAN bus via a USB-CAN adapter or CAN HAT
@@ -48,10 +48,10 @@ PIL (Processor-in-the-Loop) bridges the gap between pure software simulation (SI
                      +-----------------+
 ```
 
-### SIL vs PIL Comparison
+### SIL vs HIL Comparison
 
-| Aspect | SIL (Pure Software) | PIL (Mixed HW/SW) |
-|--------|--------------------|--------------------|
+| Aspect | SIL (Pure Software) | HIL (Real HW + Simulated Plant) |
+|--------|--------------------|---------------------------------|
 | CVC/FZC/RZC/SC | Docker containers on vcan0 | Physical STM32/TMS570 on real CAN |
 | BCM/ICU/TCU | Docker containers on vcan0 | Docker containers on RPi (can0) |
 | CAN bus | vcan0 (kernel virtual) | Physical CAN + can0 on RPi |
@@ -66,7 +66,7 @@ PIL (Processor-in-the-Loop) bridges the gap between pure software simulation (SI
 
 ### 2.1 AUTOSAR-Like MCAL Architecture (Link-Time Platform Swap)
 
-The entire BSW stack uses a 3-layer abstraction that enables the same application code to run on both POSIX (SIL/Docker) and STM32 (PIL/HIL):
+The entire BSW stack uses a 3-layer abstraction that enables the same application code to run on both POSIX (SIL/Docker) and STM32 (HIL):
 
 ```
 Application SWCs (cvc/fzc/rzc)
@@ -125,14 +125,14 @@ All STM32 hardware drivers are implemented for real peripheral I/O:
 | Battery | `battery_model.py` | Voltage droop under load, SOC depletion |
 | Lidar | `lidar_model.py` | Distance + signal strength simulation |
 
-**CAN message schedule (plant-sim TX):**
+**CAN message schedule (plant-sim TX in SIL):**
 
-| CAN ID | Message | Rate | E2E |
-|--------|---------|------|-----|
-| 0x400 | FZC_Virtual_Sensors (steer angle, brake pos, brake current) | 10ms | No |
-| 0x401 | RZC_Virtual_Sensors (motor current, motor temp, battery mV) | 10ms | No |
-| 0x220 | Lidar_Distance | 10ms | Yes (DataID=0x0D) |
-| 0x500 | DTC_Broadcast | On event | No |
+| CAN ID | Message | Rate | E2E | HIL |
+|--------|---------|------|-----|-----|
+| 0x400 | FZC_Virtual_Sensors (steer angle, brake pos, brake current) | 10ms | No | Disabled (BCM owns 0x400) |
+| 0x401 | RZC_Virtual_Sensors (motor current, motor temp, battery mV) | 10ms | No | Disabled (BCM owns 0x401) |
+| 0x220 | Lidar_Distance | 10ms | Yes (DataID=0x0D) | Active |
+| 0x500 | DTC_Broadcast | On event | No | Active |
 
 **CAN message schedule (plant-sim RX from ECUs):**
 
@@ -162,7 +162,7 @@ All 3 Nucleo boards identified by ST-LINK serial:
 
 ---
 
-## 3. PIL Plant Setup — Step by Step
+## 3. HIL Plant Setup — Step by Step
 
 ### Phase P0: Prerequisites
 
@@ -268,76 +268,15 @@ All 3 Nucleo boards identified by ST-LINK serial:
    cd taktflow-embedded
    ```
 
-2. Create PIL-specific docker-compose override — `docker/docker-compose.pil.yml`:
-   ```yaml
-   # PIL override — only simulated ECUs + gateway services
-   # Physical ECUs (CVC, FZC, RZC, SC) run on real hardware
-   #
-   # Usage: docker compose -f docker-compose.yml -f docker-compose.pil.yml up --build
-   services:
-     # Disable physical ECUs (they run on real hardware)
-     cvc:
-       profiles: ["sil-only"]
-     fzc:
-       profiles: ["sil-only"]
-     rzc:
-       profiles: ["sil-only"]
-     sc:
-       profiles: ["sil-only"]
-
-     # Override CAN channel: use can0 (physical) instead of vcan0
-     bcm:
-       environment:
-         - CAN_INTERFACE=can0
-         - ECU_NAME=bcm
-     icu:
-       environment:
-         - CAN_INTERFACE=can0
-         - ECU_NAME=icu
-     tcu:
-       environment:
-         - CAN_INTERFACE=can0
-         - ECU_NAME=tcu
-     plant-sim:
-       environment:
-         - CAN_CHANNEL=can0
-         - DBC_PATH=/app/taktflow.dbc
-         - MQTT_HOST=localhost
-         - MQTT_PORT=1883
-     can-gateway:
-       environment:
-         - CAN_CHANNEL=can0
-         - DBC_PATH=/app/taktflow.dbc
-         - MQTT_HOST=localhost
-         - MQTT_PORT=1883
-         - SAP_QM_API_URL=http://localhost:8090
-     fault-inject:
-       environment:
-         - CAN_CHANNEL=can0
-         - FAULT_PORT=8091
-         - MQTT_HOST=localhost
-         - MQTT_PORT=1883
-
-     # Override can-setup to use real can0 instead of creating vcan0
-     can-setup:
-       command: >
-         /bin/sh -c "
-           if ip link show can0 > /dev/null 2>&1; then
-             ip link set can0 up;
-             echo '[can-setup] can0 already UP (physical CAN adapter)';
-           else
-             echo '[can-setup] ERROR: can0 not found — is USB-CAN adapter plugged in?';
-             echo '[can-setup] Run: sudo ip link set can0 type can bitrate 500000 && sudo ip link set can0 up';
-             exit 1;
-           fi;
-           ip -d link show can0
-         "
-   ```
+2. HIL docker-compose override already exists at `docker/docker-compose.hil.yml`:
+   - Disables physical ECU containers (CVC, FZC, RZC, SC) via `profiles: ["sil-only"]`
+   - Switches all remaining services to `can0`
+   - Sets `HIL_MODE=1` for plant-sim (disables virtual sensor TX on 0x400/0x401)
 
 3. Build all images (ARM64 native on Pi):
    ```bash
    cd docker
-   docker compose -f docker-compose.yml -f docker-compose.pil.yml build
+   docker compose -f docker-compose.yml -f docker-compose.hil.yml build
    ```
 
 **Note**: First build on Pi takes 10-20 minutes (ARM64 compilation of C firmware + Python deps). Subsequent builds use cache.
@@ -368,7 +307,7 @@ SC (TMS570) is flashed separately via CCS/UniFlash.
 
 **Status**: PENDING
 
-### Phase P5: Start PIL Platform
+### Phase P5: Start HIL Platform
 
 1. Ensure CAN adapter is up:
    ```bash
@@ -378,7 +317,12 @@ SC (TMS570) is flashed separately via CCS/UniFlash.
 2. Start Docker services:
    ```bash
    cd docker
-   docker compose -f docker-compose.yml -f docker-compose.pil.yml up --build -d
+   docker compose -f docker-compose.yml -f docker-compose.hil.yml up --build -d
+   ```
+
+   Or use the convenience script:
+   ```bash
+   sudo ./scripts/hil-start.sh
    ```
 
 3. Monitor logs:
@@ -401,12 +345,14 @@ Expected CAN traffic:
 | FZC (physical) | 0x011, 0x200, 0x201 | 20-100ms |
 | RZC (physical) | 0x012, 0x300, 0x301, 0x302, 0x303 | 10-1000ms |
 | SC (physical) | 0x013 | 100ms |
-| BCM (Docker) | 0x014 | 100ms |
-| ICU (Docker) | 0x015 | 100ms |
+| BCM (Docker) | 0x400, 0x401, 0x402 | 100-500ms |
+| ICU (Docker) | 0x015 (heartbeat only, listen-only ECU) | 100ms |
 | TCU (Docker) | 0x016 | 100ms |
-| Plant-sim (Docker) | 0x220, 0x400, 0x401 | 10ms |
+| Plant-sim (Docker) | 0x220 | 10ms |
 
-**Pass criteria**: All 7 ECU heartbeats present, plant-sim sending virtual sensor data, no CAN errors
+**Note**: In HIL mode, plant-sim does NOT transmit 0x400/0x401 (virtual sensors) — those IDs belong to BCM for body control status. Physical ECUs use real sensors, not plant-sim injection.
+
+**Pass criteria**: All 7 ECU heartbeats present, plant-sim sending lidar data, no CAN errors
 
 **Status**: PENDING
 
@@ -419,12 +365,11 @@ This is the critical test — verifying that the physical ECUs and Docker contai
 1. CVC reads pedal sensor (physical SPI on STM32)
 2. CVC sends Torque_Request (0x101) on physical CAN
 3. Plant-sim (Docker) receives 0x101, updates motor model
-4. Plant-sim sends RZC_Virtual_Sensors (0x401) with motor current/temp
-5. RZC (physical) receives 0x401 via sensor feeder → ADC injection
-6. RZC reads motor current via IoHwAb, detects if overcurrent
-7. RZC sends Motor_Status (0x300) on CAN
+4. Plant-sim logs motor physics (current, RPM, temperature)
+5. RZC (physical) reads motor current via real ADC
+6. RZC detects if overcurrent, sends Motor_Status (0x300) on CAN
 
-**Verification**: `candump can0 | grep -E "101|401|300"` shows the data flow chain
+**Verification**: `candump can0 | grep -E "101|300"` shows the data flow chain
 
 #### Test 2: Safety Shutdown
 
@@ -450,9 +395,9 @@ This is the critical test — verifying that the physical ECUs and Docker contai
 
 1. BCM (Docker) receives Vehicle_State (0x100) from CVC (physical)
 2. BCM processes headlight/indicator logic
-3. BCM sends BCM_Status CAN messages
+3. BCM sends Light_Status (0x400) and Indicator_State (0x401)
 
-**Verification**: BCM container logs show received vehicle state
+**Verification**: BCM container logs show received vehicle state, ICU receives body status
 
 #### Test 5: TCU UDS Diagnostics (Docker → Physical)
 
@@ -466,7 +411,7 @@ This is the critical test — verifying that the physical ECUs and Docker contai
 
 ---
 
-## 4. PIL-Specific Considerations
+## 4. HIL-Specific Considerations
 
 ### 4.1 CAN Bus Timing
 
@@ -478,42 +423,41 @@ Physical ECUs run at real-time tick rates (10ms SchM cycle). Docker containers o
 | Docker containers (Pi) | 1-5ms (Linux scheduler + Docker overhead) |
 | Plant-sim (Pi) | 1-5ms (asyncio sleep accuracy) |
 
-This jitter is acceptable for PIL — the E2E protection (alive counter + CRC) handles occasional late frames via the state machine's timeout tolerance.
+This jitter is acceptable for HIL — the E2E protection (alive counter + CRC) handles occasional late frames via the state machine's timeout tolerance.
 
-### 4.2 Virtual Sensor Path (PIL vs SIL)
+### 4.2 Virtual Sensor Path (HIL vs SIL)
 
-In SIL, the plant-sim injects sensor values directly into POSIX MCAL stubs via function calls. In PIL, the path is different:
+In SIL, the plant-sim injects sensor values via CAN to POSIX MCAL stubs. In HIL, physical ECUs read real sensors:
 
-**SIL path** (all in-process):
+**SIL path** (Docker-to-Docker via vcan0):
 ```
-Plant-sim → Pwm_Posix_InjectDuty() → IoHwAb → SWC
-```
-
-**PIL path** (CAN-based):
-```
-Plant-sim → CAN 0x400/0x401 → Physical ECU CAN RX → Sensor Feeder SWC → IoHwAb → SWC
+Plant-sim → CAN 0x400/0x401 → Docker ECU → Sensor Feeder SWC → MCAL injection → IoHwAb → SWC
 ```
 
-The physical ECUs have **sensor feeder SWCs** that receive virtual sensor CAN messages (0x400, 0x401) and inject values into the local MCAL. This enables closed-loop simulation without physical sensors attached.
+**HIL path** (real hardware):
+```
+Physical sensor → ADC/SPI/UART → MCAL HAL driver → IoHwAb → SWC
+```
 
-### 4.3 What You Don't Need for PIL
+In HIL, sensor feeder SWCs are compiled out on STM32 (`#ifdef PLATFORM_POSIX` guard). Physical ECUs read real sensors directly. Plant-sim only provides lidar simulation (0x220) since there is no physical lidar on the bench.
 
-PIL mode does NOT require:
-- Physical sensors (pedal, lidar, current sensor) — plant-sim provides virtual values
-- Physical actuators (motor, servos) — plant-sim models the physics
-- Kill relay circuit — SC sends relay status on CAN, plant-sim disables motor model
-- Power distribution beyond USB power for each Nucleo board
+### 4.3 What HIL Validates
 
-PIL validates **firmware logic + real-time behavior + CAN communication** without the full hardware bench.
+HIL validates:
+- **Real-time firmware behavior** on target MCU hardware
+- **CAN bus communication** between all 7 ECUs (4 physical + 3 Docker)
+- **Safety state machine** transitions with real timing
+- **E2E protection** over physical CAN (bit errors, EMI, timing jitter)
+- **Docker ECU integration** (BCM body control, ICU monitoring, TCU diagnostics)
 
-### 4.4 Transitioning from PIL to HIL
+### 4.4 Transitioning to Full Bench
 
-Once PIL is validated, transitioning to full HIL means:
-1. Connect physical sensors to the STM32 ADC/SPI/UART pins
-2. Connect physical actuators to the PWM/DIO outputs
-3. Disable sensor feeder SWCs (or compile them out)
-4. Plant-sim becomes optional (real physics replaces simulation)
-5. Kill relay circuit must be working (Phase 4 of hardware bringup)
+Once HIL is validated with plant-sim providing lidar data, the full bench adds:
+1. Physical lidar sensor (TFMini-S) connected to FZC UART
+2. Physical motor + motor driver connected to RZC PWM
+3. Physical servos connected to FZC PWM outputs
+4. Kill relay circuit working (Phase 4 of hardware bringup)
+5. Plant-sim becomes fully optional (real physics replaces all simulation)
 
 ---
 
@@ -537,7 +481,7 @@ Once PIL is validated, transitioning to full HIL means:
 
 1. Check plant-sim logs: `docker compose logs plant-sim`
 2. Verify CAN IDs match: plant-sim expects 0x101, 0x102, 0x103 from physical ECUs
-3. Check CAN_CHANNEL env var: must be `can0` (not `vcan0`) in PIL mode
+3. Check CAN_CHANNEL env var: must be `can0` (not `vcan0`) in HIL mode
 
 ### High CAN error rate
 
@@ -567,13 +511,16 @@ Once PIL is validated, transitioning to full HIL means:
 | File | Purpose |
 |------|---------|
 | `firmware/Makefile.posix` | POSIX (SIL) build — links *_Posix.c backends |
-| `firmware/Makefile.stm32` | STM32 (PIL/HIL) build — links *_Hw_STM32.c backends |
+| `firmware/Makefile.stm32` | STM32 (HIL) build — links *_Hw_STM32.c backends |
 | `firmware/shared/bsw/mcal/posix/` | All POSIX MCAL stubs with injection/readback APIs |
 | `firmware/shared/bsw/mcal/target/` | All STM32 HAL-based MCAL drivers |
 | `docker/docker-compose.yml` | Full SIL platform (13 services) |
-| `docker/docker-compose.pil.yml` | PIL override (disables physical ECU containers) |
+| `docker/docker-compose.hil.yml` | HIL override (disables physical ECU containers, adds HIL_MODE) |
+| `scripts/hil-start.sh` | HIL startup script (CAN setup + Docker launch) |
+| `scripts/hil-stop.sh` | HIL shutdown script |
+| `scripts/can0-setup.service` | systemd unit for can0 at boot |
 | `gateway/plant_sim/simulator.py` | Plant physics simulator (100 Hz) |
 | `gateway/can_gateway/main.py` | CAN → MQTT bridge |
 | `gateway/taktflow.dbc` | CAN database (message definitions) |
 | `docs/plans/plan-hardware-bringup.md` | Hardware assembly plan (Phases 0-7) |
-| `docs/aspice/verification/xil/pil-report.md` | PIL test report (to be filled after execution) |
+| `docs/aspice/verification/xil/pil-report.md` | xIL test report (to be filled after execution) |

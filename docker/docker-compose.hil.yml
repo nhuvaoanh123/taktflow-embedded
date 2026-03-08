@@ -1,13 +1,13 @@
 # =============================================================================
-# docker-compose.pil.yml — PIL Override (Processor-in-the-Loop)
+# docker-compose.hil.yml — HIL Override (Hardware-in-the-Loop)
 #
 # Disables physical ECU containers (CVC, FZC, RZC, SC — running on real
 # hardware) and switches all remaining services to use physical CAN (can0)
 # instead of virtual CAN (vcan0).
 #
 # Usage (on Raspberry Pi with USB-CAN adapter):
-#   docker compose -f docker-compose.yml -f docker-compose.pil.yml up --build
-#   docker compose -f docker-compose.yml -f docker-compose.pil.yml down
+#   docker compose -f docker-compose.yml -f docker-compose.hil.yml up --build
+#   docker compose -f docker-compose.yml -f docker-compose.hil.yml down
 #
 # Prerequisites:
 #   - Physical CAN adapter (CANable, PCAN-USB, etc.) connected and UP:
@@ -60,12 +60,13 @@ services:
       - ECU_NAME=tcu
 
   # --- Plant simulator: switch to physical CAN ---
-  # In PIL with real sensors, plant-sim acts as a monitor and fault injector.
-  # Virtual sensor messages (0x400, 0x401) are ignored by physical ECUs
-  # (sensor feeder SWCs compiled out on STM32).
+  # In HIL mode, plant-sim disables TX of CAN IDs that collide with real
+  # ECUs or BCM (0x100, 0x200, 0x201, 0x400, 0x401). Keeps 0x220 (lidar)
+  # and 0x500 (DTC broadcast) for fault injection.
   plant-sim:
     environment:
       - CAN_CHANNEL=can0
+      - HIL_MODE=1
       - DBC_PATH=/app/taktflow.dbc
       - MQTT_HOST=localhost
       - MQTT_PORT=1883

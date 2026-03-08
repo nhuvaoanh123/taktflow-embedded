@@ -12,9 +12,9 @@
 - Append-only: AI may add new comments/changes only; prior HITL comments stay unchanged.
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
-# PIL — Processor-in-the-Loop
+# HIL — Hardware-in-the-Loop
 
-Real MCU on CAN bus + simulated plant from PC.
+Real MCU hardware on CAN bus + simulated plant on Raspberry Pi.
 
 Phase 12 deliverable.
 
