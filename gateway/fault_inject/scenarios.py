@@ -18,6 +18,14 @@ import can
 import docker
 import paho.mqtt.client as paho_mqtt
 
+# SIL time acceleration: divide wall-clock sleeps by scale factor
+_SIL_SCALE = max(1, min(100, int(os.environ.get("SIL_TIME_SCALE", "1"))))
+
+
+def _scaled_sleep(seconds: float) -> None:
+    """Sleep for seconds / SIL_TIME_SCALE wall-clock time."""
+    time.sleep(seconds / _SIL_SCALE)
+
 from .pedal_udp import (
     clear_pedal_override,
     pedal_pct_to_angle,
@@ -256,7 +264,7 @@ def overcurrent() -> str:
     if _mqtt_client is None:
         return "Overcurrent: MQTT client not available"
     send_pedal_override(pedal_pct_to_angle(95))
-    time.sleep(0.5)  # let motor spin up
+    _scaled_sleep(0.5)  # let motor spin up
     plant_inject_overcurrent(_mqtt_client)
     return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent.  "
             "Plant sim reports overcurrent on CAN -> DTC 0xE301 -> SAFE_STOP.")
@@ -324,7 +332,7 @@ def battery_low() -> str:
             v = int(12600 - (12600 - 10200) * frac)
             soc = int(100 - (100 - 18) * frac)
             plant_inject_voltage(_mqtt_client, v, soc)
-            time.sleep(0.1)
+            _scaled_sleep(0.1)
 
         # Phase 2: voltage drops from 10.2 V to 7.0 V (critical_UV) over 3 s
         # Must cross RZC DISABLE_LOW threshold (8000 mV) for status=0
@@ -333,7 +341,7 @@ def battery_low() -> str:
             v = int(10200 - (10200 - 7000) * frac)
             soc = int(18 - (18 - 1) * frac)
             plant_inject_voltage(_mqtt_client, v, soc)
-            time.sleep(0.1)
+            _scaled_sleep(0.1)
 
         # Fire DTC_BATTERY_UV
         _send(bus, CAN_DTC_BROADCAST,
@@ -360,9 +368,9 @@ def motor_reversal() -> str:
     if _mqtt_client is None:
         return "Motor reversal: MQTT client not available"
     send_pedal_override(pedal_pct_to_angle(80))
-    time.sleep(1.0)  # let motor reach speed
+    _scaled_sleep(1.0)  # let motor reach speed
     plant_inject_stall(_mqtt_client)
-    time.sleep(0.1)
+    _scaled_sleep(0.1)
     plant_inject_overcurrent(_mqtt_client)
     return ("Motor reversal: pedal 80% (SPI) + MQTT inject_stall + "
             "inject_overcurrent.  Simulates mechanical blockage -> SAFE_STOP.")
@@ -382,7 +390,7 @@ def unintended_braking() -> str:
         # Establish normal drive first
         _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
         _send(bus, CAN_BRAKE_COMMAND, _brake_frame(0, brake_mode=0))
-        time.sleep(0.5)
+        _scaled_sleep(0.5)
         # Sudden emergency brake
         _send(bus, CAN_BRAKE_COMMAND, _brake_frame(100, brake_mode=2))
     finally:
@@ -404,7 +412,7 @@ def torque_loss() -> str:
     try:
         # Establish normal drive
         _send(bus, CAN_TORQUE_REQUEST, _torque_frame(50, 1))
-        time.sleep(0.5)
+        _scaled_sleep(0.5)
         # Sudden torque loss
         _send(bus, CAN_TORQUE_REQUEST, _torque_frame(0, 0))
     finally:
@@ -651,7 +659,7 @@ def _reset_all_containers() -> list[str]:
         log.warning("Failed to start %s: %s", _SC_CONTAINER, exc)
 
     # Phase 4: wait for SC to boot, then start CVC last
-    time.sleep(2)
+    _scaled_sleep(2)
     try:
         c = client.containers.get(_CVC_CONTAINER)
         c.start()

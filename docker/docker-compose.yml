@@ -201,6 +201,7 @@ services:
       - DBC_PATH=/app/taktflow.dbc
       - MQTT_HOST=localhost
       - MQTT_PORT=1883
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
     restart: unless-stopped
 
   # --- Mosquitto MQTT Broker (internal only) ---
@@ -313,6 +314,7 @@ services:
       - FAULT_PORT=8091
       - MQTT_HOST=localhost
       - MQTT_PORT=1883
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
     restart: unless-stopped
 
 volumes:

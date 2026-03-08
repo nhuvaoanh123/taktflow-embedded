@@ -522,14 +522,22 @@ class PlantSimulator:
                                   data=bytes(payload), is_extended_id=False))
 
     async def run(self):
-        """Main simulation loop at 100 Hz."""
+        """Main simulation loop at 100 Hz (scaled by SIL_TIME_SCALE)."""
         self.bus = can.interface.Bus(channel=self.channel,
                                      interface="socketcan")
         self._init_mqtt()
         log.info("Plant simulator started on %s", self.channel)
         log.info("Loaded DBC with %d messages", len(self.db.messages))
 
-        dt = 0.01  # 10ms
+        # SIL time acceleration: physics dt stays 10ms virtual, but wall-clock
+        # sleep is divided by scale so physics runs N× faster
+        sil_scale = int(os.environ.get("SIL_TIME_SCALE", "1"))
+        sil_scale = max(1, min(100, sil_scale))
+        dt = 0.01  # 10ms virtual time step (physics always sees 10ms)
+        wall_dt = dt / sil_scale  # actual wall-clock sleep per tick
+        if sil_scale > 1:
+            log.info("SIL time acceleration: %dx (wall sleep %.1fms per tick)",
+                     sil_scale, wall_dt * 1000)
         self._tick = 0
 
         try:
@@ -657,9 +665,9 @@ class PlantSimulator:
                         self.brake.position_int,
                     )
 
-                # Sleep remainder of 10ms cycle
+                # Sleep remainder of cycle (wall_dt = dt / SIL_TIME_SCALE)
                 elapsed = time.monotonic() - loop_start
-                sleep_time = dt - elapsed
+                sleep_time = wall_dt - elapsed
                 if sleep_time > 0:
                     await asyncio.sleep(sleep_time)
 

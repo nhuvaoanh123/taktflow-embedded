@@ -101,7 +101,10 @@ CAN_DTC_BROADCAST = 0x500
 # Default CAN channel
 DEFAULT_CAN_CHANNEL = "vcan0"
 
-# Default timeouts
+# SIL time acceleration — scale all wall-clock waits and timeouts
+_SIL_SCALE = max(1, min(100, int(os.environ.get("SIL_TIME_SCALE", "1"))))
+
+# Default timeouts (virtual seconds — divided by SIL_TIME_SCALE for wall clock)
 DEFAULT_SCENARIO_TIMEOUT_SEC = 60
 DEFAULT_STATE_WAIT_TIMEOUT_SEC = 10
 
@@ -597,6 +600,7 @@ class ScenarioExecutor:
         timeout_sec = scenario.get(
             "timeout_sec", self._default_timeout_sec
         )
+        wall_timeout_sec = timeout_sec / _SIL_SCALE
 
         log.info(
             "%s--- Scenario: %s (%s) ---%s",
@@ -604,7 +608,8 @@ class ScenarioExecutor:
         )
         log.info("  Description: %s", description)
         log.info("  Verifies: %s", ", ".join(verifies))
-        log.info("  Timeout: %ds", timeout_sec)
+        log.info("  Timeout: %ds virtual (%.1fs wall, scale=%d)",
+                 timeout_sec, wall_timeout_sec, _SIL_SCALE)
 
         start_time = time.monotonic()
 
@@ -620,7 +625,7 @@ class ScenarioExecutor:
         try:
             setup_steps = scenario.get("setup", [])
             for step in setup_steps:
-                self._execute_step(step, timeout_sec)
+                self._execute_step(step, wall_timeout_sec)
         except Exception as exc:
             return ScenarioResult(
                 scenario_id=scenario_id,
@@ -649,7 +654,7 @@ class ScenarioExecutor:
         try:
             steps = scenario.get("steps", [])
             for step in steps:
-                self._execute_step(step, timeout_sec)
+                self._execute_step(step, wall_timeout_sec)
         except Exception as exc:
             return ScenarioResult(
                 scenario_id=scenario_id,
@@ -670,7 +675,7 @@ class ScenarioExecutor:
             evidence = self._evaluate_verdict(
                 vdef,
                 observation_start=observation_start,
-                timeout_sec=timeout_sec,
+                timeout_sec=wall_timeout_sec,
             )
             verdict_results.append(evidence)
 
@@ -678,7 +683,7 @@ class ScenarioExecutor:
         teardown_steps = scenario.get("teardown", [])
         for step in teardown_steps:
             try:
-                self._execute_step(step, timeout_sec)
+                self._execute_step(step, wall_timeout_sec)
             except Exception as exc:
                 log.warning("Teardown step failed (non-fatal): %s", exc)
 
@@ -750,18 +755,21 @@ class ScenarioExecutor:
 
         elif action == "wait":
             seconds = float(step.get("seconds", 1))
-            log.info("  [STEP] Waiting %.1fs...", seconds)
-            time.sleep(seconds)
+            wall_sec = seconds / _SIL_SCALE
+            log.info("  [STEP] Waiting %.1fs virtual (%.1fs wall)...",
+                     seconds, wall_sec)
+            time.sleep(wall_sec)
 
         elif action == "wait_state":
             state_name = step.get("state", "RUN")
             target = VEHICLE_STATE_NAMES.get(state_name, VehicleState.RUN)
             timeout = float(step.get("timeout", DEFAULT_STATE_WAIT_TIMEOUT_SEC))
+            wall_timeout = timeout / _SIL_SCALE
             log.info(
-                "  [STEP] Waiting for vehicle state %s (timeout: %.0fs)...",
-                state_name, timeout,
+                "  [STEP] Waiting for vehicle state %s (timeout: %.0fs virtual, %.1fs wall)...",
+                state_name, timeout, wall_timeout,
             )
-            reached = self._can.wait_for_state(target, timeout_sec=timeout)
+            reached = self._can.wait_for_state(target, timeout_sec=wall_timeout)
             if not reached:
                 raise TimeoutError(
                     f"Vehicle did not reach state {state_name} "
@@ -1237,7 +1245,7 @@ class ScenarioExecutor:
         """
         expected_name = vdef.get("expected", "RUN")
         expected_val = VEHICLE_STATE_NAMES.get(expected_name, -1)
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Give the system time to reach the expected state
         reached = self._can.wait_for_state(expected_val, timeout_sec=wait_sec)
@@ -1278,7 +1286,7 @@ class ScenarioExecutor:
         """
         can_id = _parse_int(vdef.get("can_id", 0))
         field_checks = vdef.get("field_checks", [])
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # First check message history for frames received since
         # observation_start (covers event bursts during steps phase).
@@ -1356,7 +1364,7 @@ class ScenarioExecutor:
         within_ms: float,
     ) -> VerdictEvidence:
         """Verify that motor RPM drops to 0."""
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         reached_zero = self._can.wait_for_motor_rpm_zero(
             timeout_sec=wait_sec
         )
@@ -1381,7 +1389,7 @@ class ScenarioExecutor:
         topic = vdef.get("topic", "")
         field_name = vdef.get("field", "")
         expected_raw = vdef.get("expected")
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         msg = self._mqtt.wait_for_message(topic, timeout_sec=wait_sec)
 
@@ -1445,7 +1453,7 @@ class ScenarioExecutor:
         can_id = _parse_int(vdef.get("can_id", CAN_DTC_BROADCAST))
         expected_dtc = _parse_int(vdef.get("dtc_code", 0))
         expected_source = vdef.get("ecu_source")
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Check all DTC messages received during the scenario
         history = self._can.get_message_history(can_id)
@@ -1521,7 +1529,7 @@ class ScenarioExecutor:
         ECU has stopped broadcasting (container stopped, bus-off, etc.).
         """
         can_id = _parse_int(vdef.get("can_id", 0))
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # The heartbeat should NOT appear — we wait and check for absence
         # We already captured initial messages; now wait to see if new ones
@@ -1564,7 +1572,7 @@ class ScenarioExecutor:
         that the values are identical or within a small tolerance.
         """
         rpm_before = self._can.motor_rpm
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         time.sleep(wait_sec)
         rpm_after = self._can.motor_rpm
 
@@ -1611,7 +1619,7 @@ class ScenarioExecutor:
                         )
 
         # Fall back to live polling
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         deadline = time.monotonic() + wait_sec
 
         while time.monotonic() < deadline:
@@ -1649,7 +1657,7 @@ class ScenarioExecutor:
         topic = vdef.get("topic", "taktflow/telemetry/e2e")
         field_name = vdef.get("field", "error_count")
         min_errors = int(vdef.get("min_errors", 1))
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         msg = self._mqtt.wait_for_message(topic, timeout_sec=wait_sec)
 
@@ -1686,7 +1694,7 @@ class ScenarioExecutor:
         Checks Steering_Status (0x200) for a fault flag indicating
         the steering rate limit was violated.
         """
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         result = self._can.wait_for_can_message(
             CAN_STEERING_STATUS, timeout_sec=wait_sec
         )
@@ -1726,7 +1734,7 @@ class ScenarioExecutor:
         Checks DTC_Broadcast (0x500) history for any message with
         DTC_Status == 0x01 (active). If none found, the verdict passes.
         """
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         time.sleep(min(wait_sec, 1.0))  # Brief observation window
 
         history = self._can.get_message_history(CAN_DTC_BROADCAST)
@@ -1762,7 +1770,7 @@ class ScenarioExecutor:
         recovery to RUN state).
         """
         expected_dtc = _parse_int(vdef.get("dtc_code", 0))
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Wait for any DTC messages
         time.sleep(min(wait_sec, 2.0))
@@ -1803,7 +1811,7 @@ class ScenarioExecutor:
         """
         expected_name = vdef.get("expected_state", "SAFE_STOP")
         expected_val = VEHICLE_STATE_NAMES.get(expected_name, -1)
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         reached = self._can.wait_for_state(expected_val, timeout_sec=wait_sec)
         current_state = self._can.vehicle_state
@@ -1839,7 +1847,7 @@ class ScenarioExecutor:
         the power output was limited. Compares the current RPM against the
         maximum observed RPM in the history.
         """
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
         time.sleep(min(wait_sec, 2.0))
 
         history = self._can.get_message_history(CAN_MOTOR_STATUS)
@@ -1897,7 +1905,7 @@ class ScenarioExecutor:
         and not forwarded onto the bus.
         """
         can_id = _parse_int(vdef.get("can_id", 0))
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Wait the observation period
         time.sleep(wait_sec)
@@ -1990,7 +1998,7 @@ class ScenarioExecutor:
         """
         can_ids = [_parse_int(x) for x in vdef.get("can_ids", [])]
         interval_ms = float(vdef.get("interval_ms", 50))
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Wait briefly to collect messages
         time.sleep(min(wait_sec, 1.0))
@@ -2255,7 +2263,7 @@ class ScenarioExecutor:
         field_name = vdef.get("field", "")
         operator = vdef.get("operator", "eq")
         expected_raw = vdef.get("expected")
-        wait_sec = within_ms / 1000.0
+        wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         msg = self._mqtt.wait_for_message(topic, timeout_sec=wait_sec)
 
@@ -2759,7 +2767,7 @@ def main() -> int:
     mqtt_monitor.start()
 
     # Brief pause for monitors to connect
-    time.sleep(1.0)
+    time.sleep(1.0 / _SIL_SCALE)
 
     executor = ScenarioExecutor(
         can_monitor=can_monitor,

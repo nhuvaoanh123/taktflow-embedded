@@ -60,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     if: inputs.tier != 'hil-only'
     timeout-minutes: 45
+    env:
+      SIL_TIME_SCALE: "10"
 
     steps:
       - name: Checkout repository
@@ -102,8 +104,6 @@ jobs:
           chmod +x test/sil/run_sil.sh
           ./test/sil/run_sil.sh --timeout=${{ env.SIL_SCENARIO_TIMEOUT || '60' }} 2>&1 | tee sil_output.log
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-        env:
-          SIL_TIME_SCALE: "10"
         continue-on-error: true
 
       - name: Upload SIL test results

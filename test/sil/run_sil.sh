@@ -61,6 +61,7 @@ HEALTH_WAIT_MAX=120     # Max seconds to wait for services to become healthy
 HEALTH_POLL_INTERVAL=3  # Seconds between health checks
 FAULT_API_URL="http://localhost:8091"
 MQTT_PORT=1883
+SIL_SCALE="${SIL_TIME_SCALE:-1}"
 
 # ---------------------------------------------------------------------------
 # Parse command-line arguments
@@ -269,8 +270,10 @@ if [ "$HEALTH_OK" = false ]; then
 fi
 
 # Brief stabilization pause — let all ECUs complete init and reach RUN state
-info "Stabilization pause (5s) — waiting for ECUs to initialize..."
-sleep 5
+STAB_SEC=$(( 5 / SIL_SCALE ))
+[ "$STAB_SEC" -lt 1 ] && STAB_SEC=1
+info "Stabilization pause (${STAB_SEC}s, scale=${SIL_SCALE}) — waiting for ECUs to initialize..."
+sleep "$STAB_SEC"
 ok "All services healthy and stabilized"
 
 # ---------------------------------------------------------------------------
