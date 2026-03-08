@@ -16,6 +16,9 @@
  *           On real hardware this module compiles to empty stubs
  *           (entire logic guarded by #ifdef PLATFORM_POSIX).
  *
+ *           HIL mode (PLATFORM_HIL): same Com RX path but injects via
+ *           IoHwAb_Hil_SetOverride() in engineering units — no reverse-scaling.
+ *
  * @standard AUTOSAR SWC pattern
  * @copyright Taktflow Systems 2026
  */
@@ -39,6 +42,11 @@ static uint8 SensorFeeder_DataValid;
 extern void IoHwAb_Posix_InjectEncoderCount(uint32 Count);
 extern void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir);
 static uint32 SensorFeeder_EncCount;
+#endif
+
+#ifdef PLATFORM_HIL
+static uint8  SensorFeeder_HilDataValid;
+static uint32 SensorFeeder_HilEncCount;
 #endif
 
 /* ==================================================================
@@ -66,6 +74,16 @@ void Swc_RzcSensorFeeder_Init(void)
     Adc_Posix_InjectValue(RZC_BATTERY_VOLTAGE_ADC_GROUP,
                           RZC_BATTERY_VOLTAGE_ADC_CH,
                           3909u);
+#endif
+
+#ifdef PLATFORM_HIL
+    SensorFeeder_HilDataValid = 0u;
+    SensorFeeder_HilEncCount  = 0u;
+    /* HIL: inject nominal battery voltage via IoHwAb override to prevent
+     * false undervoltage fault before Pi rest-bus sends CAN 0x401. */
+    IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BATTERY, RZC_BATT_NOMINAL_MV);
+    IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_CURRENT, 0u);
+    IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_TEMP, 250u);  /* 25.0 dC */
 #endif
 }
 
@@ -153,6 +171,57 @@ void Swc_RzcSensorFeeder_MainFunction(void)
             (motor_rpm > 0u) ? IOHWAB_MOTOR_FORWARD : IOHWAB_MOTOR_STOP);
     }
 #else
+
+#ifdef PLATFORM_HIL
+    if (SensorFeeder_Initialized != 1u)
+    {
+        return;
+    }
+
+    {
+        uint32 motor_current   = 0u;
+        uint32 motor_temp      = 0u;
+        uint32 battery_voltage = 0u;
+
+        (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_CURRENT,   &motor_current);
+        (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_TEMP,      &motor_temp);
+        (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_BATTERY_VOLTAGE, &battery_voltage);
+
+        /* Same data-valid gate as POSIX: hold nominal defaults until
+         * Pi rest-bus sends real data (battery_voltage != 0). */
+        if (SensorFeeder_HilDataValid == 0u)
+        {
+            if (battery_voltage != 0u)
+            {
+                SensorFeeder_HilDataValid = 1u;
+            }
+            else
+            {
+                battery_voltage = RZC_BATT_NOMINAL_MV;
+            }
+        }
+
+        /* HIL: inject engineering-unit values directly — no reverse-scaling. */
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_CURRENT, motor_current);
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_MOTOR_TEMP, motor_temp);
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BATTERY, battery_voltage);
+    }
+
+    /* Encoder injection from plant-sim RPM */
+    {
+        uint32 motor_rpm = 0u;
+        (void)Com_ReceiveSignal(RZC_COM_SIG_RX_VIRT_MOTOR_RPM, &motor_rpm);
+
+        uint32 delta = ((uint32)motor_rpm * RZC_ENCODER_PPR) / 6000u;
+        SensorFeeder_HilEncCount += delta;
+
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_ENCODER_COUNT, SensorFeeder_HilEncCount);
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_ENCODER_DIR,
+            (motor_rpm > 0u) ? IOHWAB_MOTOR_FORWARD : IOHWAB_MOTOR_STOP);
+    }
+#else
     (void)SensorFeeder_Initialized;
-#endif
+#endif /* PLATFORM_HIL */
+
+#endif /* PLATFORM_POSIX */
 }

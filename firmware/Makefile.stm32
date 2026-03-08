@@ -11,6 +11,7 @@
 #   make -f Makefile.stm32 TARGET=rzc          Build RZC firmware
 #   make -f Makefile.stm32 TARGET=cvc flash    Build and flash via OpenOCD
 #   make -f Makefile.stm32 TARGET=cvc size     Report firmware size
+#   make -f Makefile.stm32 TARGET=cvc HIL=1    Build with HIL sensor override
 #   make -f Makefile.stm32 TARGET=cvc clean    Remove build artifacts
 #
 # Output:  build/stm32/<TARGET>.elf, build/stm32/<TARGET>.bin
@@ -43,6 +44,11 @@ endif
 # --- Diagnostic logging (pass DIAG=1 to enable) ---
 ifdef DIAG
   CFLAGS += -DSIL_DIAG
+endif
+
+# --- HIL mode (pass HIL=1 to enable IoHwAb sensor override from CAN) ---
+ifdef HIL
+  CFLAGS += -DPLATFORM_HIL
 endif
 
 # --- Validate TARGET ---

@@ -25,6 +25,11 @@ static uint32 iohwab_enc_count_inject = 0u;
 static uint8  iohwab_enc_dir_inject   = 0u;  /* IOHWAB_MOTOR_FORWARD */
 #endif
 
+#ifdef PLATFORM_HIL
+static uint8  iohwab_hil_active[IOHWAB_HIL_CH_COUNT];
+static uint32 iohwab_hil_value[IOHWAB_HIL_CH_COUNT];
+#endif
+
 /* ---- Private Helpers ---- */
 
 /**
@@ -137,8 +142,20 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
 
     /* Select chip select based on sensor ID */
     if (SensorId == 0u) {
+#ifdef PLATFORM_HIL
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_0]) {
+            *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_0];
+            return E_OK;
+        }
+#endif
         cs_channel = iohwab_config->PedalCsChannel0;
     } else {
+#ifdef PLATFORM_HIL
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_1]) {
+            *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_1];
+            return E_OK;
+        }
+#endif
         cs_channel = iohwab_config->PedalCsChannel1;
     }
 
@@ -160,6 +177,13 @@ Std_ReturnType IoHwAb_ReadSteeringAngle(uint16* Angle)
         return E_NOT_OK;
     }
 
+#ifdef PLATFORM_HIL
+    if (iohwab_hil_active[IOHWAB_HIL_CH_STEERING]) {
+        *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_STEERING];
+        return E_OK;
+    }
+#endif
+
     return iohwab_read_spi_angle(iohwab_config->SteeringSpiChannel,
                                   iohwab_config->SteeringSpiSequence,
                                   iohwab_config->SteeringCsChannel,
@@ -180,6 +204,13 @@ Std_ReturnType IoHwAb_ReadMotorCurrent(uint16* Current_mA)
         Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
+
+#ifdef PLATFORM_HIL
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_CURRENT]) {
+        *Current_mA = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_CURRENT];
+        return E_OK;
+    }
+#endif
 
     ret = iohwab_read_adc(iohwab_config->MotorCurrentAdcGroup, &raw_adc);
     if (ret != E_OK) {
@@ -213,6 +244,13 @@ Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC)
         return E_NOT_OK;
     }
 
+#ifdef PLATFORM_HIL
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_TEMP]) {
+        *Temp_dC = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_TEMP];
+        return E_OK;
+    }
+#endif
+
     ret = iohwab_read_adc(iohwab_config->MotorTempAdcGroup, &raw_adc);
     if (ret != E_OK) {
         return E_NOT_OK;
@@ -242,6 +280,13 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
         Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
+
+#ifdef PLATFORM_HIL
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BATTERY]) {
+        *Voltage_mV = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BATTERY];
+        return E_OK;
+    }
+#endif
 
     ret = iohwab_read_adc(iohwab_config->BatteryVoltAdcGroup, &raw_adc);
     if (ret != E_OK) {
@@ -274,6 +319,13 @@ Std_ReturnType IoHwAb_ReadBrakePosition(uint16* Position)
         Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
     }
+
+#ifdef PLATFORM_HIL
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BRAKE]) {
+        *Position = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BRAKE];
+        return E_OK;
+    }
+#endif
 
     ret = iohwab_read_adc(iohwab_config->BrakePositionAdcGroup, &raw_adc);
     if (ret != E_OK) {
@@ -393,6 +445,13 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
 
 #ifdef PLATFORM_POSIX
     *Count = iohwab_enc_count_inject;
+#elif defined(PLATFORM_HIL)
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_COUNT]) {
+        *Count = iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_COUNT];
+    } else {
+        /* TODO:HARDWARE Real encoder read via timer capture */
+        *Count = 0u;
+    }
 #else
     /* TODO:HARDWARE Real encoder read via timer capture */
     *Count = 0u;
@@ -415,6 +474,13 @@ Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
 
 #ifdef PLATFORM_POSIX
     *Dir = iohwab_enc_dir_inject;
+#elif defined(PLATFORM_HIL)
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_DIR]) {
+        *Dir = (uint8)iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_DIR];
+    } else {
+        /* TODO:HARDWARE Real encoder direction via DIO */
+        *Dir = IOHWAB_MOTOR_FORWARD;
+    }
 #else
     /* TODO:HARDWARE Real encoder direction via DIO */
     *Dir = IOHWAB_MOTOR_FORWARD;
@@ -432,5 +498,22 @@ void IoHwAb_Posix_InjectEncoderCount(uint32 Count)
 void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir)
 {
     iohwab_enc_dir_inject = Dir;
+}
+#endif
+
+#ifdef PLATFORM_HIL
+void IoHwAb_Hil_SetOverride(uint8 Channel, uint32 Value)
+{
+    if (Channel < IOHWAB_HIL_CH_COUNT) {
+        iohwab_hil_value[Channel]  = Value;
+        iohwab_hil_active[Channel] = 1u;
+    }
+}
+
+void IoHwAb_Hil_ClearOverride(uint8 Channel)
+{
+    if (Channel < IOHWAB_HIL_CH_COUNT) {
+        iohwab_hil_active[Channel] = 0u;
+    }
 }
 #endif

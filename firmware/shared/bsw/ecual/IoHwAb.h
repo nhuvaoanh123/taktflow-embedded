@@ -199,4 +199,35 @@ void IoHwAb_Posix_InjectEncoderCount(uint32 Count);
 void IoHwAb_Posix_InjectEncoderDirection(uint8 Dir);
 #endif
 
+/* ---- HIL Override API (STM32 + HIL mode) ---- */
+
+#ifdef PLATFORM_HIL
+
+/** HIL override channel IDs — one per sensor read function */
+#define IOHWAB_HIL_CH_STEERING       0u
+#define IOHWAB_HIL_CH_BRAKE          1u
+#define IOHWAB_HIL_CH_MOTOR_CURRENT  2u
+#define IOHWAB_HIL_CH_MOTOR_TEMP     3u
+#define IOHWAB_HIL_CH_BATTERY        4u
+#define IOHWAB_HIL_CH_PEDAL_0        5u
+#define IOHWAB_HIL_CH_PEDAL_1        6u
+#define IOHWAB_HIL_CH_ENCODER_COUNT  7u
+#define IOHWAB_HIL_CH_ENCODER_DIR    8u
+#define IOHWAB_HIL_CH_COUNT          9u
+
+/**
+ * @brief  Set HIL override for a sensor channel (engineering units)
+ * @param  Channel  IOHWAB_HIL_CH_* identifier
+ * @param  Value    Sensor value in engineering units (mV, mA, dC, 14-bit raw, etc.)
+ */
+void IoHwAb_Hil_SetOverride(uint8 Channel, uint32 Value);
+
+/**
+ * @brief  Clear HIL override — sensor read reverts to real hardware
+ * @param  Channel  IOHWAB_HIL_CH_* identifier
+ */
+void IoHwAb_Hil_ClearOverride(uint8 Channel);
+
+#endif /* PLATFORM_HIL */
+
 #endif /* IOHWAB_H */

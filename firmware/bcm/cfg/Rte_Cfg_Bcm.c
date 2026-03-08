@@ -20,8 +20,10 @@ extern void Swc_Lights_10ms(void);
 extern void Swc_Indicators_10ms(void);
 extern void Swc_DoorLock_100ms(void);
 extern void Com_MainFunction_Tx(void);
+extern void Com_MainFunction_Rx(void);
 extern void Can_MainFunction_Read(void);
 extern void Can_MainFunction_BusOff(void);
+extern void Bcm_ComBridge_10ms(void);
 
 /* ==================================================================
  * Signal Configuration Table
@@ -66,10 +68,12 @@ static const Rte_SignalConfigType bcm_signal_config[BCM_SIG_COUNT] = {
 
 static const Rte_RunnableConfigType bcm_runnable_config[] = {
     /* func,                        periodMs, priority, seId */
-    { Can_MainFunction_Read,           10u,      7u,     0xFFu },  /* CAN RX first            */
-    { Swc_Lights_10ms,                 10u,      6u,     0u    },  /* Lights processing       */
-    { Swc_Indicators_10ms,             10u,      5u,     1u    },  /* Indicator flash         */
-    { Swc_DoorLock_100ms,             100u,      4u,     2u    },  /* Door lock (100ms)       */
+    { Can_MainFunction_Read,           10u,      8u,     0xFFu },  /* CAN RX first            */
+    { Com_MainFunction_Rx,             10u,      7u,     0xFFu },  /* COM RX timeout monitor  */
+    { Bcm_ComBridge_10ms,              10u,      6u,     0xFFu },  /* RX→RTE + RTE→TX bridge  */
+    { Swc_Lights_10ms,                 10u,      5u,     0u    },  /* Lights processing       */
+    { Swc_Indicators_10ms,             10u,      4u,     1u    },  /* Indicator flash         */
+    { Swc_DoorLock_100ms,             100u,      3u,     2u    },  /* Door lock (100ms)       */
     { Com_MainFunction_Tx,             10u,      2u,     0xFFu },  /* COM TX (after all SWCs) */
     { Can_MainFunction_BusOff,         10u,      1u,     0xFFu },  /* Bus-off check           */
 };

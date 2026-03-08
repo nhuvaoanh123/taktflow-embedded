@@ -39,6 +39,83 @@
 #include "Swc_DoorLock.h"
 
 /* ==================================================================
+ * RTE↔Com Bridge
+ *
+ * SWCs read/write RTE signals.  Com sends/receives CAN PDUs.
+ * This bridge copies RTE output signals → Com TX shadow buffers
+ * and Com RX shadow buffers → RTE input signals every 10ms.
+ * ================================================================== */
+
+/**
+ * @brief  Bridge RTE outputs to Com TX + Com RX to RTE inputs
+ *
+ * @details  TX: Reads 6 RTE output signals (lights, indicators, door lock)
+ *           and calls Com_SendSignal() so Com_MainFunction_Tx can transmit.
+ *           RX: Reads 4 Com RX signals (vehicle state/speed, body cmd, e-stop)
+ *           and writes them to RTE so SWCs can consume them.
+ */
+void Bcm_ComBridge_10ms(void)
+{
+    /* ---- TX bridge: RTE outputs → Com TX ---- */
+    {
+        uint32 rte_val;
+        uint8  sig_u8;
+
+        /* Signal 0: headlamp → CAN 0x400 byte 2 */
+        (void)Rte_Read(BCM_SIG_LIGHT_HEADLAMP, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(0u, &sig_u8);
+
+        /* Signal 1: tail light → CAN 0x400 byte 3 */
+        (void)Rte_Read(BCM_SIG_LIGHT_TAIL, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(1u, &sig_u8);
+
+        /* Signal 2: indicator left → CAN 0x401 byte 2 */
+        (void)Rte_Read(BCM_SIG_INDICATOR_LEFT, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(2u, &sig_u8);
+
+        /* Signal 3: indicator right → CAN 0x401 byte 3 */
+        (void)Rte_Read(BCM_SIG_INDICATOR_RIGHT, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(3u, &sig_u8);
+
+        /* Signal 4: hazard active → CAN 0x401 byte 4 */
+        (void)Rte_Read(BCM_SIG_HAZARD_ACTIVE, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(4u, &sig_u8);
+
+        /* Signal 5: door lock state → CAN 0x402 byte 2 */
+        (void)Rte_Read(BCM_SIG_DOOR_LOCK_STATE, &rte_val);
+        sig_u8 = (uint8)rte_val;
+        (void)Com_SendSignal(5u, &sig_u8);
+    }
+
+    /* ---- RX bridge: Com RX → RTE inputs ---- */
+    {
+        uint8  rx_u8;
+        uint16 rx_u16;
+
+        /* Signal 6: vehicle state (CAN 0x100) → RTE */
+        (void)Com_ReceiveSignal(6u, &rx_u8);
+        (void)Rte_Write(BCM_SIG_VEHICLE_STATE, (uint32)rx_u8);
+
+        /* Signal 7: vehicle speed (CAN 0x100) → RTE */
+        (void)Com_ReceiveSignal(7u, &rx_u16);
+        (void)Rte_Write(BCM_SIG_VEHICLE_SPEED, (uint32)rx_u16);
+
+        /* Signal 8: body cmd byte0 (CAN 0x350) → RTE */
+        (void)Com_ReceiveSignal(8u, &rx_u8);
+        (void)Rte_Write(BCM_SIG_BODY_CONTROL_CMD, (uint32)rx_u8);
+
+        /* Signal 10: e-stop active (CAN 0x350) → RTE */
+        (void)Com_ReceiveSignal(10u, &rx_u8);
+        (void)Rte_Write(BCM_SIG_ESTOP_ACTIVE, (uint32)rx_u8);
+    }
+}
+
+/* ==================================================================
  * POSIX headers for simulated ECU
  * ================================================================== */
 
