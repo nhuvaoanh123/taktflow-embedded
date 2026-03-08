@@ -18,7 +18,7 @@ description: >
   Inject overcurrent scenario: 95% torque + 100% emergency brake simulates
   a mechanical jam.  Motor current stays above 20A threshold (load factor
   ~1.0 at zero RPM).  Verify DTC 0xE301 is broadcast from RZC (source 3),
-  motor is cut off (RPM -> 0), and vehicle enters DEGRADED state.
+  motor is cut off (RPM -> 0), and vehicle enters SAFE_STOP state.
 verifies:
   - "SWR-RZC-002"   # RZC motor overcurrent detection and cutoff
   - "SWR-BSW-016"   # Overcurrent fault handling chain
@@ -55,9 +55,9 @@ verdicts:
     description: "DTC 0xE301 (overcurrent) broadcast from RZC (source=3)"
 
   - type: vehicle_state
-    expected: DEGRADED
+    expected: SAFE_STOP
     within_ms: 3000
-    description: "Vehicle enters DEGRADED after overcurrent detection"
+    description: "Vehicle enters SAFE_STOP after motor cutoff (critical fault)"
 
   - type: motor_shutdown
     within_ms: 3000

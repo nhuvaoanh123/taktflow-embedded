@@ -213,6 +213,11 @@ void Swc_CurrentMonitor_MainFunction(void)
         } else {
             /* Already in overcurrent — any spike resets recovery counter */
             CM_RecoveryCycles = 0u;
+
+            /* Keep reporting to Dem so debounce counter reaches confirm
+             * threshold (DEM_DEBOUNCE_FAIL_THRESHOLD=3). */
+            Dem_ReportErrorStatus((uint8)RZC_DTC_OVERCURRENT,
+                                 DEM_EVENT_STATUS_FAILED);
         }
     } else {
         /* Current is below threshold */

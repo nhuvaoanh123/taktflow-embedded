@@ -51,7 +51,7 @@ static const Com_SignalConfigType fzc_signal_config[] = {
     {  1u,   24u,     8u, COM_UINT8,  FZC_COM_TX_HEARTBEAT,         &sig_tx_hb_ecu_id      },
     {  2u,   32u,     8u, COM_UINT8,  FZC_COM_TX_HEARTBEAT,         &sig_tx_hb_fault_mask  },
     {  3u,   16u,    16u, COM_SINT16, FZC_COM_TX_STEER_STATUS,      &sig_tx_steer_angle    },
-    {  4u,   32u,     8u, COM_UINT8,  FZC_COM_TX_STEER_STATUS,      &sig_tx_steer_fault    },
+    {  4u,   48u,     4u, COM_UINT8,  FZC_COM_TX_STEER_STATUS,      &sig_tx_steer_fault    },
     {  5u,   16u,     8u, COM_UINT8,  FZC_COM_TX_BRAKE_STATUS,      &sig_tx_brake_pos      },
     {  6u,   16u,     8u, COM_UINT8,  FZC_COM_TX_BRAKE_FAULT,       &sig_tx_brake_fault    },
     {  7u,   16u,     8u, COM_UINT8,  FZC_COM_TX_MOTOR_CUTOFF,      &sig_tx_motor_cutoff   },

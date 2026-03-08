@@ -474,7 +474,9 @@ class PlantSimulator:
         # Bytes 0-1: steering_angle (uint16 LE, 14-bit SPI format 0-16383)
         # Steering model gives actual_angle in degrees (-45..+45).
         # Convert to 14-bit SPI format: (angle + 45) / 90 * 16383
-        angle_deg = self.steering.actual_angle
+        # When steering.fault is injected, override sensor to +45 deg so
+        # FZC's plausibility check fires (|cmd - actual| >= 5 deg threshold).
+        angle_deg = 45.0 if self.steering.fault else self.steering.actual_angle
         angle_raw = int((angle_deg + 45.0) / 90.0 * 16383.0)
         angle_raw = max(0, min(16383, angle_raw))
         struct.pack_into('<H', payload, 0, angle_raw)
