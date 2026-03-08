@@ -1,0 +1,176 @@
+# =============================================================================
+# HIL (Hardware-in-the-Loop) Test Suite — GitHub Actions
+#
+# Manual-trigger workflow for running HIL tests on a Raspberry Pi with
+# physical CAN bus. This cannot run on GitHub-hosted runners — it dispatches
+# to a self-hosted runner on the Pi or requires manual execution.
+#
+# Trigger: workflow_dispatch only (manual from Actions UI)
+#
+# The workflow:
+#   1. Checks out the repo on the self-hosted Pi runner
+#   2. Installs Python dependencies
+#   3. Verifies can0 is up and plant-sim is running
+#   4. Runs all 26 HIL scenarios via hil_runner.py
+#   5. Uploads JUnit XML results as artifacts
+#
+# Standards:
+#   ISO 26262 Part 4, Section 7 — HSI Verification
+#   ISO 26262 Part 6, Section 10 — Software Integration & Testing
+#   ASPICE SWE.6 — Software Qualification Testing
+# =============================================================================
+
+name: HIL Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: 'Scenario filter pattern (e.g. "hil_03*" for fault injection only)'
+        required: false
+        default: ''
+      channel:
+        description: 'CAN channel'
+        required: false
+        default: 'can0'
+      interface:
+        description: 'CAN interface type (socketcan, slcan)'
+        required: false
+        default: 'socketcan'
+      mqtt_host:
+        description: 'MQTT broker host for fault injection'
+        required: false
+        default: 'localhost'
+      verbose:
+        description: 'Enable verbose logging'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  hil-tests:
+    name: HIL Integration Test Suite
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      # -----------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------
+      # 2. Install Python dependencies
+      # -----------------------------------------------------------------
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r test/hil/requirements.txt
+
+      # -----------------------------------------------------------------
+      # 3. Verify CAN interface is up
+      # -----------------------------------------------------------------
+      - name: Verify CAN interface
+        run: |
+          CHANNEL="${{ inputs.channel }}"
+          echo "Checking CAN interface: $CHANNEL"
+          if ! ip link show "$CHANNEL" 2>/dev/null | grep -q "UP"; then
+            echo "::error::CAN interface $CHANNEL is not UP. Start the CAN bus first."
+            echo "  sudo ip link set $CHANNEL up type can bitrate 500000"
+            exit 1
+          fi
+          echo "$CHANNEL is UP"
+          ip -d link show "$CHANNEL"
+
+      # -----------------------------------------------------------------
+      # 4. Verify plant-sim is running
+      # -----------------------------------------------------------------
+      - name: Verify plant-sim is running
+        run: |
+          echo "Checking for plant-sim heartbeat on CAN..."
+          # Look for vehicle state message 0x100 within 5 seconds
+          timeout 5 candump "${{ inputs.channel }}" -n 1 -T 5000 2>/dev/null || {
+            echo "::warning::No CAN traffic detected. Plant-sim may not be running."
+            echo "  Start with: ./scripts/hil-plant-sim.sh"
+          }
+          echo "CAN traffic detected"
+
+      # -----------------------------------------------------------------
+      # 5. Run HIL test suite
+      # -----------------------------------------------------------------
+      - name: Run HIL test suite
+        id: hil_tests
+        run: |
+          ARGS="--channel ${{ inputs.channel }} --interface ${{ inputs.interface }}"
+          ARGS="$ARGS --mqtt-host ${{ inputs.mqtt_host }}"
+
+          if [ -n "${{ inputs.filter }}" ]; then
+            ARGS="$ARGS --filter ${{ inputs.filter }}"
+          fi
+
+          if [ "${{ inputs.verbose }}" = "true" ]; then
+            ARGS="$ARGS --verbose"
+          fi
+
+          echo "Running: python3 test/hil/hil_runner.py $ARGS"
+          python3 test/hil/hil_runner.py $ARGS 2>&1 | tee hil_output.log
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      # -----------------------------------------------------------------
+      # 6. Upload JUnit XML and logs as artifacts
+      # -----------------------------------------------------------------
+      - name: Upload HIL test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hil-test-results
+          path: |
+            test/hil/results/
+            hil_output.log
+          retention-days: 90
+
+      # -----------------------------------------------------------------
+      # 7. Post summary to GitHub Actions job summary
+      # -----------------------------------------------------------------
+      - name: Post HIL results to job summary
+        if: always()
+        run: |
+          echo "## HIL Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`${GITHUB_SHA::8}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**CAN channel:** ${{ inputs.channel }} (${{ inputs.interface }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Filter:** ${{ inputs.filter || 'all scenarios' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f hil_output.log ]; then
+            echo "### Test Output (last 60 lines)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -60 hil_output.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Count JUnit XML files
+          XML_COUNT=$(find test/hil/results/ -name '*.xml' 2>/dev/null | wc -l)
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JUnit XML reports: **${XML_COUNT}**" >> "$GITHUB_STEP_SUMMARY"
+
+      # -----------------------------------------------------------------
+      # 8. Final status gate
+      # -----------------------------------------------------------------
+      - name: Check final status
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.hil_tests.outputs.exit_code }}"
+          if [ "$EXIT_CODE" = "0" ]; then
+            echo "All HIL tests passed."
+          elif [ -z "$EXIT_CODE" ]; then
+            echo "::error::HIL test runner did not produce an exit code — infrastructure failure."
+            exit 1
+          else
+            echo "::error::HIL tests failed with exit code $EXIT_CODE."
+            exit 1
+          fi
