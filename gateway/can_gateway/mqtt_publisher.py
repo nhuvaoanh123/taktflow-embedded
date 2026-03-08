@@ -112,7 +112,7 @@ class MqttPublisher:
             return
 
         alert = {
-            "dtc": f"0x{int(dtc_number):04X}",
+            "dtc": f"0x{int(dtc_number):06X}",
             "status": int(signals.get("DTC_Status", 0)),
             "ecu_source": int(signals.get("ECU_Source", 0)),
             "occurrence": int(signals.get("OccurrenceCount", 0)),

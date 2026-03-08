@@ -66,16 +66,16 @@ verdicts:
     description: "DTC 0xD001 (steer plausibility) broadcast from FZC (source=2)"
 
   - type: vehicle_state
-    expected: DEGRADED
+    expected: SAFE_STOP
     within_ms: 3000
-    description: "Vehicle enters DEGRADED (first fault) within 3 seconds"
+    description: "Vehicle enters SAFE_STOP (overcurrent → motor cutoff is critical)"
 
   - type: vehicle_state
-    expected_any: [DEGRADED, SAFE_STOP]
+    expected: SAFE_STOP
     within_ms: 5000
     description: >
-      Vehicle is in DEGRADED or SAFE_STOP after both faults
-      (SC may escalate to SAFE_STOP with two simultaneous faults)
+      Vehicle remains in SAFE_STOP after both faults — motor cutoff
+      and steering disable both warrant safe shutdown
 
   - type: motor_shutdown
     within_ms: 5000
