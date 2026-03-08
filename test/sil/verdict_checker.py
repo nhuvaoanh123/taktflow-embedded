@@ -1963,14 +1963,12 @@ class ScenarioExecutor:
                 if len(msg.data) >= 1:
                     counters.append((msg.data[0] >> 4) & counter_max)
 
-            # Count wraps using modular arithmetic (handles 4-bit wrap at 15->0)
+            # Count wraps: a wrap occurs when the counter value decreases
+            # (e.g. 15 -> 0 for a 4-bit counter).
             wraps = 0
             for i in range(1, len(counters)):
-                # Wrap detected when counter decreases (modular wrap-around)
-                if counters[i] != counters[i - 1]:
-                    delta = (counters[i] - counters[i - 1]) % (counter_max + 1)
-                    if delta > (counter_max // 2):
-                        wraps += 1
+                if counters[i] < counters[i - 1]:
+                    wraps += 1
 
             ok = wraps >= expected_wraps_min
             if not ok:
@@ -2104,8 +2102,10 @@ class ScenarioExecutor:
         nominal interval.
         """
         can_ids = [_parse_int(x) for x in vdef.get("can_ids", [])]
-        nominal_ms = float(vdef.get("nominal_interval_ms", 50))
-        max_jitter_ms = float(vdef.get("max_jitter_ms", 10))
+        # Scale nominal interval by SIL_TIME_SCALE: wall-clock intervals
+        # are shorter by the acceleration factor.
+        nominal_ms = float(vdef.get("nominal_interval_ms", 50)) / _SIL_SCALE
+        max_jitter_ms = float(vdef.get("max_jitter_ms", 10)) / _SIL_SCALE
 
         results: list[str] = []
         all_passed = True

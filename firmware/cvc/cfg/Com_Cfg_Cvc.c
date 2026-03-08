@@ -70,7 +70,7 @@ static const Com_SignalConfigType cvc_signal_config[] = {
     { 15u,   16u,    16u, COM_UINT16, CVC_COM_RX_LIDAR,         &sig_rx_lidar_dist     },
     { 16u,   16u,    16u, COM_UINT16, CVC_COM_RX_MOTOR_CURRENT, &sig_rx_motor_current  },
     { 17u,    0u,     8u, COM_UINT8,  CVC_COM_RX_SC_RELAY,      &sig_rx_sc_relay_kill  },
-    { 18u,   24u,     8u, COM_UINT8,  CVC_COM_RX_BATTERY_STATUS, &sig_rx_battery_status },
+    { 18u,   32u,     8u, COM_UINT8,  CVC_COM_RX_BATTERY_STATUS, &sig_rx_battery_status },
     { 19u,   16u,     8u, COM_UINT8,  CVC_COM_RX_ESTOP_INJECT,   &sig_rx_estop_inject   },
     { 20u,   32u,     8u, COM_UINT8,  CVC_COM_RX_STEER_STATUS,  &sig_rx_steering_fault },
     { 21u,   56u,     8u, COM_UINT8,  CVC_COM_RX_MOTOR_STATUS,  &sig_rx_motor_fault_rzc },

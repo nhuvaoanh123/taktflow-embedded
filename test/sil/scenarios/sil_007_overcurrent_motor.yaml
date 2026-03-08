@@ -33,6 +33,9 @@ setup:
     state: RUN
     timeout: 15
     description: "Wait for INIT hold (10s SIL) + E2E SM stabilization + Docker jitter"
+  - action: wait
+    seconds: 12
+    description: "Allow CVC post-INIT grace period (10s) to expire before fault injection"
 
 steps:
   - action: inject_scenario
