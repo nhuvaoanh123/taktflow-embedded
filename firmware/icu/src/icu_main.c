@@ -14,6 +14,9 @@
  *           It subscribes to ALL CAN messages (listen-only consumer)
  *           and displays gauges, warnings, DTC list, and ECU health.
  *
+ *           Headless mode: if no terminal is available (e.g. nohup on
+ *           Raspberry Pi), ncurses is skipped — CAN processing continues.
+ *
  *           Signal handler for SIGINT/SIGTERM ensures ncurses cleanup
  *           before exit.
  *
@@ -49,6 +52,8 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <ncurses.h>
 
 #endif /* PLATFORM_POSIX_TEST */
@@ -127,6 +132,9 @@ static const PduR_ConfigType pdur_config = {
 
 static volatile sig_atomic_t running = 1;
 
+/** Tracks whether ncurses was successfully initialized (0 = headless) */
+static int ncurses_active = 0;
+
 static void signal_handler(int sig)
 {
     (void)sig;
@@ -167,18 +175,33 @@ int main(void)
     Rte_Init(&icu_rte_config);
 
     /* ---- Step 3: ncurses terminal UI initialization ---- */
-    (void)initscr();
-    (void)cbreak();
-    (void)noecho();
-    (void)start_color();
-    (void)curs_set(0);
+    /* Graceful fallback: if no terminal is available (headless Pi, nohup),
+     * skip ncurses and run CAN processing only.  Rendering is TODO stubs
+     * anyway, so nothing is lost in headless mode. */
+    {
+        const char *term = getenv("TERM");
+        if ((term != NULL) && (term[0] != '\0')) {
+            WINDOW *win = initscr();
+            if (win != NULL) {
+                ncurses_active = 1;
+                (void)cbreak();
+                (void)noecho();
+                (void)start_color();
+                (void)curs_set(0);
 
-    /* Initialize color pairs */
-    (void)init_pair(ICU_COLOR_GREEN,  COLOR_GREEN,  COLOR_BLACK);
-    (void)init_pair(ICU_COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
-    (void)init_pair(ICU_COLOR_ORANGE, COLOR_RED,    COLOR_YELLOW);
-    (void)init_pair(ICU_COLOR_RED,    COLOR_RED,    COLOR_BLACK);
-    (void)init_pair(ICU_COLOR_WHITE,  COLOR_WHITE,  COLOR_BLACK);
+                /* Initialize color pairs */
+                (void)init_pair(ICU_COLOR_GREEN,  COLOR_GREEN,  COLOR_BLACK);
+                (void)init_pair(ICU_COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+                (void)init_pair(ICU_COLOR_ORANGE, COLOR_RED,    COLOR_YELLOW);
+                (void)init_pair(ICU_COLOR_RED,    COLOR_RED,    COLOR_BLACK);
+                (void)init_pair(ICU_COLOR_WHITE,  COLOR_WHITE,  COLOR_BLACK);
+            }
+        }
+    }
+
+    if (ncurses_active == 0) {
+        (void)fprintf(stderr, "[ICU] No terminal — running headless (CAN-only)\n");
+    }
 
     /* ---- Step 4: SWC initialization ---- */
     Swc_Dashboard_Init();
@@ -203,7 +226,9 @@ int main(void)
     }
 
     /* ---- Step 7: Clean shutdown ---- */
-    (void)endwin();
+    if (ncurses_active != 0) {
+        (void)endwin();
+    }
 
     return 0;
 }
