@@ -171,6 +171,7 @@ class CANBusMonitor:
         self._message_history: dict[int, list[tuple[float, can.Message]]] = {}
         self._motor_rpm: int = 0
         self._can_ids_seen: set[int] = set()
+        self._msg_count: int = 0
 
     def start(self) -> None:
         """Start the CAN bus listener thread."""
@@ -329,6 +330,7 @@ class CANBusMonitor:
             arb_id = msg.arbitration_id
 
             with self._lock:
+                self._msg_count += 1
                 self._can_ids_seen.add(arb_id)
                 self._latest_messages[arb_id] = (ts, msg)
 
@@ -358,6 +360,14 @@ class CANBusMonitor:
                         msg.data[MOTOR_RPM_BYTE_LO]
                         | (msg.data[MOTOR_RPM_BYTE_HI] << 8)
                     )
+                    if self._msg_count % 50 == 0:
+                        log.info("[VERDICT-DBG] 0x300 raw=[%s] "
+                                 "rpm_bytes[%d,%d]=%d,%d parsed_rpm=%d",
+                                 msg.data.hex(),
+                                 MOTOR_RPM_BYTE_LO, MOTOR_RPM_BYTE_HI,
+                                 msg.data[MOTOR_RPM_BYTE_LO],
+                                 msg.data[MOTOR_RPM_BYTE_HI],
+                                 self._motor_rpm)
 
 
 # ---------------------------------------------------------------------------

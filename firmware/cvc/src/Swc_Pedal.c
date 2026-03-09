@@ -30,6 +30,11 @@
 #include "Dem.h"
 #include "Com.h"
 
+#ifdef PLATFORM_POSIX
+#include <stdio.h>
+static unsigned int pedal_dbg_counter = 0u;
+#endif
+
 /* ==================================================================
  * Constants
  * ================================================================== */
@@ -484,6 +489,20 @@ void Swc_Pedal_MainFunction(void)
         uint16 tx_torque = (uint16)torque;
         (void)Com_SendSignal(5u, &tx_torque);  /* Signal 5 = torque_request */
     }
+
+#ifdef PLATFORM_POSIX
+    pedal_dbg_counter++;
+    if ((pedal_dbg_counter % 100u) == 0u)
+    {
+        fprintf(stderr, "[PEDAL-DBG] tick=%u raw1=%u raw2=%u pos=%u torque=%u "
+                "vstate=%u mlimit=%u fault=%u latch=%u\n",
+                pedal_dbg_counter,
+                (unsigned)raw1_local, (unsigned)raw2_local,
+                (unsigned)position, (unsigned)torque,
+                (unsigned)vehicle_state, (unsigned)mode_limit,
+                (unsigned)new_fault, (unsigned)Pedal_FaultLatched);
+    }
+#endif
 
     /* ----------------------------------------------------------
      * Step 11: Report DTCs via Dem

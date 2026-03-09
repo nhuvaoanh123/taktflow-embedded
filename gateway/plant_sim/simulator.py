@@ -280,6 +280,12 @@ class PlantSimulator:
                 torque_raw = struct.unpack_from('<H', data, 2)[0]
                 self.motor.duty_pct = min(100.0, float(torque_raw) / 10.0)
                 self.motor.direction = 1 if torque_raw > 0 else 0
+                if self._tick % 100 == 0:
+                    log.info("[PLANT-DBG] RX 0x101: torque_raw=%d duty=%.1f "
+                             "dir=%d rpm=%d vstate=%d",
+                             torque_raw, self.motor.duty_pct,
+                             self.motor.direction, self.motor.rpm_int,
+                             self.vehicle_state)
 
         elif arb_id == RX_STEER_COMMAND:
             if len(data) >= 4 and not self.estop_active:
@@ -324,6 +330,13 @@ class PlantSimulator:
             payload[6] = 100
 
         data = self._encode_with_e2e(TX_MOTOR_STATUS, 0x0E, payload)
+        if self._tick % 100 == 0:
+            log.info("[PLANT-DBG] TX 0x300: rpm=%d duty=%.1f dir=%d "
+                     "enable=%d estop=%d relay_kill=%d vstate=%d",
+                     rpm, self.motor.duty_pct, self.motor.direction,
+                     1 if self.motor.enabled else 0,
+                     self.estop_active, self.sc_relay_killed,
+                     self.vehicle_state)
         self.bus.send(can.Message(arbitration_id=TX_MOTOR_STATUS,
                                   data=data, is_extended_id=False))
 

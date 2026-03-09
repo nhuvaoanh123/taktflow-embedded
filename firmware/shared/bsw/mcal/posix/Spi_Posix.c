@@ -66,6 +66,9 @@ static uint16 spi_override_target = 0xFFFFu; /**< Target angle or CLEAR     */
 static uint16 spi_override_offset = 0u;      /**< Oscillation offset         */
 static uint8  spi_override_up     = 1u;      /**< Oscillation direction      */
 
+/* ---- SIL-002 debug trace ---- */
+static unsigned int spi_dbg_counter = 0u;
+
 /* ---- Injection API (called by sensor feeder SWCs) ---- */
 
 /**
@@ -183,11 +186,14 @@ Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
                 spi_override_target = cmd & 0x3FFFu;
                 spi_override_offset = 0u;
                 spi_override_up     = 1u;
+                fprintf(stderr, "[SPI-DBG] UDP override received: target=%u\n",
+                        (unsigned)spi_override_target);
             }
         }
     }
 
     /* ---- Return simulated angle ---- */
+    spi_dbg_counter++;
     if ((RxBuf != NULL_PTR) && (Length > 0u))
     {
         if (spi_steer_injected != SPI_OVERRIDE_CLEAR)
@@ -280,6 +286,14 @@ Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
                     spi_sim_up = 1u;
                 }
             }
+        }
+        /* SIL-002 debug: log returned angle every 200 calls (~1s virtual) */
+        if ((spi_dbg_counter % 200u) == 0u)
+        {
+            fprintf(stderr, "[SPI-DBG] tick=%u override_target=%u returned=%u\n",
+                    spi_dbg_counter,
+                    (unsigned)spi_override_target,
+                    (unsigned)RxBuf[0]);
         }
     }
 
