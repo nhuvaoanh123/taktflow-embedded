@@ -110,7 +110,7 @@ static const Com_RxPduConfigType cvc_rx_pdu_config[] = {
     { CVC_COM_RX_MOTOR_CUTOFF,    8u, 1000u },   /* Event — long timeout */
     { CVC_COM_RX_LIDAR,           8u,  200u },   /* 5 Hz lidar updates   */
     { CVC_COM_RX_MOTOR_CURRENT,   8u,  200u },   /* 5 Hz motor feedback  */
-    { CVC_COM_RX_SC_RELAY,        4u,  200u },   /* SC relay status      */
+    { CVC_COM_RX_SC_RELAY,        4u, 1500u },   /* SC relay status — 3× SC_Monitoring 500ms period */
     { CVC_COM_RX_BATTERY_STATUS,  8u,    0u },   /* Battery status — timeout disabled (heartbeat covers RZC comm loss) */
     { CVC_COM_RX_ESTOP_INJECT,    8u,    0u },   /* E-Stop inject (SIL) — no timeout */
     { CVC_COM_RX_STEER_STATUS,   8u,  200u },   /* FZC steering status — 20× period */
