@@ -168,11 +168,12 @@
 #define CVC_HB_ALIVE_MAX          15u   /* 4-bit alive counter wraps at 15 */
 
 /* E2E SM Configuration — FZC (100ms FTTI, SG-008 primary path)
- * SIL: wide tolerance absorbs CI Docker CPU scheduling jitter (50-200ms stalls).
- * At SIL_TIME_SCALE=10, each 50ms HB slot = 5ms wall; 30-slot window = 150ms wall. */
+ * SIL: tolerant window absorbs CI Docker CPU scheduling jitter.
+ * At SIL_TIME_SCALE=10, each 50ms HB slot = 5ms wall; 16-slot window = 80ms wall.
+ * IMPORTANT: WindowSize must not exceed E2E_SM_MAX_WINDOW (16). */
 #ifndef CVC_E2E_SM_FZC_WINDOW
   #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_FZC_WINDOW        30u  /* 30 × 50ms = 1500ms virtual — wide CI margin */
+    #define CVC_E2E_SM_FZC_WINDOW        16u  /* 16 × 50ms = 800ms virtual (max E2E_SM_MAX_WINDOW) */
   #else
     #define CVC_E2E_SM_FZC_WINDOW        4u   /* 4 × 50ms = 200ms */
   #endif
@@ -182,7 +183,7 @@
 #endif
 #ifndef CVC_E2E_SM_FZC_MAX_ERR_VALID
   #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 25u  /* tolerate 25 missed slots in SIL (125ms wall jitter) */
+    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 14u  /* tolerate 14/16 missed — need 2+ OKs to stay VALID */
   #else
     #define CVC_E2E_SM_FZC_MAX_ERR_VALID 1u   /* >1 error → INVALID (bare metal) */
   #endif
@@ -192,10 +193,11 @@
 #endif
 
 /* E2E SM Configuration — RZC (local motor cutoff primary, 150ms FTTI)
- * SIL: wide tolerance for Docker scheduling — same approach as FZC. */
+ * SIL: tolerant window for Docker scheduling — same approach as FZC.
+ * IMPORTANT: WindowSize must not exceed E2E_SM_MAX_WINDOW (16). */
 #ifndef CVC_E2E_SM_RZC_WINDOW
   #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_RZC_WINDOW        30u  /* 30 × 50ms = 1500ms virtual — wide CI margin */
+    #define CVC_E2E_SM_RZC_WINDOW        16u  /* 16 × 50ms = 800ms virtual (max E2E_SM_MAX_WINDOW) */
   #else
     #define CVC_E2E_SM_RZC_WINDOW         6u  /* 6 × 50ms = 300ms */
   #endif
@@ -205,7 +207,7 @@
 #endif
 #ifndef CVC_E2E_SM_RZC_MAX_ERR_VALID
   #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_RZC_MAX_ERR_VALID 25u  /* tolerate 25 missed slots in SIL (125ms wall jitter) */
+    #define CVC_E2E_SM_RZC_MAX_ERR_VALID 14u  /* tolerate 14/16 missed — need 2+ OKs to stay VALID */
   #else
     #define CVC_E2E_SM_RZC_MAX_ERR_VALID  2u  /* >2 errors → INVALID (bare metal) */
   #endif

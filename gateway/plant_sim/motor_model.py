@@ -76,7 +76,7 @@ class MotorModel:
 
         # Current model: proportional to torque load
         if self._overcurrent_latch:
-            # Injected overcurrent — hold at injected level, motor disabled
+            # Injected overcurrent - hold at injected level, motor disabled
             self.current_ma = self._injected_current_ma
         elif self.enabled:
             load_factor = 1.0 - (self.rpm / self.NO_LOAD_RPM)
@@ -100,7 +100,7 @@ class MotorModel:
             self._hw_disabled = True
 
     def inject_overcurrent(self, current_ma: float = 28000.0):
-        """Inject an overcurrent fault — latched until reset_faults()."""
+        """Inject an overcurrent fault - latched until reset_faults()."""
         self.current_ma = current_ma
         self._injected_current_ma = current_ma
         self._overcurrent_latch = True
