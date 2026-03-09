@@ -78,10 +78,15 @@ def map_dtc_to_defect(dtc_code: str) -> Optional[dict[str, str]]:
     """Look up a DTC code and return the corresponding SAP defect entry.
 
     Args:
-        dtc_code: Hex DTC code string, e.g. '0xE301'.
+        dtc_code: Hex DTC code string, e.g. '0xE301' or '0x00E301'.
+                  Leading zero-padded formats are normalized before lookup.
 
     Returns:
         Dict with 'code', 'text', and 'priority' keys, or None if
         the DTC code is not found in the catalog.
     """
-    return DTC_TO_DEFECT.get(dtc_code)
+    # Normalize: strip "0x" prefix, remove leading zeros, re-add "0x"
+    # so both "0xE301" and "0x00E301" match catalog key "0xE301"
+    stripped = dtc_code.upper().removeprefix("0X").lstrip("0") or "0"
+    normalized = f"0x{stripped}"
+    return DTC_TO_DEFECT.get(normalized)

@@ -202,13 +202,12 @@ BO_ 1026 Door_Lock_Status: 2 BCM
  SG_ CentralLock : 4|1@1+ (1,0) [0|1] "" ICU
 
 BO_ 1280 DTC_Broadcast: 8 CVC
- SG_ DTC_Number : 0|16@1+ (1,0) [0|65535] "" TCU,ICU
- SG_ DTC_Status : 16|8@1+ (1,0) [0|255] "" TCU,ICU
- SG_ ECU_Source : 24|8@1+ (1,0) [0|7] "" TCU,ICU
- SG_ OccurrenceCount : 32|8@1+ (1,0) [0|255] "" TCU,ICU
- SG_ FreezeFrame0 : 40|8@1+ (1,0) [0|255] "" TCU,ICU
- SG_ FreezeFrame1 : 48|8@1+ (1,0) [0|255] "" TCU,ICU
- SG_ FreezeFrame2 : 56|8@1+ (1,0) [0|255] "" TCU,ICU
+ SG_ DTC_Number : 7|24@0+ (1,0) [0|16777215] "" TCU,ICU
+ SG_ DTC_Status : 24|8@1+ (1,0) [0|255] "" TCU,ICU
+ SG_ ECU_Source : 32|8@1+ (1,0) [0|7] "" TCU,ICU
+ SG_ OccurrenceCount : 40|8@1+ (1,0) [0|255] "" TCU,ICU
+ SG_ FreezeFrame0 : 48|8@1+ (1,0) [0|255] "" TCU,ICU
+ SG_ FreezeFrame1 : 56|8@1+ (1,0) [0|255] "" TCU,ICU
 
 BO_ 2015 UDS_Func_Request: 8 Tester
  SG_ UDS_Data : 0|64@1+ (1,0) [0|0] "" CVC,FZC,RZC,TCU,BCM,ICU
