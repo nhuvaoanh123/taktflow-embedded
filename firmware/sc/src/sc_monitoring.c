@@ -89,27 +89,10 @@ static void mon_build_payload(uint8* frame)
     if (SC_Heartbeat_IsTimedOut(SC_ECU_FZC) == FALSE) { ecu_health |= 0x02u; }
     if (SC_Heartbeat_IsTimedOut(SC_ECU_RZC) == FALSE) { ecu_health |= 0x04u; }
 
-    /* Fault reason (why kill relay fired) — from relay kill reason */
-    fault_reason = 0u;
-    if (killed == TRUE) {
-        uint8 reason = SC_Relay_GetKillReason();
-        if (reason == SC_KILL_REASON_HB_TIMEOUT) {
-            fault_reason = SC_STATUS_REASON_HB_TIMEOUT;
-        } else if (reason == SC_KILL_REASON_PLAUSIBILITY) {
-            fault_reason = SC_STATUS_REASON_PLAUS;
-        } else if (reason == SC_KILL_REASON_SELFTEST) {
-            fault_reason = SC_STATUS_REASON_SELFTEST;
-        } else {
-            /* ESM, bus-off, readback — all treated as selftest-class fault */
-            fault_reason = SC_STATUS_REASON_SELFTEST;
-        }
-    }
-    /* Content fault reason — even if relay not yet fired */
-    if ((SC_Heartbeat_IsContentFault(SC_ECU_CVC) == TRUE) ||
-        (SC_Heartbeat_IsContentFault(SC_ECU_FZC) == TRUE) ||
-        (SC_Heartbeat_IsContentFault(SC_ECU_RZC) == TRUE)) {
-        fault_reason |= SC_STATUS_REASON_CONTENT;
-    }
+    /* Fault reason — pass kill reason directly (4-bit enum, values 0-9).
+     * Previously collapsed ESM/busoff/readback into SELFTEST (GAP-SC-007).
+     * Content fault is visible through fault_flags per-ECU bits. */
+    fault_reason = (killed == TRUE) ? (SC_Relay_GetKillReason() & 0x0Fu) : 0u;
 
     relay_state = (killed == FALSE) ? 1u : 0u;  /* 1=energized, 0=de-energized */
 

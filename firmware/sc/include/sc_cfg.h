@@ -234,13 +234,23 @@
 #define SC_STATUS_FAULT_PLAUS        0x08u
 
 /* ==================================================================
- * SC_Status Byte 3: FaultReason (bits [6:3])
+ * SC_Status Byte 3: FaultReason (bits [6:3]) — 4-bit enum
+ *
+ * Direct pass-through of SC_KILL_REASON_* values (GAP-SC-007 fix).
+ * Previously used bitmask encoding that collapsed multiple reasons.
+ * Values match SC_KILL_REASON_* for 1:1 post-incident diagnosability.
  * ================================================================== */
 
-#define SC_STATUS_REASON_HB_TIMEOUT  0x01u
-#define SC_STATUS_REASON_PLAUS       0x02u
-#define SC_STATUS_REASON_SELFTEST    0x04u
-#define SC_STATUS_REASON_CONTENT     0x08u
+#define SC_STATUS_REASON_NONE        0x00u  /* = SC_KILL_REASON_NONE */
+#define SC_STATUS_REASON_HB_TIMEOUT  0x01u  /* = SC_KILL_REASON_HB_TIMEOUT */
+#define SC_STATUS_REASON_PLAUS       0x02u  /* = SC_KILL_REASON_PLAUSIBILITY */
+#define SC_STATUS_REASON_SELFTEST    0x03u  /* = SC_KILL_REASON_SELFTEST */
+#define SC_STATUS_REASON_ESM         0x04u  /* = SC_KILL_REASON_ESM */
+#define SC_STATUS_REASON_BUSOFF      0x05u  /* = SC_KILL_REASON_BUSOFF */
+#define SC_STATUS_REASON_READBACK    0x06u  /* = SC_KILL_REASON_READBACK */
+#define SC_STATUS_REASON_ESTOP       0x07u  /* = SC_KILL_REASON_ESTOP */
+#define SC_STATUS_REASON_BUS_SILENCE 0x08u  /* = SC_KILL_REASON_BUS_SILENCE */
+#define SC_STATUS_REASON_E2E_FAIL    0x09u  /* = SC_KILL_REASON_E2E_FAIL */
 
 /* ==================================================================
  * TX Mailbox for SC_Status (SWR-SC-029) — firmware-only TX mailbox
