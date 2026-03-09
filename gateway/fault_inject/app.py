@@ -195,6 +195,8 @@ def _on_startup():
     global _mqtt_client, _test_runner
     _mqtt_client = _init_mqtt()
     set_mqtt_client(_mqtt_client)
+    # Always publish initial unlocked state to clear any stale retained lock payload.
+    _publish_lock_state()
     # Initialize test runner
     _test_runner = DashboardTestRunner(_mqtt_client, _trigger_scenario, reset_scenario)
     # Start lock watchdog (daemon thread — dies with process)
