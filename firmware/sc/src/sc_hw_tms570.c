@@ -986,6 +986,25 @@ void sc_het_led_off(void)
     reg_write(GIO_BASE, GIO_DCLRB, LED_MASK);
 }
 
+/**
+ * @brief  Set individual user LEDs (LED2=GIOB[6], LED3=GIOB[7])
+ * @param  led2  1=ON, 0=OFF
+ * @param  led3  1=ON, 0=OFF
+ */
+void sc_het_led_set(uint8 led2, uint8 led3)
+{
+    uint32 set = 0u;
+    uint32 clr = 0u;
+
+    if (led2 != 0u) { set |= ((uint32)1u << 6u); }
+    else             { clr |= ((uint32)1u << 6u); }
+    if (led3 != 0u) { set |= ((uint32)1u << 7u); }
+    else             { clr |= ((uint32)1u << 7u); }
+
+    if (set != 0u) { reg_write(GIO_BASE, GIO_DSETB, set); }
+    if (clr != 0u) { reg_write(GIO_BASE, GIO_DCLRB, clr); }
+}
+
 /* ==================================================================
  * ESM Group 3 Notification Override
  *
@@ -1070,9 +1089,45 @@ void esmGroup2Notification(void *esm, uint32 channel)
  * NOTE: For production, replace with proper error handling per
  * ISO 26262 requirements.
  */
+/* GAP-SC-005 debug: snapshot of CCM/ESM registers captured in
+ * esmGroup3Notification BEFORE clearing. Readable from main(). */
+static uint32 g3_ccmsr1;
+static uint32 g3_ccmsr2;
+static uint32 g3_ccmsr3;
+static uint32 g3_ccmsr4;
+static uint32 g3_esm_sr1;
+static uint32 g3_esm_sr3;
+static uint32 g3_esm_ekr;
+static uint32 g3_channel;
+static uint32 g3_call_count;
+
+void sc_ccm_debug_get(uint32 *out)
+{
+    out[0] = g3_ccmsr1;
+    out[1] = g3_ccmsr2;
+    out[2] = g3_ccmsr3;
+    out[3] = g3_ccmsr4;
+    out[4] = g3_esm_sr1;
+    out[5] = g3_esm_sr3;
+    out[6] = g3_esm_ekr;
+    out[7] = g3_channel;
+    out[8] = g3_call_count;
+}
+
 void esmGroup3Notification(void *esm, uint32 channel)
 {
     (void)esm;
+
+    /* GAP-SC-005: snapshot registers BEFORE clearing */
+    g3_ccmsr1  = reg_read(CCMR5_BASE, CCMSR1_OFF);
+    g3_ccmsr2  = reg_read(CCMR5_BASE, CCMSR2_OFF);
+    g3_ccmsr3  = reg_read(CCMR5_BASE, CCMSR3_OFF);
+    g3_ccmsr4  = reg_read(CCMR5_BASE, CCMSR4_OFF);
+    g3_esm_sr1 = reg_read(ESM_BASE, ESM_SR1_0);
+    g3_esm_sr3 = reg_read(ESM_BASE, ESM_SR3);
+    g3_esm_ekr = reg_read(ESM_BASE, ESM_EKR_OFF);
+    g3_channel = channel;
+    g3_call_count++;
 
     /* 1. Clear ALL CCM-R5F compare errors at their SOURCE.
      *    The CCM continuously drives ESM Group 3 until its status
@@ -1233,6 +1288,22 @@ void sc_sci_put_uint(uint32 val)
     /* Print in reverse order */
     for (j = i; j > 0u; j--) {
         sc_sci_putchar((uint8)buf[j - 1u]);
+    }
+}
+
+/**
+ * @brief  Send a uint32 as 8-digit hex string ("0xNNNNNNNN") over SCI
+ * @param  val  Value to print
+ */
+void sc_sci_put_hex32(uint32 val)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    uint8 i;
+
+    sc_sci_putchar((uint8)'0');
+    sc_sci_putchar((uint8)'x');
+    for (i = 0u; i < 8u; i++) {
+        sc_sci_putchar((uint8)hex[(val >> (28u - (i * 4u))) & 0x0Fu]);
     }
 }
 

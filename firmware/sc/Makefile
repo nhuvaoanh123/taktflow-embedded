@@ -29,7 +29,7 @@ BUILD     := build/tms570
 # TMS570LC43x = ARM Cortex-R5F, big-endian, VFPv3-D16
 CFLAGS := -mcpu=cortex-r5 -mbig-endian -mfloat-abi=hard -mfpu=vfpv3-d16 \
           -marm -Og \
-          -DPLATFORM_TMS570 -D__big_endian__ \
+          -DPLATFORM_TMS570 -D__big_endian__ -DSC_ESM_ENABLED \
           -I$(SC_INC) -I$(HCG_INC) -I$(CGT_ROOT)/include \
           -Wall -Wno-unused-parameter \
           -g
@@ -66,8 +66,10 @@ SC_CSRC := $(SC_SRC)/sc_main.c \
            $(SC_SRC)/sc_hw_tms570.c \
            $(SC_SRC)/sc_led.c \
            $(SC_SRC)/sc_plausibility.c \
+           $(SC_SRC)/sc_monitoring.c \
            $(SC_SRC)/sc_relay.c \
            $(SC_SRC)/sc_selftest.c \
+           $(SC_SRC)/sc_state.c \
            $(SC_SRC)/sc_watchdog.c
 
 # ---- HALCoGen Assembly Sources (original TI-syntax .asm) ----

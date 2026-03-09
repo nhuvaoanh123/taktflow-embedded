@@ -71,8 +71,11 @@ extern void gioSetDirection(uint8 port, uint8 pin, uint8 direction);
 extern void sc_sci_init(void);
 extern void sc_sci_puts(const char* str);
 extern void sc_sci_put_uint(uint32 val);
+extern void sc_sci_put_hex32(uint32 val);
+extern void sc_ccm_debug_get(uint32 *out);
 extern void sc_het_led_on(void);
 extern void sc_het_led_off(void);
+extern void sc_het_led_set(uint8 led2, uint8 led3);
 #endif
 
 /* ==================================================================
@@ -143,6 +146,7 @@ int main(void)
     boolean all_checks_ok;
 #ifdef PLATFORM_TMS570
     uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
+    uint8 hb_blink_counter = 0u;  /* heartbeat LED blink (GIOB[6:7]) */
 #endif
 #ifdef SIL_DIAG
     uint16 sil_diag_tick = 0u;
@@ -159,6 +163,30 @@ int main(void)
     sc_het_led_on();
     sc_sci_puts("=== SC Boot (TMS570LC43x) ===\r\n");
     sc_sci_puts("main() reached OK\r\n");
+
+    /* GAP-SC-005 debug: print CCM/ESM snapshot captured by
+     * esmGroup3Notification BEFORE it cleared the registers.
+     * Also print current (post-clear) register state. */
+    {
+        uint32 ccm_dbg[9];
+        sc_ccm_debug_get(ccm_dbg);
+        sc_sci_puts("--- CCM/ESM G3 snapshot (pre-clear) ---\r\n");
+        sc_sci_puts("G3_calls="); sc_sci_put_uint(ccm_dbg[8]); sc_sci_puts("\r\n");
+        sc_sci_puts("G3_ch=");    sc_sci_put_uint(ccm_dbg[7]); sc_sci_puts("\r\n");
+        sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(ccm_dbg[0]); sc_sci_puts("\r\n");
+        sc_sci_puts("CCMSR2=");   sc_sci_put_hex32(ccm_dbg[1]); sc_sci_puts("\r\n");
+        sc_sci_puts("CCMSR3=");   sc_sci_put_hex32(ccm_dbg[2]); sc_sci_puts("\r\n");
+        sc_sci_puts("CCMSR4=");   sc_sci_put_hex32(ccm_dbg[3]); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(ccm_dbg[4]); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(ccm_dbg[5]); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(ccm_dbg[6]); sc_sci_puts("\r\n");
+        sc_sci_puts("--- current registers (post-clear) ---\r\n");
+        sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF600u); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u); sc_sci_puts("\r\n");
+        sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF538u); sc_sci_puts("\r\n");
+        sc_sci_puts("--- end dump ---\r\n");
+    }
 #endif
 
     /* ---- 1. System initialization ---- */
@@ -283,6 +311,33 @@ int main(void)
         /* ---- Step 5: LED Update ---- */
         SC_LED_Update();
 
+#ifdef PLATFORM_TMS570
+        /* Heartbeat blink on GIOB[6:7] user LEDs:
+         *   ESM error active → both solid ON (fault)
+         *   SC_ESM_ENABLED   → alternating (lockstep monitored)
+         *   ESM disabled     → both blink together (no lockstep) */
+        hb_blink_counter++;
+        if (hb_blink_counter >= 100u) {
+            hb_blink_counter = 0u;
+        }
+        if (SC_ESM_IsErrorActive() == TRUE) {
+            sc_het_led_on();  /* solid ON = fault */
+        }
+#ifdef SC_ESM_ENABLED
+        else if (hb_blink_counter < 50u) {
+            sc_het_led_set(1u, 0u);  /* LED2 ON, LED3 OFF */
+        } else {
+            sc_het_led_set(0u, 1u);  /* LED2 OFF, LED3 ON */
+        }
+#else
+        else if (hb_blink_counter < 50u) {
+            sc_het_led_on();
+        } else {
+            sc_het_led_off();
+        }
+#endif
+#endif
+
         /* ---- Step 6: Bus Silence Monitor ---- */
         SC_CAN_MonitorBus();
 
@@ -327,6 +382,25 @@ int main(void)
             sc_sci_puts(" ND=0x");
             sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC9Cu);  /* DCAN1 NEWDAT1 */
             sc_sci_puts("\r\n");
+
+            /* GAP-SC-005: print CCM/ESM snapshot every periodic print */
+            {
+                uint32 ccm_dbg[9];
+                sc_ccm_debug_get(ccm_dbg);
+                sc_sci_puts("[CCM] G3_calls="); sc_sci_put_uint(ccm_dbg[8]);
+                sc_sci_puts(" ch="); sc_sci_put_uint(ccm_dbg[7]);
+                sc_sci_puts(" CCMSR1="); sc_sci_put_hex32(ccm_dbg[0]);
+                sc_sci_puts(" CCMSR2="); sc_sci_put_hex32(ccm_dbg[1]);
+                sc_sci_puts(" CCMSR3="); sc_sci_put_hex32(ccm_dbg[2]);
+                sc_sci_puts(" CCMSR4="); sc_sci_put_hex32(ccm_dbg[3]);
+                sc_sci_puts("\r\n");
+                sc_sci_puts("[ESM] SR1="); sc_sci_put_hex32(ccm_dbg[4]);
+                sc_sci_puts(" SR3="); sc_sci_put_hex32(ccm_dbg[5]);
+                sc_sci_puts(" EKR="); sc_sci_put_hex32(ccm_dbg[6]);
+                sc_sci_puts(" now_SR1="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u);
+                sc_sci_puts(" now_SR3="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u);
+                sc_sci_puts("\r\n");
+            }
         }
 #endif
 
