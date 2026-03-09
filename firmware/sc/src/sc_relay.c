@@ -20,7 +20,7 @@
 
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
-#include <stdio.h>
+#include <stdio.h>  /* cppcheck-suppress misra-c2012-21.6 ; SIL-only diagnostic output */
 #define SC_RELAY_DIAG(fmt, ...) (void)fprintf(stderr, "[SC_RELAY] " fmt "\n", ##__VA_ARGS__)
 #else
 #define SC_RELAY_DIAG(fmt, ...) ((void)0)
