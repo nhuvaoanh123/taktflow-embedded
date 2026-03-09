@@ -29,6 +29,14 @@
 #include "sc_gio.h"
 #include "sc_monitoring.h"     /* SWR-SC-029/030: SC_Status broadcast (GAP-1/2) */
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define SC_MAIN_DIAG(fmt, ...) (void)fprintf(stderr, "[SC_MAIN] " fmt "\n", ##__VA_ARGS__)
+#else
+#define SC_MAIN_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * External: Platform initialization (HALCoGen-generated or mock)
  * ================================================================== */
@@ -135,6 +143,9 @@ int main(void)
 #ifdef PLATFORM_TMS570
     uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
 #endif
+#ifdef SIL_DIAG
+    uint16 sil_diag_tick = 0u;
+#endif
 
     /* ---- 0. LED+UART -- prove CPU reaches main() ---- */
 #ifdef PLATFORM_TMS570
@@ -232,6 +243,22 @@ int main(void)
 
         /* ---- Step 4: Relay Trigger Evaluation ---- */
         SC_Relay_CheckTriggers();
+
+#ifdef SIL_DIAG
+        sil_diag_tick++;
+        if (sil_diag_tick % 100u == 0u) {  /* Every 1s */
+            SC_MAIN_DIAG("t=%u hb_cvc=%u hb_fzc=%u hb_rzc=%u relay=%u selftest=%u esm=%u busoff=%u plaus=%u",
+                         (unsigned)sil_diag_tick,
+                         (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_CVC),
+                         (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_FZC),
+                         (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_RZC),
+                         (unsigned)(SC_Relay_IsKilled() ? 0u : 1u),
+                         (unsigned)SC_SelfTest_IsHealthy(),
+                         (unsigned)SC_ESM_IsErrorActive(),
+                         (unsigned)SC_CAN_IsBusOff(),
+                         (unsigned)SC_Plausibility_IsFaulted());
+        }
+#endif
 
         /* ---- Step 4b: SC_Status Broadcast (500ms, both TMS570 and SIL) ---- */
         /* Supersedes POSIX-only SC_Relay_BroadcastSil(). SWR-SC-029/030. */

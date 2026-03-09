@@ -18,6 +18,14 @@
 #include "sc_esm.h"
 #include "sc_can.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define SC_RELAY_DIAG(fmt, ...) (void)fprintf(stderr, "[SC_RELAY] " fmt "\n", ##__VA_ARGS__)
+#else
+#define SC_RELAY_DIAG(fmt, ...) ((void)0)
+#endif
+
 /* ==================================================================
  * Module State
  * ================================================================== */
@@ -91,6 +99,10 @@ void SC_Relay_CheckTriggers(void)
     /* Trigger (a): Heartbeat confirmed timeout */
     if (SC_Heartbeat_IsAnyConfirmed() == TRUE) {
         kill_reason = SC_KILL_REASON_HB_TIMEOUT;
+        SC_RELAY_DIAG("KILL reason=HB_TIMEOUT cvc=%u fzc=%u rzc=%u",
+                      (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_CVC),
+                      (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_FZC),
+                      (unsigned)SC_Heartbeat_IsTimedOut(SC_ECU_RZC));
         SC_Relay_DeEnergize();
         return;
     }
@@ -98,6 +110,7 @@ void SC_Relay_CheckTriggers(void)
     /* Trigger (b): Plausibility fault */
     if (SC_Plausibility_IsFaulted() == TRUE) {
         kill_reason = SC_KILL_REASON_PLAUSIBILITY;
+        SC_RELAY_DIAG("KILL reason=PLAUSIBILITY");
         SC_Relay_DeEnergize();
         return;
     }
@@ -105,6 +118,7 @@ void SC_Relay_CheckTriggers(void)
     /* Trigger (c/d): Self-test failure (startup or runtime) */
     if (SC_SelfTest_IsHealthy() == FALSE) {
         kill_reason = SC_KILL_REASON_SELFTEST;
+        SC_RELAY_DIAG("KILL reason=SELFTEST");
         SC_Relay_DeEnergize();
         return;
     }
@@ -112,6 +126,7 @@ void SC_Relay_CheckTriggers(void)
     /* Trigger (e): ESM lockstep error */
     if (SC_ESM_IsErrorActive() == TRUE) {
         kill_reason = SC_KILL_REASON_ESM;
+        SC_RELAY_DIAG("KILL reason=ESM");
         SC_Relay_DeEnergize();
         return;
     }
@@ -119,6 +134,7 @@ void SC_Relay_CheckTriggers(void)
     /* Trigger (f): CAN bus-off */
     if (SC_CAN_IsBusOff() == TRUE) {
         kill_reason = SC_KILL_REASON_BUSOFF;
+        SC_RELAY_DIAG("KILL reason=BUSOFF");
         SC_Relay_DeEnergize();
         return;
     }
@@ -141,6 +157,9 @@ void SC_Relay_CheckTriggers(void)
 
     if (readback_mismatch_count >= SC_RELAY_READBACK_THRESHOLD) {
         kill_reason = SC_KILL_REASON_READBACK;
+        SC_RELAY_DIAG("KILL reason=READBACK cmd=%u rb=%u cnt=%u",
+                      (unsigned)relay_commanded, (unsigned)readback,
+                      (unsigned)readback_mismatch_count);
         SC_Relay_DeEnergize();
     }
 }
