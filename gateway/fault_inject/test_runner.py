@@ -12,6 +12,7 @@ Usage:
 
 import json
 import logging
+import os
 import threading
 import time
 import uuid
@@ -24,6 +25,10 @@ log = logging.getLogger("fault_inject")
 
 # Vehicle state enum (matches ws_bridge)
 VEHICLE_STATES = {0: "INIT", 1: "RUN", 2: "DEGRADED", 3: "LIMP", 4: "SAFE_STOP", 5: "SHUTDOWN"}
+
+# Global hardening: settle after RUN before fault injection.
+# Can be tuned per environment without code changes.
+DEFAULT_POST_RUN_SETTLE_SEC = float(os.environ.get("TEST_POST_RUN_SETTLE_SEC", "10.5"))
 
 
 class MQTTVerdictMonitor:
@@ -376,10 +381,14 @@ class DashboardTestRunner:
 
                 # Some scenarios rely on ConfirmFault paths in CVC.
                 # In SIL, CVC suppresses these for a post-INIT grace period.
-                if spec.post_run_settle_sec > 0:
+                # Harden all scenarios by applying a global minimum settle.
+                settle_sec = spec.post_run_settle_sec
+                if settle_sec < DEFAULT_POST_RUN_SETTLE_SEC:
+                    settle_sec = DEFAULT_POST_RUN_SETTLE_SEC
+                if settle_sec > 0.0:
                     log.info("[TEST %s] Settling %.1fs after RUN before %s",
-                             run_id, spec.post_run_settle_sec, spec.id)
-                    settle_deadline = time.time() + spec.post_run_settle_sec
+                             run_id, settle_sec, spec.id)
+                    settle_deadline = time.time() + settle_sec
                     while time.time() < settle_deadline:
                         if self._stop_requested:
                             break
