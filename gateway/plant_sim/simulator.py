@@ -255,10 +255,13 @@ class PlantSimulator:
                     self._startup_ticks = 0
 
         elif arb_id == RX_SC_RELAY_STATUS:
-            if len(data) >= 1:
-                killed = bool(data[0])
+            if len(data) >= 4:
+                # SC Status frame: [0]=E2E alive, [1]=CRC, [2]=mode|flags,
+                # [3]= ecu_health(2:0) | fault_reason(6:3) | relay_state(7)
+                relay_energized = bool(data[3] & 0x80)
+                killed = not relay_energized
                 if killed and not self.sc_relay_killed:
-                    reason = data[1] if len(data) >= 2 else 0
+                    reason = (data[3] >> 3) & 0x0F
                     log.info("SC relay KILLED (reason=%d) — motor disabled", reason)
                     self.sc_relay_killed = True
                     self.motor._hw_disabled = True

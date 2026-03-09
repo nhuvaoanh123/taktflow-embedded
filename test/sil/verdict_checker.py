@@ -109,9 +109,9 @@ DEFAULT_SCENARIO_TIMEOUT_SEC = 60
 DEFAULT_STATE_WAIT_TIMEOUT_SEC = 10
 
 # Motor RPM byte positions in Motor_Status (0x300)
-# Layout: [E2E_CRC, E2E_Alive, torque_echo, rpm_lo, rpm_hi, dir, enable, fault]
-MOTOR_RPM_BYTE_LO = 3
-MOTOR_RPM_BYTE_HI = 4
+# Layout: [E2E_alive, CRC, rpm_lo, rpm_hi, dir|enable|fault, duty, derating, reserved]
+MOTOR_RPM_BYTE_LO = 2
+MOTOR_RPM_BYTE_HI = 3
 
 
 # ---------------------------------------------------------------------------
