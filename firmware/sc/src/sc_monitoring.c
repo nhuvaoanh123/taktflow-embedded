@@ -18,6 +18,7 @@
 #include "sc_plausibility.h"
 #include "sc_relay.h"
 #include "sc_selftest.h"
+#include "sc_state.h"
 
 /* ==================================================================
  * Module State
@@ -50,19 +51,19 @@ static void mon_build_payload(uint8* frame)
 
     killed = SC_Relay_IsKilled();
 
-    /* SC operating mode */
-    if (killed == TRUE) {
-        sc_mode = SC_STATUS_MODE_SAFE_STOP;
-    } else if ((SC_Heartbeat_IsTimedOut(SC_ECU_CVC) == TRUE) ||
-               (SC_Heartbeat_IsTimedOut(SC_ECU_FZC) == TRUE) ||
-               (SC_Heartbeat_IsTimedOut(SC_ECU_RZC) == TRUE) ||
-               (SC_Plausibility_IsFaulted() == TRUE)          ||
-               (SC_Heartbeat_IsContentFault(SC_ECU_CVC) == TRUE) ||
-               (SC_Heartbeat_IsContentFault(SC_ECU_FZC) == TRUE) ||
-               (SC_Heartbeat_IsContentFault(SC_ECU_RZC) == TRUE)) {
-        sc_mode = SC_STATUS_MODE_FAULT;
-    } else {
-        sc_mode = SC_STATUS_MODE_MONITORING;
+    /* SC operating mode — read from authoritative state machine (GAP-SC-006).
+     * SC_STATE_KILL maps to SC_STATUS_MODE_SAFE_STOP for CAN broadcast. */
+    {
+        uint8 state = SC_State_Get();
+        if (state == SC_STATE_KILL) {
+            sc_mode = SC_STATUS_MODE_SAFE_STOP;
+        } else if (state == SC_STATE_FAULT) {
+            sc_mode = SC_STATUS_MODE_FAULT;
+        } else if (state == SC_STATE_MONITORING) {
+            sc_mode = SC_STATUS_MODE_MONITORING;
+        } else {
+            sc_mode = SC_STATUS_MODE_INIT;
+        }
     }
 
     /* SC fault flags (which ECU is faulted) */

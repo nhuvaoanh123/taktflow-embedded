@@ -28,6 +28,7 @@
 #include "sc_selftest.h"
 #include "sc_gio.h"
 #include "sc_monitoring.h"     /* SWR-SC-029/030: SC_Status broadcast (GAP-1/2) */
+#include "sc_state.h"         /* GAP-SC-006: authoritative state machine */
 
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
@@ -184,6 +185,7 @@ int main(void)
     SC_LED_Init();
     SC_Watchdog_Init();
     SC_Monitoring_Init();       /* SWR-SC-030: SC_Status TX init */
+    SC_State_Init();            /* GAP-SC-006: state machine starts in INIT */
     /* ESM lockstep monitoring — define SC_ESM_ENABLED to activate.
      * Currently disabled: CCM-R5F persistent error triggers ESM ISR infinite loop.
      * TODO:HARDWARE Re-enable after lockstep error root cause is resolved. */
@@ -218,6 +220,7 @@ int main(void)
 
     /* ---- 4. Startup passed — energize relay ---- */
     SC_Relay_Energize();
+    (void)SC_State_Transition(SC_STATE_MONITORING);
 
 #ifdef PLATFORM_TMS570
     sc_sci_puts("SC_Relay: energized (MONITORING)\r\n");
@@ -244,6 +247,19 @@ int main(void)
 
         /* ---- Step 4: Relay Trigger Evaluation ---- */
         SC_Relay_CheckTriggers();
+
+        /* ---- Step 4a: State machine update (GAP-SC-006) ---- */
+        if (SC_Relay_IsKilled() == TRUE) {
+            (void)SC_State_Transition(SC_STATE_KILL);
+        } else if ((SC_Heartbeat_IsTimedOut(SC_ECU_CVC) == TRUE) ||
+                   (SC_Heartbeat_IsTimedOut(SC_ECU_FZC) == TRUE) ||
+                   (SC_Heartbeat_IsTimedOut(SC_ECU_RZC) == TRUE) ||
+                   (SC_Plausibility_IsFaulted() == TRUE)          ||
+                   (SC_Heartbeat_IsContentFault(SC_ECU_CVC) == TRUE) ||
+                   (SC_Heartbeat_IsContentFault(SC_ECU_FZC) == TRUE) ||
+                   (SC_Heartbeat_IsContentFault(SC_ECU_RZC) == TRUE)) {
+            (void)SC_State_Transition(SC_STATE_FAULT);
+        }
 
 #ifdef SIL_DIAG
         sil_diag_tick++;
