@@ -96,7 +96,15 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (a): Heartbeat confirmed timeout */
+    /* Trigger (a): E-Stop command (highest priority — explicit safety request) */
+    if (SC_CAN_IsEStopActive() == TRUE) {
+        kill_reason = SC_KILL_REASON_ESTOP;
+        SC_RELAY_DIAG("KILL reason=ESTOP");
+        SC_Relay_DeEnergize();
+        return;
+    }
+
+    /* Trigger (b): Heartbeat confirmed timeout */
     if (SC_Heartbeat_IsAnyConfirmed() == TRUE) {
         kill_reason = SC_KILL_REASON_HB_TIMEOUT;
         SC_RELAY_DIAG("KILL reason=HB_TIMEOUT cvc=%u fzc=%u rzc=%u",

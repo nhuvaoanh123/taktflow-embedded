@@ -68,6 +68,9 @@ static uint16 bus_silence_counter;
 /** Bus-off flag */
 static boolean bus_off;
 
+/** E-Stop active flag — set when EStop_Active (byte 2) != 0 in validated E-Stop frame */
+static boolean estop_active;
+
 /** Initialization flag */
 static boolean can_initialized;
 
@@ -104,6 +107,7 @@ void SC_CAN_Init(void)
 
     bus_silence_counter = 0u;
     bus_off             = FALSE;
+    estop_active        = FALSE;
 
 #ifdef PLATFORM_TMS570
     /* Use HALCoGen canInit() to properly initialize DCAN1:
@@ -174,8 +178,11 @@ void SC_CAN_Receive(void)
                 } else if (mb == SC_MB_IDX_RZC_HB) {
                     SC_Heartbeat_NotifyRx(SC_ECU_RZC);
                     SC_Heartbeat_ValidateContent(SC_ECU_RZC, rx_data);
+                } else if (mb == SC_MB_IDX_ESTOP) {
+                    /* E-Stop: byte 2 = EStop_Active (0=inactive, non-zero=active) */
+                    estop_active = (rx_data[2] != 0u) ? TRUE : FALSE;
                 } else {
-                    /* Non-heartbeat mailbox — no heartbeat notification */
+                    /* Other non-heartbeat mailbox — no special action */
                 }
             }
         }
@@ -237,6 +244,11 @@ boolean SC_CAN_IsBusSilent(void)
 boolean SC_CAN_IsBusOff(void)
 {
     return bus_off;
+}
+
+boolean SC_CAN_IsEStopActive(void)
+{
+    return estop_active;
 }
 
 void SC_CAN_TransmitStatus(const uint8* payload, uint8 dlc)

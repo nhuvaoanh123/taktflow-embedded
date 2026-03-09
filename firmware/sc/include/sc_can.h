@@ -61,6 +61,17 @@ boolean SC_CAN_IsBusSilent(void);
 boolean SC_CAN_IsBusOff(void);
 
 /**
+ * @brief  Check if E-Stop command is active
+ *
+ * Parses byte 2 (EStop_Active) from validated EStop_Broadcast (CAN 0x001).
+ * Updated on each valid E-Stop reception after E2E check.
+ *
+ * @return TRUE if last received E-Stop frame had EStop_Active != 0
+ * @safety_req SWR-SC-035 (GAP-SC-001 closure)
+ */
+boolean SC_CAN_IsEStopActive(void);
+
+/**
  * @brief  Transmit SC_Status frame on DCAN1 mailbox 7 (SWR-SC-029, SWR-SC-030)
  *
  * The only TX function in the SC firmware. Mailbox 7 is pre-configured

@@ -527,6 +527,69 @@ void test_CAN_TransmitStatus_rejects_null(void)
 }
 
 /* ==================================================================
+ * SWR-SC-035: E-Stop Parsing (GAP-SC-001)
+ * ================================================================== */
+
+/** @verifies SWR-SC-035 -- E-Stop active parsed from byte 2 of validated frame */
+void test_CAN_Receive_estop_active(void)
+{
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 1u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    mock_e2e_check_result = TRUE;
+
+    SC_CAN_Receive();
+
+    TEST_ASSERT_TRUE(SC_CAN_IsEStopActive());
+}
+
+/** @verifies SWR-SC-035 -- E-Stop inactive when byte 2 = 0 */
+void test_CAN_Receive_estop_inactive(void)
+{
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 0u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    mock_e2e_check_result = TRUE;
+
+    SC_CAN_Receive();
+
+    TEST_ASSERT_FALSE(SC_CAN_IsEStopActive());
+}
+
+/** @verifies SWR-SC-035 -- E-Stop not updated on E2E failure */
+void test_CAN_Receive_estop_not_updated_on_e2e_fail(void)
+{
+    /* Set E-Stop inactive with valid frame */
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 0u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    mock_e2e_check_result = TRUE;
+    SC_CAN_Receive();
+    TEST_ASSERT_FALSE(SC_CAN_IsEStopActive());
+
+    /* Send E-Stop active but E2E fails — should NOT update */
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 1u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    mock_e2e_check_result = FALSE;
+    SC_CAN_Receive();
+    TEST_ASSERT_FALSE(SC_CAN_IsEStopActive());
+}
+
+/** @verifies SWR-SC-035 -- E-Stop clears when subsequent frame has byte 2 = 0 */
+void test_CAN_Receive_estop_clears(void)
+{
+    /* Activate */
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 1u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    mock_e2e_check_result = TRUE;
+    SC_CAN_Receive();
+    TEST_ASSERT_TRUE(SC_CAN_IsEStopActive());
+
+    /* Deactivate */
+    mock_mb_data[SC_MB_IDX_ESTOP][2] = 0u;
+    mock_mb_new_data[SC_MB_IDX_ESTOP] = TRUE;
+    SC_CAN_Receive();
+    TEST_ASSERT_FALSE(SC_CAN_IsEStopActive());
+}
+
+/* ==================================================================
  * Test runner
  * ================================================================== */
 
@@ -565,6 +628,12 @@ int main(void)
     /* SWR-SC-030: SC_Status TX broadcast */
     RUN_TEST(test_CAN_TransmitStatus_calls_dcan1_transmit);  /* TC-SC-050 */
     RUN_TEST(test_CAN_TransmitStatus_rejects_null);          /* TC-SC-050b */
+
+    /* SWR-SC-035: E-Stop parsing (GAP-SC-001) */
+    RUN_TEST(test_CAN_Receive_estop_active);
+    RUN_TEST(test_CAN_Receive_estop_inactive);
+    RUN_TEST(test_CAN_Receive_estop_not_updated_on_e2e_fail);
+    RUN_TEST(test_CAN_Receive_estop_clears);
 
     return UNITY_END();
 }

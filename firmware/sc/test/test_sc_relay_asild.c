@@ -46,6 +46,7 @@ typedef uint8               Std_ReturnType;
 #define SC_KILL_REASON_ESM          4u
 #define SC_KILL_REASON_BUSOFF       5u
 #define SC_KILL_REASON_READBACK     6u
+#define SC_KILL_REASON_ESTOP        7u
 
 /* Fault source enum */
 #define SC_FAULT_SOURCE_NONE        0u
@@ -93,6 +94,7 @@ static boolean mock_plaus_faulted;
 static boolean mock_selftest_healthy;
 static boolean mock_esm_error;
 static boolean mock_can_bus_off;
+static boolean mock_estop_active;
 
 boolean SC_Heartbeat_IsAnyConfirmed(void)
 {
@@ -117,6 +119,11 @@ boolean SC_ESM_IsErrorActive(void)
 boolean SC_CAN_IsBusOff(void)
 {
     return mock_can_bus_off;
+}
+
+boolean SC_CAN_IsEStopActive(void)
+{
+    return mock_estop_active;
 }
 
 /* ==================================================================
@@ -162,6 +169,7 @@ void setUp(void)
     mock_selftest_healthy = TRUE;
     mock_esm_error        = FALSE;
     mock_can_bus_off      = FALSE;
+    mock_estop_active     = FALSE;
 
     /* Reset CAN TX mock */
     for (i = 0u; i < 8u; i++) {
@@ -231,6 +239,32 @@ void test_Relay_kill_latch(void)
 /* ==================================================================
  * SWR-SC-012: De-energize Triggers
  * ================================================================== */
+
+/** @verifies SWR-SC-035 -- E-Stop command triggers immediate relay kill (GAP-SC-001) */
+void test_Relay_trigger_estop(void)
+{
+    SC_Relay_Energize();
+    mock_estop_active = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_EQUAL_UINT8(0u, mock_gio_a_dout[SC_PIN_RELAY]);
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_ESTOP, SC_Relay_GetKillReason());
+}
+
+/** @verifies SWR-SC-035 -- E-Stop has higher priority than heartbeat timeout */
+void test_Relay_trigger_estop_priority_over_heartbeat(void)
+{
+    SC_Relay_Energize();
+    mock_estop_active     = TRUE;
+    mock_hb_any_confirmed = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_ESTOP, SC_Relay_GetKillReason());
+}
 
 /** @verifies SWR-SC-012 -- Heartbeat confirmed timeout triggers kill */
 void test_Relay_trigger_heartbeat(void)
@@ -509,6 +543,10 @@ int main(void)
 
     /* SWR-SC-011: Kill Latch */
     RUN_TEST(test_Relay_kill_latch);
+
+    /* SWR-SC-035: E-Stop trigger (GAP-SC-001) */
+    RUN_TEST(test_Relay_trigger_estop);
+    RUN_TEST(test_Relay_trigger_estop_priority_over_heartbeat);
 
     /* SWR-SC-012: Triggers */
     RUN_TEST(test_Relay_trigger_heartbeat);
