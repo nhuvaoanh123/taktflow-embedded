@@ -38,7 +38,7 @@ void SC_Relay_DeEnergize(void);
  *
  * Checks (in priority order): E-Stop command, heartbeat confirmed timeout,
  * plausibility fault, self-test failure, ESM lockstep error, CAN bus-off,
- * and GPIO readback mismatch.
+ * bus silence, and GPIO readback mismatch.
  */
 void SC_Relay_CheckTriggers(void);
 
@@ -53,15 +53,5 @@ boolean SC_Relay_IsKilled(void);
  * @return Kill reason (SC_KILL_REASON_* from sc_cfg.h), 0 if not killed
  */
 uint8 SC_Relay_GetKillReason(void);
-
-#ifdef PLATFORM_POSIX
-/**
- * @brief  Broadcast relay state on CAN 0x013 (SIL-only, 50ms period)
- *
- * Sends a 4-byte CAN frame with relay_killed, kill_reason, fault_source,
- * and reserved byte. Only exists in POSIX builds — no effect on real TMS570.
- */
-void SC_Relay_BroadcastSil(void);
-#endif
 
 #endif /* SC_RELAY_H */

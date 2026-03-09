@@ -55,10 +55,6 @@ typedef uint8               Std_ReturnType;
 #define SC_FAULT_SOURCE_FZC         2u
 #define SC_FAULT_SOURCE_RZC         3u
 
-/* Relay status broadcast */
-#define SC_CAN_ID_RELAY_STATUS      0x013u
-#define SC_RELAY_STATUS_DLC         4u
-#define SC_RELAY_BROADCAST_TICKS    5u
 
 /* ==================================================================
  * Mock: GIO Register Access
@@ -133,25 +129,6 @@ boolean SC_CAN_IsEStopActive(void)
     return mock_estop_active;
 }
 
-/* ==================================================================
- * Mock: SIL CAN send (captures broadcast payload)
- * ================================================================== */
-
-static uint8  mock_can_tx_data[8];
-static uint32 mock_can_tx_id;
-static uint8  mock_can_tx_dlc;
-static uint8  mock_can_tx_count;
-
-void sc_posix_can_send(uint32 can_id, const uint8 *data, uint8 dlc)
-{
-    uint8 i;
-    mock_can_tx_id  = can_id;
-    mock_can_tx_dlc = dlc;
-    for (i = 0u; i < dlc && i < 8u; i++) {
-        mock_can_tx_data[i] = data[i];
-    }
-    mock_can_tx_count++;
-}
 
 /* ==================================================================
  * Include source under test
@@ -178,14 +155,6 @@ void setUp(void)
     mock_can_bus_off      = FALSE;
     mock_can_bus_silent   = FALSE;
     mock_estop_active     = FALSE;
-
-    /* Reset CAN TX mock */
-    for (i = 0u; i < 8u; i++) {
-        mock_can_tx_data[i] = 0u;
-    }
-    mock_can_tx_id    = 0u;
-    mock_can_tx_dlc   = 0u;
-    mock_can_tx_count = 0u;
 
     /* Direct reset of kill latch for test isolation.
      * SC_Relay_Init() does NOT clear the latch (SWR-SC-011). */
@@ -456,67 +425,6 @@ void test_relay_check_triggers_not_energized(void)
     TEST_ASSERT_FALSE(SC_Relay_IsKilled());
 }
 
-/* ==================================================================
- * SIL Relay Broadcast Tests
- * ================================================================== */
-
-/** Helper: force broadcast by advancing tick counter to threshold */
-static void force_broadcast(void)
-{
-    broadcast_tick_count = SC_RELAY_BROADCAST_TICKS - 1u;
-    SC_Relay_BroadcastSil();
-}
-
-/** @verifies SWR-SC-010 -- Broadcast sends relay_killed=1 after de-energize */
-void test_relay_broadcast_sends_killed(void)
-{
-    SC_Relay_Energize();
-    SC_Relay_DeEnergize();
-
-    force_broadcast();
-
-    TEST_ASSERT_EQUAL_UINT32(SC_CAN_ID_RELAY_STATUS, mock_can_tx_id);
-    TEST_ASSERT_EQUAL_UINT8(SC_RELAY_STATUS_DLC, mock_can_tx_dlc);
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_can_tx_data[0]);
-}
-
-/** @verifies SWR-SC-010 -- Broadcast sends relay_killed=0 when not killed */
-void test_relay_broadcast_sends_not_killed(void)
-{
-    SC_Relay_Energize();
-
-    force_broadcast();
-
-    TEST_ASSERT_EQUAL_UINT32(SC_CAN_ID_RELAY_STATUS, mock_can_tx_id);
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_can_tx_data[0]);
-}
-
-/** @verifies SWR-SC-012 -- Heartbeat-triggered kill sets reason=1 */
-void test_relay_broadcast_reason_heartbeat(void)
-{
-    SC_Relay_Energize();
-    mock_hb_any_confirmed = TRUE;
-    SC_Relay_CheckTriggers();
-
-    force_broadcast();
-
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_can_tx_data[0]);  /* killed */
-    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_HB_TIMEOUT, mock_can_tx_data[1]);
-}
-
-/** @verifies SWR-SC-012 -- Plausibility-triggered kill sets reason=2 */
-void test_relay_broadcast_reason_plausibility(void)
-{
-    SC_Relay_Energize();
-    mock_plaus_faulted = TRUE;
-    SC_Relay_CheckTriggers();
-
-    force_broadcast();
-
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_can_tx_data[0]);  /* killed */
-    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_PLAUSIBILITY, mock_can_tx_data[1]);
-}
-
 /** @verifies SWR-SC-012 -- GetKillReason returns correct reason code */
 void test_relay_get_kill_reason(void)
 {
@@ -527,23 +435,6 @@ void test_relay_get_kill_reason(void)
     SC_Relay_CheckTriggers();
 
     TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_HB_TIMEOUT, SC_Relay_GetKillReason());
-}
-
-/** @verifies SWR-SC-010 -- Broadcast respects 50ms period (only sends every 5 ticks) */
-void test_relay_broadcast_respects_period(void)
-{
-    SC_Relay_Energize();
-
-    /* Call 4 times — should NOT send yet */
-    SC_Relay_BroadcastSil();
-    SC_Relay_BroadcastSil();
-    SC_Relay_BroadcastSil();
-    SC_Relay_BroadcastSil();
-    TEST_ASSERT_EQUAL_UINT8(0u, mock_can_tx_count);
-
-    /* 5th call should trigger send */
-    SC_Relay_BroadcastSil();
-    TEST_ASSERT_EQUAL_UINT8(1u, mock_can_tx_count);
 }
 
 /* ==================================================================
@@ -588,13 +479,8 @@ int main(void)
     RUN_TEST(test_relay_readback_exactly_1_no_kill);
     RUN_TEST(test_relay_check_triggers_not_energized);
 
-    /* SIL Relay Broadcast */
-    RUN_TEST(test_relay_broadcast_sends_killed);
-    RUN_TEST(test_relay_broadcast_sends_not_killed);
-    RUN_TEST(test_relay_broadcast_reason_heartbeat);
-    RUN_TEST(test_relay_broadcast_reason_plausibility);
+    /* Kill reason getter */
     RUN_TEST(test_relay_get_kill_reason);
-    RUN_TEST(test_relay_broadcast_respects_period);
 
     return UNITY_END();
 }

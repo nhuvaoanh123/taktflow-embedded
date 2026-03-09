@@ -260,8 +260,7 @@ int main(void)
         }
 #endif
 
-        /* ---- Step 4b: SC_Status Broadcast (500ms, both TMS570 and SIL) ---- */
-        /* Supersedes POSIX-only SC_Relay_BroadcastSil(). SWR-SC-029/030. */
+        /* ---- Step 4b: SC_Status Broadcast (500ms, SWR-SC-029/030) ---- */
         SC_Monitoring_Update();
 
         /* ---- Step 5: LED Update ---- */
