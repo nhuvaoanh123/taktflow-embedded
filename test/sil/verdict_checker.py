@@ -760,6 +760,10 @@ class ScenarioExecutor:
                 f"{self._fault_api_url}/api/fault/reset",
             )
             log.info("  [STEP] Reset: %s", resp.json())
+            # Clear stale CAN/MQTT data from the previous lifecycle so
+            # subsequent wait_state checks use fresh post-reset frames.
+            self._can.reset()
+            self._mqtt.reset()
 
         elif action == "inject_scenario":
             name = step["name"]
