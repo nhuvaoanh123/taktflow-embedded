@@ -184,11 +184,12 @@ int main(void)
     SC_LED_Init();
     SC_Watchdog_Init();
     SC_Monitoring_Init();       /* SWR-SC-030: SC_Status TX init */
-    /* SC_ESM_Init() — SKIPPED during TMS570 bring-up.
-     * Enabling ESM Group 1 channel 2 (lockstep) with a persistent
-     * CCM-R5F error causes SC_ESM_HighLevelInterrupt → infinite loop.
+    /* ESM lockstep monitoring — define SC_ESM_ENABLED to activate.
+     * Currently disabled: CCM-R5F persistent error triggers ESM ISR infinite loop.
      * TODO:HARDWARE Re-enable after lockstep error root cause is resolved. */
-    /* SC_ESM_Init(); */
+#ifdef SC_ESM_ENABLED
+    SC_ESM_Init();
+#endif
     SC_SelfTest_Init();
 
 #ifdef PLATFORM_TMS570
