@@ -406,11 +406,10 @@ void Swc_Brake_MainFunction(void)
     (void)Rte_Write(FZC_SIG_BRAKE_POS,   (uint32)Brake_Position);
     (void)Rte_Write(FZC_SIG_BRAKE_FAULT,  (uint32)Brake_Fault);
 
-    /* Cyclic TX of brake fault status so CVC always has current value */
-    {
-        uint32 fault_tx = (uint32)Brake_Fault;
-        (void)Com_SendSignal(FZC_COM_SIG_TX_BRAKE_FAULT, &fault_tx);
-    }
+    /* Brake fault TX is handled by Swc_FzcCom_TransmitSchedule which reads
+     * FZC_SIG_BRAKE_FAULT from RTE and sends on 0x210 with E2E protection.
+     * Do NOT use Com_SendSignal here — it bypasses E2E and the duplicate
+     * frame causes CVC's E2E check to fail. */
 
     if (Brake_CutoffSending == TRUE) {
         (void)Rte_Write(FZC_SIG_MOTOR_CUTOFF, 1u);

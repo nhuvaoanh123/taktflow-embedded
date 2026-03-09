@@ -108,7 +108,13 @@
 
 #define SC_PLAUS_REL_THRESHOLD      20u    /* 20% relative difference */
 #define SC_PLAUS_ABS_THRESHOLD_MA   2000u  /* 2000 mA absolute (near-zero) */
-#define SC_PLAUS_DEBOUNCE_TICKS     5u     /* 50ms debounce */
+#ifndef SC_PLAUS_DEBOUNCE_TICKS
+  #ifdef PLATFORM_POSIX
+    #define SC_PLAUS_DEBOUNCE_TICKS 10u    /* 100ms - SIL CAN round-trip adds ~20-30ms latency */
+  #else
+    #define SC_PLAUS_DEBOUNCE_TICKS 5u     /* 50ms - real FOC inverter responds in <1ms */
+  #endif
+#endif
 
 /* ==================================================================
  * Backup Cutoff (SWR-SC-024)
