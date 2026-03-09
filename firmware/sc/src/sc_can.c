@@ -41,8 +41,8 @@ extern void canInit(void);
 
 #define DCAN_CTL_OFFSET         0x00u
 #define DCAN_ES_OFFSET          0x04u
-#define DCAN_BTR_OFFSET         0x08u
-#define DCAN_TEST_OFFSET        0x10u
+#define DCAN_BTR_OFFSET         0x0Cu
+#define DCAN_TEST_OFFSET        0x14u
 #define DCAN_NWDAT1_OFFSET      0x98u
 
 /* DCAN Error Status bits */

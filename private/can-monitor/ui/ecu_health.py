@@ -11,14 +11,15 @@ class EcuHealthBar(QWidget):
     ECU_ORDER = ("CVC", "FZC", "RZC", "SC", "BCM", "ICU", "TCU")
 
     # Heartbeat CAN IDs (where available in DBC/system design).
+    # Heartbeat CAN IDs per taktflow.dbc (BCM has no heartbeat message)
     HB_IDS = {
         "CVC": 0x010,
         "FZC": 0x011,
         "RZC": 0x012,
         "SC": 0x013,
-        "BCM": 0x014,
-        "ICU": 0x015,
-        "TCU": 0x016,
+        "BCM": None,
+        "ICU": 0x014,
+        "TCU": 0x015,
     }
 
     def __init__(self, parent=None):
@@ -70,7 +71,7 @@ class EcuHealthBar(QWidget):
 
         for ecu, hb_id in self.HB_IDS.items():
             lbl = self._labels[ecu]
-            if hb_id in messages_snapshot:
+            if hb_id is not None and hb_id in messages_snapshot:
                 ms = messages_snapshot[hb_id]
                 frame = ms["latest"]
                 age = elapsed - ms["last_seen"]

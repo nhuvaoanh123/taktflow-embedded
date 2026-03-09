@@ -215,6 +215,13 @@ class AppWindow(QMainWindow):
                 continue
 
             for raw in batch:
+                # DLC cross-check: reject frames whose DLC is shorter than DBC expects.
+                # Catches Waveshare variable-protocol mis-sync (no checksum).
+                # Allow DLC >= expected — CAN padding to 8 bytes is normal.
+                msg_def = self.decoder._msg_cache.get(raw["can_id"])
+                if msg_def and raw["dlc"] < msg_def.length:
+                    continue
+
                 # Decode with choices for display, without for plotting
                 decoded = self.decoder.decode_raw(
                     raw["can_id"], raw["data"], decode_choices=True

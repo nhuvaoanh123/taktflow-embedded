@@ -44,7 +44,7 @@ class MessageState:
 
 TRACE_MAX = 10_000
 SIGNAL_HISTORY_MAX = 2_000
-MESSAGE_STALE_SEC = 1.0
+FPS_WINDOW_SEC = 2.0
 
 
 class FrameStore:
@@ -56,22 +56,16 @@ class FrameStore:
         self.total_frames = 0
         self.error_frames = 0
         self.t0 = time.monotonic()
-
-    def _prune_stale_messages(self, now_ts: float):
-        stale_ids = [
-            cid for cid, ms in self.messages.items()
-            if (now_ts - ms.last_seen) > MESSAGE_STALE_SEC
-        ]
-        for cid in stale_ids:
-            del self.messages[cid]
+        self._recent_timestamps = deque(maxlen=5000)
 
     def add_frame(self, frame: ParsedFrame):
         with self._lock:
             self.trace.append(frame)
             self.total_frames += 1
+            self._recent_timestamps.append(frame.timestamp)
             if not frame.checksum_ok:
                 self.error_frames += 1
-            # Update message table
+            # Update message table (never prune — let UI show age-based status)
             cid = frame.can_id
             if cid not in self.messages:
                 self.messages[cid] = MessageState()
@@ -80,7 +74,6 @@ class FrameStore:
             ms.latest = frame
             ms.count += 1
             ms.last_seen = frame.timestamp
-            self._prune_stale_messages(frame.timestamp)
             # Update signal history using raw_signals (always numeric, no enum strings)
             plot_signals = frame.raw_signals if frame.raw_signals else frame.signals
             for sig_name, value in plot_signals.items():
@@ -99,8 +92,6 @@ class FrameStore:
 
     def get_messages_snapshot(self):
         with self._lock:
-            now_ts = time.monotonic() - self.t0
-            self._prune_stale_messages(now_ts)
             result = {}
             for cid, ms in self.messages.items():
                 result[cid] = {
@@ -126,11 +117,17 @@ class FrameStore:
     def get_stats(self):
         with self._lock:
             elapsed = time.monotonic() - self.t0
-            self._prune_stale_messages(elapsed)
+            # Rolling FPS over last 2 seconds instead of lifetime average
+            fps = 0.0
+            if self._recent_timestamps:
+                now_ts = elapsed
+                cutoff = now_ts - FPS_WINDOW_SEC
+                recent_count = sum(1 for t in self._recent_timestamps if t >= cutoff)
+                fps = recent_count / FPS_WINDOW_SEC
             return {
                 "total": self.total_frames,
                 "errors": self.error_frames,
                 "elapsed": elapsed,
-                "fps": self.total_frames / max(elapsed, 0.001),
+                "fps": fps,
                 "msg_count": len(self.messages),
             }

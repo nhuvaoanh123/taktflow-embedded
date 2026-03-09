@@ -176,16 +176,17 @@
 #define DCAN_IF2DATA            0x130u
 #define DCAN_IF2DATB            0x134u
 
-/** IF command register bits (MISRA 12.2: use uint32 literal for shift) */
+/** IF command register bits — TMS570 big-endian: command byte is bits [23:16]
+ *  (MISRA 12.2: use uint32 literal for shift) */
 #define DCAN_IFCMD_BUSY         ((uint32)1u << 15u)  /* IF busy flag */
-#define DCAN_IFCMD_DATAB        ((uint32)1u << 0u)   /* Access data B */
-#define DCAN_IFCMD_DATAA        ((uint32)1u << 1u)   /* Access data A */
-#define DCAN_IFCMD_NEWDAT       ((uint32)1u << 2u)   /* Access NewDat/IntPnd */
-#define DCAN_IFCMD_CLRINTPND    ((uint32)1u << 3u)   /* Clear IntPnd */
-#define DCAN_IFCMD_CONTROL      ((uint32)1u << 4u)   /* Access control bits */
-#define DCAN_IFCMD_ARB          ((uint32)1u << 5u)   /* Access arbitration */
-#define DCAN_IFCMD_MASK         ((uint32)1u << 6u)   /* Access mask */
-#define DCAN_IFCMD_WR           ((uint32)1u << 7u)   /* Write (1) / Read (0) */
+#define DCAN_IFCMD_DATAB        ((uint32)1u << 16u)  /* Access data B */
+#define DCAN_IFCMD_DATAA        ((uint32)1u << 17u)  /* Access data A */
+#define DCAN_IFCMD_NEWDAT       ((uint32)1u << 18u)  /* Access NewDat/TxRqst */
+#define DCAN_IFCMD_CLRINTPND    ((uint32)1u << 19u)  /* Clear IntPnd */
+#define DCAN_IFCMD_CONTROL      ((uint32)1u << 20u)  /* Access control bits */
+#define DCAN_IFCMD_ARB          ((uint32)1u << 21u)  /* Access arbitration */
+#define DCAN_IFCMD_MASK         ((uint32)1u << 22u)  /* Access mask */
+#define DCAN_IFCMD_WR           ((uint32)1u << 23u)  /* Write (1) / Read (0) */
 
 /** MCTL NewDat bit */
 #define DCAN_MCTL_NEWDAT        ((uint32)1u << 15u)
@@ -688,14 +689,8 @@ boolean dcan1_get_mailbox_data(uint8 mbIndex, uint8* data, uint8* dlc)
 
     *dlc = msg_dlc;
 
-    /* Clear NewDat by writing back MCTL with NewDat=0 via IF2
-     * (write CONTROL + NEWDAT flags to clear it in message object) */
-    dcan1_wait_if2_ready();
-    reg_write(DCAN1_BASE, DCAN_IF2MCTL, mctl & ~DCAN_MCTL_NEWDAT);
-    reg_write(DCAN1_BASE, DCAN_IF2CMD,
-              DCAN_IFCMD_WR | DCAN_IFCMD_CONTROL | DCAN_IFCMD_NEWDAT |
-              (msg_num & 0xFFu));
-    dcan1_wait_if2_ready();
+    /* NewDat is already cleared atomically by the read command above
+     * (DCAN_IFCMD_NEWDAT with WR=0 clears NewDat in the message object) */
 
     return TRUE;
 }
