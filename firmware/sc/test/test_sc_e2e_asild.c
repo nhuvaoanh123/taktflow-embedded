@@ -281,6 +281,57 @@ void test_E2E_valid_resets_failures(void)
 }
 
 /* ==================================================================
+ * SWR-SC-003: IsAnyCriticalFailed (GAP-SC-002)
+ * ================================================================== */
+
+/** @verifies SWR-SC-003 -- No failures returns FALSE */
+void test_E2E_any_critical_none(void)
+{
+    TEST_ASSERT_FALSE(SC_E2E_IsAnyCriticalFailed());
+}
+
+/** @verifies SWR-SC-003 -- E-Stop persistent failure returns TRUE */
+void test_E2E_any_critical_estop(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+    uint8 i;
+
+    for (i = 0u; i < SC_E2E_MAX_CONSEC_FAIL; i++) {
+        build_valid_msg(data, SC_E2E_ESTOP_DATA_ID, (uint8)(i + 1u), payload);
+        data[1] ^= 0xFFu;
+        SC_E2E_Check(data, SC_CAN_DLC, SC_E2E_ESTOP_DATA_ID, SC_MB_IDX_ESTOP);
+    }
+
+    TEST_ASSERT_TRUE(SC_E2E_IsAnyCriticalFailed());
+}
+
+/** @verifies SWR-SC-003 -- CVC HB persistent failure returns TRUE */
+void test_E2E_any_critical_cvc_hb(void)
+{
+    uint8 data[8];
+    uint8 payload[6] = { 0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u };
+    uint8 i;
+
+    for (i = 0u; i < SC_E2E_MAX_CONSEC_FAIL; i++) {
+        build_valid_msg(data, SC_E2E_CVC_HB_DATA_ID, (uint8)(i + 1u), payload);
+        data[1] ^= 0xFFu;
+        SC_E2E_Check(data, SC_CAN_DLC, SC_E2E_CVC_HB_DATA_ID, SC_MB_IDX_CVC_HB);
+    }
+
+    TEST_ASSERT_TRUE(SC_E2E_IsAnyCriticalFailed());
+}
+
+/** @verifies SWR-SC-003 -- Non-critical mailbox failure does NOT trigger critical */
+void test_E2E_any_critical_non_critical_only(void)
+{
+    /* Force persistent failure on vehicle state (non-critical) by direct state manipulation */
+    e2e_failed[SC_MB_IDX_VEHICLE_STATE] = TRUE;
+
+    TEST_ASSERT_FALSE(SC_E2E_IsAnyCriticalFailed());
+}
+
+/* ==================================================================
  * HARDENED TESTS — Boundary Values, Fault Injection
  * ================================================================== */
 
@@ -415,6 +466,12 @@ int main(void)
     /* Consecutive failures */
     RUN_TEST(test_E2E_3_consecutive_failures);
     RUN_TEST(test_E2E_valid_resets_failures);
+
+    /* IsAnyCriticalFailed (GAP-SC-002) */
+    RUN_TEST(test_E2E_any_critical_none);
+    RUN_TEST(test_E2E_any_critical_estop);
+    RUN_TEST(test_E2E_any_critical_cvc_hb);
+    RUN_TEST(test_E2E_any_critical_non_critical_only);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_crc8_single_byte);

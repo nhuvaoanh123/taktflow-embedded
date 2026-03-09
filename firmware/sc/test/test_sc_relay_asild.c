@@ -48,6 +48,7 @@ typedef uint8               Std_ReturnType;
 #define SC_KILL_REASON_READBACK     6u
 #define SC_KILL_REASON_ESTOP        7u
 #define SC_KILL_REASON_BUS_SILENCE  8u
+#define SC_KILL_REASON_E2E_FAIL    9u
 
 /* Fault source enum */
 #define SC_FAULT_SOURCE_NONE        0u
@@ -93,6 +94,7 @@ static boolean mock_esm_error;
 static boolean mock_can_bus_off;
 static boolean mock_can_bus_silent;
 static boolean mock_estop_active;
+static boolean mock_e2e_any_critical_failed;
 
 boolean SC_Heartbeat_IsAnyConfirmed(void)
 {
@@ -129,6 +131,11 @@ boolean SC_CAN_IsEStopActive(void)
     return mock_estop_active;
 }
 
+boolean SC_E2E_IsAnyCriticalFailed(void)
+{
+    return mock_e2e_any_critical_failed;
+}
+
 
 /* ==================================================================
  * Include source under test
@@ -154,7 +161,8 @@ void setUp(void)
     mock_esm_error        = FALSE;
     mock_can_bus_off      = FALSE;
     mock_can_bus_silent   = FALSE;
-    mock_estop_active     = FALSE;
+    mock_estop_active             = FALSE;
+    mock_e2e_any_critical_failed  = FALSE;
 
     /* Direct reset of kill latch for test isolation.
      * SC_Relay_Init() does NOT clear the latch (SWR-SC-011). */
@@ -349,6 +357,48 @@ void test_Relay_trigger_bus_silence(void)
 }
 
 /* ==================================================================
+ * SWR-SC-003: E2E Persistent Failure Trigger (GAP-SC-002)
+ * ================================================================== */
+
+/** @verifies SWR-SC-003 -- E2E persistent failure on critical mailbox triggers kill */
+void test_Relay_trigger_e2e_fail(void)
+{
+    SC_Relay_Energize();
+    mock_e2e_any_critical_failed = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_E2E_FAIL, SC_Relay_GetKillReason());
+}
+
+/** @verifies SWR-SC-003 -- E2E failure has lower priority than plausibility */
+void test_Relay_trigger_e2e_priority_below_plausibility(void)
+{
+    SC_Relay_Energize();
+    mock_plaus_faulted           = TRUE;
+    mock_e2e_any_critical_failed = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_PLAUSIBILITY, SC_Relay_GetKillReason());
+}
+
+/** @verifies SWR-SC-003 -- E2E failure has higher priority than self-test */
+void test_Relay_trigger_e2e_priority_above_selftest(void)
+{
+    SC_Relay_Energize();
+    mock_e2e_any_critical_failed = TRUE;
+    mock_selftest_healthy        = FALSE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_E2E_FAIL, SC_Relay_GetKillReason());
+}
+
+/* ==================================================================
  * HARDENED TESTS — Boundary Values, Fault Injection
  * ================================================================== */
 
@@ -470,6 +520,11 @@ int main(void)
 
     /* SWR-SC-036: Bus silence trigger (GAP-SC-003) */
     RUN_TEST(test_Relay_trigger_bus_silence);
+
+    /* SWR-SC-003: E2E persistent failure trigger (GAP-SC-002) */
+    RUN_TEST(test_Relay_trigger_e2e_fail);
+    RUN_TEST(test_Relay_trigger_e2e_priority_below_plausibility);
+    RUN_TEST(test_Relay_trigger_e2e_priority_above_selftest);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_relay_trigger_can_busoff);

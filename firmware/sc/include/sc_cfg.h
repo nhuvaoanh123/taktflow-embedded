@@ -280,6 +280,7 @@
 #define SC_KILL_REASON_READBACK     6u
 #define SC_KILL_REASON_ESTOP        7u
 #define SC_KILL_REASON_BUS_SILENCE  8u
+#define SC_KILL_REASON_E2E_FAIL    9u
 
 /* ==================================================================
  * Fault Source Enum (for relay status broadcast)

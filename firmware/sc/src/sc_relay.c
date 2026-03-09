@@ -17,6 +17,7 @@
 #include "sc_selftest.h"
 #include "sc_esm.h"
 #include "sc_can.h"
+#include "sc_e2e.h"
 
 /* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
 #ifdef SIL_DIAG
@@ -113,7 +114,15 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (c/d): Self-test failure (startup or runtime) */
+    /* Trigger (c): E2E persistent failure on safety-critical mailbox (GAP-SC-002) */
+    if (SC_E2E_IsAnyCriticalFailed() == TRUE) {
+        kill_reason = SC_KILL_REASON_E2E_FAIL;
+        SC_RELAY_DIAG("KILL reason=E2E_FAIL");
+        SC_Relay_DeEnergize();
+        return;
+    }
+
+    /* Trigger (d/e): Self-test failure (startup or runtime) */
     if (SC_SelfTest_IsHealthy() == FALSE) {
         kill_reason = SC_KILL_REASON_SELFTEST;
         SC_RELAY_DIAG("KILL reason=SELFTEST");

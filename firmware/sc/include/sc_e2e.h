@@ -48,6 +48,17 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
 boolean SC_E2E_IsMsgFailed(uint8 msgIndex);
 
 /**
+ * @brief  Check if any safety-critical mailbox has persistent E2E failure
+ *
+ * Checks E-Stop + all three heartbeat mailboxes (CVC, FZC, RZC).
+ * Persistent failure = 3+ consecutive E2E check failures on that message.
+ *
+ * @return TRUE if any critical mailbox has persistent E2E failure
+ * @safety_req SWR-SC-003
+ */
+boolean SC_E2E_IsAnyCriticalFailed(void);
+
+/**
  * @brief  Compute CRC-8 over arbitrary bytes (for SC_Status TX, SWR-SC-030)
  *
  * Same polynomial (0x1D, init 0xFF, XOR-out 0xFF) as the RX validation path.

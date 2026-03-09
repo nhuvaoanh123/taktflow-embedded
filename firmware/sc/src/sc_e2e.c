@@ -168,6 +168,18 @@ boolean SC_E2E_IsMsgFailed(uint8 msgIndex)
     return e2e_failed[msgIndex];
 }
 
+boolean SC_E2E_IsAnyCriticalFailed(void)
+{
+    /* Safety-critical mailboxes: E-Stop + 3 heartbeats.
+     * Any persistent E2E failure on these channels means we cannot trust
+     * the safety data, warranting fail-safe action (GAP-SC-002). */
+    if (e2e_failed[SC_MB_IDX_ESTOP]  == TRUE) { return TRUE; }
+    if (e2e_failed[SC_MB_IDX_CVC_HB] == TRUE) { return TRUE; }
+    if (e2e_failed[SC_MB_IDX_FZC_HB] == TRUE) { return TRUE; }
+    if (e2e_failed[SC_MB_IDX_RZC_HB] == TRUE) { return TRUE; }
+    return FALSE;
+}
+
 uint8 SC_E2E_ComputeCRC8(const uint8* data, uint8 len)
 {
     /* Standalone CRC-8 for SC_Status TX (SWR-SC-030). Poly 0x1D, init 0xFF, XOR-out 0xFF.

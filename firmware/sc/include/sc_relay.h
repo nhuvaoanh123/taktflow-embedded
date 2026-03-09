@@ -37,8 +37,8 @@ void SC_Relay_DeEnergize(void);
  * @brief  10ms cyclic — evaluate all de-energize trigger conditions
  *
  * Checks (in priority order): E-Stop command, heartbeat confirmed timeout,
- * plausibility fault, self-test failure, ESM lockstep error, CAN bus-off,
- * bus silence, and GPIO readback mismatch.
+ * plausibility fault, E2E persistent failure, self-test failure,
+ * ESM lockstep error, CAN bus-off, bus silence, and GPIO readback mismatch.
  */
 void SC_Relay_CheckTriggers(void);
 
