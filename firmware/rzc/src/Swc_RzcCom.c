@@ -567,17 +567,36 @@ void Swc_RzcCom_TransmitSchedule(void)
         (void)E2E_Protect(&rzc_e2e_motor_status_cfg, &rzc_e2e_motor_status_state, pdu, 8u);
         (void)PduR_Transmit(RZC_COM_TX_MOTOR_STATUS, &pdu_info);
 
-        /* --- 0x301 Motor Current: every cycle (10ms) --- */
+        /* --- 0x301 Motor Current: every cycle (10ms) ---
+         * DBC layout (little-endian bit numbering):
+         *   [0-1]  E2E (DataID + AliveCounter + CRC8)
+         *   [2-3]  Current_mA        16|16  (uint16 LE)
+         *   [4]    CurrentDirection   32|1   (bit 0)
+         *          MotorEnable        33|1   (bit 1)
+         *          OvercurrentFlag    34|1   (bit 2)
+         *          TorqueEcho low     35|5   (bits 3-7)
+         *   [5]    TorqueEcho high    —      (bits 0-2)
+         */
         {
             uint32 current_ma  = 0u;
             uint32 overcurrent = 0u;
+            uint8  dir_bit;
+            uint8  torque_val;
+
             (void)Rte_Read(RZC_SIG_CURRENT_MA, &current_ma);
             (void)Rte_Read(RZC_SIG_OVERCURRENT, &overcurrent);
+
+            dir_bit   = (motor_dir == 2u) ? 1u : 0u;
+            torque_val = (uint8)(torque_echo & 0xFFu);
 
             for (i = 0u; i < 8u; i++) { pdu[i] = 0u; }
             pdu[2] = (uint8)(current_ma & 0xFFu);
             pdu[3] = (uint8)((current_ma >> 8u) & 0xFFu);
-            pdu[4] = (uint8)overcurrent;
+            pdu[4] = dir_bit
+                   | (uint8)((motor_enable != 0u) ? 2u : 0u)
+                   | (uint8)((overcurrent != 0u) ? 4u : 0u)
+                   | (uint8)((torque_val & 0x1Fu) << 3u);
+            pdu[5] = (uint8)((torque_val >> 5u) & 0x07u);
             (void)E2E_Protect(&rzc_e2e_motor_current_cfg, &rzc_e2e_motor_current_state, pdu, 8u);
             (void)PduR_Transmit(RZC_COM_TX_MOTOR_CURRENT, &pdu_info);
         }

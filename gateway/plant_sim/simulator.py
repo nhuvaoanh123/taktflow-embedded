@@ -297,15 +297,28 @@ class PlantSimulator:
                 self.brake.record_command(float(data[2]))
 
     def _tx_motor_status(self):
-        """Send Motor_Status (0x300) every 20ms."""
+        """Send Motor_Status (0x300) every 20ms.
+
+        Byte layout per taktflow.dbc:
+          [0-1] E2E (DataID + AliveCounter + CRC8)
+          [2]   TorqueEcho (duty %)
+          [3-4] MotorSpeed_RPM (16-bit LE)
+          [5]   MotorDirection (0=stopped, 1=fwd, 2=rev)
+          [6]   MotorEnable (0/1)
+          [7]   MotorFaultStatus (bit0=overcurrent, bit1=overtemp, bit2=stall)
+        """
         payload = bytearray(8)
-        # Byte 2-3: RPM (16-bit LE)
+        # Byte 2: TorqueEcho
+        payload[2] = int(min(100, self.motor.duty_pct))
+        # Byte 3-4: MotorSpeed_RPM (16-bit LE)
         rpm = self.motor.rpm_int
-        payload[2] = rpm & 0xFF
-        payload[3] = (rpm >> 8) & 0xFF
-        # Byte 4: direction(2) + enable(1) + fault(5)
-        direction = self.motor.direction & 0x03
-        enable = 1 if self.motor.enabled else 0
+        payload[3] = rpm & 0xFF
+        payload[4] = (rpm >> 8) & 0xFF
+        # Byte 5: MotorDirection
+        payload[5] = self.motor.direction & 0xFF
+        # Byte 6: MotorEnable
+        payload[6] = 1 if self.motor.enabled else 0
+        # Byte 7: MotorFaultStatus
         fault_bits = 0
         if self.motor.overcurrent:
             fault_bits |= 0x01
@@ -313,35 +326,32 @@ class PlantSimulator:
             fault_bits |= 0x02
         if self.motor.stall_fault:
             fault_bits |= 0x04
-        payload[4] = direction | (enable << 2) | (fault_bits << 3)
-        # Byte 5: duty
-        payload[5] = int(min(95, self.motor.duty_pct))
-        # Byte 6: derating
-        if self.motor.overtemp:
-            payload[6] = 0
-        elif self.motor.temp_c > 80:
-            payload[6] = 50
-        elif self.motor.temp_c > 60:
-            payload[6] = 75
-        else:
-            payload[6] = 100
+        payload[7] = fault_bits
 
         data = self._encode_with_e2e(TX_MOTOR_STATUS, 0x0E, payload)
         self.bus.send(can.Message(arbitration_id=TX_MOTOR_STATUS,
                                   data=data, is_extended_id=False))
 
     def _tx_motor_current(self):
-        """Send Motor_Current (0x301) every 10ms."""
+        """Send Motor_Current (0x301) every 10ms.
+
+        Byte layout per taktflow.dbc:
+          [0-1] E2E (DataID + AliveCounter + CRC8)
+          [2-3] Current_mA       16|16 (uint16 LE, 0-30000 mA)
+          [4]   CurrentDirection  32|1  (bit 0: 0=fwd, 1=rev)
+                MotorEnable       33|1  (bit 1)
+                OvercurrentFlag   34|1  (bit 2)
+                TorqueEcho low    35|5  (bits 3-7)
+          [5]   TorqueEcho high          (bits 0-2)
+        """
         payload = bytearray(8)
         current = self.motor.current_ma_int
         payload[2] = current & 0xFF
         payload[3] = (current >> 8) & 0xFF
-        # Byte 4: dir(1) + enable(1) + overcurrent(1) + torque_echo(8) starting at bit 35
         direction_bit = 0 if self.motor.direction != 2 else 1
         enable_bit = 1 if self.motor.enabled else 0
         oc_bit = 1 if self.motor.overcurrent else 0
         payload[4] = direction_bit | (enable_bit << 1) | (oc_bit << 2)
-        # Torque echo at bits 35-42 (byte 4 bit 3 through byte 5)
         torque = int(self.motor.duty_pct) & 0xFF
         payload[4] |= (torque & 0x1F) << 3
         payload[5] = (torque >> 5) & 0x07
@@ -351,7 +361,15 @@ class PlantSimulator:
                                   data=data, is_extended_id=False))
 
     def _tx_motor_temp(self):
-        """Send Motor_Temperature (0x302) every 100ms."""
+        """Send Motor_Temperature (0x302) every 100ms.
+
+        Byte layout per taktflow.dbc:
+          [0-1] E2E (DataID + AliveCounter + CRC8)
+          [2-3] WindingTemp1_C  16|16 (factor 0.1, offset +40 raw)
+          [4-5] WindingTemp2_C  32|16 (factor 0.1, offset +40 raw)
+          [6]   DeratingPct     48|8  (0-100%)
+          [7]   TempFaultStatus 56|4  (bit2=overtemp, bit3=derating)
+        """
         payload = bytearray(6)
         # Byte 2: winding temp 1 (raw = temp + 40)
         payload[2] = int(self.motor.temp_c + 40) & 0xFF
@@ -380,7 +398,13 @@ class PlantSimulator:
                                   data=data, is_extended_id=False))
 
     def _tx_battery_status(self):
-        """Send Battery_Status (0x303) every 1000ms. No E2E."""
+        """Send Battery_Status (0x303) every 1000ms. No E2E.
+
+        Byte layout per taktflow.dbc:
+          [0-1] BattVoltage_mV  0|16 (uint16 LE, mV)
+          [2]   BattSoC         16|8 (0-100%)
+          [3]   BattStatus      24|4 (0=UV, 1=low, 2=nominal, 3=full)
+        """
         payload = bytearray(4)
         v = self.battery.voltage_mv
         payload[0] = v & 0xFF
@@ -421,7 +445,15 @@ class PlantSimulator:
             self._send_dtc(DTC_BATTERY_UV, ECU_RZC)
 
     def _tx_steering_status(self):
-        """Send Steering_Status (0x200) every 20ms."""
+        """Send Steering_Status (0x200) every 20ms.
+
+        Byte layout per taktflow.dbc:
+          [0-1] E2E (DataID + AliveCounter + CRC8)
+          [2-3] SteerAngle_Actual  16|16 (sint16 LE, factor 0.1 deg)
+          [4-5] SteerAngle_Cmd     32|16 (sint16 LE, factor 0.1 deg)
+          [6]   SteerFaultStatus   48|4  (bits 0-3)
+          [7]   ServoCurrent       56|8  (factor 10 mA)
+        """
         payload = bytearray(8)
         actual_raw = self.steering.actual_raw
         payload[2] = actual_raw & 0xFF
@@ -440,7 +472,16 @@ class PlantSimulator:
                                   data=data, is_extended_id=False))
 
     def _tx_brake_status(self):
-        """Send Brake_Status (0x201) every 20ms."""
+        """Send Brake_Status (0x201) every 20ms.
+
+        Byte layout per taktflow.dbc:
+          [0-1] E2E (DataID + AliveCounter + CRC8)
+          [2]   BrakePosition      16|8  (0-100%)
+          [3]   BrakeCommand       24|8  (0-100%)
+          [4-5] ServoCurrent       32|16 (uint16 LE, mA)
+          [6]   BrakeFaultStatus   48|4  (bits 0-3)
+          [7]   BrakeMode          56|4  (bits 0-3)
+        """
         payload = bytearray(8)
         payload[2] = self.brake.position_int
         payload[3] = int(self.brake.commanded_pct)

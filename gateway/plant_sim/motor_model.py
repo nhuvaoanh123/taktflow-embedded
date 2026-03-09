@@ -87,8 +87,9 @@ class MotorModel:
             tau = 0.1
             self.current_ma *= max(0.0, 1.0 - dt / tau)
 
-        # Thermal model
-        heat_input = (self.current_ma / 1000.0) ** 2 * self.R_THERMAL
+        # Thermal model — use zero current for heating when HW disabled
+        thermal_current = 0.0 if self._hw_disabled else self.current_ma
+        heat_input = (thermal_current / 1000.0) ** 2 * self.R_THERMAL
         heat_loss = (self.temp_c - self.T_AMBIENT) / self.R_COOL
         self.temp_c += (heat_input - heat_loss) * dt * 10.0  # speed up for demo
 
