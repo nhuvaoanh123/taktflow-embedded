@@ -90,6 +90,7 @@ static uint8 tcu_hb_alive_counter = 0u;
 /**
  * @brief  TCU heartbeat -- sends CAN 0x015 every 500ms
  */
+extern void Tcu_Heartbeat_500ms(void);
 void Tcu_Heartbeat_500ms(void)
 {
     uint8 alive  = tcu_hb_alive_counter;

@@ -39,6 +39,10 @@
 #include "Swc_Indicators.h"
 #include "Swc_DoorLock.h"
 
+/* POSIX headers for simulated ECU */
+#include <signal.h>
+#include <unistd.h>
+
 /* ==================================================================
  * RTE↔Com Bridge
  *
@@ -55,6 +59,7 @@
  *           RX: Reads 4 Com RX signals (vehicle state/speed, body cmd, e-stop)
  *           and writes them to RTE so SWCs can consume them.
  */
+extern void Bcm_ComBridge_10ms(void);
 void Bcm_ComBridge_10ms(void)
 {
     /* ---- TX bridge: RTE outputs → Com TX ---- */
@@ -115,13 +120,6 @@ void Bcm_ComBridge_10ms(void)
         (void)Rte_Write(BCM_SIG_ESTOP_ACTIVE, (uint32)rx_u8);
     }
 }
-
-/* ==================================================================
- * POSIX headers for simulated ECU
- * ================================================================== */
-
-#include <signal.h>
-#include <unistd.h>
 
 /* ==================================================================
  * External Configuration (defined in cfg/ files)

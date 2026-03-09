@@ -27,9 +27,14 @@
 #include "Swc_FzcSensorFeeder.h"
 #include "Fzc_Cfg.h"
 
-#ifdef PLATFORM_POSIX
-
+#if defined(PLATFORM_POSIX) || defined(PLATFORM_HIL)
 #include "Com.h"
+#endif
+#ifdef PLATFORM_HIL
+#include "IoHwAb.h"
+#endif
+
+#ifdef PLATFORM_POSIX
 
 /* MCAL injection externs (POSIX only — no header file) */
 extern void Spi_Posix_InjectAngle(uint16 angle);
@@ -38,13 +43,6 @@ extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
 /* No state variable needed — zero-substitution is stateless (see MainFunction) */
 
 #endif /* PLATFORM_POSIX */
-
-#ifdef PLATFORM_HIL
-
-#include "Com.h"
-#include "IoHwAb.h"
-
-#endif /* PLATFORM_HIL */
 
 /* ==================================================================
  * API: Swc_FzcSensorFeeder_Init
@@ -133,3 +131,5 @@ void Swc_FzcSensorFeeder_MainFunction(void)
     }
 #endif /* PLATFORM_HIL */
 }
+
+

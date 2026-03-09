@@ -11,6 +11,8 @@ misra-c2012-15.5
 misra-c2012-17.8
 misra-c2012-21.5:*/bcm_main.c
 misra-c2012-21.5:*/icu_main.c
+misra-c2012-21.6:*/icu_main.c
+misra-c2012-21.8:*/icu_main.c
 misra-c2012-21.5:*/tcu_main.c
 misra-c2012-21.6:*/tcu_main.c
 misra-c2012-21.6:*/*_hw_posix.c

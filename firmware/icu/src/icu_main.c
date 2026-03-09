@@ -142,6 +142,7 @@ static uint8 icu_hb_alive_counter = 0u;
  * @note   Packs alive counter (signal 19) and ECU ID (signal 20) into
  *         TX PDU 0 (CAN 0x014) via Com_SendSignal.
  */
+extern void Icu_Heartbeat_500ms(void);
 void Icu_Heartbeat_500ms(void)
 {
     uint8 alive = icu_hb_alive_counter;

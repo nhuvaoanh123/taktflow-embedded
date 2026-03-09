@@ -287,6 +287,8 @@ int main(void)
                    (SC_Heartbeat_IsContentFault(SC_ECU_FZC) == TRUE) ||
                    (SC_Heartbeat_IsContentFault(SC_ECU_RZC) == TRUE)) {
             (void)SC_State_Transition(SC_STATE_FAULT);
+        } else {
+            /* No transition requested in this cycle. */
         }
 
 #ifdef SIL_DIAG

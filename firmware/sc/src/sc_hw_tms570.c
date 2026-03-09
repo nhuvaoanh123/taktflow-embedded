@@ -1294,11 +1294,15 @@ void sc_sci_put_hex32(uint32 val)
 {
     static const char hex[] = "0123456789ABCDEF";
     uint8 i;
+    uint32 shift;
+    uint32 idx;
 
     sc_sci_putchar((uint8)'0');
     sc_sci_putchar((uint8)'x');
     for (i = 0u; i < 8u; i++) {
-        sc_sci_putchar((uint8)hex[(val >> (28u - (i * 4u))) & 0x0Fu]);
+        shift = 28u - ((uint32)i * 4u);
+        idx = (val >> shift) & 0x0Fu;
+        sc_sci_putchar((uint8)hex[idx]);
     }
 }
 
