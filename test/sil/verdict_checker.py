@@ -109,9 +109,9 @@ DEFAULT_SCENARIO_TIMEOUT_SEC = 60
 DEFAULT_STATE_WAIT_TIMEOUT_SEC = 10
 
 # Motor RPM byte positions in Motor_Status (0x300)
-# Layout: [E2E_CRC, E2E_Alive, torque_echo, rpm_lo, rpm_hi, dir, enable, fault]
-MOTOR_RPM_BYTE_LO = 3
-MOTOR_RPM_BYTE_HI = 4
+# Layout: [E2E_alive, CRC, rpm_lo, rpm_hi, dir|enable|fault, duty, derating, reserved]
+MOTOR_RPM_BYTE_LO = 2
+MOTOR_RPM_BYTE_HI = 3
 
 
 # ---------------------------------------------------------------------------
@@ -745,6 +745,10 @@ class ScenarioExecutor:
                 f"{self._fault_api_url}/api/fault/reset",
             )
             log.info("  [STEP] Reset: %s", resp.json())
+            # Clear stale CAN/MQTT data from the previous lifecycle so
+            # subsequent wait_state checks use fresh post-reset frames.
+            self._can.reset()
+            self._mqtt.reset()
 
         elif action == "inject_scenario":
             name = step["name"]

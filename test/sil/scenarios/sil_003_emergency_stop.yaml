@@ -54,8 +54,8 @@ verdicts:
     description: "Vehicle state must reach SAFE_STOP within 100ms of E-Stop"
 
   - type: motor_shutdown
-    within_ms: 100
-    description: "Motor RPM must reach 0 within 100ms (de-energized)"
+    within_ms: 5000
+    description: "Motor RPM must reach 0 within 5s (physical deceleration after de-energize)"
 
   - type: can_message
     can_id: 0x103
