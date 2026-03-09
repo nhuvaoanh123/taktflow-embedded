@@ -105,6 +105,22 @@ class MqttPublisher:
         if msg_name == DTC_MSG_NAME:
             self._publish_dtc_alert(signals)
 
+    def publish_can_error(self, error_info: dict):
+        """Publish a structured CAN error-frame event."""
+        if not self._connected:
+            return
+
+        payload = {
+            "ts": time.time(),
+            **error_info,
+        }
+        self._client.publish(
+            f"{TOPIC_PREFIX}/can/error",
+            json.dumps(payload),
+            qos=1,
+            retain=True,
+        )
+
     def _publish_dtc_alert(self, signals: dict):
         """Publish a DTC alert with structured JSON."""
         dtc_number = signals.get("DTC_Number", 0)

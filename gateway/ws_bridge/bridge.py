@@ -110,6 +110,7 @@ class TelemetryState:
         self.events: list[dict] = []
         self.can_log: list[dict] = []  # Rolling buffer of decoded CAN messages
         self.sap_notifications: list[dict] = []  # Rolling SAP QM notifications
+        self.can_errors: list[dict] = []  # Rolling CAN error-frame events
 
         # Controller lock state (relayed from fault_inject via MQTT)
         self.control_locked = False
@@ -200,6 +201,7 @@ class TelemetryState:
             "events": self.events[-20:],  # Last 20 events
             "can_log": self.can_log[-50:],  # Last 50 CAN messages
             "sap_notifications": self.sap_notifications[-20:],
+            "can_errors": self.can_errors[-20:],
             "control": {
                 "locked": self.control_locked,
                 "client_id": self.control_client_id or "",
@@ -279,6 +281,7 @@ def on_mqtt_message(client, userdata, msg):
         state.vehicle_state = 0  # INIT — plant sim will transition to RUN after 3s
         state._dtc_last_seen.clear()
         state.sap_notifications.clear()
+        state.can_errors.clear()
         state.events.clear()
         state.can_log.clear()
         state.add_event("info", "System reset — all state cleared, re-initializing")
@@ -364,6 +367,22 @@ def on_mqtt_message(client, userdata, msg):
             state.sap_notifications.append(evt)
             if len(state.sap_notifications) > 20:
                 state.sap_notifications = state.sap_notifications[-20:]
+        except json.JSONDecodeError:
+            pass
+
+    # Structured CAN error-frame event from gateway
+    elif topic == "taktflow/can/error":
+        try:
+            err = json.loads(payload)
+            classes = err.get("classes", [])
+            if isinstance(classes, list):
+                class_label = ",".join(str(v) for v in classes[:3]) if classes else "UNKNOWN"
+            else:
+                class_label = str(classes)
+            state.add_event("can", f"CAN error frame: {class_label}")
+            state.can_errors.append(err)
+            if len(state.can_errors) > 50:
+                state.can_errors = state.can_errors[-50:]
         except json.JSONDecodeError:
             pass
 
