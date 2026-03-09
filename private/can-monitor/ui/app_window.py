@@ -215,11 +215,17 @@ class AppWindow(QMainWindow):
                 continue
 
             for raw in batch:
+                # Reject bad checksums (fixed protocol only — variable has no checksum)
+                if not raw.get("checksum_ok", True):
+                    self.store.error_frames += 1
+                    continue
+
                 # DLC cross-check: reject frames whose DLC is shorter than DBC expects.
                 # Catches Waveshare variable-protocol mis-sync (no checksum).
                 # Allow DLC >= expected — CAN padding to 8 bytes is normal.
                 msg_def = self.decoder._msg_cache.get(raw["can_id"])
                 if msg_def and raw["dlc"] < msg_def.length:
+                    self.store.rejected_dlc += 1
                     continue
 
                 # Decode with choices for display, without for plotting
@@ -232,6 +238,12 @@ class AppWindow(QMainWindow):
                 # Strict DBC-only monitor mode:
                 # drop any frame that is not decodable by DBC, or decodes to no signals.
                 if not decoded or not decoded.get("signals"):
+                    self.store.rejected_unknown += 1
+                    continue
+                # Signal range validation: reject frames with out-of-range values.
+                # Catches Waveshare mis-sync where data bytes are garbage (e.g. ECU_ID=170=0xAA).
+                if not self.decoder.signals_in_range(raw["can_id"], decoded["signals"]):
+                    self.store.rejected_range += 1
                     continue
                 frame = ParsedFrame(
                     timestamp=raw["timestamp"],

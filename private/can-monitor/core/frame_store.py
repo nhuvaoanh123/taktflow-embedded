@@ -55,6 +55,9 @@ class FrameStore:
         self.signal_history = {}  # "MsgName.SignalName" -> deque of (timestamp, value)
         self.total_frames = 0
         self.error_frames = 0
+        self.rejected_dlc = 0
+        self.rejected_range = 0
+        self.rejected_unknown = 0
         self.t0 = time.monotonic()
         self._recent_timestamps = deque(maxlen=5000)
 
@@ -63,8 +66,6 @@ class FrameStore:
             self.trace.append(frame)
             self.total_frames += 1
             self._recent_timestamps.append(frame.timestamp)
-            if not frame.checksum_ok:
-                self.error_frames += 1
             # Update message table (never prune — let UI show age-based status)
             cid = frame.can_id
             if cid not in self.messages:
@@ -127,6 +128,9 @@ class FrameStore:
             return {
                 "total": self.total_frames,
                 "errors": self.error_frames,
+                "rejected_dlc": self.rejected_dlc,
+                "rejected_range": self.rejected_range,
+                "rejected_unknown": self.rejected_unknown,
                 "elapsed": elapsed,
                 "fps": fps,
                 "msg_count": len(self.messages),

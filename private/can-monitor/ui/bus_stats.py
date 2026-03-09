@@ -20,11 +20,16 @@ class BusStatsTab(QWidget):
 
         self._total_label = self._make_stat_card("Total Frames", "0")
         self._fps_label = self._make_stat_card("Frame Rate", "0 fps")
-        self._errors_label = self._make_stat_card("Errors", "0")
+        self._errors_label = self._make_stat_card("Checksum Err", "0")
+        self._rejected_dlc_label = self._make_stat_card("DLC Rejected", "0")
+        self._rejected_range_label = self._make_stat_card("Range Rejected", "0")
+        self._rejected_unknown_label = self._make_stat_card("Unknown ID", "0")
         self._bus_load_label = self._make_stat_card("Bus Load", "0%")
         self._elapsed_label = self._make_stat_card("Elapsed", "0s")
 
         for card in (self._total_label, self._fps_label, self._errors_label,
+                     self._rejected_dlc_label, self._rejected_range_label,
+                     self._rejected_unknown_label,
                      self._bus_load_label, self._elapsed_label):
             summary.addWidget(card[2])  # card = (name_lbl, value_lbl, group)
         layout.addLayout(summary)
@@ -60,6 +65,9 @@ class BusStatsTab(QWidget):
         self._total_label[1].setText(f"{stats['total']:,}")
         self._fps_label[1].setText(f"{stats['fps']:.0f} fps")
         self._errors_label[1].setText(f"{stats['errors']:,}")
+        self._rejected_dlc_label[1].setText(f"{stats.get('rejected_dlc', 0):,}")
+        self._rejected_range_label[1].setText(f"{stats.get('rejected_range', 0):,}")
+        self._rejected_unknown_label[1].setText(f"{stats.get('rejected_unknown', 0):,}")
         self._elapsed_label[1].setText(f"{stats['elapsed']:.0f}s")
 
         # Bus load estimate (assuming 500kbps, avg 8 byte frames = 130 bits each)

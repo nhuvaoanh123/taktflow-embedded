@@ -14,12 +14,18 @@ class CanDecoder:
             dbc_path = os.path.join(base, "gateway", "taktflow.dbc")
         self.db = cantools.database.load_file(dbc_path)
         self._msg_cache = {}
+        self._sig_ranges = {}  # frame_id -> {sig_name: (min, max)}
         self._asil_cache = {}
         self._cycle_cache = {}
         self._sender_cache = {}
         self._receiver_cache = {}
         for msg in self.db.messages:
             self._msg_cache[msg.frame_id] = msg
+            ranges = {}
+            for sig in msg.signals:
+                if sig.minimum is not None and sig.maximum is not None:
+                    ranges[sig.name] = (sig.minimum, sig.maximum)
+            self._sig_ranges[msg.frame_id] = ranges
             # Extract DBC attributes
             attrs = {}
             try:
@@ -59,6 +65,22 @@ class CanDecoder:
             "asil": self._asil_cache.get(arb_id, "QM"),
             "cycle_ms": self._cycle_cache.get(arb_id, 0),
         }
+
+    def signals_in_range(self, arb_id, signals):
+        """Check all numeric signal values against DBC min/max ranges.
+
+        Returns False if any signal exceeds its defined range (corrupted frame).
+        """
+        ranges = self._sig_ranges.get(arb_id)
+        if not ranges:
+            return True
+        for name, value in signals.items():
+            if not isinstance(value, (int, float)):
+                continue
+            bounds = ranges.get(name)
+            if bounds and not (bounds[0] <= value <= bounds[1]):
+                return False
+        return True
 
     def get_message_name(self, arb_id):
         msg = self._msg_cache.get(arb_id)
