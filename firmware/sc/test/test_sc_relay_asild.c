@@ -47,6 +47,7 @@ typedef uint8               Std_ReturnType;
 #define SC_KILL_REASON_BUSOFF       5u
 #define SC_KILL_REASON_READBACK     6u
 #define SC_KILL_REASON_ESTOP        7u
+#define SC_KILL_REASON_BUS_SILENCE  8u
 
 /* Fault source enum */
 #define SC_FAULT_SOURCE_NONE        0u
@@ -94,6 +95,7 @@ static boolean mock_plaus_faulted;
 static boolean mock_selftest_healthy;
 static boolean mock_esm_error;
 static boolean mock_can_bus_off;
+static boolean mock_can_bus_silent;
 static boolean mock_estop_active;
 
 boolean SC_Heartbeat_IsAnyConfirmed(void)
@@ -119,6 +121,11 @@ boolean SC_ESM_IsErrorActive(void)
 boolean SC_CAN_IsBusOff(void)
 {
     return mock_can_bus_off;
+}
+
+boolean SC_CAN_IsBusSilent(void)
+{
+    return mock_can_bus_silent;
 }
 
 boolean SC_CAN_IsEStopActive(void)
@@ -169,6 +176,7 @@ void setUp(void)
     mock_selftest_healthy = TRUE;
     mock_esm_error        = FALSE;
     mock_can_bus_off      = FALSE;
+    mock_can_bus_silent   = FALSE;
     mock_estop_active     = FALSE;
 
     /* Reset CAN TX mock */
@@ -357,6 +365,18 @@ void test_Relay_no_trigger(void)
 
     TEST_ASSERT_EQUAL_UINT8(1u, mock_gio_a_dout[SC_PIN_RELAY]);
     TEST_ASSERT_FALSE(SC_Relay_IsKilled());
+}
+
+/** @verifies SWR-SC-036 -- Bus silence triggers relay kill (GAP-SC-003) */
+void test_Relay_trigger_bus_silence(void)
+{
+    SC_Relay_Energize();
+    mock_can_bus_silent = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_BUS_SILENCE, SC_Relay_GetKillReason());
 }
 
 /* ==================================================================
@@ -556,6 +576,9 @@ int main(void)
     RUN_TEST(test_Relay_trigger_readback_mismatch);
     RUN_TEST(test_Relay_readback_resets);
     RUN_TEST(test_Relay_no_trigger);
+
+    /* SWR-SC-036: Bus silence trigger (GAP-SC-003) */
+    RUN_TEST(test_Relay_trigger_bus_silence);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_relay_trigger_can_busoff);

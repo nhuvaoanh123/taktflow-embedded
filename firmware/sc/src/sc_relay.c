@@ -147,7 +147,15 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (g): GPIO readback mismatch */
+    /* Trigger (g): CAN bus silence — no valid frames for >= 200ms */
+    if (SC_CAN_IsBusSilent() == TRUE) {
+        kill_reason = SC_KILL_REASON_BUS_SILENCE;
+        SC_RELAY_DIAG("KILL reason=BUS_SILENCE");
+        SC_Relay_DeEnergize();
+        return;
+    }
+
+    /* Trigger (h): GPIO readback mismatch */
     readback = gioGetBit(SC_GIO_PORT_A, SC_PIN_RELAY);
     if (relay_commanded == TRUE) {
         if (readback != 1u) {
