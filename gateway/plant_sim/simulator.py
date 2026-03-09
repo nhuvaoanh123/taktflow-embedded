@@ -45,6 +45,8 @@ TX_MOTOR_STATUS = 0x300
 TX_MOTOR_CURRENT = 0x301
 TX_MOTOR_TEMP = 0x302
 TX_BATTERY_STATUS = 0x303
+TX_BRAKE_FAULT_EVENT = 0x210   # Brake_Fault event (DBC ID 528) — read by CVC
+TX_MOTOR_CUTOFF_REQ = 0x211   # Motor_Cutoff_Req event (DBC ID 529) — read by CVC
 TX_DTC_BROADCAST = 0x500
 
 # Virtual sensor CAN IDs (plant-sim → ECU sensor feeders, SIL only, no E2E)
@@ -434,15 +436,15 @@ class PlantSimulator:
         log.info("DTC 0x%06X from ECU %d (occurrence %d)", dtc_code, ecu_source, count)
 
     def _check_and_send_dtcs(self):
-        """Check all fault conditions and send DTCs."""
-        if self.motor.overcurrent:
-            self._send_dtc(DTC_OVERCURRENT, ECU_RZC)
-        if self.steering.fault:
-            self._send_dtc(DTC_STEER_FAULT, ECU_FZC)
+        """Check fault conditions and send DTCs for faults that have no
+        firmware Dem equivalent yet.  DTCs handled by ECU firmware:
+          - Overcurrent (0xE301): RZC Swc_Motor.c
+          - Battery UV  (0xE401): RZC Swc_Battery.c
+          - Steer fault (0xD001): FZC Swc_Steering.c
+        Only brake fault still needs plant-sim DTC (no FZC Dem for it yet).
+        """
         if self.brake.fault:
             self._send_dtc(DTC_BRAKE_FAULT, ECU_FZC)
-        if self.battery.status == 0:  # critical_UV
-            self._send_dtc(DTC_BATTERY_UV, ECU_RZC)
 
     def _tx_steering_status(self):
         """Send Steering_Status (0x200) every 20ms.
@@ -494,6 +496,27 @@ class PlantSimulator:
 
         data = self._encode_with_e2e(TX_BRAKE_STATUS, 0x0A, payload)
         self.bus.send(can.Message(arbitration_id=TX_BRAKE_STATUS,
+                                  data=data, is_extended_id=False))
+
+    def _tx_brake_fault_event(self):
+        """Send Brake_Fault event (0x210) when brake fault is active.
+
+        Byte layout per taktflow.dbc (4 bytes, E2E protected):
+          [0]   E2E: AliveCounter[7:4] | DataID[3:0]
+          [1]   E2E: CRC8
+          [2]   FaultType[3:0]   (1=deviation, 2=sensor, 3=actuator)
+                CommandedBrake[7:4]+[11:8] at bits 20-27
+          [3]   MeasuredBrake[3:0] at bits 28-31
+        CVC reads byte 2 as sig_rx_brake_fault (bitPos=16, bitSize=8).
+        Any non-zero value triggers EVT_BRAKE_FAULT -> SAFE_STOP.
+        """
+        if not self.brake.fault:
+            return
+        # Use 8-byte frame to match FZC firmware DLC (CVC Com expects DLC=8)
+        payload = bytearray(8)
+        payload[2] = 0x01  # FaultType=1 (deviation)
+        data = self._encode_with_e2e(TX_BRAKE_FAULT_EVENT, 0x0B, payload)
+        self.bus.send(can.Message(arbitration_id=TX_BRAKE_FAULT_EVENT,
                                   data=data, is_extended_id=False))
 
     def _tx_vehicle_state(self):
@@ -548,8 +571,15 @@ class PlantSimulator:
         struct.pack_into('<H', payload, 0, angle_raw)
 
         # Bytes 2-3: brake_position (uint16 LE, 0-1000 ADC counts)
-        # Brake model gives position_int (0-100%), map to ADC counts 0-1000
-        brake_pos = int(self.brake.position_int * 10)
+        # Brake model gives position_int (0-100%), map to ADC counts 0-1000.
+        # When brake.fault is injected, override sensor to 50% so FZC's
+        # deviation check fires (|cmd - actual| > 2% threshold for 50 cycles).
+        # CVC sends brake_cmd=0 during normal drive, so reporting 50% position
+        # creates a 50% deviation that exceeds the 2% threshold.
+        if self.brake.fault:
+            brake_pos = 500  # report 50% position (500 ADC counts) while cmd=0
+        else:
+            brake_pos = int(self.brake.position_int * 10)
         brake_pos = max(0, min(1000, brake_pos))
         struct.pack_into('<H', payload, 2, brake_pos)
 
@@ -619,31 +649,35 @@ class PlantSimulator:
                         break
                     self._process_rx(msg)
 
-                # Update physics — limit output in degraded/limp/safe states
-                if self.estop_active or self.vehicle_state == VS_SAFE_STOP or self.sc_relay_killed:
+                # Update physics — model hardware capabilities, not policy.
+                # Policy (when to brake, which state to enter) is CVC's job.
+                # Plant-sim models: motor power limits, E-stop brake lock,
+                # and natural physics.  Brake always follows CVC command
+                # (via CAN 0x103) except E-stop which is a physical lock.
+                if self.estop_active:
+                    # E-stop: physical brake lock + motor kill
                     self.motor.update(0, 0, dt)
                     self.steering.update(0, dt)
                     self.brake.update(100, dt)
-                elif self.vehicle_state == VS_LIMP:
-                    # Limp mode: cap torque at 15%, force gentle braking
-                    capped_duty = min(self.motor.duty_pct, 15.0)
-                    brake_load = max(self.brake.actual_pct / 100.0, 0.3)
-                    self.motor.update(capped_duty, self.motor.direction, dt,
-                                      brake_load=brake_load)
-                    self.steering.update(self.steering.commanded_angle, dt)
-                    self.brake.update(max(self.brake.commanded_pct, 30), dt)
-                elif self.vehicle_state == VS_DEGRADED:
-                    # DEGRADED: 50% torque cap (battery warning)
-                    capped_duty = min(self.motor.duty_pct, 50.0)
-                    brake_load = self.brake.actual_pct / 100.0
-                    self.motor.update(capped_duty, self.motor.direction, dt,
-                                      brake_load=brake_load)
+                elif self.sc_relay_killed or self.motor._hw_disabled:
+                    # SC relay or overcurrent: motor power cut, actuators
+                    # follow CVC commands (CVC will command 100% brake
+                    # once it transitions to SAFE_STOP)
+                    self.motor.update(0, 0, dt)
                     self.steering.update(self.steering.commanded_angle, dt)
                     self.brake.update(self.brake.commanded_pct, dt)
                 else:
+                    # Normal operation — apply torque cap from battery
+                    # capacity (physics: less voltage = less torque available)
+                    if self.battery.status == 0:       # critical UV
+                        duty_cap = 15.0
+                    elif self.battery.status == 1:     # UV warning
+                        duty_cap = 50.0
+                    else:
+                        duty_cap = 100.0
+                    capped_duty = min(self.motor.duty_pct, duty_cap)
                     brake_load = self.brake.actual_pct / 100.0
-                    self.motor.update(self.motor.duty_pct,
-                                      self.motor.direction, dt,
+                    self.motor.update(capped_duty, self.motor.direction, dt,
                                       brake_load=brake_load)
                     self.steering.update(self.steering.commanded_angle, dt)
                     self.brake.update(self.brake.commanded_pct, dt)

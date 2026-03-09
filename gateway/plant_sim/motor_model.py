@@ -1,8 +1,13 @@
-"""First-order DC motor model with thermal dynamics.
+"""Motor + inverter model with FOC current control and thermal dynamics.
+
+Models an automotive BLDC/PMSM with field-oriented control (FOC) inverter.
+The FOC controller maintains motor current proportional to the torque command
+regardless of RPM (closed-loop Iq regulation), matching the Safety Controller's
+torque-vs-current plausibility lookup table.
 
 Physics:
   dw/dt = (torque - friction * w) / inertia
-  current = stall_current * (duty / 100) * (1 - w / no_load_rpm)
+  current = rated_current * (duty / 100)   [FOC closed-loop]
   dT/dt = (I^2 * R_thermal - (T - T_ambient) / R_cool) / C_thermal
 """
 
@@ -10,12 +15,12 @@ import time
 
 
 class MotorModel:
-    # Motor parameters (775 DC motor, 12V, demo-quality)
+    # Motor parameters (BLDC with FOC inverter, 12V, demo-quality)
     NO_LOAD_RPM = 4000.0
-    STALL_CURRENT_MA = 25000.0  # 25A stall
+    RATED_CURRENT_MA = 25000.0  # 25A at 100% torque command
     FRICTION = 0.005            # friction coefficient (Nm/RPM)
     INERTIA = 0.002             # kg*m^2
-    R_THERMAL = 0.008           # degC per mA^2 (heating factor)
+    R_THERMAL = 0.001           # degC per mA^2 — equilibrium at 25A ≈ 75°C (below 100°C overtemp)
     R_COOL = 80.0               # thermal resistance degC/W
     C_THERMAL = 50.0            # thermal capacitance J/degC
     T_AMBIENT = 25.0            # ambient temperature degC
@@ -74,27 +79,25 @@ class MotorModel:
             if self.rpm < 1.0:
                 self.rpm = 0.0
 
-        # Current model: proportional to torque load
+        # Current model: FOC inverter maintains Iq ∝ torque command
         if self._overcurrent_latch:
             # Injected overcurrent - hold at injected level, motor disabled
             self.current_ma = self._injected_current_ma
         elif self.enabled:
-            load_factor = 1.0 - (self.rpm / self.NO_LOAD_RPM)
-            load_factor = max(load_factor, brake_load)
-            load_factor = max(0.0, min(1.0, load_factor))
-            self.current_ma = self.STALL_CURRENT_MA * (self.duty_pct / 100.0) * load_factor
+            self.current_ma = self.RATED_CURRENT_MA * (self.duty_pct / 100.0)
         else:
-            tau = 0.1
-            self.current_ma *= max(0.0, 1.0 - dt / tau)
+            # FOC inverter actively drives current to zero when disabled
+            self.current_ma = 0.0
 
         # Thermal model — use zero current for heating when HW disabled
         thermal_current = 0.0 if self._hw_disabled else self.current_ma
         heat_input = (thermal_current / 1000.0) ** 2 * self.R_THERMAL
         heat_loss = (self.temp_c - self.T_AMBIENT) / self.R_COOL
-        self.temp_c += (heat_input - heat_loss) * dt * 10.0  # speed up for demo
+        self.temp_c += (heat_input - heat_loss) * dt  # real-time thermal (overtemp scenario uses direct MQTT injection)
 
-        # Fault detection
-        self.overcurrent = self.current_ma > 20000.0
+        # Fault detection — threshold above rated max (25A) but below
+        # injected fault level (28A) so natural operation never triggers
+        self.overcurrent = self.current_ma > 26000.0
         self.overtemp = self.temp_c > 100.0
 
         if self.overcurrent or self.overtemp:
