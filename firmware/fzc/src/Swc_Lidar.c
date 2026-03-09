@@ -213,12 +213,16 @@ void Swc_Lidar_MainFunction(void)
     } else {
 #if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
         /* SIL: No physical TFMini-S sensor, UART POSIX stub returns 0
-         * bytes every cycle.  Inject a synthetic "clear" reading so the
-         * lidar SWC doesn't permanently fault.  Actual lidar scenarios
-         * use the fault-inject API to override via CAN-based injection.
+         * bytes every cycle.  Inject a synthetic "clear" reading with
+         * small variation to avoid stuck detection (50 identical readings).
          * NOTE: This guard is transparent on bare metal (compiled out).
          * NOTE: Guard excludes UNIT_TEST — tests exercise real parse paths. */
-        raw_dist       = 500u;   /* 500 cm = well within CLEAR zone */
+        {
+            static uint16 sil_lidar_counter = 0u;
+            /* Oscillate ±2 cm around 500 to defeat stuck detection */
+            raw_dist = 500u + (sil_lidar_counter % 5u) - 2u;
+            sil_lidar_counter++;
+        }
         raw_signal     = 500u;   /* Good signal strength             */
         parse_result   = E_OK;
         frame_received = TRUE;
