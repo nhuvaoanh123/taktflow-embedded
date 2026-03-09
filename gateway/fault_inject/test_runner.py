@@ -315,20 +315,37 @@ class DashboardTestRunner:
         log.info("[TEST %s] Stop requested", self._run_id)
         return True
 
-    def _wait_for_run(self, run_id: str, timeout: float = 60.0) -> bool:
-        """Poll MQTT verdict monitor until vehicle_state == 1 (RUN).
+    def _wait_for_run(self, run_id: str, timeout: float = 60.0,
+                      stable_sec: float = 5.0) -> bool:
+        """Poll MQTT verdict monitor until vehicle_state == 1 (RUN) and stable.
 
-        Returns True if RUN was reached within timeout, False otherwise.
+        Requires CVC to stay in RUN for ``stable_sec`` consecutive seconds
+        before returning True.  This handles the SC relay-kill transient that
+        can briefly push CVC to SAFE_STOP during Docker container startup.
+
+        Returns True if stable RUN was reached within timeout, False otherwise.
         """
         deadline = time.time() + timeout
+        run_since: float | None = None
         while time.time() < deadline:
             if self._stop_requested:
                 return False
             if self._monitor.vehicle_state == 1:
-                log.info("[TEST %s] CVC reached RUN", run_id)
-                return True
+                if run_since is None:
+                    run_since = time.time()
+                    log.info("[TEST %s] CVC reached RUN, waiting %.0fs for stability",
+                             run_id, stable_sec)
+                elif time.time() - run_since >= stable_sec:
+                    log.info("[TEST %s] CVC stable in RUN for %.0fs", run_id, stable_sec)
+                    return True
+            else:
+                if run_since is not None:
+                    log.info("[TEST %s] CVC left RUN (state=%d/%s), resetting stability timer",
+                             run_id, self._monitor.vehicle_state,
+                             VEHICLE_STATES.get(self._monitor.vehicle_state, "UNKNOWN"))
+                run_since = None
             time.sleep(0.5)
-        log.warning("[TEST %s] CVC did not reach RUN within %.0fs (state=%d/%s)",
+        log.warning("[TEST %s] CVC did not reach stable RUN within %.0fs (state=%d/%s)",
                     run_id, timeout, self._monitor.vehicle_state,
                     VEHICLE_STATES.get(self._monitor.vehicle_state, "UNKNOWN"))
         return False

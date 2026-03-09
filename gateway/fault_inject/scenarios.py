@@ -76,6 +76,7 @@ DATA_ID_TORQUE = 0x02
 DATA_ID_STEER = 0x03
 DATA_ID_BRAKE = 0x04
 
+
 # Shared alive counters (per CAN ID, 4-bit wrapping)
 _alive_counters: dict[int, int] = {}
 
@@ -282,16 +283,10 @@ def overcurrent() -> str:
     _scaled_sleep(0.5)  # let motor spin up
     plant_inject_overcurrent(_mqtt_client)
     _scaled_sleep(1.0)  # allow plant-sim to process + send physics update
-    # Direct DTC injection on CAN 0x500 — ensures DTC is visible even if
-    # the plant-sim MQTT subscription had a startup race
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_DTC_BROADCAST,
-              _dtc_frame(DTC_OVERCURRENT, ECU_RZC))
-    finally:
-        bus.shutdown()
-    return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent + "
-            "DTC 0xE301 on CAN 0x500 -> SAFE_STOP.")
+    # DTC 0xE301 now sent by RZC firmware (Swc_Motor.c) when it detects
+    # overcurrent via the real signal path — no belt-and-suspenders needed.
+    return ("Overcurrent: pedal 95% (SPI) + MQTT inject_overcurrent.  "
+            "RZC detects overcurrent -> DTC 0xE301 -> SAFE_STOP.")
 
 
 def steer_fault() -> str:
@@ -313,43 +308,28 @@ def steer_fault() -> str:
         return "Steer fault: MQTT client not available"
     inject_steer_fault(_mqtt_client)
     _scaled_sleep(0.5)  # allow plant-sim to process
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_DTC_BROADCAST,
-              _dtc_frame(DTC_STEER_FAULT, ECU_FZC))
-    finally:
-        bus.shutdown()
-    return ("Steer fault: MQTT inject_steer_fault + DTC 0xD001 on CAN.  "
-            "Physics -> SAFE_STOP.")
+    # DTC 0xD001 now sent by FZC firmware when it detects steering
+    # plausibility fault via the real signal path.
+    return ("Steer fault: MQTT inject_steer_fault.  "
+            "FZC detects plausibility fault -> DTC 0xD001 -> SAFE_STOP.")
 
 
 def brake_fault() -> str:
-    """Inject a brake fault via plant-sim MQTT command.
+    """Inject a brake fault via plant-sim MQTT virtual sensor deviation.
 
-    Directly sets brake.fault = True in the plant-sim, bypassing
-    the CAN cyclic-TX override problem (CVC cyclically sends 0x103,
-    overriding any injected brake commands within one tick).
-
-    The plant-sim:
-      1. Sets brake fault flag
-      2. Sends DTC 0xE202 (brake fault) on CAN 0x500
-      3. Transitions to SAFE_STOP (motor off, brake applied)
-      4. Motor_Status CAN frames reflect motor disabled
-
-    Also sends DTC 0xE202 directly on CAN 0x500 as belt-and-suspenders.
+    Plant-sim sets brake.fault, overrides FZC virtual sensor to report 50%
+    position (deviation from cmd=0%).  FZC firmware detects PWM deviation
+    (>2% for 50 consecutive cycles = 500ms SIL), sets Brake_Fault=1 in RTE.
+    Swc_FzcCom_TransmitSchedule reads RTE and sends E2E-protected frame on
+    CAN 0x210 with FaultType=1.  CVC reads byte 2 -> EVT_BRAKE_FAULT ->
+    SAFE_STOP.
     """
     if _mqtt_client is None:
         return "Brake fault: MQTT client not available"
     inject_brake_fault(_mqtt_client)
-    _scaled_sleep(0.5)  # allow plant-sim to process
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_DTC_BROADCAST,
-              _dtc_frame(DTC_BRAKE_FAULT, ECU_FZC))
-    finally:
-        bus.shutdown()
-    return ("Brake fault: MQTT inject_brake_fault + DTC 0xE202 on CAN.  "
-            "Physics -> SAFE_STOP.")
+    _scaled_sleep(1.5)  # FZC needs 500ms debounce + 100ms TX cycle + margin
+    return ("Brake fault: MQTT inject_brake_fault.  "
+            "FZC detects PWM deviation -> CAN 0x210 FaultType=1 -> SAFE_STOP.")
 
 
 def motor_overtemp() -> str:
@@ -379,15 +359,10 @@ def motor_overtemp() -> str:
         plant_inject_temp(_mqtt_client, temp)
         _scaled_sleep(0.1)
 
-    # Direct DTC injection on CAN 0x500 — belt-and-suspenders
-    bus = _get_bus()
-    try:
-        _send(bus, CAN_DTC_BROADCAST,
-              _dtc_frame(DTC_OVERTEMP, ECU_RZC))
-    finally:
-        bus.shutdown()
-    return ("Motor overtemp: 25 C -> 110 C over 4 s via MQTT + "
-            "DTC 0xE302 on CAN.  Derating at 80 C, shutdown at 100 C.")
+    # DTC 0xE302 now sent by RZC firmware (Swc_Motor.c) when it detects
+    # overtemp via the real signal path — no belt-and-suspenders needed.
+    return ("Motor overtemp: 25 C -> 110 C over 4 s via MQTT.  "
+            "RZC detects overtemp -> DTC 0xE302.  Derating at 80 C, shutdown at 100 C.")
 
 
 def battery_low() -> str:
@@ -434,12 +409,12 @@ def battery_low() -> str:
             plant_inject_voltage(_mqtt_client, v, soc)
             _scaled_sleep(0.1)
 
-        # Fire DTC_BATTERY_UV
-        _send(bus, CAN_DTC_BROADCAST,
-              _dtc_frame(DTC_BATTERY_UV, ECU_RZC))
+        # DTC 0xE401 now sent by RZC firmware (Swc_Battery.c) when it
+        # detects DISABLE_LOW status — no belt-and-suspenders needed.
     finally:
         bus.shutdown()
-    return ("Battery drain: 12.6 V -> 7.0 V over 7.5 s via MQTT + DTC 0xE401.  "
+    return ("Battery drain: 12.6 V -> 7.0 V over 7.5 s via MQTT.  "
+            "RZC detects undervoltage -> DTC 0xE401.  "
             "Plant sim restores normal values within ~8 s after scenario ends.")
 
 
@@ -724,20 +699,24 @@ def _reset_all_containers() -> list[str]:
     all_ecu_names = _ZONE_CONTAINERS + [_SC_CONTAINER, _CVC_CONTAINER]
     restarted: list[str] = []
 
-    # Phase 1: kill ALL containers in parallel — no graceful shutdown needed
-    def _kill_container(name: str) -> None:
+    # Phase 1: stop ALL containers in parallel.  Use stop() (not kill()) so
+    # Docker's restart_policy does NOT auto-restart them — the phased start
+    # in Phase 2-4 controls the ordering (SC must send SC_Status before CVC
+    # boots, otherwise CVC's Com RX timeout zeros the relay shadow buffer
+    # and CVC interprets it as SC relay killed).
+    def _stop_container(name: str) -> None:
         try:
             c = client.containers.get(name)
-            c.kill()
+            c.stop(timeout=2)
         except docker.errors.NotFound:
-            log.warning("Container %s not found — skipping kill", name)
+            log.warning("Container %s not found — skipping stop", name)
         except docker.errors.APIError:
             pass  # Container may already be stopped
         except Exception as exc:
-            log.warning("Failed to kill %s: %s", name, exc)
+            log.warning("Failed to stop %s: %s", name, exc)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-        pool.map(_kill_container, all_ecu_names)
+        pool.map(_stop_container, all_ecu_names)
 
     # Phase 2: start zone controllers + plant-sim (heartbeat senders first)
     for name in _ZONE_CONTAINERS:
@@ -843,8 +822,8 @@ SCENARIOS: dict[str, dict] = {
     "battery_low": {
         "fn": battery_low,
         "description": (
-            "Battery drain: injects Battery_Status frames with voltage "
-            "dropping from 12.6 V to 8.5 V over 5 s, then fires DTC 0xE401."
+            "Battery drain: voltage 12.6 V -> 7.0 V over 7.5 s via MQTT.  "
+            "RZC detects undervoltage -> DTC 0xE401 -> DEGRADED/LIMP."
         ),
     },
     "motor_reversal": {
