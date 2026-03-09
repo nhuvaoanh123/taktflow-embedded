@@ -87,7 +87,7 @@
 
 - `RECOMMENDED (NOT DONE)` Hardware bring-up SOP (power-on/off + safety).
   - Deliverable: 1-page runbook for safe first power-up and emergency shutdown flow.
-  - Target path: `taktflow-embedded/hardware/README.md` (new section) or `taktflow-embedded/hardware/bringup-sop.md`
+  - Target path: `taktflow-embedded/hardware/apps-web-overview.md` (new section) or `taktflow-embedded/hardware/bringup-sop.md`
   - Completion signal: includes pre-power checks, max current limits, abort steps, and operator sequence.
 
 - `RECOMMENDED (NOT DONE)` As-built wiring plan v0.
@@ -695,6 +695,7 @@ Use this chronicle for append-only procurement updates in date order.
 - ~$2K hardware budget
 - Refine every document 3 times (see memory/refinement-process.md)
 - Search web freely without asking
+
 
 
 

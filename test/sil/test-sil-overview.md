@@ -1,4 +1,4 @@
-## Human-in-the-Loop (HITL) Comment Lock
+﻿## Human-in-the-Loop (HITL) Comment Lock
 
 `HITL` means human-reviewer-owned comment content.
 
@@ -388,7 +388,7 @@ docker compose -f docker/docker-compose.yml down
 
 ```
 test/sil/
-  README.md                   # This file
+  apps-web-overview.md                   # This file
   run_sil.sh                  # Test orchestrator (Bash)
   verdict_checker.py          # Verdict evaluation engine (Python)
   requirements.txt            # Python dependencies
@@ -429,3 +429,4 @@ test/sil/
 - Software integration testing using both functional and structural approaches
 - Fault injection at integration boundaries (Fault Injection API)
 - Automated regression via nightly schedule
+

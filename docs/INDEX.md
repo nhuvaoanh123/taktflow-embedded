@@ -173,7 +173,7 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Document | Path | Process | Status |
 |----------|------|---------|--------|
-| Plans README | [aspice/plans/README.md](aspice/plans/README.md) | — | active |
+| Plans README | [aspice/plans/apps-web-overview.md](aspice/plans/apps-web-overview.md) | — | active |
 | Safety Workstream | [aspice/plans/SYS.1-system-requirements/safety-workstream.md](aspice/plans/SYS.1-system-requirements/safety-workstream.md) | SYS.1 | active |
 | Interfaces & BSW Workstream | [aspice/plans/SYS.2-system-architecture/interfaces-and-bsw-workstream.md](aspice/plans/SYS.2-system-architecture/interfaces-and-bsw-workstream.md) | SYS.2 | active |
 | SW Req & Architecture Plan | [aspice/plans/SWE.1-2-requirements-and-architecture/software-requirements-and-architecture-plan.md](aspice/plans/SWE.1-2-requirements-and-architecture/software-requirements-and-architecture-plan.md) | SWE.1-2 | active |
@@ -185,7 +185,7 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Document | Path | Status |
 |----------|------|--------|
-| Research Repository Index | [research/README.md](research/README.md) | active |
+| Research Repository Index | [research/apps-web-overview.md](research/apps-web-overview.md) | active |
 | Research Link Log | [research/link-log.md](research/link-log.md) | active |
 | Process Playbook | [reference/process-playbook.md](reference/process-playbook.md) | active |
 | Lessons Learned | [reference/lessons-learned-security-hardening.md](reference/lessons-learned-security-hardening.md) | active |
@@ -194,7 +194,7 @@ Every document must be registered here. If it is not in this index, it does not 
 
 | Document | Path | Status |
 |----------|------|--------|
-| Deliverable Artifact Catalog | [deliverable-artifact/README.md](deliverable-artifact/README.md) | active |
+| Deliverable Artifact Catalog | [deliverable-artifact/apps-web-overview.md](deliverable-artifact/apps-web-overview.md) | active |
 
 ---
 
@@ -235,4 +235,5 @@ Every document must be registered here. If it is not in this index, it does not 
 ---
 
 *Last updated: 2026-02-21*
+
 

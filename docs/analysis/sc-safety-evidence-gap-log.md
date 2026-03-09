@@ -3,6 +3,12 @@
 Date: 2026-03-08
 Scope: safety-critical dataflow and state transitions for SC firmware.
 
+## Related Artifacts
+
+- [SC Safety-Critical Data Flow Analysis](sc-safety-critical-dataflow.md)
+- [SC State Transition Model](sc-state-transition-model.md)
+- [Lessons Learned: SC Safety-Critical Dataflow/State Transition Investigation](../reference/lessons-learned/safety/PROCESS-sc-safety-critical-dataflow-state-transition-investigation.md)
+
 Severity scale:
 - `Critical`: can directly compromise intended fail-safe behavior
 - `High`: substantial verification or diagnosability weakness on safety path

@@ -1216,7 +1216,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 - [x] Final traceability verification — 475 reqs, 0 gaps, CI-enforced
 
 ### 14d: Portfolio Polish
-- [ ] README.md — portfolio landing page
+- [ ] apps-web-overview.md — portfolio landing page
   - [ ] Project overview + zonal architecture diagram
   - [ ] Photo of assembled platform
   - [ ] Safety lifecycle summary (HARA → safety case)
@@ -1230,7 +1230,7 @@ Full **HIL (Hardware-in-the-Loop)** — all 4 physical ECUs with real sensors/ac
 ### Files
 - `docs/aspice/verification/system-verification/system-verification-report.md`
 - `docs/safety/plan/safety-case.md`
-- `README.md`
+- `apps-web-overview.md`
 - `media/` — demo video or YouTube link
 
 ### DONE Criteria
@@ -1309,6 +1309,7 @@ These are honest uncertainties that need to be resolved during implementation. F
 | UDS implementation scope creep | TCU takes too long | Limit to 5 core services (0x10, 0x22, 0x14, 0x19, 0x3E). No security access (0x27) for portfolio scope. |
 | AUTOSAR BSW over-engineering | Spend too long on BSW perfection | Keep modules simplified (~2,500 LOC total). Not a certified stack — demonstrate architecture understanding, not production completeness. |
 | vsomeip build complexity | Docker image build issues | Pin vsomeip version, pre-build in base image, fallback to raw SOME/IP over UDP if vsomeip too heavy. **Eliminated — SOME/IP dropped entirely. Pure BSW + SocketCAN.** |
+
 
 
 

@@ -1,6 +1,6 @@
----
+﻿---
 document_id: AEP-001
-title: "Audit Evidence Package — Taktflow Embedded Platform"
+title: "Audit Evidence Package â€” Taktflow Embedded Platform"
 version: "1.0"
 status: interim
 standard: "ISO 26262:2018 (ASIL D) + Automotive SPICE 4.0"
@@ -22,7 +22,7 @@ date: 2026-02-24
 - If a locked comment needs revision, add a new note outside the lock or ask the human reviewer to unlock it.
 
 
-# Audit Evidence Package — Taktflow Embedded Platform
+# Audit Evidence Package â€” Taktflow Embedded Platform
 
 | Field | Value |
 |-------|-------|
@@ -122,7 +122,7 @@ The Taktflow Embedded Platform is a 7-ECU zonal vehicle architecture comprising 
 | SIL Verification | SIL Verdict Checker | `test/sil/verdict_checker.py` (21 verdict types) | Complete |
 | SIL Verification | SIL Scenarios | `test/sil/scenarios/` | Complete (15 scenarios) |
 | SIL Verification | SIL CI Nightly | `.github/workflows/sil-nightly.yml` | Complete |
-| SIL Verification | SIL README | `test/sil/README.md` | Complete |
+| SIL Verification | SIL README | `test/sil/apps-web-overview.md` | Complete |
 
 ### Traceability (ASPICE SWE.4-6, ISO 26262 Part 6)
 
@@ -180,3 +180,4 @@ The Taktflow Embedded Platform is a 7-ECU zonal vehicle architecture comprising 
 3. **PIL/HIL testing** requires physical hardware targets and is out of scope for this portfolio demonstration. The SIL layer provides the highest level of automated verification achievable without physical ECUs.
 4. **Safety validation at vehicle level** (ISO 26262 Part 4) requires a physical system operating in its intended environment. The safety validation report documents the validation strategy for a production context.
 5. All evidence is maintained under Git version control with CI enforcement, providing full change history and baseline management per ASPICE SUP.8.
+

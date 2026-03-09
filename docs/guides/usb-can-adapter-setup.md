@@ -1,4 +1,4 @@
-# USB-CAN Adapter + can-utils Setup Guide
+﻿# USB-CAN Adapter + can-utils Setup Guide
 
 > **Prerequisite**: BOM #8 (USB-CAN adapters) must show Delivered in [`hardware/bom.md`](../../hardware/bom.md)
 > **Last updated**: 2026-03-01
@@ -16,7 +16,7 @@ The BOM originally specified USB-CAN adapter 2.0 (from canable.com / Tindie), bu
 | # | Adapter | Vendor | Interface | Driver | Notes |
 |---|---------|--------|-----------|--------|-------|
 | 1 | **Ecktron UCAN** | Eckstein GmbH (German) | USB | `gs_usb` or `slcan` (check docs) | Primary adapter |
-| 2 | **Waveshare USB-CAN** | Waveshare | USB | `slcan` (typical) | Backup — may have stock delay |
+| 2 | **Waveshare USB-CAN** | Waveshare | USB | `slcan` (typical) | Backup â€” may have stock delay |
 
 **Acceptance criteria (from BOM Q-002):** Must support SocketCAN workflow + stable CAN 500 kbps operation. Verify on arrival during bring-up Phase 3.
 
@@ -24,10 +24,10 @@ The BOM originally specified USB-CAN adapter 2.0 (from canable.com / Tindie), bu
 
 | Mode | Protocol | Driver | How to tell |
 |------|----------|--------|-------------|
-| **gs_usb** (native CAN) | USB native | `gs_usb` kernel module | `dmesg` shows "gs_usb" on plug-in → interface shows as `can0` |
-| **slcan** (serial) | Serial USB CDC | `slcand` daemon | `dmesg` shows ttyACM0/ttyUSB0 on plug-in → need `slcand` to create `slcan0` |
+| **gs_usb** (native CAN) | USB native | `gs_usb` kernel module | `dmesg` shows "gs_usb" on plug-in â†’ interface shows as `can0` |
+| **slcan** (serial) | Serial USB CDC | `slcand` daemon | `dmesg` shows ttyACM0/ttyUSB0 on plug-in â†’ need `slcand` to create `slcan0` |
 
-**Prefer gs_usb** if the adapter supports it — native SocketCAN, same as our SIL `vcan0` setup. If only slcan is available, see Section 3b below.
+**Prefer gs_usb** if the adapter supports it â€” native SocketCAN, same as our SIL `vcan0` setup. If only slcan is available, see Section 3b below.
 
 ## 2. Firmware Flashing (only if adapter supports candleLight)
 
@@ -44,12 +44,12 @@ sudo apt install dfu-util
 # 4. Flash
 sudo dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D candleLight_fw.bin
 
-# 5. Unplug and replug — done
+# 5. Unplug and replug â€” done
 ```
 
 **Note:** Not all adapters support candleLight. Check adapter docs first. Waveshare USB-CAN typically uses slcan only.
 
-## 3a. Linux Setup — gs_usb Mode (native SocketCAN)
+## 3a. Linux Setup â€” gs_usb Mode (native SocketCAN)
 
 If `dmesg` shows `gs_usb` on plug-in:
 
@@ -82,7 +82,7 @@ iface can0 inet manual
     down /sbin/ip link set down can0
 ```
 
-## 3b. Linux Setup — slcan Mode (serial/USB CDC)
+## 3b. Linux Setup â€” slcan Mode (serial/USB CDC)
 
 If `dmesg` shows `ttyACM0` or `ttyUSB0` on plug-in (typical for Waveshare):
 
@@ -162,7 +162,7 @@ candump can0,700:700
 
 ## 5. Our CAN Message ID Ranges
 
-From `docs/aspice/system/can-message-matrix.md` — 31 messages total:
+From `docs/aspice/system/can-message-matrix.md` â€” 31 messages total:
 
 | Range | ECU | Example Messages |
 |-------|-----|-----------------|
@@ -193,18 +193,18 @@ CAN Bus Trunk (twisted pair CAN_H + CAN_L + GND reference wire)
 
   120 ohm                                            120 ohm
     |                                                   |
-   CVC ─────────── FZC ─────────── RZC ─────────── SC
+   CVC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ FZC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RZC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SC
          ~200mm          ~200mm          ~300mm
                                                  (~700mm total)
 
-   USB-CAN adapter #1 ──┐  (tap via <100mm stub)
-                 ├── Screw terminal on bus trunk
-   USB-CAN adapter #2 ──┘  (tap via <100mm stub)
+   USB-CAN adapter #1 â”€â”€â”  (tap via <100mm stub)
+                 â”œâ”€â”€ Screw terminal on bus trunk
+   USB-CAN adapter #2 â”€â”€â”˜  (tap via <100mm stub)
 ```
 
-- **USB-CAN adapter #1** → Raspberry Pi 4 USB (gateway / live monitoring)
-- **USB-CAN adapter #2** → Dev PC USB (debugging with candump)
-- **Do NOT add 120 ohm on USB-CAN adapter** — bus already terminated at CVC and SC ends
+- **USB-CAN adapter #1** â†’ Raspberry Pi 4 USB (gateway / live monitoring)
+- **USB-CAN adapter #2** â†’ Dev PC USB (debugging with candump)
+- **Do NOT add 120 ohm on USB-CAN adapter** â€” bus already terminated at CVC and SC ends
 - All ECU connections use screw terminals (CAN_H, CAN_L, GND)
 
 ### Pin Assignments (ECU side)
@@ -222,15 +222,15 @@ CAN Bus Trunk (twisted pair CAN_H + CAN_L + GND reference wire)
 # Check error counters (TX errors, RX errors, bus-off state)
 ip -details -statistics link show can0
 
-# If bus-off (too many errors) — auto-restart after 100ms:
+# If bus-off (too many errors) â€” auto-restart after 100ms:
 sudo ip link set can0 type can restart-ms 100
 
 # Manual restart:
 sudo ip link set down can0 && sudo ip link set up can0
 
 # Common issues:
-# - No traffic: CAN_H / CAN_L swapped → swap wires
-# - No traffic: wrong bitrate → all nodes must be 500000
+# - No traffic: CAN_H / CAN_L swapped â†’ swap wires
+# - No traffic: wrong bitrate â†’ all nodes must be 500000
 # - Measure termination: should be ~60 ohm between CAN_H and CAN_L at any point
 # - Error frames flooding: check for loose connections or missing GND reference wire
 # - Bus-off loops: one node has wrong bit timing or hardware fault
@@ -240,9 +240,9 @@ sudo ip link set down can0 && sudo ip link set up can0
 
 SocketCAN does **not** work in WSL (no kernel CAN modules). Options for Windows dev:
 
-1. **SSH into Raspberry Pi** (recommended) — run candump remotely
-2. **SavvyCAN** — Windows GUI tool, works with USB-CAN adapter in slcan mode
-3. **PCAN-View** — if you have a PEAK adapter (not our case)
+1. **SSH into Raspberry Pi** (recommended) â€” run candump remotely
+2. **SavvyCAN** â€” Windows GUI tool, works with USB-CAN adapter in slcan mode
+3. **PCAN-View** â€” if you have a PEAK adapter (not our case)
 
 Since our Raspberry Pi is already in the HIL setup, SSH is the path of least resistance:
 
@@ -253,7 +253,7 @@ candump can0
 
 ## 9. Integration with SIL
 
-Our SIL environment (`test/sil/`) uses virtual CAN (`vcan0`). Same tools, same commands — just different interface name:
+Our SIL environment (`test/sil/`) uses virtual CAN (`vcan0`). Same tools, same commands â€” just different interface name:
 
 | Environment | Interface | Setup |
 |-------------|-----------|-------|
@@ -268,7 +268,8 @@ Scripts that accept a CAN interface parameter work in both environments.
 
 - CAN bus schematic: `hardware/schematics/03-can-bus.md`
 - Hardware bringup plan: `docs/plans/plan-hardware-bringup.md`
-- SIL test environment: `test/sil/README.md`
+- SIL test environment: `test/sil/apps-web-overview.md`
 - CAN message matrix: `docs/aspice/system/can-message-matrix.md`
 - Pin mapping: `hardware/pin-mapping.md`
 - BOM: `hardware/bom.md`
+

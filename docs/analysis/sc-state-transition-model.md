@@ -3,6 +3,12 @@
 Date: 2026-03-08
 Derived from implementation (not from intended architecture diagrams).
 
+## Related Artifacts
+
+- [SC Safety-Critical Data Flow Analysis](sc-safety-critical-dataflow.md)
+- [SC Safety Evidence Gap Log](sc-safety-evidence-gap-log.md)
+- [Lessons Learned: SC Safety-Critical Dataflow/State Transition Investigation](../reference/lessons-learned/safety/PROCESS-sc-safety-critical-dataflow-state-transition-investigation.md)
+
 ## 1. Effective Runtime States
 
 The code does not maintain one explicit `sc_state` variable. Operational state is distributed across flags and latches.

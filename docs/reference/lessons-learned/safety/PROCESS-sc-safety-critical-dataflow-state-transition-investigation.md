@@ -49,9 +49,9 @@ Primary files reviewed:
 
 ## Follow-Up Artifacts
 
-- `docs/analysis/sc-safety-critical-dataflow.md`
-- `docs/analysis/sc-state-transition-model.md`
-- `docs/analysis/sc-safety-evidence-gap-log.md`
+- [SC Safety-Critical Data Flow Analysis](../../../analysis/sc-safety-critical-dataflow.md)
+- [SC State Transition Model](../../../analysis/sc-state-transition-model.md)
+- [SC Safety Evidence Gap Log](../../../analysis/sc-safety-evidence-gap-log.md)
 
 ## Owner / Next Review
 

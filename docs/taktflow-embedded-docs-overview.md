@@ -32,6 +32,7 @@ Top-level documentation map for the project.
 ## Quick Start
 
 1. Start at `docs/INDEX.md`.
-2. Use `docs/aspice/plans/README.md` for execution plans.
+2. Use `docs/aspice/plans/apps-web-overview.md` for execution plans.
 3. Use `docs/research/link-log.md` for source traceability.
+
 

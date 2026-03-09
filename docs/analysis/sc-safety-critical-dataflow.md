@@ -3,6 +3,12 @@
 Date: 2026-03-08
 Scope: `firmware/sc/src/sc_main.c`, `sc_e2e.c`, `sc_hw_posix.c` (+ dependent safety modules)
 
+## Related Artifacts
+
+- [SC State Transition Model](sc-state-transition-model.md)
+- [SC Safety Evidence Gap Log](sc-safety-evidence-gap-log.md)
+- [Lessons Learned: SC Safety-Critical Dataflow/State Transition Investigation](../reference/lessons-learned/safety/PROCESS-sc-safety-critical-dataflow-state-transition-investigation.md)
+
 ## 1. Execution Cadence and Call Order
 
 The Safety Controller executes a strict 10 ms cooperative loop after startup self-test passes and relay energize (`sc_main.c:131`, `sc_main.c:225-291`).

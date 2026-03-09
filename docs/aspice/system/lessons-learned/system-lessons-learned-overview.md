@@ -1,4 +1,4 @@
-# System Requirements — Lessons Learned
+﻿# System Requirements â€” Lessons Learned
 
 ## Rule
 
@@ -6,7 +6,7 @@
 
 - File naming: `SYS-NNN-<short-title>.md`
 - Created during or immediately after the review discussion
-- One file per requirement — never combine multiple requirements into one doc
+- One file per requirement â€” never combine multiple requirements into one doc
 - **Use the standard template below** so every doc is reproducible in a real review meeting
 
 ## Standard Template
@@ -14,7 +14,7 @@
 Every lessons-learned file MUST follow this structure:
 
 ```markdown
-# Lessons Learned — [ID]: [Title]
+# Lessons Learned â€” [ID]: [Title]
 
 **Requirement**: [Copy the requirement text]
 **ASIL**: [ASIL level]
@@ -30,7 +30,7 @@ Every lessons-learned file MUST follow this structure:
 - **Raised by**: [Name]
 - **Discussion**: [What was discussed, arguments for/against]
 - **Resolution**: [What was agreed]
-- **Action item**: [If any — owner + deadline]
+- **Action item**: [If any â€” owner + deadline]
 
 ### Topic 2: [e.g., Architecture Choice]
 - **Raised by**: [Name]
@@ -74,11 +74,11 @@ Every lessons-learned file MUST follow this structure:
 - **Reproducible**: Anyone can run a review meeting using this template
 - **Traceable**: Links discussion points to people, decisions, and actions
 - **Auditable**: ASPICE SUP.4 (Joint Review) expects documented review outcomes
-- **Actionable**: Open items have owners and deadlines — nothing gets lost
+- **Actionable**: Open items have owners and deadlines â€” nothing gets lost
 
 ## Consolidated Location
 
-> **All lessons-learned files are now in [`docs/reference/lessons-learned/`](../../../reference/lessons-learned/README.md).**
+> **All lessons-learned files are now in [`docs/reference/lessons-learned/`](../../../reference/lessons-learned/apps-web-overview.md).**
 > This folder retains the template and rules. Actual lesson files live in the consolidated folder.
 
 ## Index
@@ -86,3 +86,4 @@ Every lessons-learned file MUST follow this structure:
 | Requirement | File | Date | Status |
 |-------------|------|------|--------|
 | SYS-001 | [SYS-001-dual-pedal-sensing.md](../../../reference/lessons-learned/safety/SYS-001-dual-pedal-sensing.md) | 2026-02-27 | Closed |
+
