@@ -374,6 +374,17 @@ class DashboardTestRunner:
                     self._trigger(spec.prep)
                     time.sleep(1.5)  # allow prep scenario to take effect
 
+                # Some scenarios rely on ConfirmFault paths in CVC.
+                # In SIL, CVC suppresses these for a post-INIT grace period.
+                if spec.post_run_settle_sec > 0:
+                    log.info("[TEST %s] Settling %.1fs after RUN before %s",
+                             run_id, spec.post_run_settle_sec, spec.id)
+                    settle_deadline = time.time() + spec.post_run_settle_sec
+                    while time.time() < settle_deadline:
+                        if self._stop_requested:
+                            break
+                        time.sleep(0.2)
+
                 # Clear monitor state before injection
                 self._monitor.reset()
 

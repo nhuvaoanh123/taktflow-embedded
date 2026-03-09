@@ -33,6 +33,7 @@ class TestSpec:
     description: str = ""    # What the test proves (HARA context)
     injection: str = ""      # What CAN/fault is injected
     prep: str = "normal_drive"  # scenario to run before injection
+    post_run_settle_sec: float = 0.0  # wait after RUN before injection
     observe_sec: float = 5.0
     verdicts: list[VerdictCheck] = field(default_factory=list)
 
@@ -50,6 +51,7 @@ TEST_SPECS: list[TestSpec] = [
         description="Verifies motor overcurrent triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-001: prevent unintended vehicle acceleration from motor fault.",
         injection="SPI pedal 95% + MQTT inject_overcurrent to plant-sim",
+        post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
@@ -96,6 +98,7 @@ TEST_SPECS: list[TestSpec] = [
         description="Verifies steering fault triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-003: prevent unintended steering from actuator malfunction.",
         injection="MQTT inject_steer_fault to plant-sim",
+        post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
@@ -122,6 +125,7 @@ TEST_SPECS: list[TestSpec] = [
         description="Verifies brake fault triggers SAFE_STOP and DTC. "
                     "Safety Goal SG-004: prevent loss of braking from actuator malfunction.",
         injection="MQTT inject_brake_fault to plant-sim",
+        post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
@@ -174,6 +178,7 @@ TEST_SPECS: list[TestSpec] = [
         description="Verifies motor fault at speed triggers SAFE_STOP. "
                     "Safety Goal SG-010: prevent unintended reversal at speed.",
         injection="SPI pedal 80% + MQTT inject stall+overcurrent to plant-sim",
+        post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
@@ -212,6 +217,7 @@ TEST_SPECS: list[TestSpec] = [
         description="Verifies unintended creep from standstill triggers SAFE_STOP. "
                     "Safety Goal SG-012: prevent vehicle movement without driver intent.",
         injection="SPI pedal override at 30% from stationary (enters CVC full pipeline)",
+        post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
             VerdictCheck(
