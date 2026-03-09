@@ -702,31 +702,42 @@ def _clear_nvm_files() -> None:
 
 
 def _reset_all_containers() -> list[str]:
-    """Stop ALL ECU containers, then start them in correct order.
+    """Kill ALL ECU containers, then start them in correct order.
 
-    Two-phase stop-then-start eliminates the timing race where an old
+    Two-phase kill-then-start eliminates the timing race where an old
     container (e.g. CVC in SAFE_STOP sending brake_cmd=100%) keeps
     running while freshly restarted containers (e.g. FZC) receive its
     stale commands — causing spurious PWM deviation faults.
 
-    Phase 1: Stop all ECU + plant-sim containers (all off first)
+    Uses kill() instead of stop() — these are stateless firmware processes
+    with no persistent state that needs graceful shutdown.  Reduces reset
+    time from ~40s to ~5s.
+
+    Phase 1: Kill all ECU + plant-sim containers in parallel
     Phase 2: Start zone controllers + plant-sim (heartbeat senders)
     Phase 3: Start SC (needs heartbeats during its 5s grace)
     Phase 4: Wait 2s, then start CVC (needs SC relay OK + heartbeats)
     """
+    import concurrent.futures
+
     client = docker.from_env()
     all_ecu_names = _ZONE_CONTAINERS + [_SC_CONTAINER, _CVC_CONTAINER]
     restarted: list[str] = []
 
-    # Phase 1: stop ALL containers first — no stale data race
-    for name in all_ecu_names:
+    # Phase 1: kill ALL containers in parallel — no graceful shutdown needed
+    def _kill_container(name: str) -> None:
         try:
             c = client.containers.get(name)
-            c.stop(timeout=5)
+            c.kill()
         except docker.errors.NotFound:
-            log.warning("Container %s not found — skipping stop", name)
+            log.warning("Container %s not found — skipping kill", name)
+        except docker.errors.APIError:
+            pass  # Container may already be stopped
         except Exception as exc:
-            log.warning("Failed to stop %s: %s", name, exc)
+            log.warning("Failed to kill %s: %s", name, exc)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        pool.map(_kill_container, all_ecu_names)
 
     # Phase 2: start zone controllers + plant-sim (heartbeat senders first)
     for name in _ZONE_CONTAINERS:
