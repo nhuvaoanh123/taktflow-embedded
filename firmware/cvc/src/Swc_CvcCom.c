@@ -370,7 +370,10 @@ void Swc_CvcCom_BridgeRxToRte(void)
     /* Read fault signals from Com shadow buffers */
     (void)Com_ReceiveSignal(13u, &brake_fault_val);      /* sig_rx_brake_fault */
     (void)Com_ReceiveSignal(14u, &motor_cutoff_val);     /* sig_rx_motor_cutoff */
-    (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* sig_rx_sc_relay_kill */
+    (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* byte 3 of SC_Status 0x013 */
+    /* SC_Monitoring packs RelayState in byte 3 bit 7: 1=energized, 0=killed.
+     * CVC expects non-zero=killed. Extract bit 7 and invert. */
+    sc_relay_kill_val = ((sc_relay_kill_val & 0x80u) != 0u) ? 0u : 1u;
     (void)Com_ReceiveSignal(18u, &battery_status_val);   /* sig_rx_battery_status (CAN 0x303) */
     (void)Com_ReceiveSignal(20u, &steering_fault_val);   /* sig_rx_steering_fault (CAN 0x200) */
     (void)Com_ReceiveSignal(21u, &motor_fault_rzc_val);  /* sig_rx_motor_fault_rzc (CAN 0x300) */
