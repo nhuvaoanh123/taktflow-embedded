@@ -30,11 +30,8 @@ static boolean e2e_failed[SC_MB_COUNT];
 
 /* ==================================================================
  * Internal: CRC-8 Computation (SAE-J1850, poly 0x1D, init 0xFF)
- *
- * Only needed when real E2E validation runs (not in SIL runtime).
  * ================================================================== */
 
-#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * @brief  Compute CRC-8 using bit-by-bit method
  *
@@ -64,7 +61,6 @@ static uint8 sc_crc8(const uint8* data, uint8 len)
 
     return crc ^ 0xFFu;  /* XOR-out per SAE-J1850 (matches BSW E2E) */
 }
-#endif
 
 /* ==================================================================
  * Public API
@@ -84,15 +80,6 @@ void SC_E2E_Init(void)
 boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
                      uint8 msgIndex)
 {
-#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-    /* SIL bypass: vcan0 has perfect data integrity — no bit-flips.
-     * E2E algorithm is validated by unit tests (UNIT_TEST builds). */
-    (void)dataId;
-    if ((data == NULL_PTR) || (msgIndex >= SC_MB_COUNT) || (dlc < 2u)) {
-        return FALSE;
-    }
-    return TRUE;
-#else
     uint8 crc_input[7];
     uint8 expected_crc;
     uint8 received_crc;
@@ -157,7 +144,6 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
     }
 
     return valid;
-#endif
 }
 
 boolean SC_E2E_IsMsgFailed(uint8 msgIndex)

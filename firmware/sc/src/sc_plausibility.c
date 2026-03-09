@@ -22,11 +22,8 @@
 
 /* ==================================================================
  * Torque-to-Current Lookup Table
- *
- * Only needed when real plausibility validation runs (not in SIL runtime).
  * ================================================================== */
 
-#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * Torque percentage entries (0%, 7%, 13%, 20%, 27%, 33%, 40%, 47%,
  * 53%, 60%, 67%, 73%, 80%, 87%, 93%, 100%)
@@ -44,7 +41,6 @@ static const uint16 current_ma_lut[SC_TORQUE_LUT_SIZE] = {
     0u,    1750u,  3250u,  5000u,  6750u,  8250u,  10000u, 11750u,
     13250u, 15000u, 16750u, 18250u, 20000u, 21750u, 23250u, 25000u
 };
-#endif
 
 /* ==================================================================
  * Module State
@@ -64,11 +60,8 @@ static uint16 plaus_startup_grace;
 
 /* ==================================================================
  * Internal: Lookup expected current for given torque percentage
- *
- * Only needed when real plausibility validation runs (not in SIL runtime).
  * ================================================================== */
 
-#if !defined(PLATFORM_POSIX) || defined(UNIT_TEST)
 /**
  * @brief  Linear interpolation in the torque-to-current lookup table
  * @param  torque_pct  Torque percentage (0-100)
@@ -141,7 +134,6 @@ static boolean is_implausible(uint16 expected_ma, uint16 actual_ma)
 
     return (diff > threshold) ? TRUE : FALSE;
 }
-#endif
 
 /* ==================================================================
  * Public API
@@ -157,19 +149,6 @@ void SC_Plausibility_Init(void)
 
 void SC_Plausibility_Check(void)
 {
-#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-    /* SIL bypass: plausibility check compares torque (from 0x100) vs current
-     * (from 0x301), but in the SIL environment:
-     *   - CAN 0x100 has two senders (CVC + plant-sim) causing collision
-     *   - Motor model timing differs from the static lookup table
-     *   - Torque-to-current correlation depends on motor characteristics
-     *     that the plant-sim doesn't replicate exactly
-     * The algorithm is validated by unit tests (UNIT_TEST builds).
-     * Backup cutoff is also bypassed (same signal-path limitations). */
-    (void)plaus_faulted;
-    (void)plaus_startup_grace;
-    (void)backup_cutoff_counter;
-#else
     uint8 veh_data[SC_CAN_DLC];
     uint8 cur_data[SC_CAN_DLC];
     uint8 dlc;
@@ -233,7 +212,6 @@ void SC_Plausibility_Check(void)
     } else {
         backup_cutoff_counter = 0u;
     }
-#endif
 }
 
 boolean SC_Plausibility_IsFaulted(void)
