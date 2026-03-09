@@ -345,13 +345,18 @@ class CANBusMonitor:
                 # Track vehicle state from 0x100
                 if arb_id == CAN_VEHICLE_STATE and len(msg.data) >= 3:
                     new_state = msg.data[2] & 0x0F
+                    if self._msg_count % 50 == 0 or new_state != self._vehicle_state:
+                        log.info(
+                            "[STATE-DBG] 0x100 raw=[%s] byte2=0x%02x "
+                            "new_state=%d cur_state=%d transitions=%d",
+                            msg.data.hex(),
+                            msg.data[2],
+                            new_state,
+                            self._vehicle_state,
+                            len(self._state_transitions),
+                        )
                     if new_state != self._vehicle_state:
                         self._state_transitions.append((ts, new_state))
-                        log.debug(
-                            "Vehicle state: %s -> %s",
-                            _state_name(self._vehicle_state),
-                            _state_name(new_state),
-                        )
                     self._vehicle_state = new_state
 
                 # Track motor RPM from 0x300
@@ -1260,6 +1265,7 @@ class ScenarioExecutor:
         wait_sec = within_ms / 1000.0 / _SIL_SCALE
 
         # Give the system time to reach the expected state
+        log.info("[VSTATE-DBG] waiting for %s (wait_sec=%.3f)", expected_name, wait_sec)
         reached = self._can.wait_for_state(expected_val, timeout_sec=wait_sec)
         current_state = self._can.vehicle_state
         current_name = _state_name(current_state)
@@ -1267,6 +1273,11 @@ class ScenarioExecutor:
         # Also check transition history
         transitions = self._can.state_transitions
         state_seen = any(s == expected_val for _, s in transitions)
+
+        log.info("[VSTATE-DBG] reached=%s current=%s(%d) state_seen=%s "
+                 "transitions=%s",
+                 reached, current_name, current_state, state_seen,
+                 [(t, _state_name(s)) for t, s in transitions])
 
         passed = reached or state_seen or current_state == expected_val
 
