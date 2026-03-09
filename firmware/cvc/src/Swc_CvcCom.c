@@ -26,6 +26,14 @@
 #include "Swc_VehicleState.h"
 #include "PduR.h"
 
+/* SIL diagnostic logging — compile with -DSIL_DIAG to enable */
+#ifdef SIL_DIAG
+#include <stdio.h>
+#define CVCCOM_DIAG(fmt, ...) (void)fprintf(stderr, "[CVC_COM] " fmt "\n", ##__VA_ARGS__)
+#else
+#define CVCCOM_DIAG(fmt, ...) ((void)0)
+#endif
+
 #define CVC_SAFE_BRAKE_CMD   100u   /**< Max brake for safe-state TX */
 
 /* ==================================================================
@@ -326,6 +334,9 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
             tx_brake = 0u;
         }
 
+        if (tx_brake != 0u) {
+            CVCCOM_DIAG("TX brake=%u vs=%u", (unsigned)tx_brake, (unsigned)vs);
+        }
         (void)Com_SendSignal(6u, &tx_steer);  /* Signal 6 = steer_angle -> CAN 0x102 */
         (void)Com_SendSignal(7u, &tx_brake);  /* Signal 7 = brake_pressure -> CAN 0x103 */
     }

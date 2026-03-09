@@ -98,6 +98,11 @@ static uint8   Brake_FirstCmdReceived;
 /** Previous brake command for timeout and feedback detection */
 static uint32  Brake_PrevBrakeCmd;
 
+#ifdef SIL_DIAG
+/** Diagnostic tick counter for periodic status dumps */
+static uint16  Brake_DiagTick;
+#endif
+
 /** Previous clamped brake command for oscillation detection */
 static uint8   Brake_OscPrevCmd;
 
@@ -131,6 +136,9 @@ void Swc_Brake_Init(const Swc_Brake_ConfigType* ConfigPtr)
     Brake_PrevBrakeCmd        = 0xFFFFFFFFu;  /* Sentinel: no previous command */
     Brake_OscPrevCmd          = 0u;
     Brake_OscillationCounter  = 0u;
+#ifdef SIL_DIAG
+    Brake_DiagTick            = 0u;
+#endif
 
     Brake_Initialized         = TRUE;
 }
@@ -284,6 +292,11 @@ void Swc_Brake_MainFunction(void)
 
         if (deviation > Brake_CfgPtr->pwmFaultThreshold) {
             Brake_FaultDebounceCounter++;
+            BRAKE_DIAG("DEV cmd=%u pos=%u dev=%u thresh=%u dbc=%u/%u",
+                       (unsigned)brake_cmd, (unsigned)Brake_Position,
+                       (unsigned)deviation, (unsigned)Brake_CfgPtr->pwmFaultThreshold,
+                       (unsigned)Brake_FaultDebounceCounter,
+                       (unsigned)Brake_CfgPtr->faultDebounce);
             if (Brake_FaultDebounceCounter >= Brake_CfgPtr->faultDebounce) {
                 new_fault = FZC_BRAKE_PWM_DEVIATION;
             }
@@ -304,6 +317,19 @@ void Swc_Brake_MainFunction(void)
         }
         /* If read fails, keep previous Brake_Position (fail-safe: stale value) */
     }
+
+#ifdef SIL_DIAG
+    Brake_DiagTick++;
+    /* Log every 1s (100 cycles) to track cmd/pos over time */
+    if ((Brake_DiagTick % 100u) == 1u) {
+        BRAKE_DIAG("t=%u cmd=%u pos=%u fault=%u latch=%u auto=%u tmo=%u first=%u",
+                   (unsigned)Brake_DiagTick, (unsigned)brake_cmd,
+                   (unsigned)Brake_Position, (unsigned)Brake_Fault,
+                   (unsigned)Brake_FaultLatched, (unsigned)Brake_AutoBrakeActive,
+                   (unsigned)Brake_CmdTimeoutCounter,
+                   (unsigned)Brake_FirstCmdReceived);
+    }
+#endif
 
     /* ----------------------------------------------------------
      * Step 7: Fault handling — force full brake on any fault
