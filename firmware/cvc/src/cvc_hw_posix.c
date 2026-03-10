@@ -217,3 +217,31 @@ Std_ReturnType Ssd1306_Hw_I2cWrite(uint8 addr, const uint8* data, uint8 len)
     (void)len;
     return E_OK;
 }
+
+/* ==================================================================
+ * CvcCom E-Stop Injection (SIL only)
+ * ================================================================== */
+
+#include "IoHwAb_Inject.h"
+
+/**
+ * @brief  Inject E-Stop DIO state from CAN signal into IoHwAb buffer
+ * @param  Level  STD_HIGH (E-Stop active) or STD_LOW (inactive)
+ */
+void CvcCom_Hw_InjectEstop(uint8 Level)
+{
+    IoHwAb_Inject_SetDigitalPin(IOHWAB_INJECT_PIN_ESTOP, Level);
+}
+
+/* ==================================================================
+ * Debug Status Print
+ * ================================================================== */
+
+/**
+ * @brief  Debug status print — no-op on POSIX (info available via CAN monitor)
+ * @param  tick_us  Current tick in microseconds (unused)
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    (void)tick_us;
+}

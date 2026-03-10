@@ -87,6 +87,7 @@ else
 # --- AUTOSAR BSW ECU configuration ---
 
 # --- Include paths ---
+CFLAGS += -I$(TARGET)/cfg/platform_posix
 CFLAGS += -I$(BSW_DIR)/include
 CFLAGS += -I$(MCAL_DIR)
 CFLAGS += -I$(MCAL_POSIX)
@@ -111,7 +112,7 @@ BSW_SRCS = \
     $(MCAL_POSIX)/Spi_Posix.c \
     $(ECUAL_DIR)/CanIf.c \
     $(ECUAL_DIR)/PduR.c \
-    $(ECUAL_DIR)/IoHwAb.c \
+    $(ECUAL_DIR)/IoHwAb_Posix.c \
     $(SERVICES_DIR)/Com.c \
     $(SERVICES_DIR)/Dcm.c \
     $(SERVICES_DIR)/Dem.c \
@@ -121,6 +122,7 @@ BSW_SRCS = \
     $(SERVICES_DIR)/BswM.c \
     $(SERVICES_DIR)/NvM.c \
     $(SERVICES_DIR)/Det.c \
+    $(SERVICES_DIR)/Det_Callout_Sil.c \
     $(SERVICES_DIR)/SchM.c \
     $(SERVICES_DIR)/CanTp.c \
     $(RTE_DIR)/Rte.c \

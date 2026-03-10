@@ -86,6 +86,7 @@ LDSCRIPT      = $(CUBEMX_DIR)/STM32G474XX_FLASH.ld
 STARTUP       = $(CUBEMX_DIR)/startup_stm32g474xx.s
 
 # --- Include paths ---
+CFLAGS += -I$(TARGET)/cfg/platform_target
 CFLAGS += -I$(BSW_DIR)/include
 CFLAGS += -I$(MCAL_DIR)
 CFLAGS += -I$(MCAL_TARGET)

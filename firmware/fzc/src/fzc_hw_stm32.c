@@ -22,6 +22,9 @@
 #include "Platform_Types.h"
 #include "Std_Types.h"
 #include "stm32g4xx_hal.h"
+#include "Fzc_Cfg.h"
+#include "Can.h"
+#include "Swc_FzcCanMonitor.h"
 
 /* ==================================================================
  * Error Handler — required by CubeMX HAL_FDCAN_MspInit()
@@ -297,4 +300,73 @@ Std_ReturnType Main_Hw_RamPatternTest(void)
 void Main_Hw_PlantStackCanary(void)
 {
     /* TODO:HARDWARE — plant canary at stack boundary */
+}
+
+/* ==================================================================
+ * 5s Periodic Debug Status (moved from main.c — STM32 UART only)
+ * ================================================================== */
+
+/**
+ * @brief  Print decimal uint32 to debug UART
+ * @param  val  Value to print
+ */
+static void Dbg_PrintU32(uint32 val)
+{
+    char buf[11];
+    char *p = &buf[10];
+    *p = '\0';
+    if (val == 0u)
+    {
+        p--;
+        *p = '0';
+    }
+    else
+    {
+        while (val > 0u)
+        {
+            p--;
+            *p = (char)('0' + (char)(val % 10u));
+            val /= 10u;
+        }
+    }
+    Dbg_Uart_Print(p);
+}
+
+/**
+ * @brief  5s periodic debug status print to UART
+ * @param  tick_us  Current tick in microseconds
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    uint8 can_status;
+    uint8 tec = 0u;
+    uint8 rec = 0u;
+
+    can_status = Swc_FzcCanMonitor_GetStatus();
+    (void)Can_GetErrorCounters(0u, &tec, &rec);
+
+    Dbg_Uart_Print("[");
+    Dbg_PrintU32(tick_us / 1000000u);
+    Dbg_Uart_Print("s] FZC: CAN=");
+    if (can_status == FZC_CAN_OK)
+    {
+        Dbg_Uart_Print("OK");
+    }
+    else if (can_status == FZC_CAN_BUS_OFF)
+    {
+        Dbg_Uart_Print("BUS_OFF");
+    }
+    else if (can_status == FZC_CAN_SILENCE)
+    {
+        Dbg_Uart_Print("SILENCE");
+    }
+    else
+    {
+        Dbg_Uart_Print("ERR_WARN");
+    }
+    Dbg_Uart_Print(" TEC=");
+    Dbg_PrintU32((uint32)tec);
+    Dbg_Uart_Print(" REC=");
+    Dbg_PrintU32((uint32)rec);
+    Dbg_Uart_Print("\r\n");
 }

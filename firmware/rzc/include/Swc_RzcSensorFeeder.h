@@ -1,13 +1,14 @@
 /**
  * @file    Swc_RzcSensorFeeder.h
- * @brief   RZC sensor feeder — injects virtual sensor data into MCAL (SIL only)
+ * @brief   RZC sensor feeder — injects virtual sensor data via IoHwAb
  * @date    2026-03-03
  *
- * @details  Reads virtual sensor CAN signals (0x401) from Com and injects
- *           values into MCAL ADC stubs so that existing SWC fault detection
- *           (CurrentMonitor, TempMonitor, Battery) works identically to real
- *           hardware.  Entire module is compiled out on real hardware builds
- *           via #ifdef PLATFORM_POSIX.
+ * @details  SIL/HIL-only module. Reads virtual sensor CAN signals from
+ *           plant-sim (CAN 0x601) via Com_ReceiveSignal and injects values
+ *           into IoHwAb via the unified injection API (IoHwAb_Inject.h).
+ *
+ *           This file is NOT compiled on target hardware. On POSIX it links
+ *           against IoHwAb_Posix.c, on HIL against IoHwAb_Hil.c.
  *
  * @standard AUTOSAR SWC pattern
  * @copyright Taktflow Systems 2026
@@ -22,7 +23,7 @@ void Swc_RzcSensorFeeder_Init(void);
 
 /**
  * @brief  Cyclic main function — reads virtual sensor Com signals,
- *         injects into MCAL ADC stubs.  Must run BEFORE motor/battery SWCs.
+ *         injects into IoHwAb.  Must run BEFORE motor/battery SWCs.
  */
 void Swc_RzcSensorFeeder_MainFunction(void);
 

@@ -60,41 +60,10 @@
 #include "Swc_FzcSensorFeeder.h"
 
 /* ==================================================================
- * Debug Logging (STM32 UART — compiled out on POSIX)
+ * Det-based debug tracing (replaces DBG_LOG macro)
  * ================================================================== */
 
-#ifdef PLATFORM_STM32
-extern void Dbg_Uart_Print(const char *str);
-#define DBG_LOG(msg)  Dbg_Uart_Print(msg)
-
-/**
- * @brief  Print decimal uint32 to debug UART (for periodic status)
- * @param  val  Value to print
- */
-static void Dbg_PrintU32(uint32 val)
-{
-    char buf[11]; /* max "4294967295\0" */
-    char *p = &buf[10];
-    *p = '\0';
-    if (val == 0u)
-    {
-        p--;
-        *p = '0';
-    }
-    else
-    {
-        while (val > 0u)
-        {
-            p--;
-            *p = (char)('0' + (char)(val % 10u));
-            val /= 10u;
-        }
-    }
-    Dbg_Uart_Print(p);
-}
-#else
-#define DBG_LOG(msg)  ((void)0)
-#endif
+#include "Det.h"
 
 /* ==================================================================
  * External Configuration (defined in cfg/ files)
@@ -122,6 +91,9 @@ extern Std_ReturnType Main_Hw_CanLoopbackTest(void);
 extern Std_ReturnType Main_Hw_MpuVerifyTest(void);
 extern Std_ReturnType Main_Hw_RamPatternTest(void);
 extern void           Main_Hw_PlantStackCanary(void);
+
+/* 5s periodic debug status — UART print on STM32, no-op on POSIX */
+extern void           Main_Hw_DebugPrintStatus(uint32 tick_us);
 
 /* ==================================================================
  * Static Configuration Constants
@@ -354,12 +326,12 @@ static uint8 Main_RunSelfTest(void)
     /* Item 7: RAM pattern — memory integrity check */
     if (Main_Hw_RamPatternTest() != E_OK)
     {
-        DBG_LOG("Self-test: RAM=FAIL\r\n");
+        Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_SELF_TEST, DET_E_DBG_SELF_TEST_FAIL);
         Dem_ReportErrorStatus(FZC_DTC_SELF_TEST_FAIL, DEM_EVENT_STATUS_FAILED);
         return FZC_SELF_TEST_FAIL;
     }
 
-    DBG_LOG("Self-test: SERVO=PASS SPI=PASS LIDAR=PASS CAN=PASS MPU=PASS RAM=PASS\r\n");
+    Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_SELF_TEST, DET_E_DBG_SELF_TEST_PASS);
     return FZC_SELF_TEST_PASS;
 }
 
@@ -384,9 +356,7 @@ int main(void)
     uint32 last_1ms_us   = 0u;
     uint32 last_10ms_us  = 0u;
     uint32 last_100ms_us = 0u;
-#ifdef PLATFORM_STM32
     uint32 last_5s_us    = 0u;
-#endif
     uint8  self_test_result;
 
     /* ---- Step 1: Hardware initialization ---- */
@@ -395,7 +365,7 @@ int main(void)
 
     /* ---- Step 2: BSW module initialization (order matters) ---- */
     Can_Init(&can_config);
-    DBG_LOG("CAN: FDCAN1 init OK\r\n");
+    Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_INIT, DET_E_DBG_CAN_INIT_OK);
     CanIf_Init(&canif_config);
     PduR_Init(&fzc_pdur_config);
     Com_Init(&fzc_com_config);
@@ -430,7 +400,7 @@ int main(void)
     IoHwAb_Init(&iohwab_config);
     Uart_Init(&uart_config);   /* UART for TFMini-S lidar */
     Rte_Init(&fzc_rte_config);
-    DBG_LOG("BSW init: 14 modules OK\r\n");
+    Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_INIT, DET_E_DBG_BSW_INIT_OK);
 
     /* ---- Step 3: SWC initialization ---- */
     Swc_Steering_Init(&steering_config);
@@ -442,7 +412,7 @@ int main(void)
     Swc_FzcSafety_Init();
     Swc_Buzzer_Init();
     Swc_FzcSensorFeeder_Init();
-    DBG_LOG("SWC init: 9 modules OK\r\n");
+    Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_INIT, DET_E_DBG_SWC_INIT_OK);
 
     /* ---- Step 4: Self-test sequence (7 items, SWR-FZC-025) ---- */
     self_test_result = Main_RunSelfTest();
@@ -457,12 +427,12 @@ int main(void)
     if (self_test_result == FZC_SELF_TEST_PASS)
     {
         (void)BswM_RequestMode(0u, BSWM_RUN);
-        DBG_LOG("BswM: STARTUP -> RUN\r\n");
+        Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_RUN, DET_E_DBG_STATE_RUN);
     }
 
     /* ---- Step 7: Start SysTick (1ms period = 1000us) ---- */
     Main_Hw_SysTickInit(1000u);
-    DBG_LOG("SysTick: 1ms — entering main loop\r\n");
+    Det_ReportRuntimeError(DET_MODULE_FZC_MAIN, 0u, MAIN_API_RUN, DET_E_DBG_SYSTICK_START);
 
     /* ---- Step 8: Main loop ---- */
     for (;;)
@@ -496,45 +466,12 @@ int main(void)
             Dem_MainFunction();
         }
 
-#ifdef PLATFORM_STM32
-        /* 5s debug task: CAN communication status print */
+        /* 5s debug task: platform-specific status print (UART on STM32, no-op on POSIX) */
         if ((tick_us - last_5s_us) >= 5000000u)
         {
-            uint8 can_status;
-            uint8 tec = 0u;
-            uint8 rec = 0u;
-
             last_5s_us = tick_us;
-
-            can_status = Swc_FzcCanMonitor_GetStatus();
-            (void)Can_GetErrorCounters(0u, &tec, &rec);
-
-            Dbg_Uart_Print("[");
-            Dbg_PrintU32(tick_us / 1000000u);
-            Dbg_Uart_Print("s] FZC: CAN=");
-            if (can_status == FZC_CAN_OK)
-            {
-                Dbg_Uart_Print("OK");
-            }
-            else if (can_status == FZC_CAN_BUS_OFF)
-            {
-                Dbg_Uart_Print("BUS_OFF");
-            }
-            else if (can_status == FZC_CAN_SILENCE)
-            {
-                Dbg_Uart_Print("SILENCE");
-            }
-            else
-            {
-                Dbg_Uart_Print("ERR_WARN");
-            }
-            Dbg_Uart_Print(" TEC=");
-            Dbg_PrintU32((uint32)tec);
-            Dbg_Uart_Print(" REC=");
-            Dbg_PrintU32((uint32)rec);
-            Dbg_Uart_Print("\r\n");
+            Main_Hw_DebugPrintStatus(tick_us);
         }
-#endif
     }
 
     /* MISRA: unreachable but satisfies compiler */

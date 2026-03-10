@@ -130,31 +130,10 @@
 #define CVC_PEDAL_SENSOR2_FAIL     4u
 
 /* ====================================================================
- * INIT Hold Time
+ * Platform-Specific Constants (selected via -I path in Makefile)
  * ==================================================================== */
 
-/** @brief  Minimum cycles to stay in INIT before allowing transition to RUN.
- *          Allows all ECU containers time to boot and send heartbeats.
- *          Bare metal: 500 × 10ms = 5s. SIL: 1000 × 10ms = 10s (Docker boot). */
-#ifndef CVC_INIT_HOLD_CYCLES
-  #ifdef PLATFORM_POSIX
-    #define CVC_INIT_HOLD_CYCLES    1000u  /* 10s — Docker boot is slower */
-  #else
-    #define CVC_INIT_HOLD_CYCLES     500u  /* 5s */
-  #endif
-#endif
-
-/** @brief  Cycles to suppress ConfirmFault after INIT->RUN.
- *          SIL: absorbs stale zone-controller signals after container restart.
- *          Bare metal: 0 (transparent — no grace delay).
- *          Platform-equivalent code path; only the constant differs. */
-#ifndef CVC_POST_INIT_GRACE_CYCLES
-  #ifdef PLATFORM_POSIX
-    #define CVC_POST_INIT_GRACE_CYCLES  1000u  /* 10s — Docker fault signal settling */
-  #else
-    #define CVC_POST_INIT_GRACE_CYCLES  0u     /* Bare metal: no grace needed */
-  #endif
-#endif
+#include "Cvc_Cfg_Platform.h"
 
 /* ====================================================================
  * RTE Period
@@ -170,49 +149,20 @@
 #define CVC_HB_ALIVE_MAX          15u   /* 4-bit alive counter wraps at 15 */
 
 /* E2E SM Configuration — FZC (100ms FTTI, SG-008 primary path)
- * SIL: tolerant window absorbs CI Docker CPU scheduling jitter.
- * At SIL_TIME_SCALE=10, each 50ms HB slot = 5ms wall; 16-slot window = 80ms wall.
+ * WindowSize/MaxError are platform-specific (Cvc_Cfg_Platform.h).
  * IMPORTANT: WindowSize must not exceed E2E_SM_MAX_WINDOW (16). */
-#ifndef CVC_E2E_SM_FZC_WINDOW
-  #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_FZC_WINDOW        16u  /* 16 × 50ms = 800ms virtual (max E2E_SM_MAX_WINDOW) */
-  #else
-    #define CVC_E2E_SM_FZC_WINDOW        4u   /* 4 × 50ms = 200ms */
-  #endif
-#endif
 #ifndef CVC_E2E_SM_FZC_MIN_OK_INIT
   #define CVC_E2E_SM_FZC_MIN_OK_INIT     2u   /* 2 OKs to declare VALID (100ms) */
-#endif
-#ifndef CVC_E2E_SM_FZC_MAX_ERR_VALID
-  #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 14u  /* tolerate 14/16 missed — need 2+ OKs to stay VALID */
-  #else
-    #define CVC_E2E_SM_FZC_MAX_ERR_VALID 1u   /* >1 error → INVALID (bare metal) */
-  #endif
 #endif
 #ifndef CVC_E2E_SM_FZC_MIN_OK_INV
   #define CVC_E2E_SM_FZC_MIN_OK_INV      3u   /* 3 OKs to recover from INVALID */
 #endif
 
 /* E2E SM Configuration — RZC (local motor cutoff primary, 150ms FTTI)
- * SIL: tolerant window for Docker scheduling — same approach as FZC.
+ * WindowSize/MaxError are platform-specific (Cvc_Cfg_Platform.h).
  * IMPORTANT: WindowSize must not exceed E2E_SM_MAX_WINDOW (16). */
-#ifndef CVC_E2E_SM_RZC_WINDOW
-  #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_RZC_WINDOW        16u  /* 16 × 50ms = 800ms virtual (max E2E_SM_MAX_WINDOW) */
-  #else
-    #define CVC_E2E_SM_RZC_WINDOW         6u  /* 6 × 50ms = 300ms */
-  #endif
-#endif
 #ifndef CVC_E2E_SM_RZC_MIN_OK_INIT
   #define CVC_E2E_SM_RZC_MIN_OK_INIT      3u  /* 3 OKs to declare VALID (150ms) */
-#endif
-#ifndef CVC_E2E_SM_RZC_MAX_ERR_VALID
-  #ifdef PLATFORM_POSIX
-    #define CVC_E2E_SM_RZC_MAX_ERR_VALID 14u  /* tolerate 14/16 missed — need 2+ OKs to stay VALID */
-  #else
-    #define CVC_E2E_SM_RZC_MAX_ERR_VALID  2u  /* >2 errors → INVALID (bare metal) */
-  #endif
 #endif
 #ifndef CVC_E2E_SM_RZC_MIN_OK_INV
   #define CVC_E2E_SM_RZC_MIN_OK_INV       3u  /* 3 OKs to recover from INVALID */
@@ -318,12 +268,6 @@
  *          50 = 5.0% torque request. */
 #define CVC_CREEP_TORQUE_THRESH     50u
 
-/** @brief  Consecutive cycles with creep condition before fault event.
- *          SIL needs longer debounce for CAN round-trip latency. */
-#ifdef PLATFORM_POSIX
-  #define CVC_CREEP_DEBOUNCE_TICKS  50u   /* 500ms SIL */
-#else
-  #define CVC_CREEP_DEBOUNCE_TICKS  20u   /* 200ms HW  */
-#endif
+/* CVC_CREEP_DEBOUNCE_TICKS defined in Cvc_Cfg_Platform.h */
 
 #endif /* CVC_CFG_H */

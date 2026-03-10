@@ -17,6 +17,9 @@
 #ifndef FZC_CFG_H
 #define FZC_CFG_H
 
+/* Platform-specific constants (selected via -I path in Makefile) */
+#include "Fzc_Cfg_Platform.h"
+
 /* ====================================================================
  * RTE Signal IDs (extends BSW well-known IDs at offset 16)
  * ==================================================================== */
@@ -125,11 +128,7 @@
  * ==================================================================== */
 
 #define FZC_STEER_PLAUS_THRESHOLD_DEG    5u    /* 5 degree command vs feedback */
-#ifdef PLATFORM_POSIX
-#define FZC_STEER_PLAUS_DEBOUNCE        50u    /* SIL: 500ms debounce (CAN feedback jitter) */
-#else
-#define FZC_STEER_PLAUS_DEBOUNCE         5u    /* HW: 5-cycle debounce (direct ADC) */
-#endif
+/* FZC_STEER_PLAUS_DEBOUNCE defined in Fzc_Cfg_Platform.h */
 #define FZC_STEER_RATE_LIMIT_DEG_10MS    3u    /* 0.3 deg per 10ms = 3 tenths */
 #define FZC_STEER_CMD_TIMEOUT_MS       100u    /* 100ms command timeout */
 #define FZC_STEER_RTC_RATE_DEG_S        30u    /* 30 deg/s return-to-center rate */
@@ -146,11 +145,7 @@
 
 #define FZC_BRAKE_AUTO_TIMEOUT_MS      100u    /* 100ms auto-brake timeout */
 #define FZC_BRAKE_PWM_FAULT_THRESH       2u    /* 2% PWM fault threshold */
-#ifdef PLATFORM_POSIX
-#define FZC_BRAKE_FAULT_DEBOUNCE        50u    /* SIL: 500ms debounce (CAN feedback jitter) */
-#else
-#define FZC_BRAKE_FAULT_DEBOUNCE         3u    /* HW: 3-cycle debounce (direct ADC) */
-#endif
+/* FZC_BRAKE_FAULT_DEBOUNCE defined in Fzc_Cfg_Platform.h */
 #define FZC_BRAKE_CUTOFF_REPEAT_MS      10u    /* Motor cutoff CAN repeat period */
 #define FZC_BRAKE_CUTOFF_REPEAT_COUNT   10u    /* Number of cutoff CAN repeats */
 #define FZC_BRAKE_PWM_MIN                0u    /* 0% = no brake */
@@ -241,13 +236,7 @@
  * Bare metal: 0 (transparent).  Platform-equivalent code path.
  * ==================================================================== */
 
-#ifndef FZC_POST_INIT_GRACE_CYCLES
-  #ifdef PLATFORM_POSIX
-    #define FZC_POST_INIT_GRACE_CYCLES   500u   /* 5s at 10ms cycle */
-  #else
-    #define FZC_POST_INIT_GRACE_CYCLES   0u     /* Bare metal: no grace */
-  #endif
-#endif
+/* FZC_POST_INIT_GRACE_CYCLES defined in Fzc_Cfg_Platform.h */
 
 /* ====================================================================
  * Fault Bitmask Positions

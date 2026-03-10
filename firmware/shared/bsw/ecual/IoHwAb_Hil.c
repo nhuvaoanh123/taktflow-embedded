@@ -1,27 +1,34 @@
 /**
- * @file    IoHwAb.c
- * @brief   I/O Hardware Abstraction — target implementation (real MCAL)
- * @date    2026-02-21
+ * @file    IoHwAb_Hil.c
+ * @brief   IoHwAb HIL implementation — override + MCAL fallback
+ * @author  Claude + andao
+ * @date    2026-03-10
+ *
+ * @details Complete IoHwAb implementation for HIL builds. Each sensor read
+ *          checks the override array first; if active, returns the override
+ *          value. Otherwise, falls through to real MCAL hardware reads
+ *          (identical to target IoHwAb.c logic).
+ *
+ *          Linked only in Makefile.hil — replaces IoHwAb.c at link time.
  *
  * @safety_req SWR-BSW-014
  * @traces_to  TSR-030, TSR-031, TSR-032
- *
- * Provides application-level sensor/actuator access by calling MCAL
- * drivers (Spi, Adc, Pwm, Dio). Hides hardware details from SWC layer.
- *
- * Platform variants (POSIX, HIL) are separate compilation units linked
- * by the platform Makefile — see IoHwAb_Posix.c and IoHwAb_Hil.c.
  *
  * @standard AUTOSAR_SWS_IOHardwareAbstraction, ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
  */
 #include "IoHwAb.h"
+#include "IoHwAb_Hil.h"
+#include "IoHwAb_Inject.h"
 #include "Det.h"
 
 /* ---- Internal State ---- */
 
 static const IoHwAb_ConfigType* iohwab_config = NULL_PTR;
 static boolean                  iohwab_initialized = FALSE;
+
+static boolean iohwab_hil_active[IOHWAB_HIL_CH_COUNT];
+static uint32  iohwab_hil_value[IOHWAB_HIL_CH_COUNT];
 
 /* ---- Private Helpers ---- */
 
@@ -42,42 +49,33 @@ static Std_ReturnType iohwab_read_spi_angle(uint8 spiChannel,
     uint16 tx_data[4];
     Std_ReturnType ret;
 
-    /* AS5048A: send NOP command to read angle register */
     tx_data[0] = 0xFFFFu;
     tx_data[1] = 0u;
     tx_data[2] = 0u;
     tx_data[3] = 0u;
 
-    /* Assert chip select (active low) */
     Dio_WriteChannel(csChannel, STD_LOW);
 
-    /* Write command to SPI input buffer */
     ret = Spi_WriteIB(spiChannel, tx_data);
     if (ret != E_OK) {
         Dio_WriteChannel(csChannel, STD_HIGH);
         return E_NOT_OK;
     }
 
-    /* Perform synchronous SPI transfer */
     ret = Spi_SyncTransmit(spiSequence);
     if (ret != E_OK) {
         Dio_WriteChannel(csChannel, STD_HIGH);
         return E_NOT_OK;
     }
 
-    /* Read received data */
     ret = Spi_ReadIB(spiChannel, rx_data);
-
-    /* De-assert chip select */
     Dio_WriteChannel(csChannel, STD_HIGH);
 
     if (ret != E_OK) {
         return E_NOT_OK;
     }
 
-    /* AS5048A: 14-bit angle in bits [13:0] of first word */
     *angle = rx_data[0] & 0x3FFFu;
-
     return E_OK;
 }
 
@@ -100,15 +98,48 @@ static Std_ReturnType iohwab_read_adc(uint8 adcGroup, uint16* rawValue)
     return ret;
 }
 
+/* ---- Override API ---- */
+
+void IoHwAb_Hil_SetOverride(uint8 Channel, uint32 Value)
+{
+    if (Channel < IOHWAB_HIL_CH_COUNT) {
+        iohwab_hil_value[Channel]  = Value;
+        iohwab_hil_active[Channel] = TRUE;
+    }
+}
+
+void IoHwAb_Hil_ClearOverride(uint8 Channel)
+{
+    if (Channel < IOHWAB_HIL_CH_COUNT) {
+        iohwab_hil_active[Channel] = FALSE;
+    }
+}
+
+void IoHwAb_Hil_ClearAllOverrides(void)
+{
+    uint8 i;
+    for (i = 0u; i < IOHWAB_HIL_CH_COUNT; i++) {
+        iohwab_hil_active[i] = FALSE;
+    }
+}
+
 /* ---- API Implementation ---- */
 
 void IoHwAb_Init(const IoHwAb_ConfigType* ConfigPtr)
 {
+    uint8 i;
+
     if (ConfigPtr == NULL_PTR) {
         Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_INIT, DET_E_PARAM_POINTER);
         iohwab_initialized = FALSE;
         iohwab_config = NULL_PTR;
         return;
+    }
+
+    /* Clear all overrides on init */
+    for (i = 0u; i < IOHWAB_HIL_CH_COUNT; i++) {
+        iohwab_hil_active[i] = FALSE;
+        iohwab_hil_value[i]  = 0u;
     }
 
     iohwab_config = ConfigPtr;
@@ -133,10 +164,17 @@ Std_ReturnType IoHwAb_ReadPedalAngle(uint8 SensorId, uint16* Angle)
         return E_NOT_OK;
     }
 
-    /* Select chip select based on sensor ID */
     if (SensorId == 0u) {
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_0] != FALSE) {
+            *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_0];
+            return E_OK;
+        }
         cs_channel = iohwab_config->PedalCsChannel0;
     } else {
+        if (iohwab_hil_active[IOHWAB_HIL_CH_PEDAL_1] != FALSE) {
+            *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_PEDAL_1];
+            return E_OK;
+        }
         cs_channel = iohwab_config->PedalCsChannel1;
     }
 
@@ -156,6 +194,11 @@ Std_ReturnType IoHwAb_ReadSteeringAngle(uint16* Angle)
     if (Angle == NULL_PTR) {
         Det_ReportError(DET_MODULE_IOHWAB, 0u, IOHWAB_API_READ_SENSOR, DET_E_PARAM_POINTER);
         return E_NOT_OK;
+    }
+
+    if (iohwab_hil_active[IOHWAB_HIL_CH_STEERING] != FALSE) {
+        *Angle = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_STEERING];
+        return E_OK;
     }
 
     return iohwab_read_spi_angle(iohwab_config->SteeringSpiChannel,
@@ -179,20 +222,17 @@ Std_ReturnType IoHwAb_ReadMotorCurrent(uint16* Current_mA)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_CURRENT] != FALSE) {
+        *Current_mA = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_CURRENT];
+        return E_OK;
+    }
+
     ret = iohwab_read_adc(iohwab_config->MotorCurrentAdcGroup, &raw_adc);
     if (ret != E_OK) {
         return E_NOT_OK;
     }
 
-    /*
-     * ACS723 current sensor: Vout = VCC/2 + (Isense * sensitivity)
-     * For ACS723-20A: sensitivity = 100 mV/A, zero-current = VCC/2 = 1650 mV
-     * ADC voltage = raw * VREF / ADC_MAX
-     * Current (mA) = (voltage_mV - 1650) * 10   (100 mV/A = 10 mA/mV offset)
-     * Simplified for unsigned: just scale ADC to mA range
-     */
     *Current_mA = (uint16)(((uint32)raw_adc * IOHWAB_VREF_MV) / IOHWAB_ADC_MAX_RAW);
-
     return E_OK;
 }
 
@@ -211,18 +251,17 @@ Std_ReturnType IoHwAb_ReadMotorTemp(uint16* Temp_dC)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_MOTOR_TEMP] != FALSE) {
+        *Temp_dC = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_MOTOR_TEMP];
+        return E_OK;
+    }
+
     ret = iohwab_read_adc(iohwab_config->MotorTempAdcGroup, &raw_adc);
     if (ret != E_OK) {
         return E_NOT_OK;
     }
 
-    /*
-     * NTC thermistor: linearized approximation for test range
-     * Temp (dC) = raw_adc * 10 * VREF / (ADC_MAX * 33)
-     * This gives roughly 0..1000 dC (0..100.0 degC) over full ADC range
-     */
     *Temp_dC = (uint16)(((uint32)raw_adc * 1000u) / IOHWAB_ADC_MAX_RAW);
-
     return E_OK;
 }
 
@@ -241,20 +280,17 @@ Std_ReturnType IoHwAb_ReadBatteryVoltage(uint16* Voltage_mV)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BATTERY] != FALSE) {
+        *Voltage_mV = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BATTERY];
+        return E_OK;
+    }
+
     ret = iohwab_read_adc(iohwab_config->BatteryVoltAdcGroup, &raw_adc);
     if (ret != E_OK) {
         return E_NOT_OK;
     }
 
-    /*
-     * Voltage divider: Vbatt * (R2/(R1+R2)) = Vadc
-     * With 10K/3.3K divider: ratio = 3.3/13.3 = 0.248
-     * Vbatt = Vadc / 0.248 = Vadc * 4.03
-     * Vadc_mV = raw * 3300 / 4095
-     * Vbatt_mV = Vadc_mV * 4 (simplified integer scaling)
-     */
     *Voltage_mV = (uint16)(((uint32)raw_adc * IOHWAB_VREF_MV * 4u) / IOHWAB_ADC_MAX_RAW);
-
     return E_OK;
 }
 
@@ -273,17 +309,17 @@ Std_ReturnType IoHwAb_ReadBrakePosition(uint16* Position)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_BRAKE] != FALSE) {
+        *Position = (uint16)iohwab_hil_value[IOHWAB_HIL_CH_BRAKE];
+        return E_OK;
+    }
+
     ret = iohwab_read_adc(iohwab_config->BrakePositionAdcGroup, &raw_adc);
     if (ret != E_OK) {
         return E_NOT_OK;
     }
 
-    /*
-     * Brake position potentiometer: 0..4095 ADC maps to 0..1000 counts.
-     * 1000 counts = 100% brake, scaling: (raw * 1000) / ADC_MAX.
-     */
     *Position = (uint16)(((uint32)raw_adc * 1000u) / IOHWAB_ADC_MAX_RAW);
-
     return E_OK;
 }
 
@@ -294,28 +330,24 @@ Std_ReturnType IoHwAb_SetMotorPWM(uint8 Direction, uint16 DutyCycle)
         return E_NOT_OK;
     }
 
-    /* Clamp duty cycle to maximum */
     if (DutyCycle > IOHWAB_PWM_MAX_DUTY) {
         DutyCycle = IOHWAB_PWM_MAX_DUTY;
     }
 
     switch (Direction) {
     case IOHWAB_MOTOR_FORWARD:
-        /* BTS7960: RPWM=HIGH (dir A), LPWM=LOW (dir B) */
         Dio_WriteChannel(iohwab_config->MotorDirAChannel, STD_HIGH);
         Dio_WriteChannel(iohwab_config->MotorDirBChannel, STD_LOW);
         Pwm_SetDutyCycle(iohwab_config->MotorPwmChannel, DutyCycle);
         break;
 
     case IOHWAB_MOTOR_REVERSE:
-        /* BTS7960: RPWM=LOW (dir A), LPWM=HIGH (dir B) */
         Dio_WriteChannel(iohwab_config->MotorDirAChannel, STD_LOW);
         Dio_WriteChannel(iohwab_config->MotorDirBChannel, STD_HIGH);
         Pwm_SetDutyCycle(iohwab_config->MotorPwmChannel, DutyCycle);
         break;
 
     case IOHWAB_MOTOR_STOP:
-        /* Both direction pins LOW, PWM idle */
         Dio_WriteChannel(iohwab_config->MotorDirAChannel, STD_LOW);
         Dio_WriteChannel(iohwab_config->MotorDirBChannel, STD_LOW);
         Pwm_SetOutputToIdle(iohwab_config->MotorPwmChannel);
@@ -340,7 +372,6 @@ Std_ReturnType IoHwAb_SetSteeringServoPWM(uint16 DutyCycle)
     }
 
     Pwm_SetDutyCycle(iohwab_config->SteeringServoPwmCh, DutyCycle);
-
     return E_OK;
 }
 
@@ -356,7 +387,6 @@ Std_ReturnType IoHwAb_SetBrakeServoPWM(uint16 DutyCycle)
     }
 
     Pwm_SetDutyCycle(iohwab_config->BrakeServoPwmCh, DutyCycle);
-
     return E_OK;
 }
 
@@ -372,8 +402,12 @@ Std_ReturnType IoHwAb_ReadEStop(uint8* State)
         return E_NOT_OK;
     }
 
-    *State = Dio_ReadChannel(iohwab_config->EStopDioChannel);
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ESTOP] != FALSE) {
+        *State = (uint8)iohwab_hil_value[IOHWAB_HIL_CH_ESTOP];
+        return E_OK;
+    }
 
+    *State = Dio_ReadChannel(iohwab_config->EStopDioChannel);
     return E_OK;
 }
 
@@ -389,9 +423,13 @@ Std_ReturnType IoHwAb_ReadEncoderCount(uint32* Count)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_COUNT] != FALSE) {
+        *Count = iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_COUNT];
+        return E_OK;
+    }
+
     /* TODO:HARDWARE Real encoder read via timer capture */
     *Count = 0u;
-
     return E_OK;
 }
 
@@ -407,8 +445,48 @@ Std_ReturnType IoHwAb_ReadEncoderDirection(uint8* Dir)
         return E_NOT_OK;
     }
 
+    if (iohwab_hil_active[IOHWAB_HIL_CH_ENCODER_DIR] != FALSE) {
+        *Dir = (uint8)iohwab_hil_value[IOHWAB_HIL_CH_ENCODER_DIR];
+        return E_OK;
+    }
+
     /* TODO:HARDWARE Real encoder direction via DIO */
     *Dir = IOHWAB_MOTOR_FORWARD;
-
     return E_OK;
+}
+
+/* ---- Unified Injection API (IoHwAb_Inject.h) ---- */
+
+/** Map IOHWAB_INJECT_* sensor IDs to IOHWAB_HIL_CH_* override channels */
+static const uint8 inject_sensor_to_hil_ch[IOHWAB_INJECT_SENSOR_COUNT] = {
+    IOHWAB_HIL_CH_PEDAL_0,        /* IOHWAB_INJECT_PEDAL_0         */
+    IOHWAB_HIL_CH_PEDAL_1,        /* IOHWAB_INJECT_PEDAL_1         */
+    IOHWAB_HIL_CH_STEERING,       /* IOHWAB_INJECT_STEERING        */
+    IOHWAB_HIL_CH_MOTOR_CURRENT,  /* IOHWAB_INJECT_MOTOR_CURRENT   */
+    IOHWAB_HIL_CH_MOTOR_TEMP,     /* IOHWAB_INJECT_MOTOR_TEMP      */
+    IOHWAB_HIL_CH_BATTERY,        /* IOHWAB_INJECT_BATTERY_VOLTAGE */
+    IOHWAB_HIL_CH_BRAKE           /* IOHWAB_INJECT_BRAKE_POSITION  */
+};
+
+void IoHwAb_Inject_SetSensorValue(uint8 SensorId, uint16 Value)
+{
+    if (SensorId < IOHWAB_INJECT_SENSOR_COUNT) {
+        IoHwAb_Hil_SetOverride(inject_sensor_to_hil_ch[SensorId], (uint32)Value);
+    }
+}
+
+void IoHwAb_Inject_SetEncoderValue(uint8 EncoderId, uint32 Count,
+                                    uint8 Direction)
+{
+    if (EncoderId == IOHWAB_INJECT_ENC_MOTOR) {
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_ENCODER_COUNT, Count);
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_ENCODER_DIR, (uint32)Direction);
+    }
+}
+
+void IoHwAb_Inject_SetDigitalPin(uint8 PinId, uint8 Level)
+{
+    if (PinId == IOHWAB_INJECT_PIN_ESTOP) {
+        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_ESTOP, (uint32)Level);
+    }
 }

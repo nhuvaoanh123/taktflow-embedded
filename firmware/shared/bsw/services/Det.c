@@ -15,11 +15,6 @@
  */
 #include "Det.h"
 
-#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-/* cppcheck-suppress misra-c2012-21.6 ; SIL_DIAG stderr output only */
-#include <stdio.h>
-#endif
-
 /* ---- Internal State ---- */
 
 static Det_ErrorEntryType det_log[DET_LOG_SIZE];
@@ -28,46 +23,6 @@ static uint8              det_log_count;    /**< Entries in buffer      */
 static uint16             det_error_count;  /**< Total errors reported  */
 static boolean            det_initialized;
 static Det_CallbackType   det_callback;
-
-/* ---- Module Name Lookup (for SIL_DIAG output) ---- */
-
-#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-static const char* det_module_name(uint16 id)
-{
-    switch (id) {
-    case DET_MODULE_CAN:    return "Can";
-    case DET_MODULE_CANIF:  return "CanIf";
-    case DET_MODULE_PDUR:   return "PduR";
-    case DET_MODULE_COM:    return "Com";
-    case DET_MODULE_DCM:    return "Dcm";
-    case DET_MODULE_DEM:    return "Dem";
-    case DET_MODULE_WDGM:   return "WdgM";
-    case DET_MODULE_BSWM:   return "BswM";
-    case DET_MODULE_E2E:    return "E2E";
-    case DET_MODULE_RTE:    return "Rte";
-    case DET_MODULE_SPI:    return "Spi";
-    case DET_MODULE_ADC:    return "Adc";
-    case DET_MODULE_DIO:    return "Dio";
-    case DET_MODULE_GPT:    return "Gpt";
-    case DET_MODULE_PWM:    return "Pwm";
-    case DET_MODULE_IOHWAB: return "IoHwAb";
-    case DET_MODULE_UART:   return "Uart";
-    case DET_MODULE_NVM:    return "NvM";
-    case DET_MODULE_CANTP:  return "CanTp";
-    default:                return "Unknown";
-    }
-}
-
-static const char* det_error_name(uint8 id)
-{
-    switch (id) {
-    case DET_E_PARAM_POINTER: return "PARAM_POINTER";
-    case DET_E_UNINIT:        return "UNINIT";
-    case DET_E_PARAM_VALUE:   return "PARAM_VALUE";
-    default:                  return "UNKNOWN";
-    }
-}
-#endif
 
 /* ---- API Implementation ---- */
 
@@ -113,14 +68,7 @@ void Det_ReportError(uint16 ModuleId, uint8 InstanceId,
         det_error_count++;
     }
 
-    /* SIL_DIAG output (POSIX only, not in unit tests) */
-#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
-    fprintf(stderr, "[DET] %s(Inst=%u) Api=0x%02X Err=%s(0x%02X)\n",
-            det_module_name(ModuleId), InstanceId,
-            ApiId, det_error_name(ErrorId), ErrorId);
-#endif
-
-    /* User callback */
+    /* User callback (SIL builds register Det_Callout_SilPrint here) */
     if (det_callback != NULL_PTR) {
         det_callback(ModuleId, InstanceId, ApiId, ErrorId);
     }

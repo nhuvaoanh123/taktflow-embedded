@@ -17,6 +17,10 @@
 #include "Platform_Types.h"
 #include "Std_Types.h"
 #include "stm32g4xx_hal.h"
+#include "Cvc_Cfg.h"
+#include "Can.h"
+#include "Com.h"
+#include "Rte.h"
 
 /* ==================================================================
  * Error Handler — required by CubeMX HAL_FDCAN_MspInit()
@@ -373,4 +377,93 @@ Std_ReturnType Ssd1306_Hw_I2cWrite(uint8 addr, const uint8* data, uint8 len)
     (void)len;
     /* TODO:HARDWARE — real I2C write via HAL_I2C_Master_Transmit() */
     return E_OK;
+}
+
+/* ==================================================================
+ * CvcCom E-Stop Injection — no-op on target (GPIO reads real hardware)
+ * ================================================================== */
+
+/**
+ * @brief  E-Stop injection — no-op on STM32 (real DIO hardware)
+ * @param  Level  Unused on target
+ */
+void CvcCom_Hw_InjectEstop(uint8 Level)
+{
+    (void)Level;
+}
+
+/* ==================================================================
+ * 5s Periodic Debug Status (moved from main.c — STM32 UART only)
+ * ================================================================== */
+
+/**
+ * @brief  Print decimal uint32 to debug UART
+ * @param  val  Value to print
+ */
+static void Dbg_PrintU32(uint32 val)
+{
+    char buf[11]; /* max "4294967295\0" */
+    char *p = &buf[10];
+    *p = '\0';
+    if (val == 0u)
+    {
+        p--;
+        *p = '0';
+    }
+    else
+    {
+        while (val > 0u)
+        {
+            p--;
+            *p = (char)('0' + (char)(val % 10u));
+            val /= 10u;
+        }
+    }
+    Dbg_Uart_Print(p);
+}
+
+/**
+ * @brief  5s periodic debug status print to UART
+ * @param  tick_us  Current tick in microseconds
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    uint32 fzc_comm = 0u;
+    uint32 rzc_comm = 0u;
+    uint8  tec = 0u;
+    uint8  rec = 0u;
+
+    (void)Rte_Read(CVC_SIG_FZC_COMM_STATUS, &fzc_comm);
+    (void)Rte_Read(CVC_SIG_RZC_COMM_STATUS, &rzc_comm);
+    (void)Can_GetErrorCounters(0u, &tec, &rec);
+
+    Dbg_Uart_Print("[");
+    Dbg_PrintU32(tick_us / 1000000u);
+    Dbg_Uart_Print("s] CVC: FZC=");
+    Dbg_Uart_Print((fzc_comm == CVC_COMM_OK) ? "OK" : "TIMEOUT");
+    Dbg_Uart_Print(" RZC=");
+    Dbg_Uart_Print((rzc_comm == CVC_COMM_OK) ? "OK" : "TIMEOUT");
+    Dbg_Uart_Print(" TEC=");
+    Dbg_PrintU32((uint32)tec);
+    Dbg_Uart_Print(" REC=");
+    Dbg_PrintU32((uint32)rec);
+
+    {
+        uint8 fzc_alive = 0xFFu;
+        uint8 rzc_alive = 0xFFu;
+        (void)Com_ReceiveSignal(CVC_COM_SIG_FZC_HB_ALIVE, &fzc_alive);
+        (void)Com_ReceiveSignal(CVC_COM_SIG_RZC_HB_ALIVE, &rzc_alive);
+        Dbg_Uart_Print(" Fa=");
+        Dbg_PrintU32((uint32)fzc_alive);
+        Dbg_Uart_Print(" Ra=");
+        Dbg_PrintU32((uint32)rzc_alive);
+    }
+
+    Dbg_Uart_Print(" rx=");
+    Dbg_PrintU32(g_can_rx_count);
+    Dbg_Uart_Print(" h11=");
+    Dbg_PrintU32(g_can_rx_011_count);
+    Dbg_Uart_Print(" h12=");
+    Dbg_PrintU32(g_can_rx_012_count);
+    Dbg_Uart_Print("\r\n");
 }

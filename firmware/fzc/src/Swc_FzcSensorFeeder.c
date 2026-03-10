@@ -1,21 +1,19 @@
 /**
  * @file    Swc_FzcSensorFeeder.c
- * @brief   FZC sensor feeder — plant-sim virtual sensors → MCAL injection
+ * @brief   FZC sensor feeder — plant-sim virtual sensors → IoHwAb injection
  * @date    2026-03-03
  *
- * @details  SIL-only module. Reads virtual sensor values from Com RX
+ * @details  SIL/HIL-only module. Reads virtual sensor values from Com RX
  *           (CAN 0x600, sent by plant-sim at 10ms) and injects them into
- *           MCAL POSIX stubs so that existing SWC fault detection code
- *           (Swc_Steering, Swc_Brake) receives realistic physics data.
+ *           IoHwAb via the unified injection API (IoHwAb_Inject.h).
  *
  *           Injection targets:
- *           - Steering angle → Spi_Posix_InjectAngle() → IoHwAb_ReadSteeringAngle
- *           - Brake position → Adc_Posix_InjectValue() → IoHwAb_ReadBrakePosition
+ *           - Steering angle → IoHwAb_Inject_SetSensorValue → IoHwAb_ReadSteeringAngle
+ *           - Brake position → IoHwAb_Inject_SetSensorValue → IoHwAb_ReadBrakePosition
  *
- *           Entire module compiled out on real hardware (PLATFORM_POSIX guard).
- *
- *           HIL mode (PLATFORM_HIL): same Com RX path but injects via
- *           IoHwAb_Hil_SetOverride() in engineering units — no reverse-scaling.
+ *           This file is NOT compiled on target hardware. On POSIX it links
+ *           against IoHwAb_Posix.c, on HIL against IoHwAb_Hil.c — the unified
+ *           IoHwAb_Inject API is implemented by both. Zero #ifdef PLATFORM_*.
  *
  * @safety_req SWR-BSW-014 (IoHwAb injection path)
  * @traces_to  TSR-030, TSR-031
@@ -26,23 +24,8 @@
 
 #include "Swc_FzcSensorFeeder.h"
 #include "Fzc_Cfg.h"
-
-#if defined(PLATFORM_POSIX) || defined(PLATFORM_HIL)
 #include "Com.h"
-#endif
-#ifdef PLATFORM_HIL
-#include "IoHwAb.h"
-#endif
-
-#ifdef PLATFORM_POSIX
-
-/* MCAL injection externs (POSIX only — no header file) */
-extern void Spi_Posix_InjectAngle(uint16 angle);
-extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
-
-/* No state variable needed — zero-substitution is stateless (see MainFunction) */
-
-#endif /* PLATFORM_POSIX */
+#include "IoHwAb_Inject.h"
 
 /* ==================================================================
  * API: Swc_FzcSensorFeeder_Init
@@ -50,22 +33,13 @@ extern void Adc_Posix_InjectValue(uint8 Group, uint8 Channel, uint16 Value);
 
 void Swc_FzcSensorFeeder_Init(void)
 {
-#ifdef PLATFORM_POSIX
     /* Inject safe center values immediately so that SWC fault detection
      * sees nominal sensor readings from the very first cycle — before
      * plant-sim has started sending CAN 0x600.
      * Center steering: 8191 = 14-bit midpoint → 0° actual angle.
-     * Brake: 0 raw ADC = no brake applied (matches idle cmd=0). */
-    Spi_Posix_InjectAngle(8191u);
-    Adc_Posix_InjectValue(FZC_BRAKE_ADC_GROUP, FZC_BRAKE_ADC_CHANNEL, 0u);
-#endif
-
-#ifdef PLATFORM_HIL
-    /* HIL: inject nominal defaults via IoHwAb override so SWCs see safe
-     * sensor readings before the Pi rest-bus starts sending CAN 0x600. */
-    IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_STEERING, 8191u);  /* 14-bit center = 0 deg */
-    IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BRAKE, 0u);        /* no brake */
-#endif
+     * Brake: 0 = no brake applied (matches idle cmd=0). */
+    IoHwAb_Inject_SetSensorValue(IOHWAB_INJECT_STEERING, 8191u);
+    IoHwAb_Inject_SetSensorValue(IOHWAB_INJECT_BRAKE_POSITION, 0u);
 }
 
 /* ==================================================================
@@ -74,7 +48,6 @@ void Swc_FzcSensorFeeder_Init(void)
 
 void Swc_FzcSensorFeeder_MainFunction(void)
 {
-#ifdef PLATFORM_POSIX
     uint32 steer_angle = 0u;
     uint32 brake_pos   = 0u;
 
@@ -98,38 +71,11 @@ void Swc_FzcSensorFeeder_MainFunction(void)
         /* brake_pos 0 = no brake — already correct for idle */
     }
 
-    /* Inject steering angle into SPI POSIX stub. */
-    Spi_Posix_InjectAngle((uint16)steer_angle);
-
-    /* Inject brake position into ADC POSIX stub.
-     * Plant-sim sends 0-1000 (ADC counts). IoHwAb scales: (raw*1000)/4095.
-     * Reverse-scale: raw = (adc_counts * 4095) / 1000. */
-    {
-        uint16 raw_adc = (uint16)(((uint32)brake_pos * 4095u) / 1000u);
-        Adc_Posix_InjectValue(FZC_BRAKE_ADC_GROUP, FZC_BRAKE_ADC_CHANNEL, raw_adc);
-    }
-#endif /* PLATFORM_POSIX */
-
-#ifdef PLATFORM_HIL
-    {
-        uint32 steer_angle = 0u;
-        uint32 brake_pos   = 0u;
-
-        (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_STEER_ANGLE, &steer_angle);
-        (void)Com_ReceiveSignal(FZC_COM_SIG_RX_VIRT_BRAKE_POS,   &brake_pos);
-
-        /* Same zero-substitution logic as POSIX path */
-        if (steer_angle == 0u)
-        {
-            steer_angle = 8191u;
-        }
-
-        /* HIL: inject engineering-unit values directly into IoHwAb overrides.
-         * No reverse-scaling needed — override bypasses the ADC-to-eng conversion. */
-        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_STEERING, steer_angle);
-        IoHwAb_Hil_SetOverride(IOHWAB_HIL_CH_BRAKE, brake_pos);
-    }
-#endif /* PLATFORM_HIL */
+    /* Inject engineering-unit values directly via unified inject API.
+     * No reverse-scaling needed — IoHwAb_Posix returns injected values
+     * as-is, and IoHwAb_Hil maps to override channels internally. */
+    IoHwAb_Inject_SetSensorValue(IOHWAB_INJECT_STEERING,
+                                  (uint16)steer_angle);
+    IoHwAb_Inject_SetSensorValue(IOHWAB_INJECT_BRAKE_POSITION,
+                                  (uint16)brake_pos);
 }
-
-

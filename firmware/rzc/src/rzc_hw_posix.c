@@ -155,3 +155,20 @@ void Main_Hw_PlantStackCanary(void)
 {
     /* POSIX: stack protection handled by OS */
 }
+
+/**
+ * @brief  Debug status print — no-op on POSIX (info available via CAN monitor)
+ * @param  tick_us  Current tick in microseconds (unused)
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    (void)tick_us;
+}
+
+/**
+ * @brief  CAN TX diagnostic test — no-op on POSIX
+ */
+void Main_Hw_CanTxDiagTest(void)
+{
+    /* POSIX: CAN TX always succeeds via vcan */
+}

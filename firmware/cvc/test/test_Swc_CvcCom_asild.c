@@ -149,12 +149,11 @@ static uint8 mock_vehicle_state;
 uint8 Swc_VehicleState_GetState(void) { return mock_vehicle_state; }
 
 /* ==================================================================
- * Mock: Dio_Hw_WritePin (used by BridgeRxToRte under PLATFORM_POSIX)
+ * Mock: CvcCom_Hw_InjectEstop (platform hw-file function)
  * ================================================================== */
 
-void Dio_Hw_WritePin(uint8 ChannelId, uint8 Level)
+void CvcCom_Hw_InjectEstop(uint8 Level)
 {
-    (void)ChannelId;
     (void)Level;
 }
 

@@ -18,6 +18,9 @@
 #include "Platform_Types.h"
 #include "Std_Types.h"
 #include "stm32g4xx_hal.h"
+#include "Rzc_Cfg.h"
+#include "Can.h"
+#include "Rte.h"
 
 /* ==================================================================
  * Error Handler — required by CubeMX HAL_FDCAN_MspInit()
@@ -376,4 +379,82 @@ Std_ReturnType Main_Hw_RamPatternTest(void)
 void Main_Hw_PlantStackCanary(void)
 {
     /* TODO:HARDWARE — plant canary at stack boundary */
+}
+
+/* ==================================================================
+ * 5s Periodic Debug Status (moved from main.c — STM32 UART only)
+ * ================================================================== */
+
+/**
+ * @brief  Print decimal uint32 to debug UART
+ * @param  val  Value to print
+ */
+static void Dbg_PrintU32(uint32 val)
+{
+    char buf[11];
+    char *p = &buf[10];
+    *p = '\0';
+    if (val == 0u)
+    {
+        p--;
+        *p = '0';
+    }
+    else
+    {
+        while (val > 0u)
+        {
+            p--;
+            *p = (char)('0' + (char)(val % 10u));
+            val /= 10u;
+        }
+    }
+    Dbg_Uart_Print(p);
+}
+
+/**
+ * @brief  5s periodic debug status print to UART
+ * @param  tick_us  Current tick in microseconds
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    uint8 tec = 0u;
+    uint8 rec = 0u;
+    uint8 err_state = 0u;
+    uint32 hb_alive = 0u;
+
+    (void)Can_GetErrorCounters(0u, &tec, &rec);
+    (void)Can_GetControllerErrorState(0u, &err_state);
+    (void)Rte_Read(RZC_SIG_HEARTBEAT_ALIVE, &hb_alive);
+
+    Dbg_Uart_Print("[");
+    Dbg_PrintU32(tick_us / 1000000u);
+    Dbg_Uart_Print("s] RZC: TEC=");
+    Dbg_PrintU32((uint32)tec);
+    Dbg_Uart_Print(" REC=");
+    Dbg_PrintU32((uint32)rec);
+    Dbg_Uart_Print(" ERR=");
+    Dbg_PrintU32((uint32)err_state);
+    Dbg_Uart_Print(" HB=");
+    Dbg_PrintU32(hb_alive);
+    Dbg_Uart_Print(" HAL=");
+    Dbg_PrintU32((uint32)Main_Hw_GetCanHalState());
+    Dbg_Uart_Print(" TXbusy=");
+    Dbg_PrintU32(g_can_tx_busy_count);
+    Dbg_Uart_Print("\r\n");
+}
+
+/**
+ * @brief  Init-time CAN TX diagnostic test — sends test frame and dumps diag
+ */
+void Main_Hw_CanTxDiagTest(void)
+{
+    uint8 test_data[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x03, 0x00, 0x00, 0x00};
+    Can_PduType test_pdu;
+    test_pdu.id     = 0x012u;
+    test_pdu.length = 8u;
+    test_pdu.sdu    = test_data;
+    Can_ReturnType tx_result = Can_Write(0u, &test_pdu);
+    Dbg_Uart_Print("CAN TX test: ");
+    Dbg_Uart_Print((tx_result == CAN_OK) ? "OK\r\n" : "FAIL\r\n");
+    Main_Hw_DumpCanDiag();
 }

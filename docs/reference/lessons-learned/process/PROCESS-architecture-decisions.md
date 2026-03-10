@@ -119,3 +119,23 @@ Built a BSW layer that follows AUTOSAR patterns (MCAL, ECUAL, Services, RTE) but
 | Traceability | A CI script that blocks merge > an expensive tool nobody configures |
 | AUTOSAR-like | Be honest about "like" vs actual; the pattern matters more than the license |
 | Decision audit | Automate the check for undocumented decisions |
+| Platform abstraction | Link-time swap > #ifdef. Same public API, different .c files per platform |
+
+---
+
+## 8. Platform Abstraction via Link-Time Swap (Not #ifdef)
+
+**Date:** 2026-03-10
+
+**Context**: IoHwAb.c and Det.c had 35 `#ifdef PLATFORM_*` blocks mixing POSIX, HIL, and target code in single files. MCAL-layer ifdefs were already clean (separate directories), but BSW ECUAL/Services were polluted.
+
+**Mistake**: Original approach embedded platform-variant logic inline with `#ifdef PLATFORM_POSIX` / `#elif defined(PLATFORM_HIL)` / `#else` chains. This made every function a maze of conditionals, made testing require `-DPLATFORM_*` flags, and violated the AUTOSAR principle that BSW modules should be platform-agnostic above MCAL.
+
+**Fix**: Applied Vector vVIRTUALtarget production pattern:
+1. **Det.c** — extracted `fprintf`-based debug output to `Det_Callout_Sil.c` (POSIX-only file). Det.c now uses callback mechanism (`Det_SetCallback`). Zero ifdefs.
+2. **IoHwAb.c** — split into 3 complete implementations: `IoHwAb.c` (target/MCAL), `IoHwAb_Posix.c` (injection buffers), `IoHwAb_Hil.c` (override + MCAL fallback). Each is a standalone compilation unit. Makefile selects which `.c` to link.
+3. **Security**: Injection APIs (`IoHwAb_Posix_SetSensorValue`) exist only in `IoHwAb_Posix.c`. On target, calling them is a **link error** — not `E_NOT_OK`, an actual linker failure. Strongest possible protection against accidental sensor injection in production.
+
+**Result**: 25/25 BSW tests pass. Det.c/IoHwAb.c/IoHwAb.h have zero `#ifdef PLATFORM_*`. 42 new TDD tests (6 Det callout + 18 POSIX + 18 HIL).
+
+**Principle**: Link-time file swap is strictly better than `#ifdef` for platform abstraction. Benefits: (1) each variant is independently readable and testable, (2) no ifdef nesting makes code review trivial, (3) injection-as-link-error provides compile-time safety guarantees that runtime checks cannot match, (4) follows production AUTOSAR patterns (Vector, EB, ETAS).

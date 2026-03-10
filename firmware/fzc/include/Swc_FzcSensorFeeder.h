@@ -1,12 +1,15 @@
 /**
  * @file    Swc_FzcSensorFeeder.h
- * @brief   FZC sensor feeder — bridges plant-sim virtual sensors to MCAL injection
+ * @brief   FZC sensor feeder — injects virtual sensor data via IoHwAb
  * @date    2026-03-03
  *
- * @details  SIL-only module (PLATFORM_POSIX). Reads virtual sensor CAN data
- *           from Com RX (CAN 0x600, sent by plant-sim) and injects values into
- *           MCAL stubs (Spi_Posix, Adc_Posix) so that SWC fault detection
- *           reads realistic physics data instead of hardcoded "OK" values.
+ * @details  SIL/HIL-only module. Reads virtual sensor CAN signals from
+ *           plant-sim (CAN 0x600) via Com_ReceiveSignal and injects values
+ *           into IoHwAb via the unified injection API (IoHwAb_Inject.h).
+ *
+ *           This file is NOT compiled on target hardware. On POSIX it links
+ *           against IoHwAb_Posix.c, on HIL against IoHwAb_Hil.c — the unified
+ *           IoHwAb_Inject API is implemented by both.
  *
  *           Run BEFORE Swc_Steering_MainFunction and Swc_Brake_MainFunction
  *           so injected values are available when SWCs read sensors.
@@ -26,7 +29,7 @@
 void Swc_FzcSensorFeeder_Init(void);
 
 /**
- * @brief  Main function — reads virtual sensor CAN, injects into MCAL
+ * @brief  Main function — reads virtual sensor CAN, injects into IoHwAb
  *         10ms cyclic, must run BEFORE steering and brake SWCs
  */
 void Swc_FzcSensorFeeder_MainFunction(void);

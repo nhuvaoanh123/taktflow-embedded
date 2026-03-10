@@ -146,3 +146,12 @@ void Main_Hw_PlantStackCanary(void)
 {
     /* POSIX: stack protection handled by OS */
 }
+
+/**
+ * @brief  Debug status print — no-op on POSIX (info available via CAN monitor)
+ * @param  tick_us  Current tick in microseconds (unused)
+ */
+void Main_Hw_DebugPrintStatus(uint32 tick_us)
+{
+    (void)tick_us;
+}
