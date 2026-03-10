@@ -124,6 +124,18 @@
 #define SC_BACKUP_CUTOFF_TICKS      10u    /* 100ms timeout */
 
 /* ==================================================================
+ * Creep Guard Thresholds (SSR-SC-018, SM-024)
+ *
+ * Standstill torque cross-plausibility: if torque_pct == 0 and
+ * motor current > threshold for debounce cycles, kill relay.
+ * Detects BTS7960 FET short (MB-006) — motor activates despite
+ * zero torque command.
+ * ================================================================== */
+
+#define SC_CREEP_CURRENT_THRESH     500u   /* 500 mA — above this with zero torque = fault */
+#define SC_CREEP_DEBOUNCE_CYCLES    2u     /* 2 × 10ms = 20ms debounce (< 50ms FTTI) */
+
+/* ==================================================================
  * GIO Pin Assignments
  * ================================================================== */
 
@@ -257,6 +269,7 @@
 #define SC_STATUS_REASON_ESTOP       0x07u  /* = SC_KILL_REASON_ESTOP */
 #define SC_STATUS_REASON_BUS_SILENCE 0x08u  /* = SC_KILL_REASON_BUS_SILENCE */
 #define SC_STATUS_REASON_E2E_FAIL    0x09u  /* = SC_KILL_REASON_E2E_FAIL */
+#define SC_STATUS_REASON_CREEP_GUARD 0x0Au  /* = SC_KILL_REASON_CREEP_GUARD */
 
 /* ==================================================================
  * TX Mailbox for SC_Status (SWR-SC-029) — firmware-only TX mailbox
@@ -297,6 +310,7 @@
 #define SC_KILL_REASON_ESTOP        7u
 #define SC_KILL_REASON_BUS_SILENCE  8u
 #define SC_KILL_REASON_E2E_FAIL    9u
+#define SC_KILL_REASON_CREEP_GUARD 10u  /* SSR-SC-018: standstill torque cross-plausibility */
 
 /* ==================================================================
  * Fault Source Enum (for relay status broadcast)

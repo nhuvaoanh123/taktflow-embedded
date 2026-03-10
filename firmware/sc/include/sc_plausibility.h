@@ -9,7 +9,7 @@
  *          Includes backup cutoff for FZC brake fault condition.
  *
  * @safety_req SWR-SC-007, SWR-SC-008, SWR-SC-009, SWR-SC-024
- * @traces_to  SSR-SC-007, SSR-SC-008, SSR-SC-009
+ * @traces_to  SSR-SC-007, SSR-SC-008, SSR-SC-009, SSR-SC-018
  * @note    Safety level: ASIL D
  * @standard ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -38,5 +38,22 @@ void SC_Plausibility_Check(void);
  * @return TRUE if plausibility fault has been declared
  */
 boolean SC_Plausibility_IsFaulted(void);
+
+/**
+ * @brief  10ms cyclic standstill torque cross-plausibility check (SSR-SC-018)
+ *
+ * If torque_pct == 0 (Vehicle_State 0x100 byte 4) and motor current > 500mA
+ * (Motor_Current 0x301 bytes 2-3) for 2 consecutive cycles (20ms), latch
+ * creep fault. Detects BTS7960 FET short (MB-006).
+ *
+ * @note  Non-clearable — only power cycle resets the latch.
+ */
+void SC_CreepGuard_Check(void);
+
+/**
+ * @brief  Check if creep guard fault is latched
+ * @return TRUE if standstill torque cross-plausibility fault has been declared
+ */
+boolean SC_Plausibility_IsCreepFaulted(void);
 
 #endif /* SC_PLAUSIBILITY_H */

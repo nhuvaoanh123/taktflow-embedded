@@ -4,7 +4,7 @@
  * @date    2026-02-23
  *
  * @safety_req SWR-SC-007, SWR-SC-008, SWR-SC-009, SWR-SC-024
- * @traces_to  SSR-SC-007, SSR-SC-008, SSR-SC-009
+ * @traces_to  SSR-SC-007, SSR-SC-008, SSR-SC-009, SSR-SC-018
  * @note    Safety level: ASIL D
  * @standard ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -57,6 +57,12 @@ static uint8 backup_cutoff_counter;
 
 /** Startup grace counter — skip plausibility until signals stabilize */
 static uint16 plaus_startup_grace;
+
+/** Creep guard debounce counter (SSR-SC-018) */
+static uint8 creep_debounce;
+
+/** Creep guard fault latch — non-clearable, power cycle only (SSR-SC-018) */
+static boolean creep_faulted;
 
 /* ==================================================================
  * Internal: Lookup expected current for given torque percentage
@@ -145,6 +151,8 @@ void SC_Plausibility_Init(void)
     plaus_faulted         = FALSE;
     backup_cutoff_counter = 0u;
     plaus_startup_grace   = SC_HB_STARTUP_GRACE_TICKS;
+    creep_debounce        = 0u;
+    creep_faulted         = FALSE;
 }
 
 void SC_Plausibility_Check(void)
@@ -217,4 +225,52 @@ void SC_Plausibility_Check(void)
 boolean SC_Plausibility_IsFaulted(void)
 {
     return plaus_faulted;
+}
+
+void SC_CreepGuard_Check(void)
+{
+    uint8 veh_data[SC_CAN_DLC];
+    uint8 cur_data[SC_CAN_DLC];
+    uint8 dlc;
+    boolean veh_ok;
+    boolean cur_ok;
+    uint8 torque_pct;
+    uint16 motor_current_ma;
+
+    /* Non-clearable latch — once faulted, stay faulted until power cycle */
+    if (creep_faulted == TRUE) {
+        return;
+    }
+
+    /* Share startup grace with main plausibility — signals must stabilize first */
+    if (plaus_startup_grace > 0u) {
+        return;
+    }
+
+    veh_ok = SC_CAN_GetMessage(SC_MB_IDX_VEHICLE_STATE, veh_data, &dlc);
+    cur_ok = SC_CAN_GetMessage(SC_MB_IDX_MOTOR_CURRENT, cur_data, &dlc);
+
+    if ((veh_ok != TRUE) || (cur_ok != TRUE)) {
+        /* Missing CAN data — heartbeat/bus-silence monitors handle this */
+        return;
+    }
+
+    torque_pct = veh_data[4];
+    motor_current_ma = ((uint16)cur_data[3] << 8u) | (uint16)cur_data[2];
+
+    /* SSR-SC-018: torque command is zero but motor draws current → FET short */
+    if ((torque_pct == 0u) && (motor_current_ma > SC_CREEP_CURRENT_THRESH)) {
+        creep_debounce++;
+        if (creep_debounce >= SC_CREEP_DEBOUNCE_CYCLES) {
+            creep_faulted = TRUE;
+            gioSetBit(SC_GIO_PORT_A, SC_PIN_LED_SYS, 1u);
+        }
+    } else {
+        creep_debounce = 0u;
+    }
+}
+
+boolean SC_Plausibility_IsCreepFaulted(void)
+{
+    return creep_faulted;
 }

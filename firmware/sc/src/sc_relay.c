@@ -114,6 +114,14 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
+    /* Trigger (b2): Creep guard — standstill torque cross-plausibility (SSR-SC-018) */
+    if (SC_Plausibility_IsCreepFaulted() == TRUE) {
+        kill_reason = SC_KILL_REASON_CREEP_GUARD;
+        SC_RELAY_DIAG("KILL reason=CREEP_GUARD (DTC 0xE312)");
+        SC_Relay_DeEnergize();
+        return;
+    }
+
     /* Trigger (c): E2E persistent failure on safety-critical mailbox (GAP-SC-002) */
     if (SC_E2E_IsAnyCriticalFailed() == TRUE) {
         kill_reason = SC_KILL_REASON_E2E_FAIL;

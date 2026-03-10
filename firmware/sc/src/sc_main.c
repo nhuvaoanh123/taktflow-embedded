@@ -10,7 +10,7 @@
  *          stack canary check, and conditional watchdog feed.
  *
  * @safety_req SWR-SC-025, SWR-SC-026
- * @traces_to  SSR-SC-001 to SSR-SC-017
+ * @traces_to  SSR-SC-001 to SSR-SC-018
  * @note    Safety level: ASIL D
  * @standard ISO 26262 Part 6
  * @copyright Taktflow Systems 2026
@@ -272,6 +272,9 @@ int main(void)
 
         /* ---- Step 3: Plausibility Check ---- */
         SC_Plausibility_Check();
+
+        /* ---- Step 3a: Creep Guard (SSR-SC-018) ---- */
+        SC_CreepGuard_Check();
 
         /* ---- Step 4: Relay Trigger Evaluation ---- */
         SC_Relay_CheckTriggers();
