@@ -227,6 +227,10 @@ void Dem_ReportErrorStatus(uint8 EventId, uint8 EventStatus)
  * ================================================================== */
 
 static uint8   mock_iohwab_brake_fail;
+/** When non-zero, return mock_brake_pos_fixed instead of tracking PWM */
+static uint8   mock_brake_pos_override;
+/** Fixed position value (0-1000) returned when override is active */
+static uint16  mock_brake_pos_fixed;
 
 Std_ReturnType IoHwAb_ReadBrakePosition(uint16* pos)
 {
@@ -235,6 +239,10 @@ Std_ReturnType IoHwAb_ReadBrakePosition(uint16* pos)
     }
     if (mock_iohwab_brake_fail != 0u) {
         return E_NOT_OK;
+    }
+    if (mock_brake_pos_override != 0u) {
+        *pos = mock_brake_pos_fixed;
+        return E_OK;
     }
     /* Simulate brake actuator tracking PWM command.
      * PWM duty is 0-100, IoHwAb returns 0-1000 (= duty * 10). */
@@ -264,7 +272,9 @@ void setUp(void)
     mock_pwm_call_count   = 0u;
 
     /* Reset IoHwAb mock */
-    mock_iohwab_brake_fail = 0u;
+    mock_iohwab_brake_fail  = 0u;
+    mock_brake_pos_override = 0u;
+    mock_brake_pos_fixed    = 0u;
 
     /* Reset RTE mock */
     mock_rte_read_count        = 0u;
@@ -410,55 +420,41 @@ void test_Feedback_fail_debounce_3(void)
      */
     run_cycles(50u, 5u);
 
-    /* Now create deviation: command jumps, but position lags one cycle */
-    /* With simulated feedback, deviation resets each cycle because
-     * position = command.  To properly test, we rely on the
-     * implementation comparing commanded duty vs actual position
-     * where a discrepancy can happen. The SWC injects a small offset
-     * when PrevBrakeCmd != current to simulate actuator lag.
-     *
-     * Instead, the cleanest way: set command to 0, then immediately
-     * to 100 -- the position will be 0 from prior cycle vs command 100
-     * => deviation = 100 > 2. Hold for 3 cycles. */
-    run_cycles(0u, 5u);
+    /* Inject stuck actuator: command 50 but sensor reads 0.
+     * With HIL-PF-006 fix, position is read in the same cycle as the
+     * deviation check, so we override the mock to return a fixed value
+     * that differs from the commanded duty. */
+    mock_brake_pos_override = 1u;
+    mock_brake_pos_fixed    = 0u;  /* stuck at 0% while commanding 50% */
 
-    /* Now abruptly command 100 -- position still at 0 from prev.
-     * Deviation = |100 - 0| = 100 > 2% threshold.
-     * But position updates to command each cycle in simulated mode.
-     * The feedback check compares commanded vs PREVIOUS cycle position.
-     */
-    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
-    Swc_Brake_MainFunction();  /* cycle 1: prev=0, cmd=100, delta=100 > 2 */
-    Swc_Brake_MainFunction();  /* cycle 2: prev=100, cmd=100, delta=0 -- resets */
+    /* Run 3 cycles — debounce threshold is 3 */
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 50u;
+    Swc_Brake_MainFunction();  /* cycle 1: cmd=50, pos=0, dev=50 > 2 */
+    Swc_Brake_MainFunction();  /* cycle 2: dev=50 > 2, debounce=2 */
+    Swc_Brake_MainFunction();  /* cycle 3: dev=50 > 2, debounce=3 → FAULT */
 
-    /* Since the simulated feedback updates instantly, deviation only
-     * lasts 1 cycle.  For testability, we test the debounce counter
-     * by issuing rapid alternating commands. */
-    uint16 i;
-    for (i = 0u; i < 3u; i++) {
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
-        Swc_Brake_MainFunction();
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
-        Swc_Brake_MainFunction();
-    }
-
-    /* After 3+ cycles of deviation the brake fault should trigger.
-     * The alternating pattern creates consistent deviation because
-     * position tracks the PREVIOUS command. */
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_PWM_DEVIATION, fault);
+
+    mock_brake_pos_override = 0u;
 }
 
 /** @verifies SWR-FZC-010 -- Deviation returning within threshold resets counter */
 void test_Feedback_clears(void)
 {
-    /* Create 2 cycles of deviation (under debounce of 3) */
-    run_cycles(0u, 5u);
-    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
-    Swc_Brake_MainFunction();  /* deviation cycle 1 */
+    /* Establish normal operation */
+    run_cycles(50u, 5u);
 
-    /* Now stabilize -- deviation counter should reset */
-    run_cycles(100u, 5u);
+    /* Create 2 cycles of deviation (under debounce of 3) via position override */
+    mock_brake_pos_override = 1u;
+    mock_brake_pos_fixed    = 0u;
+    mock_rte_signals[FZC_SIG_BRAKE_CMD] = 50u;
+    Swc_Brake_MainFunction();  /* deviation cycle 1 */
+    Swc_Brake_MainFunction();  /* deviation cycle 2 */
+
+    /* Now stabilize -- remove override so position tracks PWM again */
+    mock_brake_pos_override = 0u;
+    run_cycles(50u, 5u);
 
     uint32 fault = mock_rte_signals[FZC_SIG_BRAKE_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, fault);
@@ -467,12 +463,17 @@ void test_Feedback_clears(void)
 /** @verifies SWR-FZC-010 -- DTC reported on PWM feedback fault */
 void test_Feedback_reports_DTC(void)
 {
-    /* Force the fault by alternating commands rapidly */
+    /* Establish normal operation first */
+    run_cycles(30u, 5u);
+
+    /* Inject stuck actuator: command 30 but sensor reads 0 */
+    mock_brake_pos_override = 1u;
+    mock_brake_pos_fixed    = 0u;
+
+    /* Run enough cycles to trigger fault (debounce = 3) */
     uint16 i;
     for (i = 0u; i < 5u; i++) {
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
-        Swc_Brake_MainFunction();
-        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
+        mock_rte_signals[FZC_SIG_BRAKE_CMD] = 30u;
         Swc_Brake_MainFunction();
     }
 

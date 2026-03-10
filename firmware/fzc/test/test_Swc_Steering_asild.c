@@ -320,6 +320,41 @@ static void run_cycles(sint16 cmd_angle, sint16 fb_angle, uint16 count)
     }
 }
 
+/**
+ * @brief  Run N cycles with feedback tracking the current output angle.
+ *         Simulates a working actuator that follows the rate-limited output.
+ *         Use this for "establish" phases where cmd == intended fb angle.
+ */
+static void run_cycles_tracking(sint16 cmd_angle, uint16 count)
+{
+    uint16 i;
+    for (i = 0u; i < count; i++) {
+        sint16 cur_deg = 0;
+        (void)Swc_Steering_GetAngle(&cur_deg);
+        mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)cmd_angle);
+        mock_iohwab_angle = DEG_TO_RAW(cur_deg);
+        Swc_Steering_MainFunction();
+    }
+}
+
+/**
+ * @brief  Run N cycles with no fresh command (Rte returns E_NOT_OK) and
+ *         feedback tracking the current output angle.
+ */
+static void run_timeout_cycles_tracking(uint16 count)
+{
+    uint16 i;
+    Std_ReturnType saved = mock_rte_read_result;
+    mock_rte_read_result = E_NOT_OK;
+    for (i = 0u; i < count; i++) {
+        sint16 cur_deg = 0;
+        (void)Swc_Steering_GetAngle(&cur_deg);
+        mock_iohwab_angle = DEG_TO_RAW(cur_deg);
+        Swc_Steering_MainFunction();
+    }
+    mock_rte_read_result = saved;
+}
+
 /* ==================================================================
  * Helper: run N main cycles with NO new command (simulate timeout)
  * The Rte_Read for steer cmd will return E_NOT_OK to simulate
@@ -396,7 +431,8 @@ void test_Normal_steering_left(void)
 {
     /* Command -45 degrees gradually (rate limited) */
     /* Rate limit: 3 tenths/10ms = 0.3 deg/cycle, need 150 cycles for 45 deg */
-    run_cycles(-45, -45, 200u);
+    /* Feedback tracks output — simulates working actuator during ramp */
+    run_cycles_tracking(-45, 200u);
 
     /* PWM should be near 1000us (full left) */
     TEST_ASSERT_TRUE(mock_pwm_last_duty >= FZC_STEER_PWM_MIN_US);
@@ -407,7 +443,8 @@ void test_Normal_steering_left(void)
 void test_Normal_steering_right(void)
 {
     /* Command +45 degrees gradually (rate limited) */
-    run_cycles(45, 45, 200u);
+    /* Feedback tracks output — simulates working actuator during ramp */
+    run_cycles_tracking(45, 200u);
 
     /* PWM should be near 2000us (full right) */
     TEST_ASSERT_TRUE(mock_pwm_last_duty <= FZC_STEER_PWM_MAX_US);
@@ -418,21 +455,24 @@ void test_Normal_steering_right(void)
  * SWR-FZC-003: Plausibility Check (4 tests)
  * ================================================================== */
 
-/** @verifies SWR-FZC-003 — cmd vs feedback within 5 deg OK */
+/** @verifies SWR-FZC-003 — output vs feedback within 5 deg OK */
 void test_Plausibility_pass(void)
 {
-    /* Command 10 deg, feedback 12 deg — delta = 2 < 5 threshold */
+    /* Establish output at 10 deg with tracking feedback */
+    run_cycles_tracking(10, 50u);
+
+    /* Now test: feedback 12 deg — delta = |10-12| = 2 < 5 threshold */
     run_cycles(10, 12, 20u);
 
     uint32 fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault);
 }
 
-/** @verifies SWR-FZC-003 — |cmd - fb| > 5 deg debounced 5 cycles */
+/** @verifies SWR-FZC-003 — |output - fb| > 5 deg debounced 5 cycles */
 void test_Plausibility_fail_debounce(void)
 {
-    /* First, establish a command angle so rate limiter is caught up */
-    run_cycles(20, 20, 100u);
+    /* First, establish output at 20 deg with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     /* Now: command stays at 20, feedback jumps to 30 (delta = 10 > 5) */
     /* Run 4 cycles: debounce should NOT yet trigger */
@@ -449,8 +489,8 @@ void test_Plausibility_fail_debounce(void)
 /** @verifies SWR-FZC-003 — Within threshold resets debounce counter */
 void test_Plausibility_clears_on_recovery(void)
 {
-    /* Establish command */
-    run_cycles(20, 20, 100u);
+    /* Establish output at 20 deg with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     /* Run 3 cycles with bad feedback (delta > 5) */
     run_cycles(20, 30, 3u);
@@ -470,8 +510,8 @@ void test_Plausibility_clears_on_recovery(void)
 /** @verifies SWR-FZC-003 — DTC reported on plausibility fault */
 void test_Plausibility_reports_DTC(void)
 {
-    /* Establish command */
-    run_cycles(20, 20, 100u);
+    /* Establish output at 20 deg with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     /* Trigger plausibility fault (5+ cycles with big delta) */
     run_cycles(20, 30, 6u);
@@ -508,13 +548,13 @@ void test_Range_reject_under_min(void)
 /** @verifies SWR-FZC-004 — Exactly +/- 45 accepted */
 void test_Range_accept_boundary(void)
 {
-    /* Command exactly +45 — should be accepted */
-    run_cycles(45, 45, 10u);
+    /* Command exactly +45 — should be accepted (tracking fb during ramp) */
+    run_cycles_tracking(45, 10u);
     uint32 fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault);
 
     /* Command exactly -45 — should be accepted */
-    run_cycles(-45, -45, 200u);
+    run_cycles_tracking(-45, 200u);
     fault = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault);
 }
@@ -554,7 +594,7 @@ void test_Rate_limit_allows_small_change(void)
      *
      * After multiple cycles (4 cycles), angle should reach ~1.2 deg.
      * After 10 cycles, angle should reach 3.0 deg. */
-    run_cycles(10, 10, 50u);
+    run_cycles_tracking(10, 50u);
 
     /* After 50 cycles at rate 0.3 deg/cycle, max reachable = 15 deg.
      * Command is 10 deg. Should have reached ~10 deg. */
@@ -566,8 +606,8 @@ void test_Rate_limit_allows_small_change(void)
 /** @verifies SWR-FZC-005 — Decrease not rate limited (safety) */
 void test_Rate_limit_allows_decrease(void)
 {
-    /* Ramp up to 20 deg */
-    run_cycles(20, 20, 100u);
+    /* Ramp up to 20 deg with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
@@ -590,18 +630,17 @@ void test_Rate_limit_allows_decrease(void)
 /** @verifies SWR-FZC-006 — After 100ms no command, angle moves toward 0 */
 void test_RTC_on_timeout(void)
 {
-    /* Establish angle at 20 degrees */
-    run_cycles(20, 20, 100u);
+    /* Establish angle at 20 degrees with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     sint16 angle_initial = 0;
     Swc_Steering_GetAngle(&angle_initial);
     TEST_ASSERT_INT_WITHIN(2, 20, angle_initial);
 
-    /* Simulate loss of fresh command data — Rte_Read returns E_NOT_OK.
-     * Timeout counter increments each cycle without fresh data.
+    /* Simulate loss of fresh command data — feedback tracks output
+     * to avoid false plausibility trips during RTC ramp-down.
      * Run 15 cycles — 10 for timeout detection + 5 RTC movement. */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(20, 20, 15u);
+    run_timeout_cycles_tracking(15u);
 
     /* After RTC: angle should be moving toward 0 */
     sint16 angle_rtc = 0;
@@ -615,13 +654,12 @@ void test_RTC_on_timeout(void)
 /** @verifies SWR-FZC-006 — RTC stops when angle reaches 0 */
 void test_RTC_stops_at_center(void)
 {
-    /* Establish small angle at 2 degrees */
-    run_cycles(2, 2, 50u);
+    /* Establish small angle at 2 degrees with tracking feedback */
+    run_cycles_tracking(2, 50u);
 
     /* Simulate loss of command data to trigger timeout + RTC */
     /* 10 cycles for timeout + ~7 cycles for RTC (2 deg / 0.3 deg/cycle) */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(2, 0, 30u);
+    run_timeout_cycles_tracking(30u);
 
     sint16 angle = 0;
     Swc_Steering_GetAngle(&angle);
@@ -635,16 +673,15 @@ void test_RTC_stops_at_center(void)
 /** @verifies SWR-FZC-006 — RTC moves at correct rate (30 deg/s = 0.3 deg/10ms) */
 void test_RTC_rate(void)
 {
-    /* Establish angle at 30 degrees */
-    run_cycles(30, 30, 150u);
+    /* Establish angle at 30 degrees with tracking feedback */
+    run_cycles_tracking(30, 150u);
 
     sint16 angle_start = 0;
     Swc_Steering_GetAngle(&angle_start);
     TEST_ASSERT_INT_WITHIN(2, 30, angle_start);
 
     /* Simulate command loss: 10 cycles for timeout + 10 RTC cycles */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(30, 30, 20u);
+    run_timeout_cycles_tracking(20u);
 
     sint16 angle_end = 0;
     Swc_Steering_GetAngle(&angle_end);
@@ -671,8 +708,8 @@ void test_PWM_maps_angle_to_duty(void)
     run_cycles(0, 0, 5u);
     TEST_ASSERT_EQUAL_UINT16(1500u, mock_pwm_last_duty);
 
-    /* Ramp to ~22 deg */
-    run_cycles(22, 22, 100u);
+    /* Ramp to ~22 deg with tracking feedback */
+    run_cycles_tracking(22, 100u);
 
     /* Expected PWM: 1500 + (22/45)*500 = 1500 + 244 = ~1744 */
     TEST_ASSERT_TRUE(mock_pwm_last_duty >= 1730u);
@@ -706,8 +743,8 @@ void test_PWM_clamps_max(void)
 /** @verifies SWR-FZC-008 — Any fault forces neutral PWM */
 void test_Fault_latches_zero_output(void)
 {
-    /* Establish non-zero angle */
-    run_cycles(20, 20, 100u);
+    /* Establish non-zero angle with tracking feedback */
+    run_cycles_tracking(20, 100u);
     TEST_ASSERT_TRUE(mock_pwm_last_duty > FZC_STEER_PWM_CENTER_US);
 
     /* Trigger SPI fault */
@@ -805,16 +842,15 @@ void test_PWM_disable_level3(void)
 /** @verifies SWR-FZC-028 — 100ms no cmd triggers RTC mode */
 void test_Cmd_timeout_triggers_RTC(void)
 {
-    /* Establish angle at 15 degrees */
-    run_cycles(15, 15, 80u);
+    /* Establish angle at 15 degrees with tracking feedback */
+    run_cycles_tracking(15, 80u);
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
     TEST_ASSERT_INT_WITHIN(2, 15, angle_before);
 
     /* Simulate loss of command data — timeout fires after 10 cycles */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(15, 15, 20u);
+    run_timeout_cycles_tracking(20u);
 
     /* Angle should be moving toward center */
     sint16 angle_after = 0;
@@ -825,12 +861,11 @@ void test_Cmd_timeout_triggers_RTC(void)
 /** @verifies SWR-FZC-028 — DTC reported on command timeout */
 void test_Cmd_timeout_reports_DTC(void)
 {
-    /* Establish angle */
-    run_cycles(10, 10, 80u);
+    /* Establish angle with tracking feedback */
+    run_cycles_tracking(10, 80u);
 
     /* Simulate command loss — enough cycles for timeout detection */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(10, 10, 15u);
+    run_timeout_cycles_tracking(15u);
 
     TEST_ASSERT_EQUAL_UINT8(1u, mock_dem_event_reported[FZC_DTC_STEER_TIMEOUT]);
     TEST_ASSERT_EQUAL_UINT8(DEM_EVENT_STATUS_FAILED,
@@ -940,8 +975,8 @@ void test_GetAngle_valid_after_init(void)
  *  Fault injection: SPI sensor failure sets SPI_FAIL fault and DTC */
 void test_FaultInj_SPI_failure_sets_DTC(void)
 {
-    /* Establish normal operation */
-    run_cycles(10, 10, 50u);
+    /* Establish normal operation with tracking feedback */
+    run_cycles_tracking(10, 50u);
 
     /* Inject SPI failure */
     mock_iohwab_result = E_NOT_OK;
@@ -964,8 +999,8 @@ void test_FaultInj_SPI_failure_sets_DTC(void)
  *  Fault injection: plausibility debounce at exact threshold (4 cycles = no fault, 5 = fault) */
 void test_FaultInj_plausibility_debounce_exact(void)
 {
-    /* Establish stable angle */
-    run_cycles(20, 20, 100u);
+    /* Establish stable angle with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     /* 4 cycles with bad feedback — should NOT fault (debounce = 5) */
     run_cycles(20, 30, 4u);
@@ -982,22 +1017,16 @@ void test_FaultInj_plausibility_debounce_exact(void)
  *  Fault injection: command timeout at exact boundary (9 cycles ok, 10 triggers) */
 void test_FaultInj_cmd_timeout_exact_boundary(void)
 {
-    /* Establish angle at 10 degrees with changing commands */
-    uint16 i;
-    for (i = 0u; i < 70u; i++) {
-        mock_rte_signals[FZC_SIG_STEER_CMD] = (uint32)((uint16)((sint16)(10 + (sint16)(i % 2u))));
-        mock_iohwab_angle = DEG_TO_RAW(10);
-        Swc_Steering_MainFunction();
-    }
+    /* Establish angle at 10 degrees with tracking feedback */
+    run_cycles_tracking(10, 70u);
 
     /* Simulate command loss — 9 cycles should NOT timeout */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(10, 10, 9u);
+    run_timeout_cycles_tracking(9u);
     uint32 fault9 = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_NO_FAULT, fault9);
 
     /* 10th cycle without fresh data — timeout triggers */
-    run_cycles(10, 10, 1u);
+    run_timeout_cycles_tracking(1u);
     uint32 fault10 = mock_rte_signals[FZC_SIG_STEER_FAULT];
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_CMD_TIMEOUT, fault10);
 }
@@ -1024,12 +1053,11 @@ void test_RateLimit_large_positive_jump(void)
  *  Fault injection: return-to-center reaches center and stops */
 void test_FaultInj_RTC_reaches_zero_and_stops(void)
 {
-    /* Establish small angle at 1 deg */
-    run_cycles(1, 1, 40u);
+    /* Establish small angle at 1 deg with tracking feedback */
+    run_cycles_tracking(1, 40u);
 
     /* Simulate command loss to trigger timeout + RTC to reach center */
-    mock_rte_read_result = E_NOT_OK;
-    run_cycles(1, 0, 30u);
+    run_timeout_cycles_tracking(30u);
 
     sint16 angle = 99;
     Swc_Steering_GetAngle(&angle);
@@ -1042,8 +1070,8 @@ void test_FaultInj_RTC_reaches_zero_and_stops(void)
  *  Fault injection: double Init call resets state cleanly */
 void test_FaultInj_double_init_steering(void)
 {
-    /* Run some normal cycles */
-    run_cycles(20, 20, 100u);
+    /* Run some normal cycles with tracking feedback */
+    run_cycles_tracking(20, 100u);
 
     sint16 angle_before = 0;
     Swc_Steering_GetAngle(&angle_before);
@@ -1108,12 +1136,8 @@ void test_No_timeout_before_first_command(void)
  *  Equivalence class: timeout armed after first valid command */
 void test_Timeout_works_after_first_command(void)
 {
-    run_cycles(10, 10, 1u);
-    mock_rte_read_result = E_NOT_OK;
-    uint16 i;
-    for (i = 0u; i < 15u; i++) {
-        Swc_Steering_MainFunction();
-    }
+    run_cycles_tracking(10, 1u);
+    run_timeout_cycles_tracking(15u);
     TEST_ASSERT_EQUAL_UINT32(FZC_STEER_CMD_TIMEOUT, mock_rte_signals[FZC_SIG_STEER_FAULT]);
 }
 

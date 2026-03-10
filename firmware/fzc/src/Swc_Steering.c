@@ -104,6 +104,9 @@ static uint8    Steering_LatchCounter;
 /** Previous output angle in tenths for rate limiting */
 static sint16   Steering_PrevAngle10;
 
+/** Plausibility check armed — FALSE until first output written */
+static uint8    Steering_PlausArmed;
+
 /** PWM disable level (0=none, 1=neutral, 2=Dio, 3=double-Dio) */
 static uint8    Steering_PwmDisableLevel;
 
@@ -260,6 +263,7 @@ void Swc_Steering_Init(const Swc_Steering_ConfigType* ConfigPtr)
     Steering_FaultLatched       = FALSE;
     Steering_LatchCounter       = 0u;
     Steering_PrevAngle10        = 0;
+    Steering_PlausArmed         = FALSE;
     Steering_PwmDisableLevel    = 0u;
     Steering_FaultEpisodeCount  = 0u;
     Steering_FirstCmdReceived   = FALSE;
@@ -380,7 +384,7 @@ void Swc_Steering_MainFunction(void)
      *         This catches actuator faults without false-tripping on the
      *         rate limiter constraining the command.
      * ---------------------------------------------------------- */
-    if (new_fault == FZC_STEER_NO_FAULT) {
+    if ((new_fault == FZC_STEER_NO_FAULT) && (Steering_PlausArmed == TRUE)) {
         sint16 prev_output_deg = (sint16)(Steering_PrevAngle10 / (sint16)DEG_TO_TENTHS);
         plaus_diff = Steering_AbsDiffSint16(prev_output_deg, actual_angle);
 
@@ -483,6 +487,7 @@ void Swc_Steering_MainFunction(void)
      * ---------------------------------------------------------- */
     Steering_CurrentAngle10 = output10;
     Steering_PrevAngle10    = output10;
+    Steering_PlausArmed     = TRUE;
 
     /* ----------------------------------------------------------
      * Step 11: Convert angle to PWM
