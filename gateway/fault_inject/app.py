@@ -393,6 +393,25 @@ def stop_test_run(request: Request):
     return {"state": "stopping"}
 
 
+@app.get("/api/test/specs")
+def list_test_specs():
+    """List all available E2E test specs for UI selection."""
+    from .test_specs import TEST_SPECS
+    return {
+        "specs": [
+            {
+                "id": s.id,
+                "label": s.label,
+                "sg": s.sg,
+                "asil": s.asil,
+                "he": s.he,
+                "description": s.description,
+            }
+            for s in TEST_SPECS
+        ]
+    }
+
+
 @app.get("/api/test/status")
 def test_status():
     """Current test run state."""

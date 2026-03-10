@@ -48,6 +48,7 @@ class MQTTVerdictMonitor:
         self.motor_overcurrent: int = 0
         self.anomaly_score: float = 0.0
         self.motor_rpm: int = 0
+        self.torque_request: int = 0
         # Timestamps for verdicts
         self._state_change_ts: dict[int, float] = {}
         self._dtc_ts: dict[int, float] = {}
@@ -64,6 +65,7 @@ class MQTTVerdictMonitor:
             self.motor_overcurrent = 0
             self.anomaly_score = 0.0
             self.motor_rpm = 0
+            self.torque_request = 0
             self._state_change_ts.clear()
             self._dtc_ts.clear()
             self._fault_ts.clear()
@@ -114,6 +116,9 @@ class MQTTVerdictMonitor:
 
             elif msg_name == "Motor_Status" and sig_name == "MotorSpeed_RPM":
                 self.motor_rpm = self._int(payload)
+
+            elif msg_name == "Torque_Request" and sig_name == "TorqueRequest":
+                self.torque_request = self._int(payload)
 
         elif topic.startswith("taktflow/anomaly/") and topic.endswith("/score"):
             try:
@@ -189,12 +194,42 @@ class MQTTVerdictMonitor:
                 result["observed"] = f"{field_name}={current_val} (expected {check.value})"
             return result
 
-        elif check.check_type == "motor_stop":
-            if self.motor_rpm == 0:
-                result["observed"] = "Motor RPM = 0"
+        elif check.check_type == "state_stays":
+            expected_values = check.value if isinstance(check.value, list) else [check.value]
+            current_name = VEHICLE_STATES.get(self.vehicle_state, f"state_{self.vehicle_state}")
+            unexpected = [
+                (st, ts) for st, ts in self._state_change_ts.items()
+                if st not in expected_values
+            ]
+            if unexpected:
+                worst = min(unexpected, key=lambda x: x[1])
+                bad_name = VEHICLE_STATES.get(worst[0], f"state_{worst[0]}")
+                elapsed = (worst[1] - start_time) * 1000
+                result["observed"] = f"Transitioned to {bad_name} at t={elapsed:.0f}ms"
+                return result
+            if self.vehicle_state in expected_values:
+                result["observed"] = f"Stayed in {current_name} for full observe window"
                 result["passed"] = True
             else:
-                result["observed"] = f"Motor RPM = {self.motor_rpm}"
+                result["observed"] = f"Current state: {current_name}"
+            return result
+
+        elif check.check_type == "motor_stop":
+            if self.motor_rpm == 0:
+                result["observed"] = "Motor RPM = 0 (torque_req={})".format(self.torque_request)
+                result["passed"] = True
+            else:
+                result["observed"] = "Motor RPM = {} (torque_req={})".format(
+                    self.motor_rpm, self.torque_request)
+            return result
+
+        elif check.check_type == "torque_zero":
+            if self.torque_request == 0:
+                result["observed"] = "TorqueRequest = 0 (RPM={})".format(self.motor_rpm)
+                result["passed"] = True
+            else:
+                result["observed"] = "TorqueRequest = {} (RPM={})".format(
+                    self.torque_request, self.motor_rpm)
             return result
 
         result["observed"] = f"Unknown check type: {check.check_type}"
@@ -432,6 +467,8 @@ class DashboardTestRunner:
                 verdict_results = []
                 for check in spec.verdicts:
                     v = self._monitor.check_verdict(check, inject_time)
+                    log.info("[TEST %s] Verdict '%s': passed=%s observed='%s'",
+                             run_id, check.check_type, v["passed"], v["observed"])
                     verdict_results.append(v)
 
                 scenario_passed = all(v["passed"] for v in verdict_results)

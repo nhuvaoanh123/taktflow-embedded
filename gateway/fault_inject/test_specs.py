@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 class VerdictCheck:
     """Single verdict check within a scenario."""
     description: str
-    check_type: str          # "vehicle_state", "dtc", "fault_flag", "motor_stop"
+    check_type: str          # "vehicle_state", "dtc", "fault_flag", "motor_stop", "torque_zero", "state_stays"
     expected: str            # human-readable expected value
     field: str = ""          # MQTT field to monitor
     value: object = None     # expected value (int, str, etc.)
@@ -171,26 +171,6 @@ TEST_SPECS: list[TestSpec] = [
         ],
     ),
     TestSpec(
-        id="motor_reversal",
-        label="Motor Reversal",
-        scenario="motor_reversal",
-        sg="SG-010", asil="C", he="HE-014",
-        description="Verifies motor fault at speed triggers SAFE_STOP. "
-                    "Safety Goal SG-010: prevent unintended reversal at speed.",
-        injection="SPI pedal 80% + MQTT inject stall+overcurrent to plant-sim",
-        post_run_settle_sec=10.0,
-        observe_sec=5.0,
-        verdicts=[
-            VerdictCheck(
-                description="Vehicle enters SAFE_STOP",
-                check_type="vehicle_state",
-                expected="SAFE_STOP",
-                value=4,
-                timeout_ms=5000,
-            ),
-        ],
-    ),
-    TestSpec(
         id="runaway_accel",
         label="Runaway Acceleration",
         scenario="runaway_accel",
@@ -210,13 +190,13 @@ TEST_SPECS: list[TestSpec] = [
         ],
     ),
     TestSpec(
-        id="creep_from_stop",
-        label="Creep from Stop",
-        scenario="creep_from_stop",
-        sg="SG-012", asil="D", he="HE-017",
-        description="Verifies unintended creep from standstill triggers SAFE_STOP. "
-                    "Safety Goal SG-012: prevent vehicle movement without driver intent.",
-        injection="SPI pedal override at 30% from stationary (enters CVC full pipeline)",
+        id="motor_reversal",
+        label="Motor Reversal",
+        scenario="motor_reversal",
+        sg="SG-002", asil="C", he="HE-014",
+        description="Verifies motor blockage/reversal triggers SAFE_STOP and DTC. "
+                    "Safety Goal SG-002: prevent unintended motor reversal during forward motion.",
+        injection="SPI pedal 80% + MQTT inject_stall + inject_overcurrent to plant-sim",
         post_run_settle_sec=10.0,
         observe_sec=5.0,
         verdicts=[
@@ -224,7 +204,38 @@ TEST_SPECS: list[TestSpec] = [
                 description="Vehicle enters SAFE_STOP",
                 check_type="vehicle_state",
                 expected="SAFE_STOP",
-                value=4,
+                value=4,       # SAFE_STOP enum
+                timeout_ms=5000,
+            ),
+            VerdictCheck(
+                description="DTC 0xE301 broadcast",
+                check_type="dtc",
+                expected="DTC 0xE301 received",
+                value=0xE301,
+                timeout_ms=5000,
+            ),
+        ],
+    ),
+    TestSpec(
+        id="creep_from_stop",
+        label="Creep from Stop",
+        scenario="creep_from_stop",
+        sg="SG-001", asil="D", he="HE-017",
+        description="Verifies SC creep guard detects BTS7960 FET short (MB-006) and "
+                    "kills relay. Fault model: motor draws 1000mA despite zero torque "
+                    "command. SC cross-plausibility (SSR-SC-018, SM-024) detects "
+                    "torque=0 AND current>500mA for 2 cycles → kill relay → SAFE_STOP. "
+                    "Safety Goal SG-001: prevent unintended vehicle motion from motor fault.",
+        injection="Plant-sim injects 1000mA motor current (BTS7960 FET short simulation)",
+        prep="",  # No pedal input — vehicle must be at standstill with torque=0
+        post_run_settle_sec=10.0,
+        observe_sec=5.0,
+        verdicts=[
+            VerdictCheck(
+                description="Vehicle enters SAFE_STOP (SC creep guard → kill relay)",
+                check_type="vehicle_state",
+                expected="SAFE_STOP",
+                value=4,       # SAFE_STOP enum
                 timeout_ms=5000,
             ),
         ],

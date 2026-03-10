@@ -33,6 +33,7 @@ from .pedal_udp import (
 )
 from .plant_inject import (
     inject_brake_fault,
+    inject_creep_current as plant_inject_creep_current,
     inject_overcurrent as plant_inject_overcurrent,
     inject_stall as plant_inject_stall,
     inject_steer_fault,
@@ -506,20 +507,26 @@ def runaway_accel() -> str:
 
 
 def creep_from_stop() -> str:
-    """Inject unintended vehicle motion via SPI pedal override at 30%.
+    """Inject motor current at standstill to simulate BTS7960 FET short.
 
-    Overrides the pedal sensor at the MCAL layer with moderate position
-    while the vehicle is stationary.  The CVC processes the pedal value
-    through its full pipeline and generates torque naturally.
+    Fault model MB-006: BTS7960 FET gate-source short causes motor
+    current flow despite zero torque command from CVC.  Pedal stays
+    in dead-zone (torque=0), but plant-sim injects 1000mA motor current.
 
-    This bypasses the CAN cyclic-TX override problem — the pedal value
-    enters at the SPI layer, not via CAN frame injection on 0x101/0x103.
+    SC creep guard (SSR-SC-018, SM-024) detects torque=0 AND current>500mA
+    for 2 cycles (20ms) → kill relay → SAFE_STOP.
 
     Maps to HE-017 (ASIL D): Unintended vehicle motion from stationary.
+    SG-001: Prevent unintended acceleration/motion from motor control fault.
     """
-    send_pedal_override(pedal_pct_to_angle(30))
-    return ("Creep from stop: pedal 30% (SPI override) from stationary.  "
-            "CVC generates torque naturally -> vehicle moves.")
+    if _mqtt_client is None:
+        return "Creep from stop: MQTT client not available"
+    # No pedal input — torque command stays at 0
+    # Inject 1000mA motor current via plant-sim (simulates FET short)
+    plant_inject_creep_current(_mqtt_client, 1000.0)
+    _scaled_sleep(0.5)  # allow plant-sim to process and SC to detect
+    return ("Creep from stop: 1000mA motor current injected via plant-sim "
+            "(BTS7960 FET short). Torque=0, SC creep guard → kill relay → SAFE_STOP.")
 
 
 def babbling_node() -> str:
@@ -857,8 +864,8 @@ SCENARIOS: dict[str, dict] = {
     "creep_from_stop": {
         "fn": creep_from_stop,
         "description": (
-            "Creep from stop: pedal 30% (SPI override) from stationary.  "
-            "CVC generates torque naturally -> vehicle moves."
+            "Creep from stop: BTS7960 FET short — 1000mA motor current with "
+            "torque=0.  SC creep guard detects cross-plausibility → kill relay → SAFE_STOP."
         ),
     },
     "babbling_node": {

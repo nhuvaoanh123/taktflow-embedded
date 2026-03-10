@@ -27,6 +27,21 @@ def inject_overcurrent(mqtt_client: paho_mqtt.Client) -> None:
     log.info("Plant inject: overcurrent")
 
 
+def inject_creep_current(mqtt_client: paho_mqtt.Client,
+                         current_ma: float = 1000.0) -> None:
+    """Tell plant-sim to inject motor current without overcurrent flag.
+
+    Simulates BTS7960 FET gate-source short: motor draws current
+    despite zero torque command.  SC creep guard (SSR-SC-018) detects
+    torque=0 AND current>500mA → kill relay.
+    """
+    mqtt_client.publish(
+        TOPIC, json.dumps({"type": "creep_current", "current_ma": current_ma}),
+        qos=1,
+    )
+    log.info("Plant inject: creep_current %.0fmA", current_ma)
+
+
 def inject_stall(mqtt_client: paho_mqtt.Client) -> None:
     """Tell plant-sim to inject motor stall fault."""
     mqtt_client.publish(

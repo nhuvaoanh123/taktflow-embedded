@@ -165,6 +165,10 @@ class PlantSimulator:
         if cmd_type == "overcurrent":
             self.motor.inject_overcurrent()
             log.info("Injected overcurrent fault (current=%.0fmA)", self.motor.current_ma)
+        elif cmd_type == "creep_current":
+            current_ma = float(cmd.get("current_ma", 1000.0))
+            self.motor.inject_creep_current(current_ma)
+            log.info("Injected creep current fault (%.0fmA, no OC flag)", current_ma)
         elif cmd_type == "stall":
             self.motor.inject_stall()
             log.info("Injected motor stall fault")

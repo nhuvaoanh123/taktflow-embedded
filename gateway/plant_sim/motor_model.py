@@ -111,6 +111,18 @@ class MotorModel:
         self.overcurrent = True
         self._hw_disabled = True
 
+    def inject_creep_current(self, current_ma: float = 1000.0):
+        """Inject motor current without overcurrent flag — simulates FET short.
+
+        BTS7960 FET gate-source short causes current flow despite zero torque
+        command. The FOC inverter is NOT disabled (it's a hardware fault below
+        the inverter control loop). SC creep guard detects this via
+        torque=0 AND current>500mA cross-plausibility.
+        """
+        self.current_ma = current_ma
+        self._injected_current_ma = current_ma
+        self._overcurrent_latch = True  # hold current at injected level
+
     def inject_stall(self):
         """Inject a stall fault for demo."""
         self.stall_fault = True
