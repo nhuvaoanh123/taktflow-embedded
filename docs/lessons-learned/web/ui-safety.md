@@ -28,3 +28,23 @@ All signal-based fault detection was broken, but tests appeared to "mostly work"
 - Added DBC byte-layout docstrings to all plant-sim TX functions to prevent future drift.
 
 **Principle**: DBC is the single source of truth for CAN signal layout. Every TX function — firmware and plant-sim — must have an explicit byte-layout comment referencing DBC bit positions. When a belt-and-suspenders mechanism (direct DTC injection) masks signal-path failures, bugs hide for weeks. Always test the primary detection path in isolation before adding fallbacks. Treat "test passes but via wrong path" as a failure.
+
+## 2026-03-10 — Dual TX path on same CAN ID breaks E2E protection
+
+**Context**: FZC brake fault detection worked internally (fault=1, latch=1), but CVC never transitioned to SAFE_STOP. CAN 0x210 frames from FZC had all-zero payload despite active fault.
+
+**Mistake**: `Swc_Brake.c` called `Com_SendSignal(FZC_COM_SIG_TX_BRAKE_FAULT)` every 10ms, which packed the fault value into the Com PDU buffer and set `com_tx_pending`. `Com_MainFunction_Tx` then sent this frame via `PduR_Transmit` — without E2E protection (no CRC, no alive counter). Meanwhile, `Swc_FzcCom_TransmitSchedule` correctly sent an E2E-protected frame on the same CAN ID (0x210) every 100ms. The Com layer frame ran at lower priority and fired 10x more often, so CVC received mostly invalid-E2E frames and rejected them.
+
+**Fix**: Removed `Com_SendSignal` from `Swc_Brake.c`. The manual TX path in `Swc_FzcCom_TransmitSchedule` already reads brake fault from RTE and sends with proper E2E. One CAN ID = one TX path.
+
+**Principle**: Never have two TX paths (Com layer + manual PduR_Transmit) for the same CAN ID. The Com layer doesn't add E2E protection — it just packs signals into PDU buffers. If a message needs E2E, use the manual path exclusively. Grep for `Com_SendSignal` and `PduR_Transmit` on the same PDU ID to detect conflicts.
+
+## 2026-03-10 — SIL timing differences require platform-specific debounce
+
+**Context**: runaway_accel scenario triggered SAFE_STOP instead of DEGRADED. SC plausibility check killed the relay before CVC could limit torque.
+
+**Mistake**: SC plausibility debounce was 5 ticks (50ms) — designed for bare-metal where FOC inverter responds in <1ms. In SIL, CAN round-trip between CVC torque command and plant-sim current response is ~20-30ms. The 50ms debounce window was too tight — SC saw 2-3 "implausible" ticks during the CAN latency window and killed prematurely.
+
+**Fix**: `#ifdef PLATFORM_POSIX` debounce = 10 ticks (100ms) for SIL, 5 ticks for HW. Same pattern already used for FZC steering/brake debounce.
+
+**Principle**: Any debounce or timeout constant that depends on signal latency needs a PLATFORM_POSIX override. SIL CAN adds 20-30ms per hop vs <1ms on real hardware. Document the latency assumption next to every debounce constant. Use the existing `#ifdef PLATFORM_POSIX` pattern consistently across all ECUs.
