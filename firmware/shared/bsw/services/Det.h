@@ -218,4 +218,7 @@ Std_ReturnType Det_GetLogEntry(uint8 Index, Det_ErrorEntryType* EntryPtr);
  */
 void Det_SetCallback(Det_CallbackType Callback);
 
+/* ---- Debug Runtime Error IDs (ECU main.c) ---- */
+#include "Det_ErrIds.h"
+
 #endif /* DET_H */
