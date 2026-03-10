@@ -681,6 +681,26 @@ The system shall transition to SAFE_STOP and shall not resume normal operation u
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement is well-structured with a four-layer defense-in-depth response chain (FZC detect, CVC command, RZC execute, SC backup). ASIL D is correct given SG-004 (loss of braking) trace. The 30 ms motor cutoff timing from fault detection is achievable through the CAN chain. Traces down to TSR-048 and TSR-049 with SM-011 and SM-013 are consistent. The SC kill relay backup path correctly handles the case where the CAN chain fails. The requirement correctly identifies motor cutoff as a secondary deceleration mechanism (back-EMF + friction), not a braking replacement. The SAFE_STOP transition with brake verification before resumption is appropriate. No significant gaps identified.
 <!-- HITL-LOCK END:COMMENT-BLOCK-FSR025 -->
 
+### FSR-026: Standstill Motor Current Cross-Plausibility
+
+- **ASIL**: D
+- **Traces up**: SG-001 (HE-017, HE-019)
+- **Traces down**: TSR-052
+- **Safety mechanism**: SM-024
+- **Allocation**: SC (detection and reaction)
+- **Status**: draft
+
+The Safety Controller shall independently monitor the CVC torque command (CAN 0x101, TorqueRequest signal) and the RZC motor current measurement (CAN 0x301, MotorCurrent_mA signal). If all of the following conditions are true for 2 or more consecutive SC main cycles (20 ms):
+
+1. CVC torque command = 0 (no driver-intended propulsion),
+2. Motor current > 500 mA (significant current flow indicating motor activation),
+
+then the SC shall open the kill relay (SM-005) within 5 ms of detection, transitioning the system to SS-MOTOR-OFF (SAFE_STOP). The SC shall log DTC 0xE312 (standstill creep fault).
+
+The system shall not resume normal operation until a manual restart sequence is performed and the fault condition is no longer present.
+
+**Rationale**: HE-017 (ASIL D) identifies the hazard of unintended vehicle motion from rest when the motor runs at full power uncontrolled (malfunction MB-006: BTS7960 FET short-circuit or PWM stuck). This fault occurs downstream of the CVC torque command — the CVC correctly commands zero torque, but the motor driver hardware activates regardless. Only an independent monitor (SC) comparing the commanded torque against the actual motor current can detect this class of fault. The 20 ms detection window (2 cycles) provides debounce against transient current spikes from back-EMF during motor deceleration. The 500 mA threshold is well above the motor's standstill leakage current (~10 mA) but low enough to detect a FET short before significant vehicle motion occurs.
+
 ---
 
 ## 5. Requirements Traceability Summary
@@ -689,7 +709,7 @@ The system shall transition to SAFE_STOP and shall not resume normal operation u
 
 | Safety Goal | ASIL | FSRs |
 |-------------|------|------|
-| SG-001 (Unintended acceleration) | D | FSR-001, FSR-002, FSR-003, FSR-013, FSR-016, FSR-018, FSR-019, FSR-021, FSR-022, FSR-024 |
+| SG-001 (Unintended acceleration/motion) | D | FSR-001, FSR-002, FSR-003, FSR-013, FSR-016, FSR-018, FSR-019, FSR-021, FSR-022, FSR-024, FSR-026 |
 | SG-002 (Loss of drive torque) | B | FSR-013, FSR-019, FSR-023, FSR-024 |
 | SG-003 (Unintended steering) | D | FSR-006, FSR-007, FSR-008, FSR-013, FSR-016, FSR-019, FSR-024 |
 | SG-004 (Loss of braking) | D | FSR-009, FSR-010, FSR-013, FSR-016, FSR-019, FSR-024, FSR-025 |
@@ -705,17 +725,17 @@ The system shall transition to SAFE_STOP and shall not resume normal operation u
 | CVC (STM32G474RE) | FSR-001, FSR-002, FSR-003, FSR-013, FSR-014, FSR-017, FSR-018, FSR-019, FSR-020, FSR-023, FSR-024, FSR-025 |
 | FZC (STM32G474RE) | FSR-006, FSR-007, FSR-008, FSR-009, FSR-010, FSR-011, FSR-012, FSR-013, FSR-014, FSR-017, FSR-020, FSR-023, FSR-024, FSR-025 |
 | RZC (STM32G474RE) | FSR-003, FSR-004, FSR-005, FSR-013, FSR-014, FSR-017, FSR-020, FSR-021, FSR-024, FSR-025 |
-| SC (TMS570LC43x) | FSR-013, FSR-015, FSR-016, FSR-017, FSR-020, FSR-022, FSR-023, FSR-024 |
+| SC (TMS570LC43x) | FSR-013, FSR-015, FSR-016, FSR-017, FSR-020, FSR-022, FSR-023, FSR-024, FSR-026 |
 
 ### 5.3 ASIL Distribution
 
 | ASIL | Count | FSRs |
 |------|-------|------|
-| D | 13 | FSR-001, FSR-002, FSR-003, FSR-006, FSR-007, FSR-009, FSR-010, FSR-013, FSR-016, FSR-017, FSR-019, FSR-024, FSR-025 |
+| D | 14 | FSR-001, FSR-002, FSR-003, FSR-006, FSR-007, FSR-009, FSR-010, FSR-013, FSR-016, FSR-017, FSR-019, FSR-024, FSR-025, FSR-026 |
 | C | 7 | FSR-008, FSR-011, FSR-012, FSR-014, FSR-015, FSR-020, FSR-021, FSR-022 |
 | B | 2 | FSR-018, FSR-023 |
 | A | 2 | FSR-004, FSR-005 |
-| **Total** | **25** | |
+| **Total** | **26** | |
 
 ## 6. Open Items and Assumptions
 
@@ -745,4 +765,5 @@ The system shall transition to SAFE_STOP and shall not resume normal operation u
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete FSR specification: 25 requirements (FSR-001 to FSR-025), traceability matrices, ASIL allocation |
+| 1.1 | 2026-03-10 | An Dao | Added FSR-026 (Standstill Motor Current Cross-Plausibility) to close HE-017/HE-019 traceability gap identified in HITL review |
 

@@ -1423,6 +1423,26 @@ The SC software shall execute a runtime self-test every 60 seconds: (a) recomput
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** Requirement specifies four runtime self-tests every 60 seconds: flash CRC-32 (spread over 6 seconds to avoid blocking), RAM pattern write/read/compare, DCAN1 status check, and GIO_A0 readback. ASIL C is correct per TSR-051. The flash CRC spreading (1/60th per iteration over 6 seconds) is a well-designed approach that prevents blocking the 10 ms main loop -- each iteration processes approximately 1/600th of flash at the 10 ms loop rate. The RAM test pattern (32-byte 0xAA/0x55) detects stuck-at faults in the reserved region. The GIO_A0 readback confirms relay state matches commanded state. Relay de-energize on any failure via SSR-SC-007 is appropriate. Traces to SC_SelfTest_Runtime() are consistent. No gaps identified.
 <!-- HITL-LOCK END:COMMENT-BLOCK-SSR-SC-017 -->
 
+### SSR-SC-018: SC Standstill Torque Cross-Plausibility Monitor
+
+- **ASIL**: D
+- **Traces up**: TSR-052 (derived from FSR-026)
+- **Traces down**: firmware/sc/src/sc_main.c:SC_CreepGuard_Check()
+- **Verified by**: TC-SC-034
+- **Status**: draft
+
+The SC software shall implement a standstill torque cross-plausibility check in the 10 ms main loop:
+
+1. **Input acquisition**: The SC shall use `TorquePct` (8-bit, CAN 0x100 Vehicle_State, byte 4) already received by SC_CAN_Receive() and `MotorCurrent_mA` (16-bit LE, CAN 0x301, bytes 2-3) from existing mailboxes. Both values are E2E-validated by the existing SC CAN pipeline — if either signal is stale (alive counter unchanged for > 100 ms), the check shall not trigger (SM-019 heartbeat monitoring handles CAN loss).
+
+2. **Cross-plausibility logic**: In the SC main loop, if `TorquePct == 0` AND `MotorCurrent_mA > SC_CREEP_CURRENT_THRESH` (default 500 mA), increment a debounce counter `sc_creep_debounce`. If `sc_creep_debounce >= SC_CREEP_DEBOUNCE_CYCLES` (default 2, = 20 ms), set `sc_creep_fault = TRUE`.
+
+3. **Fault reaction**: When `sc_creep_fault == TRUE`, the SC shall de-energize the kill relay via `GIO_WritePin(GIO_A0, 0)` (same path as SSR-SC-007), log DTC 0xE312, and set `sc_creep_fault_latched = TRUE`. The latched flag prevents relay re-energize until a full power cycle.
+
+4. **Clear condition**: If `TorquePct > 0` OR `MotorCurrent_mA <= SC_CREEP_CURRENT_THRESH`, reset `sc_creep_debounce = 0`. The latched fault is NOT clearable by software — only a power cycle resets it.
+
+**Rationale**: The SC operates in CAN listen-only mode and has independent hardware authority over the kill relay. This makes it the only ECU that can detect and react to a fault where the motor driver hardware (BTS7960) activates despite zero torque command from the CVC. The 2-cycle debounce prevents false triggers from transient motor current during deceleration (back-EMF decay). The non-clearable latch ensures that a hardware fault cannot be masked by intermittent current drops.
+
 ---
 
 ## 8. Requirements Traceability Summary
@@ -1481,6 +1501,7 @@ The SC software shall execute a runtime self-test every 60 seconds: (a) recomput
 | TSR-049 | SSR-SC-015 |
 | TSR-050 | SSR-SC-016 |
 | TSR-051 | SSR-SC-017 |
+| TSR-052 | SSR-SC-018 |
 
 ### 8.2 SSR Count per ECU
 
@@ -1489,18 +1510,18 @@ The SC software shall execute a runtime self-test every 60 seconds: (a) recomput
 | CVC | 23 | 15 | 4 | 3 | 0 |
 | FZC | 24 | 14 | 7 | 2 | 0 |
 | RZC | 17 | 7 | 4 | 0 | 5 |
-| SC | 17 | 7 | 8 | 1 | 0 |
-| **Total** | **81** | **43** | **23** | **6** | **5** |
+| SC | 18 | 8 | 8 | 1 | 0 |
+| **Total** | **82** | **44** | **23** | **6** | **5** |
 
 ### 8.3 ASIL Distribution
 
 | ASIL | Count | Percentage |
 |------|-------|-----------|
-| D | 43 | 53% |
+| D | 44 | 54% |
 | C | 23 | 28% |
 | B | 6 | 7% |
 | A | 5 | 6% |
-| **Total** | **81** | |
+| **Total** | **82** | |
 
 Note: Some SSRs may have slightly different ASIL counts due to multiple trace-up paths. The total reflects unique SSR IDs.
 
@@ -1532,4 +1553,5 @@ Note: Some SSRs may have slightly different ASIL counts due to multiple trace-up
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete SSR specification: 81 requirements across 4 ECUs (CVC: 23, FZC: 24, RZC: 17, SC: 17), full traceability |
+| 1.1 | 2026-03-10 | System | Add SSR-SC-018 (Standstill Torque Cross-Plausibility), SC: 17→18, Total: 81→82, ASIL D: 43→44 |
 

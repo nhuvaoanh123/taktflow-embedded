@@ -77,6 +77,11 @@ The following hazardous events were identified in the HARA. They are grouped int
 | HE-013 | E-stop not functional | ASIL B | SG-008 |
 | HE-014 | Unintended motor reversal | ASIL C | SG-008 |
 | HE-015 | Battery overvoltage/undervoltage | QM | SG-006 |
+| HE-016 | Unintended acceleration at high speed (pedal sensors both read high) | ASIL C | SG-001 |
+| HE-017 | Unintended vehicle motion from rest (motor runs at full power uncontrolled) | ASIL D | SG-001 |
+| HE-018 | Unintended forward motion during reversing (motor direction reversal) | ASIL A | SG-008 |
+| HE-019 | Motor enable stuck (motor cannot be stopped despite zero torque request) | ASIL C | SG-001 |
+| HE-020 | CAN bus babbling node (safety-critical messages blocked) | ASIL B | SG-008 |
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-SG1 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** The hazardous events summary table lists HE-001 through HE-015 but omits HE-016 through HE-020, which are defined in the HARA Section 6.2. This is a traceability gap: the HARA identifies 20 hazardous events, but this SG document only traces 15. The missing events are: HE-016 (unintended acceleration at high speed, ASIL C), HE-017 (unintended vehicle motion from rest, ASIL D), HE-018 (unintended forward motion during reversing, ASIL A), HE-019 (motor enable stuck, ASIL C), and HE-020 (CAN bus babbling node, ASIL B). These must be mapped to safety goals. HE-017 is particularly critical as it is ASIL D and should be assigned to SG-001 or a new SG. The HARA safety goals preview (Section 9.3) actually defines 13 safety goals including SG-004 for HE-017, but this SG document reduces to 8 by grouping differently. The grouping rationale should be documented.
@@ -88,22 +93,22 @@ The following hazardous events were identified in the HARA. They are grouped int
 
 | SG-ID | Safety Goal | ASIL | Safe State | FTTI | Source HE |
 |-------|-------------|------|------------|------|-----------|
-| SG-001 | The system shall prevent unintended acceleration due to erroneous pedal sensor readings. | ASIL D | SS-MOTOR-OFF | 50 ms | HE-001 |
+| SG-001 | The system shall prevent unintended vehicle acceleration or motion due to motor control malfunction or erroneous pedal sensor readings. | ASIL D | SS-MOTOR-OFF | 50 ms | HE-001, HE-016, HE-017, HE-019 |
 | SG-002 | The system shall prevent unintended loss of drive torque during vehicle operation. | ASIL B | SS-CONTROLLED-STOP | 200 ms | HE-002 |
 | SG-003 | The system shall prevent unintended steering movement and ensure steering availability during turning manoeuvres. | ASIL D | SS-MOTOR-OFF | 100 ms | HE-003, HE-004 |
 | SG-004 | The system shall prevent unintended loss of braking capability during braking operations. | ASIL D | SS-MOTOR-OFF | 50 ms | HE-005 |
 | SG-005 | The system shall prevent unintended braking events during normal driving. | ASIL A | SS-CONTROLLED-STOP | 200 ms | HE-006, HE-010 |
 | SG-006 | The system shall ensure motor protection against overcurrent, overtemperature, and supply voltage excursion. | ASIL A | SS-MOTOR-OFF | 500 ms | HE-007, HE-008, HE-015 |
 | SG-007 | The system shall ensure timely detection of obstacles by the distance sensing function. | ASIL C | SS-CONTROLLED-STOP | 200 ms | HE-009 |
-| SG-008 | The system shall ensure availability of independent safety monitoring, emergency stop, and protection against unintended motor reversal. | ASIL C | SS-SYSTEM-SHUTDOWN | 100 ms | HE-011, HE-012, HE-013, HE-014 |
+| SG-008 | The system shall ensure availability of independent safety monitoring, emergency stop, and protection against unintended motor reversal. | ASIL C | SS-SYSTEM-SHUTDOWN | 100 ms | HE-011, HE-012, HE-013, HE-014, HE-018, HE-020 |
 
 ### 5.2 Safety Goal Details
 
 #### SG-001: Prevent Unintended Acceleration
 
-- **Safety Goal**: The system shall prevent unintended acceleration due to erroneous pedal sensor readings.
+- **Safety Goal**: The system shall prevent unintended vehicle acceleration or motion due to motor control malfunction or erroneous pedal sensor readings.
 - **ASIL**: D
-- **Source**: HE-001 (Unintended acceleration, ASIL D)
+- **Source**: HE-001 (Unintended acceleration, ASIL D), HE-016 (Unintended acceleration at high speed, ASIL C), HE-017 (Unintended vehicle motion from rest, ASIL D), HE-019 (Motor enable stuck, ASIL C)
 - **Safe State**: SS-MOTOR-OFF -- Motor torque = 0, H-bridge disabled, brakes applied.
 - **FTTI**: 50 ms
 - **Rationale**: Unintended acceleration at any vehicle speed can result in life-threatening consequences (S3). The dual redundant pedal sensors (AS5048A on SPI1 with separate chip selects) enable plausibility checking. If both sensors simultaneously read high due to a common cause fault (e.g., power supply corruption, SPI bus fault), the system must detect the anomaly and transition to the safe state within the FTTI. The ASIL D rating demands the highest level of diagnostic coverage and freedom from interference.

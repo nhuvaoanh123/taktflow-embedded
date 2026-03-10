@@ -18,6 +18,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | [PROCESS-safety-case-development.md](safety/PROCESS-safety-case-development.md) | Safety case â€” HARA, FMEA, DFA, FSRâ†’TSR flow-down, ASIL decomposition | 2026-02-27 | Closed |
 | [PROCESS-hil-gap-analysis.md](safety/PROCESS-hil-gap-analysis.md) | HIL gap analysis, fault injection safety, preemptive protection | 2026-03-01 | Closed |
 | [PROCESS-sc-safety-critical-dataflow-state-transition-investigation.md](safety/PROCESS-sc-safety-critical-dataflow-state-transition-investigation.md) | SC safety-path investigation â€” dataflow reconstruction, transition model, and verification gaps | 2026-03-08 | Open |
+| [PROCESS-sil-hil-divergence-preflight.md](safety/PROCESS-sil-hil-divergence-preflight.md) | SIL/HIL divergence preflight â€” boundary failures, bench-readiness gating, and closure rules | 2026-03-10 | Open |
 | [SYS-001-dual-pedal-sensing.md](safety/SYS-001-dual-pedal-sensing.md) | ASIL D pedal sensing, shared SPI bus CCF, 1oo2D architecture | 2026-02-27 | Closed |
 
 ### Testing
@@ -49,6 +50,7 @@ All lessons-learned documents live in this folder. One file per topic.
 | [PROCESS-traceability-automation.md](process/PROCESS-traceability-automation.md) | Traceability automation â€” trace-gen.py, CI enforcement, suspect links | 2026-02-25 | Closed |
 | [PROCESS-architecture-decisions.md](process/PROCESS-architecture-decisions.md) | Architecture decisions â€” ADR framework, hybrid ECUs, file-based ALM | 2026-02-28 | Closed |
 | [PROCESS-claude-rules-consolidation.md](process/PROCESS-claude-rules-consolidation.md) | Claude rules consolidation â€” 30â†’26 files, 3374â†’1999 lines, context window optimization | 2026-03-01 | Closed |
+| [PROCESS-commercial-sil-vs-custom-sil-fidelity.md](process/PROCESS-commercial-sil-vs-custom-sil-fidelity.md) | Commercial SIL vs custom SIL â€” structural limits, fidelity classes, 30/60/90 closure backlog | 2026-03-10 | Open |
 
 ### Hardware
 

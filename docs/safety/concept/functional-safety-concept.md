@@ -413,6 +413,17 @@ The Safety Controller provides an independent, diverse monitoring layer. Its fai
 - **FTTI compliance**: Detection within 1 ms (interrupt latency), CAN transmission within 1 ms, reaction within 10 ms. Total: 12 ms < 50 ms FTTI.
 - **Traces to**: FSR-018
 
+#### SM-024: Standstill Torque Cross-Plausibility (Creep Guard)
+
+- **Mechanism**: The SC independently monitors two CAN signals: CVC torque command (Torque_Request.TorqueRequest, CAN 0x101) and RZC motor current (Motor_Current.MotorCurrent_mA, CAN 0x301). If motor current exceeds a standstill threshold (e.g., 500 mA) while CVC torque command is zero for more than 2 consecutive SC cycles (20 ms), the SC detects a cross-plausibility violation indicating a hardware fault (BTS7960 FET short-circuit, PWM stuck at duty > 0, or motor controller enable stuck). The SC opens the kill relay (SM-005) to remove power from the motor driver, achieving SS-MOTOR-OFF.
+- **Detection**: SC CAN-listen monitoring — compares torque command vs. actual current. Detects faults invisible to CVC software (downstream of the torque command output).
+- **Fault reaction**: Kill relay opened (SM-005). Motor driver loses power supply. Vehicle transitions to SAFE_STOP. DTC 0xE312 (standstill creep fault) logged.
+- **ECU**: SC (TMS570LC43x, CAN listen-only mode)
+- **Diagnostic coverage**: 90% — covers BTS7960 FET short, PWM stuck faults, motor enable stuck. Does not cover motor back-drive from external forces (not an electrical fault).
+- **FTTI compliance**: Detection within 20 ms (2 × 10 ms SC cycle), relay reaction within 5 ms. Total: 25 ms < 50 ms FTTI for SG-001.
+- **Traces to**: FSR-026
+- **Safety Goal**: SG-001 (prevents unintended vehicle motion from HE-017, HE-019)
+
 <!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC10 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** Section 4.9 defines the cross-cutting mechanisms SM-022 (vehicle state machine) and SM-023 (E-stop broadcast). The state machine diagram is clear and shows all valid state transitions with entry conditions. SM-022 correctly defines operational limits per state (RUN, DEGRADED, LIMP, SAFE_STOP, SHUTDOWN). SM-023 (E-stop) achieves 12 ms total response time with a high-priority CAN ID (0x001), well within the 50 ms FTTI. The E-stop being hardware interrupt-driven (GPIO PC13 with hardware debounce) provides the lowest latency detection path. The state machine coordinates with BswM on all ECUs for synchronized degradation response (described in Section 5.3), which is an important AUTOSAR-like design pattern. One observation: the state machine allows DEGRADED to transition back to NORMAL after fault clearance and a 5-second recovery timer, but LIMP cannot transition directly to NORMAL -- this asymmetry is appropriate and conservative.
 <!-- HITL-LOCK END:COMMENT-BLOCK-FSC-SEC10 -->
@@ -514,6 +525,7 @@ The following matrix shows which safety mechanisms are allocated to which ECU. "
 | SM-021: SC self-test and lockstep | — | — | — | P | SG-008 |
 | SM-022: Vehicle state machine | P | S | S | M | SG-001 to SG-008 |
 | SM-023: E-stop broadcast | P | S | S | M | SG-001, SG-008 |
+| SM-024: Standstill torque cross-plausibility | — | — | — | P | SG-001 |
 
 <!-- HITL-LOCK START:COMMENT-BLOCK-FSC-SEC12 -->
 **HITL Review (An Dao) — Reviewed: 2026-02-27:** The safety mechanism allocation matrix (Section 6) provides a clear P/S/M assignment for all 23 safety mechanisms across the 4 ECUs. Key observations: SM-004 (CAN E2E) is correctly assigned as P to all physical ECUs and M to SC. SM-005 (kill relay) is P to SC only, which is correct for the energize-to-run pattern. SM-020 (external watchdog) is P to all physical ECUs, reflecting its per-ECU implementation. The "Safety Goals Addressed" column provides quick traceability. One observation: SM-022 (vehicle state machine) and SM-023 (E-stop) address "SG-001 to SG-008" and "SG-001, SG-008" respectively, which confirms these are cross-cutting mechanisms. The matrix correctly shows the SC as the only ECU with hardware-enforced independent safety authority (SM-005 kill relay).
@@ -548,6 +560,7 @@ The following table verifies that each safety mechanism achieves its safe state 
 | SM-021: SC self-test/lockstep | < 0.001 ms | < 0.001 ms | < 0.001 ms | 100 ms | ~100 ms | Yes |
 | SM-022: Vehicle state machine | 10 ms | 10 ms | 20 ms | 50 ms | 30 ms | Yes |
 | SM-023: E-stop broadcast | 1 ms | 10 ms | 11 ms | 50 ms | 39 ms | Yes |
+| SM-024: Standstill cross-plausibility | 20 ms | 5 ms (relay) | 25 ms | 50 ms | 25 ms | Yes |
 
 ### Timing Notes
 
