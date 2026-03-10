@@ -840,19 +840,7 @@ int main(void)
 #define COM_H
 #define DEM_H
 
-/* Defense-in-depth: temporarily remove PLATFORM_POSIX so that the SIL
- * synthetic injection code in Swc_Lidar.c is guaranteed to be compiled out.
- * The guard (#if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)) should
- * already be FALSE due to -DUNIT_TEST, but some GCC versions exhibit
- * unexpected behaviour with macro redefinitions from included headers. */
-#ifdef PLATFORM_POSIX
-#undef PLATFORM_POSIX
-#define _LIDAR_TEST_RESTORE_POSIX
-#endif
-
+/* SIL injection code in Swc_Lidar.c is guarded by
+ * #if defined(PLATFORM_POSIX) && !defined(UNIT_TEST)
+ * — compiled out by -DUNIT_TEST, so tests exercise real parse paths. */
 #include "../src/Swc_Lidar.c"
-
-#ifdef _LIDAR_TEST_RESTORE_POSIX
-#define PLATFORM_POSIX
-#undef _LIDAR_TEST_RESTORE_POSIX
-#endif

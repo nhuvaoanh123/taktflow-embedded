@@ -15,10 +15,7 @@
 #include "ComStack_Types.h"
 #include "NvM.h"
 
-#ifdef PLATFORM_POSIX
-#include <stdio.h>
 #include <string.h>
-#endif
 
 /* ---- Forward declaration for PduR_Transmit (avoids circular include) ---- */
 extern Std_ReturnType PduR_Transmit(PduIdType TxPduId,
@@ -86,21 +83,15 @@ void Dem_Init(const void* ConfigPtr)
     dem_broadcast_pdu_id = 0xFFFFu;  /* Unconfigured sentinel */
 
     /* Restore occurrence counters from NvM (persistence across power cycles).
-     * POSIX: NVM_BLOCK_SIZE (1024) exceeds sizeof(dem_events) (~224 bytes).
-     * Direct read overflows 800 bytes into adjacent BSS statics, corrupting
-     * Com shadow buffers and RTE signals across compilation units.
-     * Fix: read into a properly-sized temp buffer, copy only valid data.
-     * Target: NvM_ReadBlock is a no-op stub — direct read is safe. */
-#ifdef PLATFORM_POSIX
+     * NVM_BLOCK_SIZE (1024) exceeds sizeof(dem_events) (~224 bytes).
+     * Read into a properly-sized temp buffer, copy only valid data to
+     * prevent overflow into adjacent BSS statics. */
     {
         uint8 nvm_tmp[NVM_BLOCK_SIZE];
         (void)memset(nvm_tmp, 0u, sizeof(nvm_tmp));
         (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)nvm_tmp);
         (void)memcpy(dem_events, nvm_tmp, sizeof(dem_events));
     }
-#else
-    (void)NvM_ReadBlock(DEM_NVM_BLOCK_ID, (void*)dem_events);
-#endif
 
     for (i = 0u; i < DEM_MAX_EVENTS; i++) {
         dem_events[i].debounceCounter = 0;
@@ -135,10 +126,8 @@ void Dem_ReportErrorStatus(Dem_EventIdType EventId,
         if (ev->debounceCounter >= DEM_DEBOUNCE_FAIL_THRESHOLD) {
             ev->statusByte |= DEM_STATUS_CONFIRMED_DTC;
             ev->occurrenceCounter++;
-#ifdef PLATFORM_POSIX
-            (void)fprintf(stderr, "[DEM] DTC confirmed: event=%u debounce=%d status=0x%02X dtc=0x%06X\n",
-                    EventId, ev->debounceCounter, ev->statusByte, (unsigned)dem_dtc_codes[EventId]);
-#endif
+            Det_ReportRuntimeError(DET_MODULE_DEM, (uint8)EventId,
+                                   DEM_API_REPORT_ERROR_STATUS, DET_E_DBG_DTC_CONFIRMED);
         }
     } else {
         /* Decrement debounce counter toward pass threshold */
@@ -295,27 +284,20 @@ void Dem_MainFunction(void)
              * called Dem_Init but not Dem_SetBroadcastPduId yet). */
             if (dem_broadcast_pdu_id != 0xFFFFu)
             {
-#ifdef PLATFORM_POSIX
-                (void)fprintf(stderr, "[DEM] Broadcasting DTC=0x%06X pdu=%u ecu=%u\n",
-                        (unsigned)dtc_code, (unsigned)dem_broadcast_pdu_id, (unsigned)dem_ecu_id);
-#endif
+                Det_ReportRuntimeError(DET_MODULE_DEM, (uint8)i,
+                                       DEM_API_MAIN_FUNCTION, DET_E_DBG_DTC_BROADCAST);
                 (void)PduR_Transmit(dem_broadcast_pdu_id, &pdu_info);
             }
 
             /* Persist to NvM (outside critical section).
-             * POSIX: use temp buffer to avoid writing 800 bytes of adjacent
-             * BSS into the NvM file (NVM_BLOCK_SIZE > sizeof(dem_events)). */
-#ifdef PLATFORM_POSIX
+             * Use temp buffer to avoid writing adjacent BSS into NvM
+             * (NVM_BLOCK_SIZE > sizeof(dem_events)). */
             {
                 uint8 nvm_wr[NVM_BLOCK_SIZE];
                 (void)memset(nvm_wr, 0u, sizeof(nvm_wr));
                 (void)memcpy(nvm_wr, dem_events, sizeof(dem_events));
                 (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID, (const void*)nvm_wr);
             }
-#else
-            (void)NvM_WriteBlock(DEM_NVM_BLOCK_ID,
-                                  (const void*)dem_events);
-#endif
         } else {
             SchM_Exit_Dem_DEM_EXCLUSIVE_AREA_0();
         }

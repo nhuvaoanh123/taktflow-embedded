@@ -121,11 +121,7 @@ typedef uint8 Std_ReturnType;
 /* Creep guard constants — must match Cvc_Cfg.h */
 #define CVC_CREEP_SPEED_THRESH     50u
 #define CVC_CREEP_TORQUE_THRESH    50u
-#ifdef PLATFORM_POSIX
-  #define CVC_CREEP_DEBOUNCE_TICKS 50u
-#else
-  #define CVC_CREEP_DEBOUNCE_TICKS 20u
-#endif
+#define CVC_CREEP_DEBOUNCE_TICKS 20u   /* Use target value — tests are platform-neutral */
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_FAILED     1u
