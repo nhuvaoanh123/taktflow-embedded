@@ -145,6 +145,11 @@ void dcan1_setup_mailboxes(void)
     /* Stub — mailbox setup is hardware-only, not tested here */
 }
 
+void canInit(void)
+{
+    /* Stub — HALCoGen CAN init is hardware-only */
+}
+
 /* ==================================================================
  * Mock: sc_e2e
  * ================================================================== */
