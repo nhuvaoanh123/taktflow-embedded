@@ -1136,16 +1136,15 @@ void test_Oscillation_fault_triggers_auto_brake(void)
 }
 
 /** @verifies SWR-FZC-010
- *  Brake fault status sent on CAN 0x210 every cycle */
+ *  Brake fault status written to RTE for CAN 0x210 TX by FzcCom schedule */
 void test_Brake_fault_sent_on_CAN(void)
 {
     test_config.faultDebounce = 200u;
     Swc_Brake_Init(&test_config);
 
-    /* Normal operation — fault = 0 but still sent cyclically */
+    /* Normal operation — fault RTE signal = NO_FAULT */
     run_cycles(50u, 3u);
-    TEST_ASSERT_TRUE(mock_com_signal_count[FZC_COM_SIG_TX_BRAKE_FAULT] > 0u);
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_com_signal_data[FZC_COM_SIG_TX_BRAKE_FAULT]);
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_NO_FAULT, mock_rte_signals[FZC_SIG_BRAKE_FAULT]);
 
     /* Trigger oscillation fault */
     mock_rte_signals[FZC_SIG_BRAKE_CMD] = 100u;
@@ -1157,8 +1156,8 @@ void test_Brake_fault_sent_on_CAN(void)
     mock_rte_signals[FZC_SIG_BRAKE_CMD] = 0u;
     Swc_Brake_MainFunction();
 
-    /* Fault code transmitted on CAN */
-    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, mock_com_signal_data[FZC_COM_SIG_TX_BRAKE_FAULT]);
+    /* Fault code written to RTE (FzcCom transmits on 0x210 with E2E) */
+    TEST_ASSERT_EQUAL_UINT32(FZC_BRAKE_CMD_OSCILLATION, mock_rte_signals[FZC_SIG_BRAKE_FAULT]);
 }
 
 /** @verifies SWR-FZC-010

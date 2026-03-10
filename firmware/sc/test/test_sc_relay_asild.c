@@ -48,7 +48,8 @@ typedef uint8               Std_ReturnType;
 #define SC_KILL_REASON_READBACK     6u
 #define SC_KILL_REASON_ESTOP        7u
 #define SC_KILL_REASON_BUS_SILENCE  8u
-#define SC_KILL_REASON_E2E_FAIL    9u
+#define SC_KILL_REASON_E2E_FAIL     9u
+#define SC_KILL_REASON_CREEP_GUARD 10u
 
 /* Fault source enum */
 #define SC_FAULT_SOURCE_NONE        0u
@@ -95,6 +96,7 @@ static boolean mock_can_bus_off;
 static boolean mock_can_bus_silent;
 static boolean mock_estop_active;
 static boolean mock_e2e_any_critical_failed;
+static boolean mock_creep_faulted;
 
 boolean SC_Heartbeat_IsAnyConfirmed(void)
 {
@@ -136,6 +138,11 @@ boolean SC_E2E_IsAnyCriticalFailed(void)
     return mock_e2e_any_critical_failed;
 }
 
+boolean SC_Plausibility_IsCreepFaulted(void)
+{
+    return mock_creep_faulted;
+}
+
 
 /* ==================================================================
  * Include source under test
@@ -163,6 +170,7 @@ void setUp(void)
     mock_can_bus_silent   = FALSE;
     mock_estop_active             = FALSE;
     mock_e2e_any_critical_failed  = FALSE;
+    mock_creep_faulted            = FALSE;
 
     /* Direct reset of kill latch for test isolation.
      * SC_Relay_Init() does NOT clear the latch (SWR-SC-011). */
@@ -475,6 +483,18 @@ void test_relay_check_triggers_not_energized(void)
     TEST_ASSERT_FALSE(SC_Relay_IsKilled());
 }
 
+/** @verifies SWR-SC-012 -- Creep guard fault triggers kill (SSR-SC-018) */
+void test_Relay_trigger_creep_guard(void)
+{
+    SC_Relay_Energize();
+    mock_creep_faulted = TRUE;
+
+    SC_Relay_CheckTriggers();
+
+    TEST_ASSERT_TRUE(SC_Relay_IsKilled());
+    TEST_ASSERT_EQUAL_UINT8(SC_KILL_REASON_CREEP_GUARD, SC_Relay_GetKillReason());
+}
+
 /** @verifies SWR-SC-012 -- GetKillReason returns correct reason code */
 void test_relay_get_kill_reason(void)
 {
@@ -525,6 +545,9 @@ int main(void)
     RUN_TEST(test_Relay_trigger_e2e_fail);
     RUN_TEST(test_Relay_trigger_e2e_priority_below_plausibility);
     RUN_TEST(test_Relay_trigger_e2e_priority_above_selftest);
+
+    /* SSR-SC-018: Creep guard trigger */
+    RUN_TEST(test_Relay_trigger_creep_guard);
 
     /* Hardened tests — boundary values, fault injection */
     RUN_TEST(test_relay_trigger_can_busoff);

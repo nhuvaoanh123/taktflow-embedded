@@ -284,6 +284,9 @@ void setUp(void)
     /* Battery status 0 = DISABLE_LOW (critical).  Default to NORMAL(2)
      * so battery-fault logic does not interfere with unrelated tests. */
     mock_rte_signals[CVC_SIG_BATTERY_STATUS] = 2u;
+    /* SC relay: 1=energized (OK), 0=killed.  Default to OK so relay-kill
+     * logic does not interfere with unrelated tests. */
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
     mock_rte_read_return    = E_OK;
     mock_rte_write_return   = E_OK;
     mock_rte_write_last_id  = 0u;
@@ -1020,7 +1023,7 @@ void test_SAFE_STOP_recovery_when_all_faults_clear(void)
     mock_rte_signals[CVC_SIG_BRAKE_FAULT]     = 0u;
     mock_rte_signals[CVC_SIG_STEERING_FAULT]  = 0u;
     mock_rte_signals[CVC_SIG_PEDAL_FAULT]     = 0u;
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 1u;  /* 1=energized (OK) */
     mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;  /* NORMAL */
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
@@ -1064,7 +1067,7 @@ void test_SAFE_STOP_no_recovery_when_fault_persists(void)
 
     /* Motor cutoff still active — recovery blocked */
     mock_rte_signals[CVC_SIG_MOTOR_CUTOFF] = 1u;
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 1u;  /* 1=energized (OK) */
     mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
@@ -1090,7 +1093,7 @@ void test_SAFE_STOP_recovery_counter_resets_on_fault(void)
     /* All clear — set signals */
     mock_rte_signals[CVC_SIG_FZC_COMM_STATUS] = CVC_COMM_OK;
     mock_rte_signals[CVC_SIG_RZC_COMM_STATUS] = CVC_COMM_OK;
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 0u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL]   = 1u;  /* 1=energized (OK) */
     mock_rte_signals[CVC_SIG_BATTERY_STATUS]  = 2u;
 
     /* Unlatch phase: 300 cycles clears CAN_DUAL latch */

@@ -1,7 +1,7 @@
 ﻿---
 document_id: TSR
 title: "Technical Safety Requirements"
-version: "1.0"
+version: "1.1"
 status: draft
 iso_26262_part: 4
 aspice_process: SYS.2
@@ -1262,6 +1262,23 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 
 ---
 
+#### TSR-052: SC Standstill Motor Current Cross-Plausibility
+
+- **ASIL**: D
+- **Traces up**: FSR-026 (SG-001)
+- **Traces down**: SSR-SC-018
+- **Allocated to**: SC
+- **Verification method**: Test (SIL, HIL)
+- **Status**: draft
+
+The SC shall compare the CVC torque command (Vehicle_State CAN 0x100, byte 4 TorquePct) against the RZC motor current measurement (Motor_Current CAN 0x301, bytes 2-3 MotorCurrent_mA). If torque command equals zero AND motor current exceeds 500 mA for 2 or more consecutive SC main cycles (20 ms), the SC shall de-energize the kill relay within 5 ms, transitioning the system to SAFE_STOP.
+
+This cross-plausibility check detects hardware faults in the motor driver (e.g., BTS7960 FET gate-source short) that cause unintended motor current despite zero torque command from the control layer.
+
+**Rationale**: A motor driver FET short-circuit bypasses all software-layer torque controls. Only the SC, operating independently on a separate MCU with direct relay control, can detect and react to this fault class. The 500 mA threshold discriminates genuine faults from measurement noise; the 2-cycle debounce prevents false trips from transient current spikes.
+
+---
+
 ## 5. Requirements Traceability Summary
 
 ### 5.1 FSR to TSR Mapping
@@ -1293,6 +1310,7 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 | FSR-023 | B | TSR-043, TSR-044, TSR-045 |
 | FSR-024 | D | TSR-046, TSR-047 |
 | FSR-025 | D | TSR-048, TSR-049 |
+| FSR-026 | D | TSR-052 |
 
 ### 5.2 TSR to ECU Allocation Summary
 
@@ -1301,17 +1319,17 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 | CVC (STM32G474RE) | TSR-001, TSR-002, TSR-003, TSR-004, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-033, TSR-034, TSR-035, TSR-036, TSR-037, TSR-038, TSR-039, TSR-043, TSR-046, TSR-047 |
 | FZC (STM32G474RE) | TSR-010, TSR-011, TSR-012, TSR-013, TSR-014, TSR-015, TSR-016, TSR-017, TSR-018, TSR-019, TSR-020, TSR-021, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-038, TSR-044, TSR-046, TSR-047, TSR-048 |
 | RZC (STM32G474RE) | TSR-005, TSR-006, TSR-007, TSR-008, TSR-009, TSR-022, TSR-023, TSR-024, TSR-025, TSR-026, TSR-031, TSR-038, TSR-040, TSR-046, TSR-047 |
-| SC (TMS570LC43x) | TSR-022, TSR-024, TSR-027, TSR-028, TSR-029, TSR-030, TSR-031, TSR-038, TSR-041, TSR-042, TSR-045, TSR-046, TSR-049, TSR-050, TSR-051 |
+| SC (TMS570LC43x) | TSR-022, TSR-024, TSR-027, TSR-028, TSR-029, TSR-030, TSR-031, TSR-038, TSR-041, TSR-042, TSR-045, TSR-046, TSR-049, TSR-050, TSR-051, TSR-052 |
 
 ### 5.3 ASIL Distribution
 
 | ASIL | Count | TSRs |
 |------|-------|------|
-| D | 26 | TSR-001, TSR-002, TSR-003, TSR-004, TSR-005, TSR-010, TSR-011, TSR-012, TSR-013, TSR-015, TSR-016, TSR-017, TSR-022, TSR-023, TSR-024, TSR-028, TSR-029, TSR-030, TSR-031, TSR-032, TSR-035, TSR-036, TSR-037, TSR-046, TSR-047, TSR-048, TSR-049 |
+| D | 27 | TSR-001, TSR-002, TSR-003, TSR-004, TSR-005, TSR-010, TSR-011, TSR-012, TSR-013, TSR-015, TSR-016, TSR-017, TSR-022, TSR-023, TSR-024, TSR-028, TSR-029, TSR-030, TSR-031, TSR-032, TSR-035, TSR-036, TSR-037, TSR-046, TSR-047, TSR-048, TSR-049, TSR-052 |
 | C | 17 | TSR-007, TSR-014, TSR-018, TSR-019, TSR-020, TSR-021, TSR-025, TSR-026, TSR-027, TSR-038, TSR-039, TSR-040, TSR-041, TSR-042, TSR-045, TSR-050, TSR-051 |
 | B | 4 | TSR-033, TSR-034, TSR-043, TSR-044 |
 | A | 4 | TSR-006, TSR-008, TSR-009 |
-| **Total** | **51** | |
+| **Total** | **52** | |
 
 ## 6. Open Items and Assumptions
 
@@ -1342,4 +1360,5 @@ If any runtime self-test fails, the SC shall de-energize the kill relay (TSR-030
 |---------|------|--------|---------|
 | 0.1 | 2026-02-21 | System | Initial stub |
 | 1.0 | 2026-02-21 | System | Complete TSR specification: 51 requirements (TSR-001 to TSR-051), full traceability, ECU allocation |
+| 1.1 | 2026-03-10 | An Dao | Added TSR-052 (SC Standstill Motor Current Cross-Plausibility) to close FSR-026/SSR-SC-018 traceability gap |
 
