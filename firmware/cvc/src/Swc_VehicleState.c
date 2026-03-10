@@ -563,13 +563,12 @@ void Swc_VehicleState_MainFunction(void)
                 }
             }
 
-#ifdef PLATFORM_POSIX
-            /* SIL: start post-INIT grace period — zone controllers may still
-             * be sending stale brake_fault / motor_cutoff after container
-             * restart.  Suppress ConfirmFault for a few more seconds. */
+            /* Start post-INIT grace period (0 on bare metal = transparent).
+             * SIL: absorbs stale zone-controller signals after restart. */
             post_init_grace_counter = CVC_POST_INIT_GRACE_CYCLES;
-            VSM_DIAG("post-INIT grace: %u cycles", (unsigned)post_init_grace_counter);
-#endif
+            if (post_init_grace_counter > 0u) {
+                VSM_DIAG("post-INIT grace: %u cycles", (unsigned)post_init_grace_counter);
+            }
 
             (void)BswM_RequestMode(CVC_ECU_ID_CVC, BSWM_RUN);
             VSM_DIAG("INIT -> RUN (heartbeats confirmed)");
@@ -722,10 +721,10 @@ void Swc_VehicleState_MainFunction(void)
      * and leaves counters at unpredictable values when INIT->RUN fires.
      * Suppressing during INIT ensures counters start at 0 for RUN.
      *
-     * SIL (PLATFORM_POSIX): also suppressed during post-INIT grace period.
-     * After Docker container restart, zone controllers may send stale
-     * brake_fault / motor_cutoff for a few seconds after CVC enters RUN.
-     * The grace counter counts down to zero then normal detection resumes. */
+     * Also suppressed during post-INIT grace period (0 on bare metal =
+     * transparent).  SIL: absorbs stale zone-controller signals after
+     * container restart.  Grace counter counts down to zero, then normal
+     * detection resumes.  Platform-equivalent code path. */
     {
         uint8 suppress_faults = FALSE;
 
@@ -734,7 +733,6 @@ void Swc_VehicleState_MainFunction(void)
             suppress_faults = TRUE;
         }
 
-#ifdef PLATFORM_POSIX
         if (post_init_grace_counter > 0u)
         {
             post_init_grace_counter--;
@@ -746,7 +744,6 @@ void Swc_VehicleState_MainFunction(void)
             }
 #endif
         }
-#endif
 
         if (suppress_faults == FALSE)
         {

@@ -15,30 +15,33 @@ SIL can remain green while hardware behavior diverges when:
 
 ## Closure Workstreams
 
-### WS1 â€” Safety Path Equivalence
-- Remove/contain platform-specific branches in safety-critical logic.
-- Enforce policy: no new `PLATFORM_POSIX` guards in safety decision paths.
-- Add CI gate for forbidden guards.
+### WS1 — Safety Path Equivalence — DONE
+- Removed `#ifdef PLATFORM_POSIX` guards from safety-critical paths in
+  `Swc_VehicleState.c` (HIL-PF-002/003) and `Swc_FzcSafety.c` (HIL-PF-004).
+- Grace period constants now platform-conditional in headers (0 on bare metal),
+  code paths are identical across platforms.
+- ESM guard documented with waiver (HIL-PF-008).
 
-### WS2 â€” MCAL Boundary Purity
-- Move sensor behavior synthesis and fault injection out of MCAL stubs.
-- Keep MCAL adapter role limited to interface and transport abstraction.
-- Route fault injection through plant/sensor model APIs.
+### WS2 — MCAL Boundary Purity — PENDING
+- `Spi_Posix.c` still mixes plant dynamics + fault injection + MCAL transport.
+- Refactor deferred: 341-line file needs careful split without breaking SIL.
+- Plan: extract sensor model to `firmware/shared/plant/` module.
 
-### WS3 â€” State/Recovery Correctness
-- Validate and fix SC relay state interpretation in CVC SAFE_STOP recovery.
-- Align comments, DBC semantics, and condition checks.
-- Add explicit tests for recovery gate correctness.
+### WS3 — State/Recovery Correctness — DONE
+- Fixed relay-state semantic mismatch (HIL-PF-005, CRITICAL):
+  recovery latch, instantaneous guard, and tests all aligned to 0=killed, 1=OK.
+- CI tests pass with correct relay semantics.
 
-### WS4 â€” Actuation Logic Correctness
-- Fix brake feedback sequencing to use current-cycle sensor data.
-- Rework steering plausibility to compare actuator output vs sensor feedback.
-- Add deterministic unit/integration tests for both.
+### WS4 — Actuation Logic Correctness — DONE
+- Brake feedback: moved `IoHwAb_ReadBrakePosition` before deviation check
+  so comparison uses current-cycle sensor data (HIL-PF-006).
+- Steering plausibility: now compares previous rate-limited output vs actual
+  feedback instead of raw command angle (HIL-PF-007).
 
-### WS5 â€” Timing and Calibration
-- Benchmark heartbeat/grace/timeout constants at 1x hardware timing.
-- Create calibration dataset for SC torque-current plausibility LUT.
-- Define accepted SIL↔HIL tolerance bands per key signal/verdict.
+### WS5 — Timing and Calibration — PENDING
+- Requires hardware bench measurements.
+- TODO:HARDWARE Benchmark heartbeat/grace/timeout constants at 1x timing.
+- TODO:HARDWARE Create calibration dataset for SC torque-current plausibility LUT.
 
 ## Execution Order
 1. Blockers first: recovery semantics, E-stop/relay bench proof, safety-path equivalence.

@@ -278,8 +278,25 @@ void Swc_Brake_MainFunction(void)
     Pwm_SetDutyCycle(BRAKE_PWM_CHANNEL, (uint16)brake_cmd);
 
     /* ----------------------------------------------------------
-     * Step 6: Feedback verification (simulated)
-     *         Compare commanded duty vs previous cycle's position.
+     * Step 5b: Read actual brake position from sensor (IoHwAb -> ADC).
+     *          Must read BEFORE deviation check so comparison uses
+     *          current-cycle feedback, not previous cycle's stale value.
+     *          In SIL: ADC returns value injected by Swc_FzcSensorFeeder.
+     *          On real HW: ADC reads physical potentiometer feedback.
+     * ---------------------------------------------------------- */
+    {
+        uint16 raw_pos = 0u;
+        Std_ReturnType pos_ret = IoHwAb_ReadBrakePosition(&raw_pos);
+        if (pos_ret == E_OK) {
+            /* IoHwAb returns 0-1000 (ADC counts), scale to 0-100% */
+            Brake_Position = (uint8)(raw_pos / 10u);
+        }
+        /* If read fails, keep previous Brake_Position (fail-safe: stale value) */
+    }
+
+    /* ----------------------------------------------------------
+     * Step 6: Feedback verification
+     *         Compare commanded duty vs current sensor position.
      *         If deviation exceeds threshold for N debounce cycles,
      *         declare PWM deviation fault.
      * ---------------------------------------------------------- */
@@ -303,19 +320,6 @@ void Swc_Brake_MainFunction(void)
         } else {
             Brake_FaultDebounceCounter = 0u;
         }
-    }
-
-    /* Read actual brake position from sensor (IoHwAb -> ADC).
-     * In SIL: ADC returns value injected by Swc_FzcSensorFeeder.
-     * On real HW: ADC reads physical potentiometer feedback. */
-    {
-        uint16 raw_pos = 0u;
-        Std_ReturnType pos_ret = IoHwAb_ReadBrakePosition(&raw_pos);
-        if (pos_ret == E_OK) {
-            /* IoHwAb returns 0-1000 (ADC counts), scale to 0-100% */
-            Brake_Position = (uint8)(raw_pos / 10u);
-        }
-        /* If read fails, keep previous Brake_Position (fail-safe: stale value) */
     }
 
 #ifdef SIL_DIAG

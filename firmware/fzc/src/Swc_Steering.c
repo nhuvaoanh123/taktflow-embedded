@@ -374,23 +374,27 @@ void Swc_Steering_MainFunction(void)
 
     /* ----------------------------------------------------------
      * Step 5: Plausibility check (only if no prior fault this cycle)
-     *         |cmd_angle - actual_feedback| > threshold
+     *         |prev_output - actual_feedback| > threshold
+     *         Uses previous cycle's rate-limited output (what was actually
+     *         commanded to the servo) vs current sensor feedback.
+     *         This catches actuator faults without false-tripping on the
+     *         rate limiter constraining the command.
      * ---------------------------------------------------------- */
     if (new_fault == FZC_STEER_NO_FAULT) {
-        /* Compare commanded angle with actual feedback (not output angle) */
-        plaus_diff = Steering_AbsDiffSint16(cmd_angle, actual_angle);
+        sint16 prev_output_deg = (sint16)(Steering_PrevAngle10 / (sint16)DEG_TO_TENTHS);
+        plaus_diff = Steering_AbsDiffSint16(prev_output_deg, actual_angle);
 
         if (plaus_diff >= (uint16)Steering_CfgPtr->plausThreshold) {
             Steering_PlausDebounce++;
-            STR_DIAG("PLAUS cmd=%d act=%d diff=%u deb=%u/%u",
-                     (int)cmd_angle, (int)actual_angle,
+            STR_DIAG("PLAUS out=%d act=%d diff=%u deb=%u/%u",
+                     (int)prev_output_deg, (int)actual_angle,
                      (unsigned)plaus_diff,
                      (unsigned)Steering_PlausDebounce,
                      (unsigned)Steering_CfgPtr->plausDebounce);
             if (Steering_PlausDebounce >= Steering_CfgPtr->plausDebounce) {
                 new_fault = FZC_STEER_PLAUSIBILITY;
-                STR_DIAG("!! PLAUS FAULT cmd=%d act=%d diff=%u",
-                         (int)cmd_angle, (int)actual_angle,
+                STR_DIAG("!! PLAUS FAULT out=%d act=%d diff=%u",
+                         (int)prev_output_deg, (int)actual_angle,
                          (unsigned)plaus_diff);
             }
         } else {

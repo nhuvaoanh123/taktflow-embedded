@@ -215,8 +215,15 @@ int main(void)
     SC_Monitoring_Init();       /* SWR-SC-030: SC_Status TX init */
     SC_State_Init();            /* GAP-SC-006: state machine starts in INIT */
     /* ESM lockstep monitoring — define SC_ESM_ENABLED to activate.
-     * Currently disabled: CCM-R5F persistent error triggers ESM ISR infinite loop.
-     * TODO:HARDWARE Re-enable after lockstep error root cause is resolved. */
+     * WAIVER HIL-PF-008: Temporarily disabled because CCM-R5F (CPU lockstep
+     * comparator) asserts a persistent ESM Group 2 error on the TMS570LC43x
+     * LaunchPad, causing SC_ESM_Init() to enter an infinite ISR loop.
+     * Root cause: CPU1 lockstep diagnostic test leaves comparator in error
+     * state until power cycle.  Must debug with CCS JTAG before re-enabling.
+     * TODO:HARDWARE Re-enable after lockstep error root cause is resolved.
+     * Safety impact: ESM channel 2 (lockstep) not monitored at runtime.
+     * Compensating measure: SC self-test (startup + periodic) covers RAM,
+     * flash CRC, CAN, and GPIO; lockstep is only runtime-relevant. */
 #ifdef SC_ESM_ENABLED
     SC_ESM_Init();
 #endif

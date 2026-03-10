@@ -65,8 +65,8 @@ static uint8   Safety_SelfTestDone;
 
 /** @brief  Post-boot grace counter — suppresses motor cutoff assertion
  *          after boot to absorb startup transients (SC E-Stop, lidar
- *          timeout, brake stabilization).  Only set to non-zero on SIL
- *          (PLATFORM_POSIX).  On bare metal stays at 0 (transparent). */
+ *          timeout, brake stabilization).  Platform-equivalent code path;
+ *          0 on bare metal (transparent), >0 on SIL. */
 static uint16  Safety_GraceCounter;
 
 /* ==================================================================
@@ -78,11 +78,8 @@ void Swc_FzcSafety_Init(void)
     Safety_WdiToggle    = 0u;
     Safety_Status       = SAFETY_STATUS_OK;
     Safety_SelfTestDone = FALSE;
-    Safety_GraceCounter = 0u;
-
-#ifdef PLATFORM_POSIX
+    /* Grace counter: 0 on bare metal (transparent), >0 on SIL */
     Safety_GraceCounter = FZC_POST_INIT_GRACE_CYCLES;
-#endif
 
     Safety_Initialized  = TRUE;
 }

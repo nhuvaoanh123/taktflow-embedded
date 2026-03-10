@@ -144,14 +144,15 @@
   #endif
 #endif
 
-/** @brief  SIL-only: cycles to suppress ConfirmFault after INIT->RUN.
- *          After container restart, zone controllers may still send stale
- *          brake_fault / motor_cutoff for a few seconds after CVC enters RUN.
- *          This grace period absorbs those transients in Docker only.
- *          1000 × 10ms = 10s. Not compiled on bare metal. */
-#ifdef PLATFORM_POSIX
-  #ifndef CVC_POST_INIT_GRACE_CYCLES
+/** @brief  Cycles to suppress ConfirmFault after INIT->RUN.
+ *          SIL: absorbs stale zone-controller signals after container restart.
+ *          Bare metal: 0 (transparent — no grace delay).
+ *          Platform-equivalent code path; only the constant differs. */
+#ifndef CVC_POST_INIT_GRACE_CYCLES
+  #ifdef PLATFORM_POSIX
     #define CVC_POST_INIT_GRACE_CYCLES  1000u  /* 10s — Docker fault signal settling */
+  #else
+    #define CVC_POST_INIT_GRACE_CYCLES  0u     /* Bare metal: no grace needed */
   #endif
 #endif
 

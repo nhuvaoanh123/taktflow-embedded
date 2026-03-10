@@ -235,14 +235,18 @@
 #define FZC_SELF_TEST_ITEMS             7u
 
 /* ====================================================================
- * FZC Safety Startup Grace Period (SIL only)
+ * FZC Safety Startup Grace Period
  * Suppresses motor cutoff assertion for N cycles after boot to absorb
  * startup transients (SC E-Stop, lidar timeout, brake stabilization).
- * On bare metal the value stays at 0 (transparent — guards always pass).
+ * Bare metal: 0 (transparent).  Platform-equivalent code path.
  * ==================================================================== */
 
 #ifndef FZC_POST_INIT_GRACE_CYCLES
-#define FZC_POST_INIT_GRACE_CYCLES   500u   /* 5 seconds at 10ms cycle */
+  #ifdef PLATFORM_POSIX
+    #define FZC_POST_INIT_GRACE_CYCLES   500u   /* 5s at 10ms cycle */
+  #else
+    #define FZC_POST_INIT_GRACE_CYCLES   0u     /* Bare metal: no grace */
+  #endif
 #endif
 
 /* ====================================================================
