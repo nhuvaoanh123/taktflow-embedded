@@ -4,7 +4,7 @@
  * @date    2026-02-21
  *
  * @details Implements a table-driven state machine for the CVC with 6 states
- *          and 14 events. The transition table is a const 2D array that maps
+ *          and 17 events. The transition table is a const 2D array that maps
  *          (current_state, event) -> next_state. Invalid combinations map to
  *          CVC_STATE_INVALID (0xFF) and are rejected.
  *
@@ -44,7 +44,7 @@ static const char * const diag_event_names[CVC_EVT_COUNT] = {
     "ESTOP", "SC_KILL",
     "FAULT_CLR", "CAN_RESTORED", "VEH_STOPPED",
     "MOTOR_CUTOFF", "BRAKE_FAULT", "STEER_FAULT",
-    "BATT_WARN", "BATT_CRIT"
+    "BATT_WARN", "BATT_CRIT", "CREEP"
 };
 #else
 #define VSM_DIAG(fmt, ...) ((void)0)
@@ -94,7 +94,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_CREEP_FAULT        -> (invalid)    */
     },
     /* CVC_STATE_RUN */
     {
@@ -113,7 +114,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
         CVC_STATE_DEGRADED,    /* EVT_STEERING_FAULT     -> DEGRADED     */
         CVC_STATE_DEGRADED,    /* EVT_BATTERY_WARN       -> DEGRADED     */
-        CVC_STATE_LIMP         /* EVT_BATTERY_CRIT       -> LIMP         */
+        CVC_STATE_LIMP,        /* EVT_BATTERY_CRIT       -> LIMP         */
+        CVC_STATE_SAFE_STOP    /* EVT_CREEP_FAULT        -> SAFE_STOP    */
     },
     /* CVC_STATE_DEGRADED */
     {
@@ -132,7 +134,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
         CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
         CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (already degraded) */
-        CVC_STATE_LIMP         /* EVT_BATTERY_CRIT       -> LIMP         */
+        CVC_STATE_LIMP,        /* EVT_BATTERY_CRIT       -> LIMP         */
+        CVC_STATE_SAFE_STOP    /* EVT_CREEP_FAULT        -> SAFE_STOP    */
     },
     /* CVC_STATE_LIMP */
     {
@@ -151,7 +154,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_SAFE_STOP,   /* EVT_BRAKE_FAULT        -> SAFE_STOP    */
         CVC_STATE_SAFE_STOP,   /* EVT_STEERING_FAULT     -> SAFE_STOP    */
         CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
-        CVC_STATE_SAFE_STOP    /* EVT_BATTERY_CRIT       -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP,   /* EVT_BATTERY_CRIT       -> SAFE_STOP    */
+        CVC_STATE_SAFE_STOP    /* EVT_CREEP_FAULT        -> SAFE_STOP    */
     },
     /* CVC_STATE_SAFE_STOP */
     {
@@ -170,7 +174,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_CREEP_FAULT        -> (invalid)    */
     },
     /* CVC_STATE_SHUTDOWN */
     {
@@ -189,7 +194,8 @@ static const uint8 transition_table[CVC_STATE_COUNT][CVC_EVT_COUNT] = {
         CVC_STATE_INVALID,     /* EVT_BRAKE_FAULT        -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_STEERING_FAULT     -> (invalid)    */
         CVC_STATE_INVALID,     /* EVT_BATTERY_WARN       -> (invalid)    */
-        CVC_STATE_INVALID      /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID,     /* EVT_BATTERY_CRIT       -> (invalid)    */
+        CVC_STATE_INVALID      /* EVT_CREEP_FAULT        -> (invalid)    */
     }
 };
 
@@ -228,6 +234,9 @@ static uint16 fault_unlatch_count[CVC_LATCH_COUNT];
  * Confirmation-read pattern — ISO 26262 debounce + fresh Com + E2E
  * ================================================================== */
 
+/** @brief  Creep guard debounce counter (SG-012 / HE-017 ASIL D) */
+static uint16 creep_debounce_count;
+
 /** @brief  Per-fault debounce counters: [brake, motor_cutoff_fzc, steering, motor_fault_rzc] */
 static uint8 fault_confirm_count[4];
 
@@ -264,6 +273,7 @@ void Swc_VehicleState_Init(void)
     init_hold_counter      = 0u;
     safe_stop_clear_count  = 0u;
     post_init_grace_counter = 0u;
+    creep_debounce_count    = 0u;
 
     for (i = 0u; i < CVC_FAULT_CONFIRM_COUNT; i++)
     {
@@ -469,6 +479,9 @@ void Swc_VehicleState_MainFunction(void)
     uint32 sc_relay_kill   = 0u;
     uint32 battery_status  = 2u;  /* Default NORMAL if read fails */
     uint32 motor_fault_rzc = 0u;
+    uint32 motor_speed     = 0u;
+    uint32 torque_request  = 0u;
+    uint32 pedal_position  = 0u;
 
     if (initialized != TRUE)
     {
@@ -486,6 +499,9 @@ void Swc_VehicleState_MainFunction(void)
     (void)Rte_Read(CVC_SIG_SC_RELAY_KILL,   &sc_relay_kill);
     (void)Rte_Read(CVC_SIG_BATTERY_STATUS, &battery_status);
     (void)Rte_Read(CVC_SIG_MOTOR_FAULT_RZC, &motor_fault_rzc);
+    (void)Rte_Read(CVC_SIG_MOTOR_SPEED,    &motor_speed);
+    (void)Rte_Read(CVC_SIG_TORQUE_REQUEST, &torque_request);
+    (void)Rte_Read(CVC_SIG_PEDAL_POSITION, &pedal_position);
 
 #ifdef SIL_DIAG
     {
@@ -535,9 +551,10 @@ void Swc_VehicleState_MainFunction(void)
             self_test_pass_pending = FALSE;
             current_state = CVC_STATE_RUN;
 
-            /* Reset ConfirmFault counters — ensure fresh detection from RUN.
-             * Defense-in-depth: counters should already be 0 (ConfirmFault
-             * is suppressed during INIT), but reset explicitly. */
+            /* Reset ConfirmFault + creep counters — ensure fresh detection
+             * from RUN.  Defense-in-depth: counters should already be 0
+             * (ConfirmFault is suppressed during INIT), but reset explicitly. */
+            creep_debounce_count = 0u;
             {
                 uint8 fi;
                 for (fi = 0u; fi < CVC_FAULT_CONFIRM_COUNT; fi++)
@@ -569,11 +586,12 @@ void Swc_VehicleState_MainFunction(void)
     }
 
     /* SC relay kill — second highest priority.
+     * sc_relay_kill holds RelayState from DBC: 1=energized (OK), 0=killed.
+     * Fire SC_KILL when relay is de-energized (== 0).
      * Guard: only after leaving INIT AND after post-INIT grace, so
-     * boot-time SC transients (relay killed before all ECUs send
-     * heartbeats) are absorbed by INIT hold + grace period.
+     * boot-time SC startup delay is absorbed.
      * On bare metal post_init_grace_counter is always 0 (transparent). */
-    if ((sc_relay_kill != 0u) && (current_state != CVC_STATE_INIT)
+    if ((sc_relay_kill == 0u) && (current_state != CVC_STATE_INIT)
         && (post_init_grace_counter == 0u))
     {
         Swc_VehicleState_OnEvent(CVC_EVT_SC_KILL);
@@ -633,6 +651,49 @@ void Swc_VehicleState_MainFunction(void)
         else
         {
             /* battery_status == 2 (NORMAL) — no action */
+        }
+    }
+
+    /* Creep guard (SG-012 / HE-017 ASIL D) — detect torque at standstill
+     * without driver intent.  Uses latching detection: once torque appears
+     * while motor is at standstill, keep counting even as motor spins up
+     * (the spin-up IS the creep).  Only reset when torque drops (pedal
+     * released) — that proves the condition was intentional or cleared.
+     *
+     * Guards:
+     * - pedal_fault != 0: pedal fault path handles that case
+     * - pedal_position > dead zone: driver IS pressing pedal — not a creep.
+     *   If pedal input is excessive, the runaway acceleration path (DEGRADED
+     *   with torque limiting) handles it.  Creep = torque WITHOUT pedal. */
+    if (((current_state == CVC_STATE_RUN) ||
+         (current_state == CVC_STATE_DEGRADED) ||
+         (current_state == CVC_STATE_LIMP)) &&
+        (pedal_fault == 0u) &&
+        (pedal_position < CVC_CREEP_TORQUE_THRESH))
+    {
+        if (torque_request > CVC_CREEP_TORQUE_THRESH)
+        {
+            /* Torque present — start or continue counting if motor was/is
+             * at standstill when we first detected it */
+            if ((creep_debounce_count > 0u) ||
+                (motor_speed < CVC_CREEP_SPEED_THRESH))
+            {
+                creep_debounce_count++;
+                if (creep_debounce_count >= CVC_CREEP_DEBOUNCE_TICKS)
+                {
+                    Dem_ReportErrorStatus(CVC_DTC_CREEP_FAULT, DEM_EVENT_STATUS_FAILED);
+                    Swc_VehicleState_OnEvent(CVC_EVT_CREEP_FAULT);
+                    VSM_DIAG("CREEP FAULT: rpm=%u torque=%u pedal=%u -> SAFE_STOP",
+                             (unsigned)motor_speed, (unsigned)torque_request,
+                             (unsigned)pedal_position);
+                }
+            }
+            /* else: torque present but motor already spinning — normal driving */
+        }
+        else
+        {
+            /* No torque request — clear the latch */
+            creep_debounce_count = 0u;
         }
     }
 

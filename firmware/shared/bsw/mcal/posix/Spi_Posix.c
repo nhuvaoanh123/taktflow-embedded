@@ -3,9 +3,9 @@
  * @brief   POSIX SPI stub — implements Spi_Hw_* externs from Spi.h
  * @date    2026-02-23
  *
- * @details Simulates dual AS5048A pedal angle sensors for the CVC SIL.
- *          By default, sensor values oscillate in the torque dead zone
- *          (200-800 of 14-bit range) so the vehicle stays stationary.
+ * @details Simulates AS5048A angle sensors for SIL.  Channel-aware defaults:
+ *          - Channel 0 (pedal):    dead-zone oscillation 200-800 (torque = 0)
+ *          - Channel 1+ (steering): center oscillation 8191 ±40 (0° angle)
  *
  *          When SPI_PEDAL_UDP_PORT env var is set (CVC container only),
  *          accepts UDP packets to override the pedal angle for fault
@@ -32,23 +32,37 @@
 
 /* ---- UDP pedal override constants ---- */
 #define SPI_OVERRIDE_CLEAR  0xFFFFu  /**< Packet value to clear override    */
-#define SPI_OVERRIDE_STEP   7u       /**< Oscillation step per Transmit call */
+#define SPI_OVERRIDE_STEP   11u      /**< Oscillation step — must be >= stuckThreshold (10) */
 #define SPI_OVERRIDE_RANGE  40u      /**< Max offset from target angle       */
 
-/* ---- Default dead-zone oscillation state (pedal sensors) ---- */
+/* ---- Default dead-zone oscillation state (Channel 0 / pedal sensors) ---- */
 
 /**
- * @brief  Simulated sensor angle — oscillates to avoid stuck detection
+ * @brief  Simulated pedal sensor angle — oscillates to avoid stuck detection
  *
  * Range 200-800 of 14-bit (0-16383) keeps pedal position in the torque
  * dead zone (position < 67 -> torque = 0), so simulated vehicle stays
- * stationary.  Step 7 per Spi_Hw_Transmit call.
+ * stationary.  Step 11 per Spi_Hw_Transmit call.
  * Pedal SWC reads 2 sensors per 10ms cycle = 2 Hw_Transmit calls.
- * Sensor-to-sensor delta = 7 (< plausibility threshold 819).
- * Cycle-to-cycle delta per sensor = 14 (>= stuck threshold 10).
+ * Sensor-to-sensor delta = 11 (< plausibility threshold 819).
+ * Cycle-to-cycle delta per sensor = 22 (>= stuck threshold 10).
  */
 static uint16 spi_sim_angle = 400u;
 static uint8  spi_sim_up    = 1u;
+
+/* ---- Default center oscillation state (Channel 1+ / steering sensors) ---- */
+
+/**
+ * @brief  Simulated steering sensor default — center with oscillation
+ *
+ * Raw 8191 = 14-bit midpoint → 0° actual angle.
+ * Oscillation ±40 raw gives ±0.2° — well within 5° plausibility threshold.
+ * Without this, channels > 0 would use the pedal dead-zone (200-800) which
+ * maps to -44° to -41° steering angle and instantly triggers a plausibility
+ * fault against the 0° commanded position.
+ */
+static uint16 spi_steer_default_offset = 0u;
+static uint8  spi_steer_default_up     = 1u;
 
 /* ---- Steering angle injection state (SIL sensor feeder) ---- */
 
@@ -158,7 +172,6 @@ Std_ReturnType Spi_Hw_Init(void)
 Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
                                 uint16* RxBuf, uint8 Length)
 {
-    (void)Channel;
     (void)TxBuf;
 
     /* ---- Drain UDP socket for latest override command ---- */
@@ -259,9 +272,10 @@ Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
                 }
             }
         }
-        else
+        else if (Channel == 0u)
         {
-            /* Default: dead-zone oscillation (200-800) */
+            /* Channel 0 (pedal): dead-zone oscillation (200-800).
+             * Maps to pedal position < 67 → torque = 0, vehicle stays still. */
             RxBuf[0] = spi_sim_angle & 0x3FFFu;
 
             if (spi_sim_up != 0u)
@@ -278,6 +292,37 @@ Std_ReturnType Spi_Hw_Transmit(uint8 Channel, const uint16* TxBuf,
                 if (spi_sim_angle < 200u)
                 {
                     spi_sim_up = 1u;
+                }
+            }
+        }
+        else
+        {
+            /* Channel 1+ (steering): center position with oscillation.
+             * Raw 8191 = 14-bit midpoint → 0° actual angle.
+             * Oscillation ±40 raw → ±0.2° (within 5° plausibility threshold).
+             * Prevents false steering plausibility fault from pedal dead-zone
+             * values (200-800 → -44°) that would fire on every boot. */
+            uint16 center = 8191u;
+            RxBuf[0] = (uint16)((center + spi_steer_default_offset) & 0x3FFFu);
+
+            if (spi_steer_default_up != 0u)
+            {
+                spi_steer_default_offset += SPI_OVERRIDE_STEP;
+                if (spi_steer_default_offset > SPI_OVERRIDE_RANGE)
+                {
+                    spi_steer_default_up = 0u;
+                }
+            }
+            else
+            {
+                if (spi_steer_default_offset >= SPI_OVERRIDE_STEP)
+                {
+                    spi_steer_default_offset -= SPI_OVERRIDE_STEP;
+                }
+                else
+                {
+                    spi_steer_default_offset = 0u;
+                    spi_steer_default_up     = 1u;
                 }
             }
         }

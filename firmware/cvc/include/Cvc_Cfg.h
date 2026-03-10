@@ -96,6 +96,7 @@
 #define CVC_DTC_NVM_CRC_FAIL        15u   /* 0xC60100 */
 #define CVC_DTC_SELF_TEST_FAIL      16u   /* 0xC60200 */
 #define CVC_DTC_DISPLAY_COMM        17u   /* 0xC70100 */
+#define CVC_DTC_CREEP_FAULT         18u   /* 0xC80100 */
 
 /* ====================================================================
  * E2E Data IDs
@@ -274,7 +275,8 @@
 #define CVC_EVT_STEERING_FAULT      13u
 #define CVC_EVT_BATTERY_WARN        14u
 #define CVC_EVT_BATTERY_CRIT        15u
-#define CVC_EVT_COUNT               16u
+#define CVC_EVT_CREEP_FAULT         16u
+#define CVC_EVT_COUNT               17u
 
 /* Invalid/no transition sentinel */
 #define CVC_STATE_INVALID          0xFFu
@@ -301,6 +303,26 @@
 #define CVC_LATCH_IDX_PEDAL_DUAL        5u
 #define CVC_LATCH_IDX_CAN_DUAL          6u
 #define CVC_LATCH_IDX_BATTERY_CRIT      7u
-#define CVC_LATCH_COUNT                 8u
+#define CVC_LATCH_IDX_CREEP             8u
+#define CVC_LATCH_COUNT                 9u
+
+/* ====================================================================
+ * Creep Guard Constants (SG-012 / HE-017 ASIL D)
+ * ==================================================================== */
+
+/** @brief  Motor RPM below this threshold = "standstill" */
+#define CVC_CREEP_SPEED_THRESH      50u
+
+/** @brief  Torque request above this (0-1000 scale, 0.1% units) = non-trivial.
+ *          50 = 5.0% torque request. */
+#define CVC_CREEP_TORQUE_THRESH     50u
+
+/** @brief  Consecutive cycles with creep condition before fault event.
+ *          SIL needs longer debounce for CAN round-trip latency. */
+#ifdef PLATFORM_POSIX
+  #define CVC_CREEP_DEBOUNCE_TICKS  50u   /* 500ms SIL */
+#else
+  #define CVC_CREEP_DEBOUNCE_TICKS  20u   /* 200ms HW  */
+#endif
 
 #endif /* CVC_CFG_H */

@@ -285,7 +285,7 @@ void Swc_CvcCom_TransmitSchedule(uint32 currentTimeMs)
         (void)Rte_Read(CVC_SIG_ESTOP_ACTIVE, &faultSig);
         if (faultSig != 0u) { faultMask |= 0x01u; }
         (void)Rte_Read(CVC_SIG_SC_RELAY_KILL, &faultSig);
-        if (faultSig != 0u) { faultMask |= 0x02u; }
+        if (faultSig == 0u) { faultMask |= 0x02u; }  /* 0=relay killed */
         (void)Rte_Read(CVC_SIG_MOTOR_CUTOFF, &faultSig);
         if (faultSig != 0u) { faultMask |= 0x04u; }
         (void)Rte_Read(CVC_SIG_BRAKE_FAULT, &faultSig);
@@ -359,7 +359,7 @@ void Swc_CvcCom_BridgeRxToRte(void)
         return;
     }
 
-    uint8  sc_relay_kill_val = 0u;
+    uint8  sc_relay_byte3 = 0x80u;   /* Default: bit7=1 (energized) */
 
     uint8  battery_status_val = 2u;  /* Default NORMAL if read fails */
 
@@ -370,10 +370,15 @@ void Swc_CvcCom_BridgeRxToRte(void)
     /* Read fault signals from Com shadow buffers */
     (void)Com_ReceiveSignal(13u, &brake_fault_val);      /* sig_rx_brake_fault */
     (void)Com_ReceiveSignal(14u, &motor_cutoff_val);     /* sig_rx_motor_cutoff */
-    (void)Com_ReceiveSignal(17u, &sc_relay_kill_val);    /* byte 3 of SC_Status 0x013 */
-    /* SC_Monitoring packs RelayState in byte 3 bit 7: 1=energized, 0=killed.
-     * CVC expects non-zero=killed. Extract bit 7 and invert. */
-    sc_relay_kill_val = ((sc_relay_kill_val & 0x80u) != 0u) ? 0u : 1u;
+    (void)Com_ReceiveSignal(17u, &sc_relay_byte3);       /* byte 3 of SC_Status 0x013 */
+    /* DBC: RelayState at bit 31 = bit 7 within byte 3.
+     * 1=energized (OK), 0=de-energized (killed).
+     * Extract bit 7 and write directly to RTE — VehicleState checks == 0
+     * for kill event.  On PDU timeout Com zeros shadow → bit7=0 → kill. */
+    {
+        uint32 sc_relay_state = (uint32)((sc_relay_byte3 >> 7u) & 1u);
+        (void)Rte_Write(CVC_SIG_SC_RELAY_KILL, sc_relay_state);
+    }
     (void)Com_ReceiveSignal(18u, &battery_status_val);   /* sig_rx_battery_status (CAN 0x303) */
     (void)Com_ReceiveSignal(20u, &steering_fault_val);   /* sig_rx_steering_fault (CAN 0x200) */
     (void)Com_ReceiveSignal(21u, &motor_fault_rzc_val);  /* sig_rx_motor_fault_rzc (CAN 0x300) */
@@ -383,7 +388,7 @@ void Swc_CvcCom_BridgeRxToRte(void)
      * — do NOT write CVC_SIG_FZC/RZC_COMM_STATUS here. */
     (void)Rte_Write(CVC_SIG_BRAKE_FAULT,    (uint32)brake_fault_val);
     (void)Rte_Write(CVC_SIG_MOTOR_CUTOFF,   (uint32)motor_cutoff_val);
-    (void)Rte_Write(CVC_SIG_SC_RELAY_KILL,  (uint32)sc_relay_kill_val);
+    /* SC_RELAY_KILL already written above after bit extraction */
     (void)Rte_Write(CVC_SIG_BATTERY_STATUS, (uint32)battery_status_val);
     (void)Rte_Write(CVC_SIG_STEERING_FAULT, (uint32)steering_fault_val);
     (void)Rte_Write(CVC_SIG_MOTOR_FAULT_RZC, (uint32)motor_fault_rzc_val);

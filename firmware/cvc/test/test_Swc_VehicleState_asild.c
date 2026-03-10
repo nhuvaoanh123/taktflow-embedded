@@ -42,6 +42,8 @@ typedef uint8 Std_ReturnType;
 #define CVC_SIG_SC_RELAY_KILL     31u
 #define CVC_SIG_BATTERY_STATUS    32u
 #define CVC_SIG_MOTOR_FAULT_RZC   33u
+#define CVC_SIG_PEDAL_POSITION    18u
+#define CVC_SIG_MOTOR_SPEED       25u
 
 /* ==================================================================
  * Vehicle State / Event / Comm definitions (from Cvc_Cfg.h)
@@ -72,7 +74,8 @@ typedef uint8 Std_ReturnType;
 #define CVC_EVT_STEERING_FAULT     13u
 #define CVC_EVT_BATTERY_WARN      14u
 #define CVC_EVT_BATTERY_CRIT      15u
-#define CVC_EVT_COUNT             16u
+#define CVC_EVT_CREEP_FAULT       16u
+#define CVC_EVT_COUNT             17u
 
 #define CVC_COMM_OK                 0u
 #define CVC_COMM_TIMEOUT            1u
@@ -98,7 +101,8 @@ typedef uint8 Std_ReturnType;
 #define CVC_LATCH_IDX_PEDAL_DUAL        5u
 #define CVC_LATCH_IDX_CAN_DUAL          6u
 #define CVC_LATCH_IDX_BATTERY_CRIT      7u
-#define CVC_LATCH_COUNT                 8u
+#define CVC_LATCH_IDX_CREEP             8u
+#define CVC_LATCH_COUNT                 9u
 
 /* ECU IDs (from Cvc_Cfg.h) */
 #define CVC_ECU_ID_CVC              0x01u
@@ -114,6 +118,16 @@ typedef uint8 Std_ReturnType;
 #define CVC_DTC_STEERING_FAULT_RX  11u
 #define CVC_DTC_BATT_UNDERVOLT    13u
 #define CVC_DTC_MOTOR_OVERCURRENT  7u
+#define CVC_DTC_CREEP_FAULT       18u
+
+/* Creep guard constants — must match Cvc_Cfg.h */
+#define CVC_CREEP_SPEED_THRESH     50u
+#define CVC_CREEP_TORQUE_THRESH    50u
+#ifdef PLATFORM_POSIX
+  #define CVC_CREEP_DEBOUNCE_TICKS 50u
+#else
+  #define CVC_CREEP_DEBOUNCE_TICKS 20u
+#endif
 
 /* DEM event status */
 #define DEM_EVENT_STATUS_FAILED     1u
