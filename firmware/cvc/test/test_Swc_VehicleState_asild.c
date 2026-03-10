@@ -1290,8 +1290,8 @@ void test_SC_kill_signal_triggers_safe_stop(void)
     get_to_run();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 
-    /* Set SC relay kill signal via RTE (simulates BridgeRxToRte path) */
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
+    /* SC relay kill: 0=killed (de-energized), triggers SAFE_STOP */
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 0u;
     Swc_VehicleState_MainFunction();
 
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_SAFE_STOP, Swc_VehicleState_GetState());
@@ -1300,23 +1300,23 @@ void test_SC_kill_signal_triggers_safe_stop(void)
 /** @verifies SWR-CVC-013 — SC relay kill ignored during INIT (boot transient) */
 void test_SC_kill_signal_ignored_in_INIT(void)
 {
-    /* Still in INIT — SC relay kill should be absorbed */
+    /* Still in INIT — SC relay kill (0=killed) should be absorbed */
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 0u;
     Swc_VehicleState_MainFunction();
 
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_INIT, Swc_VehicleState_GetState());
 }
 
-/** @verifies SWR-CVC-013 — SC relay kill = 0 does NOT trigger transition */
+/** @verifies SWR-CVC-013 — SC relay energized (1) does NOT trigger transition */
 void test_SC_kill_signal_zero_stays_run(void)
 {
     /* Get to RUN */
     get_to_run();
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());
 
-    /* SC relay kill signal is zero — no transition */
-    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 0u;
+    /* SC relay 1=energized (OK) — no transition */
+    mock_rte_signals[CVC_SIG_SC_RELAY_KILL] = 1u;
     Swc_VehicleState_MainFunction();
 
     TEST_ASSERT_EQUAL_UINT8(CVC_STATE_RUN, Swc_VehicleState_GetState());

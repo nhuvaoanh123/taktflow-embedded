@@ -779,7 +779,7 @@ void Swc_VehicleState_MainFunction(void)
          * 0 = fault clear, non-zero = fault still active. */
         const uint32 raw_signals[CVC_LATCH_COUNT] = {
             estop_active,   /* CVC_LATCH_IDX_ESTOP        */
-            sc_relay_kill,  /* CVC_LATCH_IDX_SC_KILL      */
+            (sc_relay_kill == 0u) ? 1u : 0u,  /* CVC_LATCH_IDX_SC_KILL — invert: 0=killed(fault), 1=energized(OK) */
             (motor_cutoff != 0u || motor_fault_rzc != 0u) ? 1u : 0u,  /* CVC_LATCH_IDX_MOTOR_CUTOFF */
             brake_fault,    /* CVC_LATCH_IDX_BRAKE        */
             steering_fault, /* CVC_LATCH_IDX_STEERING     */
@@ -828,7 +828,7 @@ void Swc_VehicleState_MainFunction(void)
                 (brake_fault == 0u) &&
                 (steering_fault == 0u) &&
                 (pedal_fault == 0u) &&
-                (sc_relay_kill == 0u) &&
+                (sc_relay_kill != 0u) &&  /* 1=energized(OK) */
                 (fzc_comm == CVC_COMM_OK) &&
                 (rzc_comm == CVC_COMM_OK) &&
                 (battery_status == 2u))
