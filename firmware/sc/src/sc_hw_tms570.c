@@ -1306,6 +1306,58 @@ void sc_sci_put_hex32(uint32 val)
     }
 }
 
+/* ==================================================================
+ * High-level debug functions (called unconditionally from sc_main.c)
+ * ================================================================== */
+
+void sc_hw_debug_boot_dump(void)
+{
+    uint32 ccm_dbg[9];
+    sc_ccm_debug_get(ccm_dbg);
+    sc_sci_puts("--- CCM/ESM G3 snapshot (pre-clear) ---\r\n");
+    sc_sci_puts("G3_calls="); sc_sci_put_uint(ccm_dbg[8]); sc_sci_puts("\r\n");
+    sc_sci_puts("G3_ch=");    sc_sci_put_uint(ccm_dbg[7]); sc_sci_puts("\r\n");
+    sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(ccm_dbg[0]); sc_sci_puts("\r\n");
+    sc_sci_puts("CCMSR2=");   sc_sci_put_hex32(ccm_dbg[1]); sc_sci_puts("\r\n");
+    sc_sci_puts("CCMSR3=");   sc_sci_put_hex32(ccm_dbg[2]); sc_sci_puts("\r\n");
+    sc_sci_puts("CCMSR4=");   sc_sci_put_hex32(ccm_dbg[3]); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(ccm_dbg[4]); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(ccm_dbg[5]); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(ccm_dbg[6]); sc_sci_puts("\r\n");
+    sc_sci_puts("--- current registers (post-clear) ---\r\n");
+    sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF600u); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u); sc_sci_puts("\r\n");
+    sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF538u); sc_sci_puts("\r\n");
+    sc_sci_puts("--- end dump ---\r\n");
+}
+
+void sc_hw_debug_periodic(void)
+{
+    uint32 ccm_dbg[9];
+
+    sc_sci_puts("[5s] SC: ES=0x");
+    sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC04u);  /* DCAN1 ES */
+    sc_sci_puts(" ND=0x");
+    sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC9Cu);  /* DCAN1 NEWDAT1 */
+    sc_sci_puts("\r\n");
+
+    sc_ccm_debug_get(ccm_dbg);
+    sc_sci_puts("[CCM] G3_calls="); sc_sci_put_uint(ccm_dbg[8]);
+    sc_sci_puts(" ch="); sc_sci_put_uint(ccm_dbg[7]);
+    sc_sci_puts(" CCMSR1="); sc_sci_put_hex32(ccm_dbg[0]);
+    sc_sci_puts(" CCMSR2="); sc_sci_put_hex32(ccm_dbg[1]);
+    sc_sci_puts(" CCMSR3="); sc_sci_put_hex32(ccm_dbg[2]);
+    sc_sci_puts(" CCMSR4="); sc_sci_put_hex32(ccm_dbg[3]);
+    sc_sci_puts("\r\n");
+    sc_sci_puts("[ESM] SR1="); sc_sci_put_hex32(ccm_dbg[4]);
+    sc_sci_puts(" SR3="); sc_sci_put_hex32(ccm_dbg[5]);
+    sc_sci_puts(" EKR="); sc_sci_put_hex32(ccm_dbg[6]);
+    sc_sci_puts(" now_SR1="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u);
+    sc_sci_puts(" now_SR3="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u);
+    sc_sci_puts("\r\n");
+}
+
 #endif /* PLATFORM_TMS570 */
 
 /* Appended by build fix: stub for unused EMIF referenced by HL_system.c */

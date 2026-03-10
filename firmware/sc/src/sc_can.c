@@ -30,10 +30,8 @@ extern void    dcan1_setup_mailboxes(void);
  * Defined in sc_hw_tms570.c (TMS570) and sc_hw_posix.c (SIL). */
 extern void    dcan1_transmit(uint8 mbIndex, const uint8* data, uint8 dlc);
 
-#ifdef PLATFORM_TMS570
-/** HALCoGen-generated CAN init (parity, message RAM, default config) */
+/** HALCoGen CAN init (parity, message RAM — TMS570: real, POSIX: no-op) */
 extern void canInit(void);
-#endif
 
 /* ==================================================================
  * DCAN1 Register Offsets
@@ -109,14 +107,9 @@ void SC_CAN_Init(void)
     bus_off             = FALSE;
     estop_active        = FALSE;
 
-#ifdef PLATFORM_TMS570
-    /* Use HALCoGen canInit() to properly initialize DCAN1:
-     * - Parity/ECC setup
-     * - Message RAM initialization (all 64 objects)
-     * - Default baud rate from .hcg config
-     * Then override with SC-specific settings. */
+    /* HALCoGen DCAN1 init: parity/ECC, message RAM, default baud rate.
+     * TMS570: real init. POSIX: no-op stub. */
     canInit();
-#endif
 
     /* Re-enter init mode to apply SC overrides */
     dcan1_reg_write(DCAN_CTL_OFFSET, 0x41u);    /* Init + CCE */

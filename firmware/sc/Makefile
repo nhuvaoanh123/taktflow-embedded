@@ -30,7 +30,7 @@ BUILD     := build/tms570
 CFLAGS := -mcpu=cortex-r5 -mbig-endian -mfloat-abi=hard -mfpu=vfpv3-d16 \
           -marm -Og \
           -DPLATFORM_TMS570 -D__big_endian__ -DSC_ESM_ENABLED \
-          -I$(SC_INC) -I$(HCG_INC) -I$(CGT_ROOT)/include \
+          -Icfg/platform_target -I$(SC_INC) -I$(HCG_INC) -I$(CGT_ROOT)/include \
           -Wall -Wno-unused-parameter \
           -g
 

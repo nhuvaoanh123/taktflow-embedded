@@ -76,6 +76,7 @@ BUILD_DIR     = build
 ifeq ($(TARGET),sc)
 
 # --- SC-specific configuration (no BSW) ---
+CFLAGS += -Isc/cfg/platform_posix
 CFLAGS += -Isc/include
 
 # SC sources: all .c files in sc/src/ (includes sc_hw_posix.c)

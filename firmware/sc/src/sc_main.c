@@ -38,45 +38,8 @@
 #define SC_MAIN_DIAG(fmt, ...) ((void)0)
 #endif
 
-/* ==================================================================
- * External: Platform initialization (HALCoGen-generated or mock)
- * ================================================================== */
-
-/** Initialize system clocks (PLL to 300 MHz) */
-extern void systemInit(void);
-
-/** Initialize GIO module (pin directions, defaults) */
-extern void gioInit(void);
-
-/** Initialize RTI timer for 10ms tick */
-extern void rtiInit(void);
-
-/** Start RTI counter */
-extern void rtiStartCounter(void);
-
-/** Check if RTI tick flag is set (10ms elapsed) */
-extern boolean rtiIsTickPending(void);
-
-/** Clear RTI tick flag */
-extern void rtiClearTick(void);
-
-/** Set GIO pin direction (0=input, 1=output) */
-extern void gioSetDirection(uint8 port, uint8 pin, uint8 direction);
-
-#ifdef PLATFORM_TMS570
-/* ==================================================================
- * External: SCI debug UART (from sc_hw_tms570.c)
- * ================================================================== */
-
-extern void sc_sci_init(void);
-extern void sc_sci_puts(const char* str);
-extern void sc_sci_put_uint(uint32 val);
-extern void sc_sci_put_hex32(uint32 val);
-extern void sc_ccm_debug_get(uint32 *out);
-extern void sc_het_led_on(void);
-extern void sc_het_led_off(void);
-extern void sc_het_led_set(uint8 led2, uint8 led3);
-#endif
+/* Platform hardware functions (link-time selection: sc_hw_tms570.c or sc_hw_posix.c) */
+#include "sc_hw.h"
 
 /* ==================================================================
  * Internal: Configure GIO pins
@@ -144,16 +107,13 @@ int main(void)
 {
     uint8 startup_result;
     boolean all_checks_ok;
-#ifdef PLATFORM_TMS570
     uint16 dbg_tick_counter = 0u;  /* 5s periodic debug print */
     uint8 hb_blink_counter = 0u;  /* heartbeat LED blink (GIOB[6:7]) */
-#endif
 #ifdef SIL_DIAG
     uint16 sil_diag_tick = 0u;
 #endif
 
     /* ---- 0. LED+UART -- prove CPU reaches main() ---- */
-#ifdef PLATFORM_TMS570
     /* LED checkpoint: startup ASM turns GIOB[6:7] ON.
      *   Both stay ON  = CPU stuck before main
      *   Both go OFF   = main reached
@@ -161,48 +121,22 @@ int main(void)
     sc_het_led_off();
     sc_sci_init();
     sc_het_led_on();
-    sc_sci_puts("=== SC Boot (TMS570LC43x) ===\r\n");
+    sc_sci_puts("=== SC Boot ===\r\n");
     sc_sci_puts("main() reached OK\r\n");
 
-    /* GAP-SC-005 debug: print CCM/ESM snapshot captured by
-     * esmGroup3Notification BEFORE it cleared the registers.
-     * Also print current (post-clear) register state. */
-    {
-        uint32 ccm_dbg[9];
-        sc_ccm_debug_get(ccm_dbg);
-        sc_sci_puts("--- CCM/ESM G3 snapshot (pre-clear) ---\r\n");
-        sc_sci_puts("G3_calls="); sc_sci_put_uint(ccm_dbg[8]); sc_sci_puts("\r\n");
-        sc_sci_puts("G3_ch=");    sc_sci_put_uint(ccm_dbg[7]); sc_sci_puts("\r\n");
-        sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(ccm_dbg[0]); sc_sci_puts("\r\n");
-        sc_sci_puts("CCMSR2=");   sc_sci_put_hex32(ccm_dbg[1]); sc_sci_puts("\r\n");
-        sc_sci_puts("CCMSR3=");   sc_sci_put_hex32(ccm_dbg[2]); sc_sci_puts("\r\n");
-        sc_sci_puts("CCMSR4=");   sc_sci_put_hex32(ccm_dbg[3]); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(ccm_dbg[4]); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(ccm_dbg[5]); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(ccm_dbg[6]); sc_sci_puts("\r\n");
-        sc_sci_puts("--- current registers (post-clear) ---\r\n");
-        sc_sci_puts("CCMSR1=");   sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF600u); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_SR1=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_SR3=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u); sc_sci_puts("\r\n");
-        sc_sci_puts("ESM_EKR=");  sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF538u); sc_sci_puts("\r\n");
-        sc_sci_puts("--- end dump ---\r\n");
-    }
-#endif
+    /* GAP-SC-005: CCM/ESM register dump (MMIO reads on target, no-op on POSIX) */
+    sc_hw_debug_boot_dump();
 
     /* ---- 1. System initialization ---- */
-#ifndef PLATFORM_TMS570
-    systemInit();           /* PLL to 300 MHz (non-TMS570 platforms only) */
-#endif
+    systemInit();           /* PLL to 300 MHz (TMS570: HALCoGen, POSIX: no-op) */
     gioInit();              /* GIO module init */
     sc_configure_gpio();    /* SC-specific pin config */
     rtiInit();              /* RTI 10ms tick timer */
 
-#ifdef PLATFORM_TMS570
     /* gioInit() resets DIRB/DOUTB, turning off GIOB[6:7] user LEDs.
      * Re-enable them so they stay ON as a "firmware running" indicator. */
     sc_het_led_on();
     sc_sci_puts("Init done: GIO, GPIO, RTI\r\n");
-#endif
 
     /* ---- 2. Module initialization ---- */
     SC_E2E_Init();
@@ -229,14 +163,11 @@ int main(void)
 #endif
     SC_SelfTest_Init();
 
-#ifdef PLATFORM_TMS570
     sc_sci_puts("Modules init: 9 OK\r\n");
-#endif
 
     /* ---- 3. Startup self-test (7 steps) ---- */
     startup_result = SC_SelfTest_Startup();
 
-#ifdef PLATFORM_TMS570
     sc_sci_puts("BIST: ");
     if (startup_result == 0u) {
         sc_sci_puts("7/7 PASS\r\n");
@@ -245,7 +176,6 @@ int main(void)
         sc_sci_put_uint((uint32)startup_result);
         sc_sci_puts("\r\n");
     }
-#endif
 
     if (startup_result != 0u) {
         /* Startup failed — blink failure pattern and halt */
@@ -257,9 +187,7 @@ int main(void)
     SC_Relay_Energize();
     (void)SC_State_Transition(SC_STATE_MONITORING);
 
-#ifdef PLATFORM_TMS570
     sc_sci_puts("SC_Relay: energized (MONITORING)\r\n");
-#endif
 
     /* ---- 5. Start RTI timer and enter main loop ---- */
     rtiStartCounter();
@@ -323,8 +251,7 @@ int main(void)
         /* ---- Step 5: LED Update ---- */
         SC_LED_Update();
 
-#ifdef PLATFORM_TMS570
-        /* Heartbeat blink on GIOB[6:7] user LEDs:
+        /* Heartbeat blink on GIOB[6:7] user LEDs (no-op on POSIX):
          *   ESM error active → both solid ON (fault)
          *   SC_ESM_ENABLED   → alternating (lockstep monitored)
          *   ESM disabled     → both blink together (no lockstep) */
@@ -347,7 +274,6 @@ int main(void)
         } else {
             sc_het_led_off();
         }
-#endif
 #endif
 
         /* ---- Step 6: Bus Silence Monitor ---- */
@@ -376,7 +302,6 @@ int main(void)
             all_checks_ok = FALSE;
         }
 
-#ifdef PLATFORM_TMS570
         /* ---- Step 8b: Periodic debug status (every 5 seconds) ---- */
         dbg_tick_counter++;
         if (dbg_tick_counter >= 500u) {  /* 500 * 10ms = 5s */
@@ -389,32 +314,9 @@ int main(void)
             sc_sci_puts(SC_Heartbeat_IsTimedOut(SC_ECU_RZC) ? "TIMEOUT" : "OK");
             sc_sci_puts(" relay=");
             sc_sci_puts((SC_Relay_IsKilled() == FALSE) ? "ON" : "OFF");
-            sc_sci_puts(" ES=0x");
-            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC04u);  /* DCAN1 ES */
-            sc_sci_puts(" ND=0x");
-            sc_sci_put_uint(*(volatile uint32 *)0xFFF7DC9Cu);  /* DCAN1 NEWDAT1 */
-            sc_sci_puts("\r\n");
-
-            /* GAP-SC-005: print CCM/ESM snapshot every periodic print */
-            {
-                uint32 ccm_dbg[9];
-                sc_ccm_debug_get(ccm_dbg);
-                sc_sci_puts("[CCM] G3_calls="); sc_sci_put_uint(ccm_dbg[8]);
-                sc_sci_puts(" ch="); sc_sci_put_uint(ccm_dbg[7]);
-                sc_sci_puts(" CCMSR1="); sc_sci_put_hex32(ccm_dbg[0]);
-                sc_sci_puts(" CCMSR2="); sc_sci_put_hex32(ccm_dbg[1]);
-                sc_sci_puts(" CCMSR3="); sc_sci_put_hex32(ccm_dbg[2]);
-                sc_sci_puts(" CCMSR4="); sc_sci_put_hex32(ccm_dbg[3]);
-                sc_sci_puts("\r\n");
-                sc_sci_puts("[ESM] SR1="); sc_sci_put_hex32(ccm_dbg[4]);
-                sc_sci_puts(" SR3="); sc_sci_put_hex32(ccm_dbg[5]);
-                sc_sci_puts(" EKR="); sc_sci_put_hex32(ccm_dbg[6]);
-                sc_sci_puts(" now_SR1="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF518u);
-                sc_sci_puts(" now_SR3="); sc_sci_put_hex32(*(volatile uint32 *)0xFFFFF520u);
-                sc_sci_puts("\r\n");
-            }
+            /* DCAN ES/NEWDAT + CCM/ESM snapshot (MMIO on target, no-op on POSIX) */
+            sc_hw_debug_periodic();
         }
-#endif
 
         /* ---- Step 9: Watchdog Feed ---- */
         SC_Watchdog_Feed(all_checks_ok);

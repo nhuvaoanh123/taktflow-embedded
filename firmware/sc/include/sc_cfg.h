@@ -18,6 +18,9 @@
 
 #include "sc_types.h"
 
+/* Platform-specific constants (selected via -I path in Makefile) */
+#include "Sc_Cfg_Platform.h"
+
 /* ==================================================================
  * CAN Message IDs (DCAN1 receive mailboxes)
  * ================================================================== */
@@ -72,29 +75,11 @@
  * Heartbeat Timing (in 10ms ticks)
  * ================================================================== */
 
-#ifndef SC_HB_TIMEOUT_TICKS
-  #ifdef PLATFORM_POSIX
-    #define SC_HB_TIMEOUT_TICKS     150u   /* 1500ms — SIL_TIME_SCALE=10 shrinks wall time to 150ms; CI Docker jitter needs wide margin */
-  #else
-    #define SC_HB_TIMEOUT_TICKS     10u    /* 100ms = 2x 50ms heartbeat period (SG-008 FTTI) */
-  #endif
-#endif
-#ifndef SC_HB_CONFIRM_TICKS
-  #ifdef PLATFORM_POSIX
-    #define SC_HB_CONFIRM_TICKS     20u    /* 200ms — wider confirmation for SIL scheduling at TIME_SCALE=10 */
-  #else
-    #define SC_HB_CONFIRM_TICKS     3u     /* 30ms additional confirmation */
-  #endif
-#endif
+/* SC_HB_TIMEOUT_TICKS defined in Sc_Cfg_Platform.h */
+/* SC_HB_CONFIRM_TICKS defined in Sc_Cfg_Platform.h */
 #define SC_HB_RECOVERY_THRESHOLD    3u     /* 3 consecutive HBs before canceling timeout */
 #define SC_HB_ALIVE_MAX             15u    /* 4-bit alive counter max */
-#ifndef SC_HB_STARTUP_GRACE_TICKS
-  #ifdef PLATFORM_POSIX
-    #define SC_HB_STARTUP_GRACE_TICKS  1500u   /* 15s grace for SIL — sequential Docker restarts need margin */
-  #else
-    #define SC_HB_STARTUP_GRACE_TICKS  500u    /* 5s grace — must >= CVC INIT hold (500 ticks) */
-  #endif
-#endif
+/* SC_HB_STARTUP_GRACE_TICKS defined in Sc_Cfg_Platform.h */
 
 /* ==================================================================
  * Bus Silence Monitoring
@@ -108,13 +93,7 @@
 
 #define SC_PLAUS_REL_THRESHOLD      20u    /* 20% relative difference */
 #define SC_PLAUS_ABS_THRESHOLD_MA   2000u  /* 2000 mA absolute (near-zero) */
-#ifndef SC_PLAUS_DEBOUNCE_TICKS
-  #ifdef PLATFORM_POSIX
-    #define SC_PLAUS_DEBOUNCE_TICKS 10u    /* 100ms - SIL CAN round-trip adds ~20-30ms latency */
-  #else
-    #define SC_PLAUS_DEBOUNCE_TICKS 5u     /* 50ms - real FOC inverter responds in <1ms */
-  #endif
-#endif
+/* SC_PLAUS_DEBOUNCE_TICKS defined in Sc_Cfg_Platform.h */
 
 /* ==================================================================
  * Backup Cutoff (SWR-SC-024)

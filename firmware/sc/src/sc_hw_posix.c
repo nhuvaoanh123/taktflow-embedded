@@ -566,3 +566,33 @@ boolean esm_is_flag_set(uint8 group, uint8 channel)
     (void)channel;
     return FALSE;
 }
+
+/* ==================================================================
+ * Debug stubs — no-op on POSIX (no UART, no user LEDs, no MMIO)
+ * ================================================================== */
+
+void canInit(void) { }
+
+void sc_sci_init(void) { }
+
+void sc_sci_puts(const char* str) { (void)str; }
+
+void sc_sci_put_uint(uint32 val) { (void)val; }
+
+void sc_sci_put_hex32(uint32 val) { (void)val; }
+
+void sc_ccm_debug_get(uint32 *out)
+{
+    uint8 i;
+    for (i = 0u; i < 9u; i++) { out[i] = 0u; }
+}
+
+void sc_het_led_on(void) { }
+
+void sc_het_led_off(void) { }
+
+void sc_het_led_set(uint8 led2, uint8 led3) { (void)led2; (void)led3; }
+
+void sc_hw_debug_boot_dump(void) { }
+
+void sc_hw_debug_periodic(void) { }
