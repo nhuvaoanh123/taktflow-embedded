@@ -48,3 +48,19 @@ All signal-based fault detection was broken, but tests appeared to "mostly work"
 **Fix**: `#ifdef PLATFORM_POSIX` debounce = 10 ticks (100ms) for SIL, 5 ticks for HW. Same pattern already used for FZC steering/brake debounce.
 
 **Principle**: Any debounce or timeout constant that depends on signal latency needs a PLATFORM_POSIX override. SIL CAN adds 20-30ms per hop vs <1ms on real hardware. Document the latency assumption next to every debounce constant. Use the existing `#ifdef PLATFORM_POSIX` pattern consistently across all ECUs.
+
+## 2026-03-10 — Platform abstraction cleanup: four patterns eliminate 35+ ifdefs
+
+**Context**: Application code (SWC + SC) had 35+ `#ifdef PLATFORM_*` directives scattered across 10+ files. SIL and target executed different code paths, hiding bugs and violating AUTOSAR portability principle.
+
+**Mistake**: Platform differences were handled ad-hoc: fprintf for debug, direct MCAL stub calls in SWCs, MMIO register reads inline in SC main loop, timing constants inside `#ifdef` blocks. Each developer added ifdefs as needed with no architectural pattern. The NvM temp buffer in Dem.c was only used on POSIX — target builds had a latent BSS overflow (NVM_BLOCK_SIZE=1024 > sizeof(dem_events)=~224 bytes).
+
+**Fix**: Applied four AUTOSAR-aligned patterns:
+1. **Link-time hw-file swap** (Vector vVIRTUALtarget): `sc_hw_tms570.c` / `sc_hw_posix.c`, `IoHwAb_Posix.c` / `IoHwAb_Target.c` — Makefile selects which `.c` to link.
+2. **Config header split** (AUTOSAR EcuC): `*_Cfg_Platform.h` in `cfg/platform_posix/` and `cfg/platform_target/`, selected via Makefile `-I` path ordering.
+3. **Det callout** for debug text: `Det_ReportRuntimeError()` with structured IDs; `Det_Callout_Sil.c` maps to human-readable text, linked only in POSIX builds.
+4. **MMIO register isolation**: TMS570 MMIO reads extracted into hw-file functions (`sc_hw_debug_boot_dump`, `sc_hw_debug_periodic`) to prevent POSIX segfaults.
+
+Result: Zero `#ifdef PLATFORM_*` in any SWC source, SC main, or BSW service. Only hw-files and MCAL retain platform guards (by design). All 47 tests pass.
+
+**Principle**: Never put `#ifdef PLATFORM_*` in application code. Use link-time swap for behavior differences, config header split for constant differences, and Det callout for debug output. MMIO register access must be isolated in hw-files — one segfault-causing dereference in shared code breaks all POSIX builds. When fixing ifdefs, check for latent bugs that the ifdef was masking (e.g., the NvM BSS overflow was harmless only because the temp buffer was ifdef'd out on target).

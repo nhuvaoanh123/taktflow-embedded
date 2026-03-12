@@ -3,7 +3,7 @@ document_id: MAN3-DECISION-LOG
 title: "Architecture Decision Log"
 version: "1.0"
 status: active
-updated: "2026-02-22"
+updated: "2026-03-10"
 ---
 
 ## Human-in-the-Loop (HITL) Comment Lock
@@ -67,6 +67,7 @@ The daily scan script (`scripts/decision-audit.sh`) searches for:
 | ADR-011 | CAN 2.0B at 500 kbps (no CAN FD) | T1 | 7/12 | 2026-02-21 | Approved |
 | ADR-012 | AWS IoT Core + Timestream + Grafana | T2 | 6/12 | 2026-02-21 | Approved |
 | ADR-013 | Custom trace-gen.py for traceability | T2 | 8/12 | 2026-02-25 | Approved |
+| ADR-014 | Platform abstraction via link-time swap + config split | T2 | 9/12 | 2026-03-10 | Approved |
 
 ---
 
@@ -384,4 +385,31 @@ AWS IoT Core costs ~$4-7/month (comparable to self-hosted at ~$6/month) but adds
 
 ### Why chosen wins
 All commercial ALM tools (Polarion, DOORS, Jama) cost $8,000-50,000/year and require weeks of setup — absurd for a solo portfolio project with 475 requirements. More importantly, they all store requirements in proprietary databases disconnected from the codebase. The custom approach keeps everything in git: requirements in Markdown, trace tags in code comments, validation in CI. This means `git diff` shows requirement changes, `git blame` shows who changed what, and every baseline is a git tag — all ASPICE SUP.8 requirements met for free. The CI enforcement (blocking merge on broken links) is functionally equivalent to what Polarion provides via workflow rules, but it's transparent, auditable, and version-controlled. For hiring, building a traceability pipeline from scratch demonstrates deeper systems engineering understanding than clicking through a Polarion UI — any engineer can learn Polarion in 2 weeks, but designing a V-model traceability graph with suspect-link detection shows architectural thinking.
+
+---
+
+## ADR-014: Platform abstraction via link-time hw-file swap + config header split
+
+- **Date**: 2026-03-10
+- **Tier**: T2 — Design
+- **Scores**: Cost 1 | Time 2 | Safety 3 | Resume 3 = **9/12**
+- **Decision**: Eliminate all `#ifdef PLATFORM_*` from application code (SWC + SC) using four AUTOSAR-aligned patterns: (1) link-time hw-file swap (Vector vVIRTUALtarget), (2) config header split via `-I` path (AUTOSAR EcuC), (3) Det callout for debug text, (4) MMIO register isolation into hw-file functions
+- **Rationale**: `#ifdef` in application code violates the AUTOSAR principle "same source, same binary logic." Platform differences must be confined to MCAL/BSW layers selected at build time. This cleanup removed 35+ ifdefs across 10+ files in SWC, SC, and BSW layers, making application code compile identically on STM32, TMS570, and POSIX. The patterns chosen are identical to those used by Vector vVIRTUALtarget and EB tresos in production AUTOSAR stacks. Zero `#ifdef PLATFORM_*` in any SWC source or SC main code — only hw-files and MCAL retain platform guards (by design).
+- **Effort**: ~2 days implementation + verification, $0
+
+### Alternative A: Preprocessor ifdefs (status quo)
+
+- **Effort**: 0 hours (no change), $0
+- **Pros**: Already working. No risk of regressions. Familiar to all developers.
+- **Cons**: Application code diverges per platform — bugs can hide behind ifdefs. SIL and target execute different code paths. MISRA Rule 20.11 violations. Not representative of AUTOSAR production practice. Grows worse with each new platform variant (HIL, PIL). Makes code review harder — reviewers must mentally track which blocks are active.
+
+### Alternative B: Runtime platform detection (function pointers / vtable)
+
+- **Effort**: 3-5 days for abstraction layer + registration, $0
+- **Pros**: Single binary for all platforms (if hardware allows). Late binding — can switch platform at startup. Extensible to new platforms without recompilation.
+- **Cons**: Runtime overhead (function pointer indirection on every HW call). Larger binary — all platform code linked even if unused. Safety concern — wrong platform code reachable at runtime (ASIL D violation: dead code in safety path). Not AUTOSAR practice — AUTOSAR uses compile-time/link-time selection, never runtime. Impossible for TMS570 MMIO — can't have POSIX code referencing TMS570 register addresses in the same binary.
+
+### Why chosen wins
+
+Link-time swap + config header split is the exact pattern used by Vector, EB, and ETAS in production AUTOSAR stacks. It gives zero runtime overhead, zero dead code in the binary, and compile-time guarantee that platform-wrong code is unreachable (link error, not runtime error). Runtime detection is fundamentally incompatible with ASIL D (reachable dead code) and impossible for MMIO (segfault on wrong platform). Keeping ifdefs is the easy path but accumulates technical debt and diverges SIL from target — the opposite of what platform abstraction should achieve.
 
