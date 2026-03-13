@@ -121,6 +121,11 @@ class TelemetryState:
         self.test_progress: dict | None = None
         self.test_result: dict | None = None
 
+        # Cloud connector status
+        self.cloud_connected = False
+        self.cloud_msgs_forwarded = 0
+        self.cloud_msgs_buffered = 0
+
         # Heartbeat tracking
         self._hb_cvc_ts = 0.0
         self._hb_fzc_ts = 0.0
@@ -210,6 +215,11 @@ class TelemetryState:
             "test": {
                 "progress": self.test_progress,
                 "result": self.test_result,
+            },
+            "cloud": {
+                "connected": self.cloud_connected,
+                "msgs_forwarded": self.cloud_msgs_forwarded,
+                "msgs_buffered": self.cloud_msgs_buffered,
             },
         }
 
@@ -368,6 +378,16 @@ def on_mqtt_message(client, userdata, msg):
             if len(state.sap_notifications) > 20:
                 state.sap_notifications = state.sap_notifications[-20:]
         except json.JSONDecodeError:
+            pass
+
+    # Cloud connector status
+    elif topic == "taktflow/cloud/status":
+        try:
+            data = json.loads(payload)
+            state.cloud_connected = bool(data.get("cloud_connected", False))
+            state.cloud_msgs_forwarded = int(data.get("msgs_forwarded", 0))
+            state.cloud_msgs_buffered = int(data.get("msgs_buffered", 0))
+        except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
     # Structured CAN error-frame event from gateway

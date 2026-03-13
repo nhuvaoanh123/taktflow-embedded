@@ -317,6 +317,26 @@ services:
       - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
     restart: unless-stopped
 
+  # --- Cloud Connector (local MQTT -> AWS IoT Core) ---
+  cloud-connector:
+    build:
+      context: ..
+      dockerfile: gateway/cloud_connector/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - AWS_IOT_ENDPOINT=${AWS_IOT_ENDPOINT:-}
+      - AWS_IOT_PORT=8883
+      - AWS_CERT_DIR=/certs
+      - DEVICE_ID=taktflow-vps-001
+    volumes:
+      - ./certs:/certs:ro
+    restart: unless-stopped
+
 volumes:
   caddy_data:
   caddy_config:

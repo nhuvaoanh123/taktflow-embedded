@@ -147,9 +147,9 @@ class MqttPublisher:
         self._client.publish("vehicle/dtc/new", alert_json, qos=1)
 
     def publish_telemetry_aggregate(self):
-        """Publish aggregated telemetry to vehicle/telemetry (5s interval)."""
+        """Publish aggregated telemetry to vehicle/telemetry (30s interval)."""
         now = time.monotonic()
-        if (now - self._last_telemetry_time) < 5.0:
+        if (now - self._last_telemetry_time) < 30.0:
             return
         self._last_telemetry_time = now
 
