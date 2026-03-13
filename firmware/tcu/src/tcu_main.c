@@ -141,7 +141,13 @@ int main(void)
     /* ECUAL */
     CanIf_Init(&canif_config);
     PduR_Init(&pdur_cfg);
-    CanTp_Init();
+    static const CanTp_ConfigType cantp_cfg = {
+        .rxPduId      = TCU_COM_RX_UDS_FUNC,
+        .txPduId      = TCU_COM_TX_UDS_RSP,
+        .fcTxPduId    = TCU_COM_TX_UDS_RSP,
+        .upperRxPduId = TCU_COM_RX_UDS_FUNC,
+    };
+    CanTp_Init(&cantp_cfg);
 
     /* Services */
     Com_Init(&tcu_com_config);
