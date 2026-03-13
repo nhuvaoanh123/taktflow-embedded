@@ -44,7 +44,8 @@
   #define CVC_E2E_SM_RZC_MAX_ERR_VALID   14u
 #endif
 
-/** @brief  Creep guard debounce: 50 × 10ms = 500ms SIL (CAN round-trip latency) */
-#define CVC_CREEP_DEBOUNCE_TICKS         50u
+/** @brief  Creep guard debounce: 200 × 10ms = 2s SIL.
+ *          Motor RPM feedback via CAN has 100-200ms wall latency in CI. */
+#define CVC_CREEP_DEBOUNCE_TICKS         200u
 
 #endif /* CVC_CFG_PLATFORM_H */

@@ -85,7 +85,9 @@
  * Bus Silence Monitoring
  * ================================================================== */
 
-#define SC_BUS_SILENCE_TICKS        20u    /* 200ms = all-heartbeat timeout */
+#ifndef SC_BUS_SILENCE_TICKS
+  #define SC_BUS_SILENCE_TICKS      20u    /* 200ms = all-heartbeat timeout */
+#endif
 
 /* ==================================================================
  * Plausibility Thresholds
@@ -166,7 +168,9 @@
  * E2E Failure Threshold
  * ================================================================== */
 
-#define SC_E2E_MAX_CONSEC_FAIL      3u     /* 3 consecutive E2E failures */
+#ifndef SC_E2E_MAX_CONSEC_FAIL
+  #define SC_E2E_MAX_CONSEC_FAIL    3u     /* 3 consecutive E2E failures */
+#endif
 
 /* ==================================================================
  * Relay Readback
