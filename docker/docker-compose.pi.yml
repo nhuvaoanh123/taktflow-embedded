@@ -1,24 +1,42 @@
 # =============================================================================
-# docker-compose.pi.yml — Raspberry Pi HIL Platform
+# docker-compose.pi.yml — Raspberry Pi Dual SIL + HIL Platform
 #
-# 3 simulated VECUs (BCM, ICU, TCU) + plant simulator + gateway stack
-# running on the Pi alongside 4 physical ECUs (CVC, FZC, RZC, SC) on can0.
+# Runs both stacks simultaneously on isolated CAN buses:
+#   HIL: 3 VECUs (BCM, ICU, TCU) + plant-sim on can0 (physical CAN bus)
+#   SIL: 7 VECUs (all ECUs)      + plant-sim on vcan0 (virtual CAN bus)
 #
-# Physical CAN bus (can0) is managed by systemd via Waveshare CAN HAT:
-#   sudo ip link set can0 up type can bitrate 500000
+# Each stack has its own MQTT broker to prevent topic collisions:
+#   HIL MQTT: port 1883 (mqtt-broker-hil)
+#   SIL MQTT: port 1884 (mqtt-broker-sil)
+#
+# Gateway services (can-gateway, ml-inference, cloud-connector) run on
+# the HIL stack — that's the real data path to AWS IoT Core.
 #
 # Usage:
 #   docker compose -f docker/docker-compose.pi.yml up --build
-#   docker compose -f docker/docker-compose.pi.yml down
-#   docker compose -f docker/docker-compose.pi.yml logs -f bcm
+#   docker compose -f docker/docker-compose.pi.yml up --build -d
+#   docker compose -f docker/docker-compose.pi.yml logs -f bcm sil-cvc
 #
 # Prerequisites (one-time Pi setup):
 #   dtoverlay=mcp2515-can0 in /boot/config.txt
-#   can0 interface UP at 500kbps (systemd-networkd or /etc/network/interfaces)
+#   can0 interface UP at 500kbps
+#   vcan kernel module: sudo modprobe vcan
 # =============================================================================
 
+# =====================================================================
+#  HIL STACK — physical CAN bus (can0), 4 physical ECUs + 3 Docker
+# =====================================================================
+
 services:
-  # --- Body Control Module (simulated) ---
+  # --- HIL: MQTT Broker (port 1883) ---
+  mqtt-broker-hil:
+    image: eclipse-mosquitto:2
+    network_mode: host
+    volumes:
+      - ../gateway/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # --- HIL: Body Control Module ---
   bcm:
     build:
       context: ..
@@ -33,7 +51,7 @@ services:
       - SIL_TIME_SCALE=1
     restart: unless-stopped
 
-  # --- Instrument Cluster Unit (simulated) ---
+  # --- HIL: Instrument Cluster Unit ---
   icu:
     build:
       context: ..
@@ -50,7 +68,7 @@ services:
     tty: true
     restart: unless-stopped
 
-  # --- Telematics Control Unit (simulated) ---
+  # --- HIL: Telematics Control Unit ---
   tcu:
     build:
       context: ..
@@ -65,8 +83,8 @@ services:
       - SIL_TIME_SCALE=1
     restart: unless-stopped
 
-  # --- Plant Physics Simulator ---
-  plant-sim:
+  # --- HIL: Plant Simulator (can0, real-time) ---
+  plant-sim-hil:
     build:
       context: ..
       dockerfile: gateway/plant_sim/Dockerfile
@@ -75,7 +93,7 @@ services:
       - NET_ADMIN
       - NET_RAW
     depends_on:
-      mqtt-broker:
+      mqtt-broker-hil:
         condition: service_started
     environment:
       - CAN_CHANNEL=can0
@@ -85,15 +103,7 @@ services:
       - SIL_TIME_SCALE=1
     restart: unless-stopped
 
-  # --- Mosquitto MQTT Broker ---
-  mqtt-broker:
-    image: eclipse-mosquitto:2
-    network_mode: host
-    volumes:
-      - ../gateway/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-    restart: unless-stopped
-
-  # --- CAN-to-MQTT Gateway ---
+  # --- HIL: CAN-to-MQTT Gateway (can0 → MQTT 1883) ---
   can-gateway:
     build:
       context: ..
@@ -103,7 +113,7 @@ services:
       - NET_ADMIN
       - NET_RAW
     depends_on:
-      mqtt-broker:
+      mqtt-broker-hil:
         condition: service_started
     environment:
       - CAN_CHANNEL=can0
@@ -112,28 +122,28 @@ services:
       - MQTT_PORT=1883
     restart: unless-stopped
 
-  # --- ML Anomaly Detection (edge inference) ---
+  # --- HIL: ML Anomaly Detection (edge) ---
   ml-inference:
     build:
       context: ..
       dockerfile: gateway/ml_inference/Dockerfile
     network_mode: host
     depends_on:
-      mqtt-broker:
+      mqtt-broker-hil:
         condition: service_started
     environment:
       - MQTT_HOST=localhost
       - MQTT_PORT=1883
     restart: unless-stopped
 
-  # --- Cloud Connector (local MQTT -> AWS IoT Core) ---
+  # --- HIL: Cloud Connector (MQTT 1883 → AWS IoT Core) ---
   cloud-connector:
     build:
       context: ..
       dockerfile: gateway/cloud_connector/Dockerfile
     network_mode: host
     depends_on:
-      mqtt-broker:
+      mqtt-broker-hil:
         condition: service_started
     environment:
       - MQTT_HOST=localhost
@@ -145,3 +155,230 @@ services:
     volumes:
       - ./certs:/certs:ro
     restart: unless-stopped
+
+  # =====================================================================
+  #  SIL STACK — virtual CAN bus (vcan0), all 7 ECUs fully simulated
+  # =====================================================================
+
+  # --- SIL: vcan0 setup ---
+  sil-can-setup:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.can-setup
+    command: >
+      /bin/sh -c "
+        modprobe vcan 2>/dev/null || true;
+        if ip link show vcan0 > /dev/null 2>&1; then
+          ip link set vcan0 up;
+          echo '[sil-can-setup] vcan0 already existed — set UP';
+        elif ip link add vcan0 type vcan; then
+          ip link set vcan0 up;
+          echo '[sil-can-setup] created vcan0 — set UP';
+        else
+          echo '[sil-can-setup] ERROR: cannot create vcan0 — vcan module not loaded';
+          exit 1;
+        fi;
+        ip -d link show vcan0
+      "
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_MODULE
+    volumes:
+      - /lib/modules:/lib/modules:ro
+    network_mode: host
+    restart: "no"
+
+  # --- SIL: MQTT Broker (port 1884) ---
+  mqtt-broker-sil:
+    image: eclipse-mosquitto:2
+    network_mode: host
+    volumes:
+      - ../gateway/mosquitto/mosquitto-sil.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # --- SIL: Central Vehicle Computer ---
+  sil-cvc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=cvc
+      - SPI_PEDAL_UDP_PORT=9100
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    volumes:
+      - nvm_sil_cvc:/tmp
+    restart: unless-stopped
+
+  # --- SIL: Front Zone Controller ---
+  sil-fzc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=fzc
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    volumes:
+      - nvm_sil_fzc:/tmp
+    restart: unless-stopped
+
+  # --- SIL: Rear Zone Controller ---
+  sil-rzc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=rzc
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    volumes:
+      - nvm_sil_rzc:/tmp
+    restart: unless-stopped
+
+  # --- SIL: Safety Controller ---
+  sil-sc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=sc
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    restart: unless-stopped
+
+  # --- SIL: Body Control Module ---
+  sil-bcm:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=bcm
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    restart: unless-stopped
+
+  # --- SIL: Instrument Cluster Unit ---
+  sil-icu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=icu
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # --- SIL: Telematics Control Unit ---
+  sil-tcu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+    environment:
+      - CAN_INTERFACE=vcan0
+      - ECU_NAME=tcu
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    restart: unless-stopped
+
+  # --- SIL: Plant Simulator (vcan0) ---
+  plant-sim-sil:
+    build:
+      context: ..
+      dockerfile: gateway/plant_sim/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+      mqtt-broker-sil:
+        condition: service_started
+    environment:
+      - CAN_CHANNEL=vcan0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1884
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    restart: unless-stopped
+
+  # --- SIL: Fault Injection API ---
+  sil-fault-inject:
+    build:
+      context: ..
+      dockerfile: gateway/fault_inject/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      sil-can-setup:
+        condition: service_completed_successfully
+      mqtt-broker-sil:
+        condition: service_started
+    environment:
+      - CAN_CHANNEL=vcan0
+      - FAULT_PORT=8091
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1884
+      - SIL_TIME_SCALE=${SIL_TIME_SCALE:-1}
+    restart: unless-stopped
+
+volumes:
+  nvm_sil_cvc:
+  nvm_sil_fzc:
+  nvm_sil_rzc:
