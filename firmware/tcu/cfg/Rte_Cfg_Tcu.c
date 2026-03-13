@@ -22,6 +22,7 @@ extern void Can_MainFunction_BusOff(void);
 extern void Com_MainFunction_Rx(void);
 extern void Tcu_Heartbeat_500ms(void);
 extern void Dcm_MainFunction(void);
+extern void CanTp_MainFunction(void);
 
 /* ---- Signal Configuration ---- */
 
@@ -83,6 +84,11 @@ static const Rte_RunnableConfigType tcu_runnable_config[] = {
         .periodMs = 10u,
         .priority = 4u,
         .seId     = 0u,
+    },
+    {
+        .func     = CanTp_MainFunction,
+        .periodMs = 10u,
+        .priority = 3u,
     },
     {
         .func     = Dcm_MainFunction,

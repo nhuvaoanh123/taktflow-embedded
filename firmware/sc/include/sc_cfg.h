@@ -165,8 +165,14 @@
 #define SC_WDG_COND_ALL             0x1Fu  /* All conditions met */
 
 /* ==================================================================
- * E2E Failure Threshold
+ * E2E Configuration
  * ================================================================== */
+
+/** @brief  E2E bypass: 0=enforced (default), 1=bypass CRC/alive checks.
+ *          Override in platform header for HIL bench debugging. */
+#ifndef SC_E2E_BYPASS
+  #define SC_E2E_BYPASS             0u
+#endif
 
 #ifndef SC_E2E_MAX_CONSEC_FAIL
   #define SC_E2E_MAX_CONSEC_FAIL    3u     /* 3 consecutive E2E failures */

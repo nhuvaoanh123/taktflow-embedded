@@ -159,11 +159,12 @@ class PlantSimulator:
             log.warning("Invalid inject command payload: %s", msg.payload)
             return
 
-        cmd_type = cmd.get("type", "")
+        cmd_type = cmd.get("fault") or cmd.get("type", "")
         log.info("MQTT inject command: %s", cmd_type)
 
         if cmd_type == "overcurrent":
-            self.motor.inject_overcurrent()
+            current_ma = float(cmd.get("current_ma", 28000.0))
+            self.motor.inject_overcurrent(current_ma)
             log.info("Injected overcurrent fault (current=%.0fmA)", self.motor.current_ma)
         elif cmd_type == "creep_current":
             current_ma = float(cmd.get("current_ma", 1000.0))
@@ -177,7 +178,7 @@ class PlantSimulator:
             soc = int(cmd.get("soc", 10))
             self.battery.inject_voltage(mv, soc)
             log.info("Injected battery voltage: %dmV, %d%% SOC", mv, soc)
-        elif cmd_type == "inject_temp":
+        elif cmd_type in ("overtemp", "inject_temp"):
             temp_c = float(cmd.get("temp_c", 95.0))
             self.motor.temp_c = temp_c
             log.info("Injected motor temperature: %.1f°C", temp_c)
@@ -194,6 +195,8 @@ class PlantSimulator:
             self.battery.clear_override()
             self._active_dtcs.clear()
             log.info("Plant faults cleared via MQTT reset")
+        else:
+            log.warning("Unknown inject command: %s (payload: %s)", cmd_type, cmd)
 
     def _next_alive(self, msg_id: int) -> int:
         val = self._alive.get(msg_id, 0)

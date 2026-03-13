@@ -52,7 +52,7 @@ except ImportError:
 from can_helpers import (
     check_e2e,
     check_heartbeat,
-    crc8,
+    crc8_j1850,
     decode_signal,
     inject_mqtt_fault,
     measure_period,
@@ -574,6 +574,8 @@ class ScenarioExecutor:
         elif action == "inject_mqtt":
             topic = step.get("topic", "taktflow/command/plant_inject")
             payload = step.get("payload", {})
+            if isinstance(payload, str):
+                payload = json.loads(payload)
             log.info("  Step: inject_mqtt %s — %s", topic, desc)
             inject_mqtt_fault(self._mqtt_host, topic, payload, self._mqtt_port)
 
@@ -756,13 +758,14 @@ class ScenarioExecutor:
 
     def _verdict_e2e(self, vdef: dict, desc: str) -> VerdictEvidence:
         can_id = vdef.get("can_id", 0)
+        data_id = vdef.get("data_id", 0)
         msg = self._can.wait_for_can_message(can_id, timeout_sec=3.0)
         if msg is None:
             return VerdictEvidence(
                 description=desc, expected=f"E2E valid on 0x{can_id:03X}",
                 observed="no message", passed=False,
             )
-        result = check_e2e(msg)
+        result = check_e2e(msg, data_id=data_id)
         return VerdictEvidence(
             description=desc,
             expected=f"E2E CRC valid on 0x{can_id:03X}",
@@ -813,15 +816,16 @@ class ScenarioExecutor:
     def _verdict_dtc_broadcast(self, vdef: dict, desc: str) -> VerdictEvidence:
         dtc_code = vdef.get("dtc_code", 0)
         within_ms = vdef.get("within_ms", 5000)
-        ecu_source = vdef.get("ecu_source")
+        ecu_source = vdef.get("ecu_source") or vdef.get("source")
 
         deadline = time.monotonic() + within_ms / 1000.0
         while time.monotonic() < deadline:
             history = self._can.get_message_history(CAN_DTC_BROADCAST)
             for _, msg in history:
-                if len(msg.data) >= 4:
-                    code = msg.data[0] | (msg.data[1] << 8)
-                    source = msg.data[2]
+                if len(msg.data) >= 5:
+                    # DTC_Broadcast frame: byte[0-2]=DTC 24-bit BE, byte[3]=status, byte[4]=source
+                    code = (msg.data[0] << 16) | (msg.data[1] << 8) | msg.data[2]
+                    source = msg.data[4]
                     if code == dtc_code:
                         if ecu_source is None or source == ecu_source:
                             return VerdictEvidence(

@@ -22,6 +22,7 @@
 #include "PduR.h"
 #include "Com.h"
 #include "Dcm.h"
+#include "CanTp.h"
 #include "Dem.h"
 #include "Rte.h"
 
@@ -140,6 +141,7 @@ int main(void)
     /* ECUAL */
     CanIf_Init(&canif_config);
     PduR_Init(&pdur_cfg);
+    CanTp_Init();
 
     /* Services */
     Com_Init(&tcu_com_config);

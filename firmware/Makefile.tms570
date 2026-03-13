@@ -46,7 +46,8 @@ HALCOGEN_DIR = sc/cfg/halcogen
 BUILD_DIR    = build/tms570
 
 # --- Include paths (shared) ---
-INC_FLAGS  = -I$(SC_DIR)/include
+INC_FLAGS  = -I$(SC_DIR)/cfg/platform_target
+INC_FLAGS += -I$(SC_DIR)/include
 INC_FLAGS += -I$(HALCOGEN_DIR)/include
 
 # --- SC code: strict warnings ---
@@ -66,20 +67,22 @@ LDSCRIPT = $(HALCOGEN_DIR)/source/HL_sys_link.cmd
 LDFLAGS  = $(MCU_FLAGS)
 LDFLAGS += -Wl,-m,$(BUILD_DIR)/sc.map
 LDFLAGS += -Wl,--rom_model
+LDFLAGS += -Wl,--be32
 
 # --- HALCoGen C sources (exclude files with conflicting symbols) ---
 # Excluded:
-#   HL_sys_main.c  — defines main() (conflicts with sc_main.c)
-#   HL_gio.c       — gioSetBit/gioSetDirection use (gioPORT_t*, uint32)
-#                     signatures, SC uses (uint8, uint8, uint8)
-#   HL_rti.c       — rtiStartCounter uses (rtiBASE_t*, uint32),
-#                     SC uses (void)
+#   HL_sys_main.c    — defines main() (conflicts with sc_main.c)
+#   HL_gio.c         — gioSetBit/gioSetDirection signature mismatch
+#   HL_rti.c         — rtiStartCounter signature mismatch
+#   HL_notification.c — weak callbacks, SC provides its own
+#   HL_emif.c        — emif_SDRAM_StartupInit conflicts with sc_hw_tms570.c
 # Replacement implementations in sc_hw_tms570.c.
 HALCOGEN_SRCS_ALL = $(wildcard $(HALCOGEN_DIR)/source/*.c)
 HALCOGEN_EXCLUDE  = $(HALCOGEN_DIR)/source/HL_sys_main.c \
                     $(HALCOGEN_DIR)/source/HL_gio.c \
                     $(HALCOGEN_DIR)/source/HL_rti.c \
-                    $(HALCOGEN_DIR)/source/HL_notification.c
+                    $(HALCOGEN_DIR)/source/HL_notification.c \
+                    $(HALCOGEN_DIR)/source/HL_emif.c
 HALCOGEN_SRCS = $(filter-out $(HALCOGEN_EXCLUDE),$(HALCOGEN_SRCS_ALL))
 
 # --- HALCoGen assembly (.asm — TI assembler syntax) ---
@@ -129,7 +132,8 @@ $(ELF): $(ALL_OBJS) | $(BUILD_DIR)
 	$(CC) $(LDFLAGS) $(ALL_OBJS) $(LDSCRIPT) -o $@
 
 # --- Compile HALCoGen sources (relaxed warnings) ---
-$(BUILD_DIR)/halcogen/%.o: $(HALCOGEN_DIR)/%.c | $(BUILD_DIR)
+# Pattern must match full path: build/tms570/sc/cfg/halcogen/source/HL_*.o
+$(BUILD_DIR)/$(HALCOGEN_DIR)/%.o: $(HALCOGEN_DIR)/%.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(HAL_CFLAGS) -c $< -o $@
 
@@ -139,7 +143,7 @@ $(BUILD_DIR)/sc/%.o: sc/%.c | $(BUILD_DIR)
 	$(CC) $(SC_CFLAGS) -c $< -o $@
 
 # --- Assemble .asm (TI assembler syntax — requires -x ti-asm for LLVM) ---
-$(BUILD_DIR)/halcogen/%.o: $(HALCOGEN_DIR)/%.asm | $(BUILD_DIR)
+$(BUILD_DIR)/$(HALCOGEN_DIR)/%.o: $(HALCOGEN_DIR)/%.asm | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(MCU_FLAGS) -x ti-asm -c $< -o $@
 

@@ -23,6 +23,7 @@ static uint8  sig_tx_indicator_left;
 static uint8  sig_tx_indicator_right;
 static uint8  sig_tx_hazard_active;
 static uint8  sig_tx_door_lock_state;
+static uint8  sig_tx_body_status;
 
 /* RX signal buffers */
 static uint8  sig_rx_vehicle_state;
@@ -46,6 +47,7 @@ static const Com_SignalConfigType bcm_signal_config[] = {
     {  3u,   24u,     8u, COM_UINT8,  BCM_COM_TX_INDICATOR_STATE,  &sig_tx_indicator_right },
     {  4u,   32u,     8u, COM_UINT8,  BCM_COM_TX_INDICATOR_STATE,  &sig_tx_hazard_active   },
     {  5u,   16u,     8u, COM_UINT8,  BCM_COM_TX_DOOR_LOCK,        &sig_tx_door_lock_state },
+    { 12u,   16u,     8u, COM_UINT8,  BCM_COM_TX_BODY_STATUS,      &sig_tx_body_status     },
 
     /* RX signals */
     {  6u,   16u,     8u, COM_UINT8,  BCM_COM_RX_VEHICLE_STATE,    &sig_rx_vehicle_state   },

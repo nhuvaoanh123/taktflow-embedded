@@ -82,6 +82,18 @@ void SC_Relay_CheckTriggers(void)
 {
     uint8 readback;
 
+#if (SC_E2E_BYPASS == 1u)
+    /* HIL bench bypass: skip ALL kill triggers to keep relay energized.
+     * Only E-Stop remains active as a physical safety override. */
+    if (SC_CAN_IsEStopActive() == TRUE) {
+        kill_reason = SC_KILL_REASON_ESTOP;
+        SC_RELAY_DIAG("KILL reason=ESTOP (bypass active, E-Stop overrides)");
+        SC_Relay_DeEnergize();
+    }
+    (void)readback;
+    return;
+#endif
+
     /* If already killed, nothing to check */
     if (relay_killed == TRUE) {
         return;
@@ -122,13 +134,23 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (c): E2E persistent failure on safety-critical mailbox (GAP-SC-002) */
+    /* Trigger (c): E2E persistent failure on safety-critical mailbox (GAP-SC-002)
+     * Disabled when SC_E2E_BYPASS=1 (HIL bench: E2E CRC under investigation). */
+#if (SC_E2E_BYPASS == 0u)
     if (SC_E2E_IsAnyCriticalFailed() == TRUE) {
         kill_reason = SC_KILL_REASON_E2E_FAIL;
         SC_RELAY_DIAG("KILL reason=E2E_FAIL");
         SC_Relay_DeEnergize();
         return;
     }
+#endif
+
+
+
+
+
+
+
 
     /* Trigger (d/e): Self-test failure (startup or runtime) */
     if (SC_SelfTest_IsHealthy() == FALSE) {

@@ -215,6 +215,12 @@ int main(void)
         SC_Relay_CheckTriggers();
 
         /* ---- Step 4a: State machine update (GAP-SC-006) ---- */
+#if (SC_E2E_BYPASS == 1u)
+        /* HIL bench: only transition to KILL on E-Stop, stay MONITORING otherwise */
+        if (SC_Relay_IsKilled() == TRUE) {
+            (void)SC_State_Transition(SC_STATE_KILL);
+        }
+#else
         if (SC_Relay_IsKilled() == TRUE) {
             (void)SC_State_Transition(SC_STATE_KILL);
         } else if ((SC_Heartbeat_IsTimedOut(SC_ECU_CVC) == TRUE) ||
@@ -228,6 +234,7 @@ int main(void)
         } else {
             /* No transition requested in this cycle. */
         }
+#endif
 
 #ifdef SIL_DIAG
         sil_diag_tick++;

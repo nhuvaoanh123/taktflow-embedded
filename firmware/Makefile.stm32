@@ -49,6 +49,9 @@ endif
 # --- HIL mode (pass HIL=1 to enable IoHwAb sensor override from CAN) ---
 ifdef HIL
   CFLAGS += -DPLATFORM_HIL
+  IOHWAB_SRC = $(ECUAL_DIR)/IoHwAb_Hil.c
+else
+  IOHWAB_SRC = $(ECUAL_DIR)/IoHwAb.c
 endif
 
 # --- Validate TARGET ---
@@ -126,7 +129,7 @@ BSW_SRCS = \
     $(MCAL_TARGET)/Spi_Hw_STM32.c \
     $(ECUAL_DIR)/CanIf.c \
     $(ECUAL_DIR)/PduR.c \
-    $(ECUAL_DIR)/IoHwAb.c \
+    $(IOHWAB_SRC) \
     $(SERVICES_DIR)/Com.c \
     $(SERVICES_DIR)/Dcm.c \
     $(SERVICES_DIR)/Dem.c \

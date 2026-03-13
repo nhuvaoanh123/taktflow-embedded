@@ -39,6 +39,7 @@
 #define BCM_COM_TX_LIGHT_STATUS     0u  /* CAN 0x400 */
 #define BCM_COM_TX_INDICATOR_STATE  1u  /* CAN 0x401 */
 #define BCM_COM_TX_DOOR_LOCK        2u  /* CAN 0x402 */
+#define BCM_COM_TX_BODY_STATUS      3u  /* CAN 0x360 */
 
 /* ====================================================================
  * Com RX PDU IDs

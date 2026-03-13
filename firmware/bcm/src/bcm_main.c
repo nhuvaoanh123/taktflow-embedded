@@ -96,6 +96,21 @@ void Bcm_ComBridge_10ms(void)
         (void)Rte_Read(BCM_SIG_DOOR_LOCK_STATE, &rte_val);
         sig_u8 = (uint8)rte_val;
         (void)Com_SendSignal(5u, &sig_u8);
+
+        /* Signal 12: body status combined -> CAN 0x360 byte 2
+         * bit0=headlamp, bit1-2=indicator, bit3=door lock */
+        {
+            uint32 hl, il, ir, dl;
+            (void)Rte_Read(BCM_SIG_LIGHT_HEADLAMP, &hl);
+            (void)Rte_Read(BCM_SIG_INDICATOR_LEFT, &il);
+            (void)Rte_Read(BCM_SIG_INDICATOR_RIGHT, &ir);
+            (void)Rte_Read(BCM_SIG_DOOR_LOCK_STATE, &dl);
+            sig_u8 = (uint8)((hl & 1u)
+                           | (uint8)((il & 1u) << 1u)
+                           | (uint8)((ir & 1u) << 2u)
+                           | (uint8)((dl & 1u) << 3u));
+            (void)Com_SendSignal(12u, &sig_u8);
+        }
     }
 
     /* ---- RX bridge: Com RX → RTE inputs ---- */
@@ -144,6 +159,7 @@ static const CanIf_TxPduConfigType canif_tx_config[] = {
     { 0x400u, BCM_COM_TX_LIGHT_STATUS,     8u, 0u },  /* Light status       */
     { 0x401u, BCM_COM_TX_INDICATOR_STATE,  8u, 0u },  /* Indicator state    */
     { 0x402u, BCM_COM_TX_DOOR_LOCK,        8u, 0u },  /* Door lock state    */
+    { 0x360u, BCM_COM_TX_BODY_STATUS,      8u, 0u },  /* Body status        */
 };
 
 /** CanIf RX PDU routing: CAN ID -> Com RX PDU */

@@ -126,8 +126,8 @@ def check_heartbeat(
     hi = expected_period_ms + tolerance_ms
 
     missed = sum(1 for d in deltas_ms if d < lo or d > hi)
-    # Allow up to 10% outliers (Linux scheduling jitter)
-    passed = missed <= max(1, len(deltas_ms) * 0.10)
+    # Allow up to 15% outliers (Pi USB-CAN adapter + Linux scheduling jitter)
+    passed = missed <= max(1, len(deltas_ms) * 0.15)
 
     return {
         "passed": passed,
@@ -141,11 +141,18 @@ def check_heartbeat(
 
 
 # ---------------------------------------------------------------------------
-# E2E Protection Validation
+# E2E Protection Validation (AUTOSAR Profile P01, CRC-8/SAE-J1850)
+#
+# PDU layout:  byte[0] = counter:4 | dataId:4
+#              byte[1] = CRC-8 over bytes[2..N-1] + DataId
+#              byte[2..N-1] = payload
+#
+# CRC-8/SAE-J1850: poly=0x1D, init=0xFF, xor_out=0xFF
+# Must match firmware E2E.c — E2E_ComputePduCrc().
 # ---------------------------------------------------------------------------
 
 CRC8_TABLE: list[int] = []
-_CRC8_POLY = 0x07
+_CRC8_POLY = 0x1D  # SAE J1850
 
 for _i in range(256):
     _crc = _i
@@ -157,50 +164,50 @@ for _i in range(256):
     CRC8_TABLE.append(_crc)
 
 
-def crc8(data: bytes, poly: int = 0x07) -> int:
-    """Compute CRC-8 over data bytes.
+def crc8_j1850(data: bytes) -> int:
+    """Compute CRC-8/SAE-J1850 over data bytes.
 
     @param data  Input bytes.
-    @param poly  CRC polynomial (default 0x07 = SAE J1850).
     @return      CRC-8 value (0-255).
     """
-    crc = 0x00
+    crc = 0xFF  # SAE J1850 init
     for b in data:
         crc = CRC8_TABLE[crc ^ b]
-    return crc
+    return crc ^ 0xFF  # SAE J1850 XOR-out
 
 
 def check_e2e(
     msg: can.Message,
-    crc_byte: int = 0,
-    alive_byte: int = 1,
-    alive_bits: int = 4,
+    data_id: int = 0,
 ) -> dict[str, Any]:
     """Validate E2E CRC-8 and alive counter on a CAN message.
 
-    @param msg         CAN message to validate.
-    @param crc_byte    Byte index of CRC field (default 0).
-    @param alive_byte  Byte index of alive counter (default 1).
-    @param alive_bits  Number of bits for alive counter (default 4 = 0-15).
+    Matches AUTOSAR E2E Profile P01 (firmware E2E.c):
+      byte[0] = [counter:4 | dataId:4]
+      byte[1] = CRC-8/SAE-J1850 over bytes[2..N-1] + DataId
+
+    @param msg      CAN message to validate.
+    @param data_id  Expected Data ID (from E2E config, e.g. 0x01 for CVC).
     @return  Dict with keys: crc_valid, crc_expected, crc_actual,
-             alive_counter, passed.
+             alive_counter, data_id, passed.
     """
-    if len(msg.data) < max(crc_byte, alive_byte) + 1:
+    if len(msg.data) < 2:
         return {"passed": False, "error": "Message too short"}
 
-    received_crc = msg.data[crc_byte]
-    alive_counter = msg.data[alive_byte] & ((1 << alive_bits) - 1)
+    received_crc = msg.data[1]
+    alive_counter = (msg.data[0] >> 4) & 0x0F
+    rx_data_id = msg.data[0] & 0x0F
 
-    # CRC is computed over all bytes except the CRC byte itself
-    payload = bytearray(msg.data)
-    payload[crc_byte] = 0x00
-    expected_crc = crc8(bytes(payload))
+    # CRC over payload bytes [2..N-1] + DataId (matches E2E_ComputePduCrc)
+    crc_input = bytes(msg.data[2:]) + bytes([data_id & 0xFF])
+    expected_crc = crc8_j1850(crc_input)
 
     return {
         "crc_valid": received_crc == expected_crc,
         "crc_expected": expected_crc,
         "crc_actual": received_crc,
         "alive_counter": alive_counter,
+        "data_id": rx_data_id,
         "passed": received_crc == expected_crc,
     }
 

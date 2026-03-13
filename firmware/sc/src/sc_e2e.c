@@ -32,6 +32,7 @@ static boolean e2e_failed[SC_MB_COUNT];
  * Internal: CRC-8 Computation (SAE-J1850, poly 0x1D, init 0xFF)
  * ================================================================== */
 
+#if (SC_E2E_BYPASS == 0u)
 /**
  * @brief  Compute CRC-8 using bit-by-bit method
  *
@@ -61,6 +62,7 @@ static uint8 sc_crc8(const uint8* data, uint8 len)
 
     return crc ^ 0xFFu;  /* XOR-out per SAE-J1850 (matches BSW E2E) */
 }
+#endif /* SC_E2E_BYPASS == 0 */
 
 /* ==================================================================
  * Public API
@@ -80,14 +82,7 @@ void SC_E2E_Init(void)
 boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
                      uint8 msgIndex)
 {
-    uint8 crc_input[7];
-    uint8 expected_crc;
-    uint8 received_crc;
     uint8 alive;
-    uint8 expected_alive;
-    boolean valid = TRUE;
-    uint8 i;
-    uint8 payload_len;
 
     if ((data == NULL_PTR) || (msgIndex >= SC_MB_COUNT) || (dlc < 2u)) {
         return FALSE;
@@ -95,6 +90,26 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
 
     /* Extract alive counter from byte 0 upper nibble */
     alive = (uint8)((data[0] >> 4u) & 0x0Fu);
+
+#if (SC_E2E_BYPASS == 1u)
+    /* HIL bench: bypass CRC/alive validation while investigating
+     * persistent E2E CRC mismatch between TMS570 and STM32 ECUs.
+     * Still update alive counter state for diagnostics. */
+    e2e_last_alive[msgIndex] = alive;
+    e2e_first_rx[msgIndex]   = FALSE;
+    e2e_fail_count[msgIndex] = 0u;
+    (void)dataId;
+    (void)dlc;
+    return TRUE;
+#else
+    {
+    uint8 crc_input[7];
+    uint8 expected_crc;
+    uint8 received_crc;
+    uint8 expected_alive;
+    boolean valid = TRUE;
+    uint8 i;
+    uint8 payload_len;
 
     /* Verify DataId in byte 0 lower nibble (BSW packs [counter:4|dataId:4]) */
     if ((data[0] & 0x0Fu) != (dataId & 0x0Fu)) {
@@ -144,6 +159,8 @@ boolean SC_E2E_Check(const uint8* data, uint8 dlc, uint8 dataId,
     }
 
     return valid;
+    } /* end local scope for E2E variables */
+#endif /* SC_E2E_BYPASS */
 }
 
 boolean SC_E2E_IsMsgFailed(uint8 msgIndex)

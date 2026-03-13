@@ -1,6 +1,8 @@
 name: HIL Nightly Tests
 
 on:
+  schedule:
+    - cron: '30 2 * * *'   # 02:30 UTC daily (after SIL at 02:00)
   workflow_dispatch:
     inputs:
       hil_channel:
@@ -15,8 +17,76 @@ on:
         default: false
 
 jobs:
+  # --- Preflight: verify bench is alive before running 26 scenarios ---
+  preflight:
+    name: HIL Preflight
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify CAN interface is UP
+        run: |
+          CHANNEL="${{ inputs.hil_channel || 'can0' }}"
+          if ! ip link show "$CHANNEL" 2>/dev/null | grep -q "UP"; then
+            echo "::error::CAN interface $CHANNEL is not UP."
+            exit 1
+          fi
+          echo "✓ $CHANNEL is UP"
+
+      - name: Verify Docker containers running
+        run: |
+          EXPECTED_CONTAINERS=("bcm" "icu" "tcu" "plant-sim-hil" "mqtt-broker-hil" "can-gateway")
+          MISSING=0
+          for name in "${EXPECTED_CONTAINERS[@]}"; do
+            if ! docker ps --format '{{.Names}}' | grep -q "$name"; then
+              echo "::warning::Container $name is not running"
+              MISSING=$((MISSING + 1))
+            else
+              echo "✓ $name running"
+            fi
+          done
+          if [ "$MISSING" -gt 2 ]; then
+            echo "::error::Too many containers missing ($MISSING). Aborting."
+            exit 1
+          fi
+
+      - name: Verify CAN bus traffic
+        run: |
+          CHANNEL="${{ inputs.hil_channel || 'can0' }}"
+          COUNT=$(timeout 3 candump "$CHANNEL" 2>/dev/null | head -10 | wc -l)
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::No CAN traffic on $CHANNEL — ECUs may be offline."
+            exit 1
+          fi
+          echo "✓ CAN bus active ($COUNT frames in 3s)"
+
+      - name: Verify MQTT broker
+        run: |
+          MQTT_HOST="${{ inputs.hil_mqtt_host || 'localhost' }}"
+          if ! mosquitto_sub -h "$MQTT_HOST" -p 1883 -t '#' -C 1 -W 3 2>/dev/null; then
+            echo "::warning::MQTT broker not responding (fault injection tests may skip)"
+          else
+            echo "✓ MQTT broker alive"
+          fi
+
+      - name: Verify ECU heartbeats on CAN
+        run: |
+          CHANNEL="${{ inputs.hil_channel || 'can0' }}"
+          FRAMES=$(timeout 3 candump "$CHANNEL" 2>/dev/null | head -100)
+          for HB_ID in "010" "011" "012"; do
+            if echo "$FRAMES" | grep -q " ${HB_ID} "; then
+              echo "✓ Heartbeat 0x${HB_ID} present"
+            else
+              echo "::warning::Heartbeat 0x${HB_ID} not seen"
+            fi
+          done
+
+  # --- Main test matrix ---
   hil-tests:
     name: HIL ${{ matrix.scenario }}
+    needs: preflight
     runs-on: self-hosted
     timeout-minutes: 5
     continue-on-error: true
@@ -60,15 +130,6 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip3 install -r test/hil/requirements.txt
-
-      - name: Verify CAN interface
-        run: |
-          CHANNEL="${{ inputs.hil_channel || 'can0' }}"
-          if ! ip link show "$CHANNEL" 2>/dev/null | grep -q "UP"; then
-            echo "::error::CAN interface $CHANNEL is not UP."
-            exit 1
-          fi
-          echo "$CHANNEL is UP"
 
       - name: Run HIL scenario ${{ matrix.scenario }}
         id: hil_run

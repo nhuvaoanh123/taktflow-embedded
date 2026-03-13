@@ -104,6 +104,13 @@ static void mon_build_payload(uint8* frame)
              | (uint8)((fault_reason & 0x0Fu) << 3u)
              | (uint8)((relay_state & 0x01u) << 7u);
 
+#if (SC_E2E_BYPASS == 1u)
+    /* Debug marker: force byte 2 high nibble to 0xF when bypass active.
+     * This allows verifying on CAN that the bypass firmware is running.
+     * TODO:HARDWARE Remove after E2E issue is resolved. */
+    frame[2] = (uint8)(frame[2] | 0xF0u);
+#endif
+
     /* CRC over bytes 0, 2, 3 (byte 1 is the CRC itself) */
     crc_input[0] = frame[0];
     crc_input[1] = frame[2];
