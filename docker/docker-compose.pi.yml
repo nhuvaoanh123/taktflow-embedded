@@ -1,0 +1,147 @@
+# =============================================================================
+# docker-compose.pi.yml — Raspberry Pi HIL Platform
+#
+# 3 simulated VECUs (BCM, ICU, TCU) + plant simulator + gateway stack
+# running on the Pi alongside 4 physical ECUs (CVC, FZC, RZC, SC) on can0.
+#
+# Physical CAN bus (can0) is managed by systemd via Waveshare CAN HAT:
+#   sudo ip link set can0 up type can bitrate 500000
+#
+# Usage:
+#   docker compose -f docker/docker-compose.pi.yml up --build
+#   docker compose -f docker/docker-compose.pi.yml down
+#   docker compose -f docker/docker-compose.pi.yml logs -f bcm
+#
+# Prerequisites (one-time Pi setup):
+#   dtoverlay=mcp2515-can0 in /boot/config.txt
+#   can0 interface UP at 500kbps (systemd-networkd or /etc/network/interfaces)
+# =============================================================================
+
+services:
+  # --- Body Control Module (simulated) ---
+  bcm:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=bcm
+      - SIL_TIME_SCALE=1
+    restart: unless-stopped
+
+  # --- Instrument Cluster Unit (simulated) ---
+  icu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=icu
+      - SIL_TIME_SCALE=1
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # --- Telematics Control Unit (simulated) ---
+  tcu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vecu
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - CAN_INTERFACE=can0
+      - ECU_NAME=tcu
+      - SIL_TIME_SCALE=1
+    restart: unless-stopped
+
+  # --- Plant Physics Simulator ---
+  plant-sim:
+    build:
+      context: ..
+      dockerfile: gateway/plant_sim/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - CAN_CHANNEL=can0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - SIL_TIME_SCALE=1
+    restart: unless-stopped
+
+  # --- Mosquitto MQTT Broker ---
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    network_mode: host
+    volumes:
+      - ../gateway/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # --- CAN-to-MQTT Gateway ---
+  can-gateway:
+    build:
+      context: ..
+      dockerfile: gateway/can_gateway/Dockerfile
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - CAN_CHANNEL=can0
+      - DBC_PATH=/app/taktflow.dbc
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+    restart: unless-stopped
+
+  # --- ML Anomaly Detection (edge inference) ---
+  ml-inference:
+    build:
+      context: ..
+      dockerfile: gateway/ml_inference/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+    restart: unless-stopped
+
+  # --- Cloud Connector (local MQTT -> AWS IoT Core) ---
+  cloud-connector:
+    build:
+      context: ..
+      dockerfile: gateway/cloud_connector/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - AWS_IOT_ENDPOINT=${AWS_IOT_ENDPOINT:-}
+      - AWS_IOT_PORT=8883
+      - AWS_CERT_DIR=/certs
+      - DEVICE_ID=taktflow-pi-001
+    volumes:
+      - ./certs:/certs:ro
+    restart: unless-stopped
