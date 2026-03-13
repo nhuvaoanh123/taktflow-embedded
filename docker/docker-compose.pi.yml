@@ -122,6 +122,21 @@ services:
       - MQTT_PORT=1883
     restart: unless-stopped
 
+  # --- HIL: WebSocket Telemetry Bridge (MQTT → WS for dashboard) ---
+  ws-bridge:
+    build:
+      context: ..
+      dockerfile: gateway/ws_bridge/Dockerfile
+    network_mode: host
+    depends_on:
+      mqtt-broker-hil:
+        condition: service_started
+    environment:
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
+      - WS_PORT=8081
+    restart: unless-stopped
+
   # --- HIL: ML Anomaly Detection (edge) ---
   ml-inference:
     build:
