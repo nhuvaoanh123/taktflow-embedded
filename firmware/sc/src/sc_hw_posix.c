@@ -149,6 +149,9 @@ boolean rtiIsTickPending(void)
     if (elapsed_us >= 10000u) {  /* 10ms = 10000us */
         return TRUE;
     }
+
+    /* Yield CPU while waiting — prevents 100% busy-spin on Linux */
+    usleep(500u);  /* 0.5ms — low enough to not miss 10ms tick */
 #endif
 
     return FALSE;

@@ -162,7 +162,8 @@ void SC_Relay_CheckTriggers(void)
         return;
     }
 
-    /* Trigger (h): GPIO readback mismatch */
+    /* Trigger (h): GPIO readback mismatch (skip when no relay HW) */
+#if (SC_RELAY_READBACK_ENABLED == 1u)
     readback = gioGetBit(SC_GIO_PORT_A, SC_PIN_RELAY);
     if (relay_commanded == TRUE) {
         if (readback != 1u) {
@@ -185,6 +186,9 @@ void SC_Relay_CheckTriggers(void)
                       (unsigned)readback_mismatch_count);
         SC_Relay_DeEnergize();
     }
+#else
+    (void)readback;  /* suppress unused warning */
+#endif
 }
 
 boolean SC_Relay_IsKilled(void)

@@ -32,4 +32,10 @@
   #define SC_PLAUS_DEBOUNCE_TICKS   5u
 #endif
 
+/** @brief  Relay readback: disabled until relay hardware is wired.
+ *          TODO:HARDWARE Re-enable (set to 1u) when relay is connected. */
+#ifndef SC_RELAY_READBACK_ENABLED
+  #define SC_RELAY_READBACK_ENABLED 0u
+#endif
+
 #endif /* SC_CFG_PLATFORM_H */

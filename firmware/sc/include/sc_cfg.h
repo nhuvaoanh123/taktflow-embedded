@@ -176,6 +176,12 @@
  * Relay Readback
  * ================================================================== */
 
+/** @brief  Enable relay GPIO readback.  Set to 0u in platform header
+ *          when no relay hardware is connected (HIL bench). */
+#ifndef SC_RELAY_READBACK_ENABLED
+  #define SC_RELAY_READBACK_ENABLED   1u
+#endif
+
 #define SC_RELAY_READBACK_THRESHOLD 2u     /* 2 consecutive mismatches */
 
 /* ==================================================================
